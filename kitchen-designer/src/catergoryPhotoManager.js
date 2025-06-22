@@ -317,11 +317,11 @@ const CategoryPhotoManager = () => {
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <h4 className="font-semibold text-blue-900 mb-2">How it works:</h4>
         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Photos are automatically displayed in the portfolio carousel on your website</li>
+          <li>Photos are automatically displayed in the portfolio carousel</li>
           <li>The order shown here (1, 2, 3...) is the order they'll appear in the slideshow</li>
           <li>You can move photos between categories using the dropdown</li>
           <li>Upload multiple photos at once by selecting them in the file dialog</li>
-          <li>Changes are saved automatically and will appear on your website immediately</li>
+          <li>Changes are saved automatically and will appear on website immediately</li>
         </ul>
       </div>
     </div>

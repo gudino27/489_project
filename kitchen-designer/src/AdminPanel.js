@@ -1,3 +1,4 @@
+// React core & icon imports
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
@@ -8,16 +9,26 @@ import {
   LogOut,
   Lock
 } from 'lucide-react';
+// Photo manager component for handling uploads to databse
+// This component will handle the photo upload, display, and management functionality
 import CategoryPhotoManager from './catergoryPhotoManager';
-
+// Top-level AdminPanel component
 const AdminPanel = () => {
-  // Admin authentication state
+ // -----------------------------
+  // Authentication state and login credentials
+  // This state will track if the user is authenticated and hold login credentials
+  // -----------------------------
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginCredentials, setLoginCredentials] = useState({ username: '', password: '' });
+    // UI tab state (either 'prices' or 'photos')
+    // This state will track which tab is currently active in the admin panel
   const [activeTab, setActiveTab] = useState('prices');
   
-  // Price management state
-  const [basePrices, setBasePrices] = useState({
+  // -----------------------------
+  // Pricing configuration state updated dynamically
+  // This state will hold the base prices, material multipliers, and color pricing
+  // -----------------------------
+const [basePrices, setBasePrices] = useState({
     'base': 250,
     'sink-base': 320,
     'wall': 180,
@@ -41,16 +52,28 @@ const AdminPanel = () => {
     3: 200,
     'custom': 500
   });
-  
-  // Temporary state for unsaved changes
+
+    // -----------------------------
+    // UI state for unsaved changes, save status, and loading state
+    // This state will track if there are unsaved changes, the status of the last save operation, and if prices are currently loading
+    // -----------------------------
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [loadingPrices, setLoadingPrices] = useState(true);
 
-  // API Configuration - UPDATE THIS TO MATCH The SERVER
+
+    // -----------------------------
+    // API base URL - this will be used to connect to the backend server
+    // This URL will be used to fetch and save prices from/to the backend
+    // -----------------------------
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-  // Mock authentication - In production time we will use proper authentication
+    // -----------------------------
+    // Authentication handlers
+    // These functions will handle user login and logout
+    // -----------------------------
+    // Handle login with hardcoded credentials for demo purposes
+    // In production, this will be replaced with a secure authentication method
   const handleLogin = (e) => {
     e.preventDefault();
     // In production, validate against backend for security
@@ -67,7 +90,10 @@ const AdminPanel = () => {
     localStorage.removeItem('adminAuth');
   };
 
-  // Load prices from database
+    // -----------------------------
+    // Load prices from the database on component mount
+    // This function will fetch the prices from the backend API and update the state
+    // -----------------------------
   const loadPrices = async () => {
     try {
       console.log('Loading prices from:', `${API_BASE}/api/prices`);
@@ -92,8 +118,10 @@ const AdminPanel = () => {
       setLoadingPrices(false);
     }
   };
-
-  // Load saved data on mount
+    // -----------------------------
+    // Load prices and check authentication on component mount
+    // This effect will run once when the component mounts to load initial data
+    // -----------------------------
   useEffect(() => {
     // Check authentication
     const auth = localStorage.getItem('adminAuth');
@@ -104,14 +132,18 @@ const AdminPanel = () => {
     loadPrices();
   }, []);
 
-  // Save price changes to database
+    // -----------------------------
+    // Save price changes to the database
+    // This function will send the updated prices to the backend API
+    // -----------------------------
   const savePriceChanges = async () => {
     setSaveStatus('saving');
     
     try {
+        // Prepare data to send
       console.log('Saving prices to database...');
-      
-      // Save cabinet prices
+        //save base prices, material multipliers, and color pricing
+
       const cabinetResponse = await fetch(`${API_BASE}/api/prices/cabinets`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -121,8 +153,7 @@ const AdminPanel = () => {
       if (!cabinetResponse.ok) {
         throw new Error('Failed to save cabinet prices');
       }
-
-      // Save material multipliers
+        // Save material multipliers
       const materialResponse = await fetch(`${API_BASE}/api/prices/materials`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -133,7 +164,7 @@ const AdminPanel = () => {
         throw new Error('Failed to save material multipliers');
       }
 
-      // Save color pricing
+        // Save color pricing
       const colorResponse = await fetch(`${API_BASE}/api/prices/colors`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -161,7 +192,11 @@ const AdminPanel = () => {
     }
   };
 
-  // Login screen
+    // -----------------------------
+    // check for authentication status
+    // This will determine if the user is logged in or not
+    //will show the login form if not authenticated
+    // -----------------------------
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -182,7 +217,8 @@ const AdminPanel = () => {
                 required
               />
             </div>
-            <div className="mb-6">
+            {/* password input field*/}
+              <div className="mb-6">
               <label className="block text-sm font-medium mb-2">Password</label>
               <input
                 type="password"
@@ -207,7 +243,10 @@ const AdminPanel = () => {
       </div>
     );
   }
-
+    // -----------------------------
+    // Render the admin panel UI
+    // This will display the header, navigation tabs, and content area based on the active tab
+    // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -229,7 +268,7 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Seconday Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-8">
@@ -465,6 +504,10 @@ const AdminPanel = () => {
           </div>
         )}
 
+        {/*
+         Photo Management Tab 
+         loaded in from a different component
+         */}
         {activeTab === 'photos' && (<CategoryPhotoManager />)}
       </div>
     </div>
