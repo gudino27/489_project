@@ -1,1 +1,63 @@
+.banner{
+    text-align: center;
+    font-size: 3rem;
+    color: rgb(24, 24, 24);
+    margin-top: 55px;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+}
+
+.introduction{
+    text-align: center;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 2rem;
+    color: rgb(24, 24, 24);
+    margin-top: 45px;
+}
+
+.intro-image{
+    text-align: center;
+    margin-top: 45px;
+}
+
+.intro-image img{
+    max-width: 90%;
+    height: auto;
+    border-radius: 5px;
+}
+
+.quote{
+    text-align: center;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 2rem;
+    color: rgb(24, 24, 24);
+    margin-top: 50px;
+}
+
+.description-header{
+    text-align: left;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 2rem;
+    color: rgb(24, 24, 24);
+    margin-top: 20px;
+    margin-left: 35px;
+}
+
+.description{
+    text-align: left;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 20px;
+    color: rgb(24, 24, 24);
+    margin-top: 5px;
+    margin-left: 35px;
+}
+
+.button{
+    text-align: center;
+    margin-top: 30px;
+}
+
+.button .btn{
+    font-size: 1em;
+    padding: 10px 20px;
+}
 

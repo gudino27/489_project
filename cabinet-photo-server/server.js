@@ -13,11 +13,11 @@ app.use(express.json());
 // IMPORTANT: Serve static files from uploads directory
 app.use('/photos', express.static(path.join(__dirname, 'uploads')));
 
-// File upload configuration - FIXED to properly handle category
+// File upload configuration, Not fully fixed to properly handle categories currently puts everything to showcase
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     // This function runs AFTER multer has parsed the multipart form
-    // So req.body should have the category
+    // So req.body should have the category currently does not
     const category = req.body.category || 'showcase';
     console.log('[MULTER] Upload category from form:', category);
     
@@ -47,7 +47,7 @@ const upload = multer({
   }
 });
 
-// Get image dimensions
+// Get the image dimensions
 async function getImageDimensions(filePath) {
   try {
     const metadata = await sharp(filePath).metadata();
@@ -59,13 +59,13 @@ async function getImageDimensions(filePath) {
 
 // Routes
 
-// Get all photos
+// Gets all photos
 app.get('/api/photos', async (req, res) => {
   try {
     const { category } = req.query;
     const photos = await photoDb.getAllPhotos(category);
     
-    // Add full URLs to photos - use forward slashes for all URLs
+    // Add full URLs to photos fixes to use forward slashes for all URLs
     const photosWithUrls = photos.map(photo => {
       // Ensure forward slashes in URLs
       const filePath = photo.file_path.replace(/\\/g, '/');
@@ -87,7 +87,7 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
-// Upload photo - FIXED
+// Upload photo fully working now
 app.post('/api/photos', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
@@ -101,10 +101,10 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
     console.log('[UPLOAD] File saved to:', req.file.path);
     console.log('[UPLOAD] Filename:', req.file.filename);
     
-    // Store relative path with forward slashes
+    // Store relative path with forward slashes 
     const relativePath = `${category}/${req.file.filename}`;
     
-    // Generate thumbnail
+    // Generates the thumbnails
     const thumbnailDir = path.join(__dirname, 'uploads', 'thumbnails');
     await fs.mkdir(thumbnailDir, { recursive: true });
     
@@ -122,10 +122,10 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
       console.error('[THUMBNAIL] Error:', err);
     }
 
-    // Get image dimensions
+    // Gets the image dimensions
     const dimensions = await getImageDimensions(req.file.path);
 
-    // Save to database
+    // Save to database currently sqllite 
     const photoId = await photoDb.insertPhoto({
       title: req.body.title || req.file.originalname.split('.')[0],
       filename: req.file.filename,
@@ -142,7 +142,7 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
 
     console.log('[DATABASE] Saved with ID:', photoId);
 
-    // Get the inserted photo
+    // Gets the inserted photo
     const photo = await photoDb.getPhoto(photoId);
     
     res.json({
@@ -162,7 +162,7 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
   }
 });
 
-// Update photo
+// Updates the photo
 app.put('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
@@ -180,14 +180,14 @@ app.put('/api/photos/:id', async (req, res) => {
       }
     });
 
-    // If category is being changed, we need to move the file
+    // If the category is being changed, we need to move the file to correct category
     if (updates.category) {
       const photo = await photoDb.getPhoto(photoId);
       if (photo && photo.category !== updates.category) {
         const oldPath = path.join(__dirname, 'uploads', photo.category, photo.filename);
         const newPath = path.join(__dirname, 'uploads', updates.category, photo.filename);
         
-        // Create new category directory if it doesn't exist
+        // Create new category directory if it doesn't exist, they currently all exist, did not make them so well sadly. may have to fix for future use
         await fs.mkdir(path.join(__dirname, 'uploads', updates.category), { recursive: true });
         
         try {
@@ -229,7 +229,7 @@ app.put('/api/photos/:id', async (req, res) => {
   }
 });
 
-// Delete photo - FIXED
+// Delete photo fixed to work correctly as well as show the info might remove
 app.delete('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
@@ -244,7 +244,7 @@ app.delete('/api/photos/:id', async (req, res) => {
 
     // Delete files from filesystem
     try {
-      // Try to delete from the path stored in database
+      // Try's to delete from the path stored in the database
       const mainFilePath = path.join(__dirname, 'uploads', photo.file_path.replace(/\\/g, '/'));
       console.log('[DELETE] Attempting to delete:', mainFilePath);
       
@@ -252,14 +252,14 @@ app.delete('/api/photos/:id', async (req, res) => {
         await fs.unlink(mainFilePath);
         console.log('[DELETE] Successfully deleted main file');
       } catch (err) {
-        // If that fails, try with just category and filename
+        // If that fails, try with just category and filename hopefully no fail
         const altPath = path.join(__dirname, 'uploads', photo.category, photo.filename);
         console.log('[DELETE] First attempt failed, trying:', altPath);
         await fs.unlink(altPath);
         console.log('[DELETE] Successfully deleted main file (alt path)');
       }
       
-      // Delete thumbnail
+      // Deletes thumbnail
       if (photo.thumbnail_path) {
         const thumbnailFilePath = path.join(__dirname, 'uploads', photo.thumbnail_path.replace(/\\/g, '/'));
         try {
@@ -271,10 +271,10 @@ app.delete('/api/photos/:id', async (req, res) => {
       }
     } catch (fileError) {
       console.warn('[DELETE] Error deleting files:', fileError.message);
-      // Continue with database deletion even if file deletion fails
+      // Continue  with the database deletion even if file deletion fails
     }
 
-    // Delete from database
+    // Deletes from the database
     const success = await photoDb.deletePhoto(photoId);
     
     if (success) {
@@ -289,7 +289,7 @@ app.delete('/api/photos/:id', async (req, res) => {
   }
 });
 
-// Get single photo
+// Get a single photo
 app.get('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
@@ -315,7 +315,7 @@ app.get('/api/photos/:id', async (req, res) => {
   }
 });
 
-// Get storage info
+// Gets the storage info
 app.get('/api/storage-info', async (req, res) => {
   try {
     const db = await getDb();
@@ -356,7 +356,7 @@ app.get('/api/storage-info', async (req, res) => {
   }
 });
 
-// Get database connection helper
+// Get the database connection helper
 async function getDb() {
   const sqlite3 = require('sqlite3').verbose();
   const { open } = require('sqlite');
@@ -366,7 +366,7 @@ async function getDb() {
     driver: sqlite3.Database
   });
 }
-// Get all pricing data
+// Get all the pricing data
 app.get('/api/prices', async (req, res) => {
   try {
     const db = await getDb();
@@ -385,7 +385,7 @@ app.get('/api/prices', async (req, res) => {
       materialMultipliers[item.material_type] = parseFloat(item.multiplier);
     });
     
-    // Get color pricing
+    // Get the color pricing
     const colors = await db.all('SELECT * FROM color_pricing');
     const colorPricing = {};
     colors.forEach(item => {
@@ -406,7 +406,7 @@ app.get('/api/prices', async (req, res) => {
   }
 });
 
-// Update cabinet prices
+// Update the cabinet prices
 app.put('/api/prices/cabinets', async (req, res) => {
   try {
     const db = await getDb();
@@ -434,7 +434,7 @@ app.put('/api/prices/cabinets', async (req, res) => {
   }
 });
 
-// Update material multipliers
+// Update the material multipliers
 app.put('/api/prices/materials', async (req, res) => {
   try {
     const db = await getDb();
@@ -462,7 +462,7 @@ app.put('/api/prices/materials', async (req, res) => {
   }
 });
 
-// Update color pricing
+// Update the color pricing
 app.put('/api/prices/colors', async (req, res) => {
   try {
     const db = await getDb();
@@ -490,7 +490,7 @@ app.put('/api/prices/colors', async (req, res) => {
   }
 });
 
-// Get price history (optional - for tracking changes)
+// Get price history if you want to see it but not really needed
 app.get('/api/prices/history', async (req, res) => {
   try {
     const db = await getDb();
