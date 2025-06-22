@@ -2459,9 +2459,9 @@ const KitchenDesigner = () => {
                 <p className="font-medium mb-1">What happens next?</p>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   <li>Your design and quote will be sent to our team</li>
-                  <li>We'll review your requirements and prepare a detailed estimate</li>
-                  <li>You'll receive a PDF copy of your design</li>
-                  <li>We'll contact you within 24 hours via your preferred method</li>
+                  <li>We'll review your requirements and contact you to get proper measurements</li>
+                  <li>You'll receive a PDF copy of your design after we plan with you</li>
+                  <li>We'll contact you within 1-4 business days via your preferred method</li>
                 </ul>
               </div>
               
