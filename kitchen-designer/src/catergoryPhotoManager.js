@@ -1,4 +1,3 @@
-// Add this component to your AdminPanel.js or create it as a separate component
 
 import React, { useState, useEffect } from 'react';
 import { Upload, Trash2, Edit2, Save, X, Image, Plus } from 'lucide-react';
