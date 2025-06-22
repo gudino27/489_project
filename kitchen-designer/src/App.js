@@ -1267,10 +1267,10 @@ const KitchenDesigner = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Application header and branding */}
             <h1 className="text-4xl font-bold text-gray-800 mb-2 text-center">
-              Cabinet Designer Pro
+              Cabinet Designer demo
             </h1>
             <p className="text-gray-600 mb-8 text-center">
-              Design your {activeRoom} cabinets
+              Design your {activeRoom}
             </p>
             
             <div className="space-y-6">
