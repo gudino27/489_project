@@ -126,7 +126,7 @@ function showSlideshow() {
     slide.className = 'slide' + (index === 0 ? ' active' : '');
 
     const thumbSrc = `${API_BASE}${photo.thumbnail || photo.full || photo.url}`;
-    const fullSrc = `${API_BASE}${photo.full || photo.url}`;
+    const fullSrc = `${API_BASE}/photos${photo.full || photo.url}`;
 
     slide.innerHTML = `
       <img src="${thumbSrc}" 

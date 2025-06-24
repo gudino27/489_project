@@ -4,7 +4,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const { photoDb } = require('./database/db-helpers');
+const { photoDb,employeeDb } = require('./database/db-helpers');
 
 const app = express();
 app.use(cors());
@@ -13,8 +13,8 @@ app.use(express.json());
 // IMPORTANT: Serve static files from uploads directory
 app.use('/photos', express.static(path.join(__dirname, 'uploads')));
 
-// File upload configuration, Not fully fixed to properly handle categories currently puts everything to showcase
-const storage = multer.diskStorage({
+//fully working to sort the photos by category on upload
+  const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     // This function runs AFTER multer has parsed the multipart form
     // So req.body should have the category currently does not
@@ -62,25 +62,31 @@ async function getImageDimensions(filePath) {
 // Gets all photos
 app.get('/api/photos', async (req, res) => {
   try {
-    const { category } = req.query;
-    const photos = await photoDb.getAllPhotos(category);
+    const photos = await photoDb.getAllPhotos();
     
-    // Add full URLs to photos fixes to use forward slashes for all URLs
-    const photosWithUrls = photos.map(photo => {
-      // Ensure forward slashes in URLs
+    // Sort by display_order first, then by uploaded_at
+    const sortedPhotos = photos.sort((a, b) => {
+      if (a.category === b.category) {
+        return (a.display_order || 999) - (b.display_order || 999);
+      }
+      return a.category.localeCompare(b.category);
+    });
+    
+    const formattedPhotos = sortedPhotos.map(photo => {
       const filePath = photo.file_path.replace(/\\/g, '/');
-      const thumbnailPath = photo.thumbnail_path ? photo.thumbnail_path.replace(/\\/g, '/') : null;
+      const thumbnailPath = photo.thumbnail_path ? 
+        `thumbnails/${photo.thumbnail_path.split('/').pop()}` : null;
       
       return {
         ...photo,
-        full: `/photos/${filePath}`,
+        full: `/${filePath}`,
         thumbnail: thumbnailPath ? `/photos/${thumbnailPath}` : null,
-        url: `/photos/${filePath}`, // For backward compatibility
+        url: `/photos/${filePath}`,
         featured: photo.featured === 1
       };
     });
     
-    res.json(photosWithUrls);
+    res.json(formattedPhotos);
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos' });
@@ -159,6 +165,25 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload photo: ' + error.message });
+  }
+});
+app.put('/api/photos/reorder', async (req, res) => {
+  try {
+    const { photoIds } = req.body;
+    
+    if (!Array.isArray(photoIds) || photoIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid photo IDs array' });
+    }
+
+    console.log('[REORDER] Updating order for photos:', photoIds);
+
+    // Update display_order for each photo using the function from db-helpers
+    await photoDb.updateDisplayOrder(photoIds);
+    
+    res.json({ success: true, message: 'Photo order updated successfully' });
+  } catch (error) {
+    console.error('[REORDER] Error:', error);
+    res.status(500).json({ error: 'Failed to update photo order: ' + error.message });
   }
 });
 
@@ -355,6 +380,268 @@ app.get('/api/storage-info', async (req, res) => {
     res.status(500).json({ error: 'Failed to get storage info' });
   }
 });
+// Get all employees
+app.get('/api/employees', async (req, res) => {
+  try {
+    const includeInactive = req.query.includeInactive === 'true';
+    const employees = await employeeDb.getAllEmployees(includeInactive);
+    
+    // Add full photo URL to each employee
+    const employeesWithPhotos = employees.map(emp => ({
+      ...emp,
+      photo_url: emp.photo_path ? `/photos/employees/${emp.photo_filename}` : null,
+      is_active: emp.is_active === 1
+    }));
+    
+    res.json(employeesWithPhotos);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ error: 'Failed to fetch employees' });
+  }
+});
+
+// Get single employee
+app.get('/api/employees/:id', async (req, res) => {
+  try {
+    const employeeId = parseInt(req.params.id);
+    const employee = await employeeDb.getEmployee(employeeId);
+    
+    if (employee) {
+      employee.photo_url = employee.photo_path ? `/photos/employees/${employee.photo_filename}` : null;
+      employee.is_active = employee.is_active === 1;
+      res.json(employee);
+    } else {
+      res.status(404).json({ error: 'Employee not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching employee:', error);
+    res.status(500).json({ error: 'Failed to fetch employee' });
+  }
+});
+
+// Create new employee with photo upload
+app.post('/api/employees', upload.single('photo'), async (req, res) => {
+  try {
+    let photoPath = null;
+    let photoFilename = null;
+
+    // Handle photo upload if provided
+    if (req.file) {
+      // Create employees directory
+      const employeesDir = path.join(__dirname, 'uploads', 'employees');
+      await fs.mkdir(employeesDir, { recursive: true });
+
+      // Generate unique filename
+      const uniqueName = `emp_${Date.now()}_${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+      const filePath = path.join(employeesDir, uniqueName);
+
+      // Move/save the file
+      if (req.file.buffer) {
+        // If using memory storage
+        await fs.writeFile(filePath, req.file.buffer);
+      } else {
+        // If using disk storage, move the file
+        await fs.rename(req.file.path, filePath);
+      }
+
+      // Create thumbnail
+      const thumbnailDir = path.join(__dirname, 'uploads', 'employees', 'thumbnails');
+      await fs.mkdir(thumbnailDir, { recursive: true });
+      
+      const thumbnailPath = path.join(thumbnailDir, `thumb_${uniqueName}`);
+      
+      try {
+        await sharp(filePath)
+          .resize(200, 200, { 
+            fit: 'cover',
+            position: 'center'
+          })
+          .jpeg({ quality: 80 })
+          .toFile(thumbnailPath);
+      } catch (err) {
+        console.error('[THUMBNAIL] Error creating employee thumbnail:', err);
+      }
+
+      photoPath = `employees/${uniqueName}`;
+      photoFilename = uniqueName;
+    }
+
+    // Save employee to database
+    const employeeData = {
+      name: req.body.name,
+      position: req.body.position,
+      bio: req.body.bio || '',
+      email: req.body.email || '',
+      phone: req.body.phone || '',
+      photo_path: photoPath,
+      photo_filename: photoFilename,
+      joined_date: req.body.joined_date || null,
+      display_order: req.body.display_order || 999
+    };
+
+    const employeeId = await employeeDb.insertEmployee(employeeData);
+    const newEmployee = await employeeDb.getEmployee(employeeId);
+    
+    res.json({
+      success: true,
+      employee: {
+        ...newEmployee,
+        photo_url: photoPath ? `/photos/${photoPath}` : null,
+        is_active: newEmployee.is_active === 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating employee:', error);
+    res.status(500).json({ error: 'Failed to create employee: ' + error.message });
+  }
+});
+app.put('/api/employees/reorder', async (req, res) => {
+  try {
+    const { employeeIds } = req.body;
+    
+    if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+      return res.status(400).json({ error: 'Invalid employee IDs array' });
+    }
+
+    await employeeDb.updateEmployeeOrder(employeeIds);
+    
+    res.json({ success: true, message: 'Employee order updated successfully' });
+  } catch (error) {
+    console.error('[REORDER] Error:', error);
+    res.status(500).json({ error: 'Failed to update employee order' });
+  }
+});
+// Update employee
+app.put('/api/employees/:id', upload.single('photo'), async (req, res) => {
+  try {
+    const employeeId = parseInt(req.params.id);
+    const updates = {};
+
+    // Handle text fields
+    const allowedFields = ['name', 'position', 'bio', 'email', 'phone', 'joined_date', 'display_order', 'is_active'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+        // Convert boolean is_active to integer
+        if (field === 'is_active') {
+          updates[field] = req.body[field] === 'true' || req.body[field] === true ? 1 : 0;
+        }
+      }
+    });
+
+    // Handle photo upload if provided
+    if (req.file) {
+      // Get current employee to delete old photo
+      const currentEmployee = await employeeDb.getEmployee(employeeId);
+      
+      // Delete old photo if exists
+      if (currentEmployee && currentEmployee.photo_path) {
+        const oldPhotoPath = path.join(__dirname, 'uploads', currentEmployee.photo_path);
+        try {
+          await fs.unlink(oldPhotoPath);
+          // Also delete old thumbnail
+          const oldThumbPath = path.join(__dirname, 'uploads', 'employees', 'thumbnails', `thumb_${currentEmployee.photo_filename}`);
+          await fs.unlink(oldThumbPath).catch(() => {});
+        } catch (err) {
+          console.log('Could not delete old photo:', err.message);
+        }
+      }
+
+      // Save new photo
+      const employeesDir = path.join(__dirname, 'uploads', 'employees');
+      await fs.mkdir(employeesDir, { recursive: true });
+
+      const uniqueName = `emp_${Date.now()}_${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}`;
+      const filePath = path.join(employeesDir, uniqueName);
+
+      if (req.file.buffer) {
+        await fs.writeFile(filePath, req.file.buffer);
+      } else {
+        await fs.rename(req.file.path, filePath);
+      }
+
+      // Create thumbnail
+      const thumbnailDir = path.join(__dirname, 'uploads', 'employees', 'thumbnails');
+      await fs.mkdir(thumbnailDir, { recursive: true });
+      
+      const thumbnailPath = path.join(thumbnailDir, `thumb_${uniqueName}`);
+      
+      try {
+        await sharp(filePath)
+          .resize(200, 200, { 
+            fit: 'cover',
+            position: 'center'
+          })
+          .jpeg({ quality: 80 })
+          .toFile(thumbnailPath);
+      } catch (err) {
+        console.error('[THUMBNAIL] Error:', err);
+      }
+
+      updates.photo_path = `employees/${uniqueName}`;
+      updates.photo_filename = uniqueName;
+    }
+
+    const success = await employeeDb.updateEmployee(employeeId, updates);
+    
+    if (success) {
+      const employee = await employeeDb.getEmployee(employeeId);
+      res.json({ 
+        success: true, 
+        employee: {
+          ...employee,
+          photo_url: employee.photo_path ? `/photos/${employee.photo_path}` : null,
+          is_active: employee.is_active === 1
+        }
+      });
+    } else {
+      res.status(404).json({ error: 'Employee not found' });
+    }
+
+  } catch (error) {
+    console.error('Update employee error:', error);
+    res.status(500).json({ error: 'Failed to update employee' });
+  }
+});
+
+// Delete employee
+app.delete('/api/employees/:id', async (req, res) => {
+  try {
+    const employeeId = parseInt(req.params.id);
+    const hardDelete = req.query.hard === 'true';
+    
+    if (hardDelete) {
+      // Get employee to delete photo
+      const employee = await employeeDb.getEmployee(employeeId);
+      if (employee && employee.photo_path) {
+        const photoPath = path.join(__dirname, 'uploads', employee.photo_path);
+        try {
+          await fs.unlink(photoPath);
+          // Delete thumbnail too
+          const thumbPath = path.join(__dirname, 'uploads', 'employees', 'thumbnails', `thumb_${employee.photo_filename}`);
+          await fs.unlink(thumbPath).catch(() => {});
+        } catch (err) {
+          console.log('Could not delete photo:', err.message);
+        }
+      }
+    }
+    
+    const success = await employeeDb.deleteEmployee(employeeId, hardDelete);
+    
+    if (success) {
+      res.json({ success: true, message: 'Employee deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Employee not found' });
+    }
+
+  } catch (error) {
+    console.error('Delete employee error:', error);
+    res.status(500).json({ error: 'Failed to delete employee' });
+  }
+});
+
+// Reorder employees
 
 // Get the database connection helper
 async function getDb() {
@@ -366,6 +653,7 @@ async function getDb() {
     driver: sqlite3.Database
   });
 }
+
 // Get all the pricing data
 app.get('/api/prices', async (req, res) => {
   try {
@@ -556,20 +844,14 @@ app.use((error, req, res, next) => {
       return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
     }
   }
-  
+
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal server error' });
 });
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
-
-
-
-
-
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

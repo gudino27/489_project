@@ -78,8 +78,37 @@ db.serialize(() => {
   stmt.finalize();
 
   console.log('Database initialized successfully!');
+  db.run(`
+    CREATE TABLE IF NOT EXISTS employees (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      position TEXT NOT NULL,
+      bio TEXT,
+      email TEXT,
+      phone TEXT,
+      photo_path TEXT,
+      photo_filename TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT 1,
+      joined_date DATE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Create index for better performance
+  db.run(`CREATE INDEX IF NOT EXISTS idx_employees_active ON employees(is_active)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_employees_order ON employees(display_order)`);
+  
+  const insertEmployee = db.prepare(`
+    INSERT OR IGNORE INTO employees (name, position, bio, email, phone, display_order) 
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  
+  
+  
+  insertEmployee.finalize();
 });
-
 
 db.close();
 

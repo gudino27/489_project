@@ -7,11 +7,14 @@ import {
   Save, 
   Check,
   LogOut,
-  Lock
+  Lock,
+  IdCardLanyard
 } from 'lucide-react';
 // Photo manager component for handling uploads to databse
 // This component will handle the photo upload, display, and management functionality
 import CategoryPhotoManager from './catergoryPhotoManager';
+// Employee management component for handling employee data
+import EmployeeManager from './EmployeeManager';
 // Top-level AdminPanel component
 const AdminPanel = () => {
  // -----------------------------
@@ -298,6 +301,19 @@ const [basePrices, setBasePrices] = useState({
                 Portfolio Photos
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('employees')}
+              className={`py-4 px-6 border-b-2 transition ${
+                activeTab === 'employees'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+              }`}
+              >
+              <div className="flex items-center gap-2">
+                <IdCardLanyard size={20} />
+                Employee Management
+              </div>
+              </button>
           </div>
         </div>
       </div>
@@ -509,6 +525,11 @@ const [basePrices, setBasePrices] = useState({
          loaded in from a different component
          */}
         {activeTab === 'photos' && (<CategoryPhotoManager />)}
+        {/*
+
+        */}
+        {activeTab === 'employees' && (<EmployeeManager/>)}
+
       </div>
     </div>
   );

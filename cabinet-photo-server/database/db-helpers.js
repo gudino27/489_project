@@ -70,30 +70,37 @@ const photoDb = {
 
   // Update photo
   async updatePhoto(id, updates) {
-    const db = await getDb();
-    const fields = [];
-    const values = [];
+  const db = await getDb();
+  const fields = [];
+  const values = [];
 
-    // Build dynamic update query
-    Object.keys(updates).forEach(key => {
-      if (key !== 'id') {
-        fields.push(`${key} = ?`);
-        values.push(updates[key]);
-      }
-    });
+  Object.keys(updates).forEach(key => {
+    if (key !== 'id') {
+      fields.push(`${key} = ?`);
+      values.push(updates[key]);
+    }
+  });
 
-    values.push(id);
-    
-    const query = `
-      UPDATE photos 
-      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `;
+  if (fields.length === 0) {
+    // If no updates, just update the timestamp
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+  } else {
+    // Always update updated_at when other fields change
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+  }
 
-    const result = await db.run(query, values);
-    await db.close();
-    return result.changes > 0;
-  },
+  values.push(id);
+
+  const query = `
+    UPDATE photos 
+    SET ${fields.join(', ')}
+    WHERE id = ?
+  `;
+
+  const result = await db.run(query, values);
+  await db.close();
+  return result.changes > 0;
+},
 
   // Delete photo
   async deletePhoto(id) {
@@ -123,17 +130,19 @@ const photoDb = {
 
   // Update display order
   async updateDisplayOrder(photoIds) {
-    const db = await getDb();
-    
-    for (let i = 0; i < photoIds.length; i++) {
-      await db.run(
-        'UPDATE photos SET display_order = ? WHERE id = ?',
-        [i + 1, photoIds[i]]
-      );
-    }
-    
-    await db.close();
-  },
+  const db = await getDb();
+  
+  for (let i = 0; i < photoIds.length; i++) {
+    console.log(`[DB] Reorder: id = ${photoIds[i]}, order = ${i + 1}`);
+    await db.run(
+      'UPDATE photos SET display_order = ? WHERE id = ?',
+      [i + 1, photoIds[i]]
+    );
+  }
+  
+  await db.close();
+}
+,
 
   // Search photos
   async searchPhotos(searchTerm) {
@@ -148,5 +157,133 @@ const photoDb = {
     return photos;
   }
 };
+// Employee operations
+const employeeDb = {
+  // Get all employees
+  async getAllEmployees(includeInactive = false) {
+    const db = await getDb();
+    let query = 'SELECT * FROM employees';
+    
+    if (!includeInactive) {
+      query += ' WHERE is_active = 1';
+    }
+    
+    query += ' ORDER BY display_order ASC, created_at DESC';
+    
+    const employees = await db.all(query);
+    await db.close();
+    return employees;
+  },
 
-module.exports = { photoDb };
+  // Get single employee
+  async getEmployee(id) {
+    const db = await getDb();
+    const employee = await db.get('SELECT * FROM employees WHERE id = ?', id);
+    await db.close();
+    return employee;
+  },
+
+  // Insert new employee
+  async insertEmployee(employeeData) {
+    const db = await getDb();
+    const {
+      name,
+      position,
+      bio,
+      email,
+      phone,
+      photo_path,
+      photo_filename,
+      joined_date,
+      display_order = 0
+    } = employeeData;
+
+    const result = await db.run(
+      `INSERT INTO employees (
+        name, position, bio, email, phone, photo_path, 
+        photo_filename, joined_date, display_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, position, bio, email, phone, photo_path, 
+       photo_filename, joined_date, display_order]
+    );
+
+    await db.close();
+    return result.lastID;
+  },
+
+  // Update employee
+  async updateEmployee(id, updates) {
+    const db = await getDb();
+    const fields = [];
+    const values = [];
+
+    // Build dynamic update query
+    Object.keys(updates).forEach(key => {
+      if (key !== 'id' && updates[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(updates[key]);
+      }
+    });
+
+    values.push(id);
+    
+    const query = `
+      UPDATE employees 
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `;
+
+    const result = await db.run(query, values);
+    await db.close();
+    return result.changes > 0;
+  },
+
+  // Delete employee (soft delete by setting is_active = 0)
+  async deleteEmployee(id, hardDelete = false) {
+    const db = await getDb();
+    let result;
+    
+    if (hardDelete) {
+      // First get the employee to delete their photo
+      const employee = await db.get('SELECT photo_path FROM employees WHERE id = ?', id);
+      result = await db.run('DELETE FROM employees WHERE id = ?', id);
+    } else {
+      // Soft delete
+      result = await db.run('UPDATE employees SET is_active = 0 WHERE id = ?', id);
+    }
+    
+    await db.close();
+    return result.changes > 0;
+  },
+
+  // Update display order
+  async updateEmployeeOrder(employeeIds) {
+    const db = await getDb();
+    
+    for (let i = 0; i < employeeIds.length; i++) {
+      await db.run(
+        'UPDATE employees SET display_order = ? WHERE id = ?',
+        [i + 1, employeeIds[i]]
+      );
+    }
+    
+    await db.close();
+  },
+
+  // Search employees
+  async searchEmployees(searchTerm) {
+    const db = await getDb();
+    const employees = await db.all(
+      `SELECT * FROM employees 
+       WHERE (name LIKE ? OR position LIKE ? OR bio LIKE ?) 
+       AND is_active = 1
+       ORDER BY display_order ASC`,
+      [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]
+    );
+    await db.close();
+    return employees;
+  }
+};
+
+// Export both photoDb and employeeDb
+module.exports = { photoDb, employeeDb };
