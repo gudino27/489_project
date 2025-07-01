@@ -20,7 +20,6 @@ import './App.css';
 
 // Component imports for different app sections
 import AdminPanel from './AdminPanel';         // Admin pricing and photo management
-import WebsiteGallery from './WebsiteGallery'; // Public photo gallery
 
 // -----------------------------
 // Main Kitchen Designer Component
@@ -2502,10 +2501,8 @@ function App() {
       <Routes>
         {/* Main cabinet design application */}
         <Route path="/" element={<KitchenDesigner />} />
-        {/* Admin panel for price management and photo uploads */}
+        {/* Admin panel for price management, photo uploads as well as employee bio */}
         <Route path="/admin" element={<AdminPanel />} />
-        {/* Public photo gallery */}
-        <Route path="/photo" element={<WebsiteGallery />} />
       </Routes>
     </Router>
   );
