@@ -1,10 +1,27 @@
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px); /* 30 px lower */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .banner{
     text-align: center;
     font-size: 3rem;
     color: rgb(255, 255, 255);
     margin-top: 55px;
     font-family:Georgia, 'Times New Roman', Times, serif;
+    animation: fadeInUp
+                   0.8s
+                   ease-out
+                   0s
+                   forwards;
 }
+
 
 .introduction{
     text-align: center;
@@ -12,6 +29,11 @@
     font-size: 2rem;
     color: rgb(255, 255, 255);
     margin-top: 45px;
+    animation: fadeInUp
+                   0.8s
+                   ease-out
+                   0.2s
+                   forwards;
 }
 
 .intro-image{

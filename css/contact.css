@@ -1,0 +1,89 @@
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px); /* 30 px lower */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.banner{
+    text-align: left;
+    font-size: 3rem;
+    color: rgb(255, 255, 255);
+    margin-top: 55px;
+    margin-left: 20px;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    animation: fadeInUp
+                   0.8s
+                   ease-out
+                   0s
+                   forwards;
+}
+
+.introduction{
+    text-align: left;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 2rem;
+    color: rgb(255, 255, 255);
+    margin-top: 20px;
+    margin-left: 20px;
+    margin-bottom: 40px;
+    animation: fadeInUp
+                   0.8s
+                   ease-out
+                   0.2s
+                   forwards;
+}
+
+.description{
+    text-align: left;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    margin-top: 15px;
+    margin-left: 20px;
+}
+
+.form{
+    margin-inline: left;
+    margin-left: 20px;
+    margin-top: 15px;
+}
+
+.check{
+    margin-inline: left;
+    margin-left: 20px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.check input[type="checkbox"] {
+  display: none;
+}
+
+.check span {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 2px solid #888;
+  border-radius: 8px;
+  background-color: #eee;
+  transition: 0.2s;
+}
+
+.check input[type="checkbox"]:checked + span {
+  background-color: #444;
+  color: white;
+  border-color: #444;
+}
+
+button[type="submit"]{
+    margin-inline: left;
+    margin-left: 20px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
