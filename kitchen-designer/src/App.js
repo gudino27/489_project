@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
+import {
   RotateCw,        // Cabinet rotation icon
   Trash2,          // Delete element icon
   Calculator,      // Pricing calculator icon
@@ -42,7 +42,7 @@ const KitchenDesigner = () => {
     materials: {},     // Material choices per cabinet (by element ID)
     colorCount: 1      // Number of cabinet colors (affects pricing)
   });
-  
+
   const [bathroomData, setBathroomData] = useState({
     dimensions: { width: '', height: '', wallHeight: '96' },
     elements: [],
@@ -1005,277 +1005,277 @@ const KitchenDesigner = () => {
   // Send quote to contractor (modified to save to database)
 
 
-const sendQuote = async () => {
-  // Validate required client information
-  if (!clientInfo.name || (clientInfo.contactPreference === 'email' && !clientInfo.email) ||
-    (clientInfo.contactPreference !== 'email' && !clientInfo.phone)) {
-    alert('Please fill in all required contact information.');
-    return;
-  }
-
-  try {
-    // Show loading state
-    const loadingMessage = document.createElement('div');
-    loadingMessage.innerHTML = 'Capturing your design...';
-    loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;';
-    document.body.appendChild(loadingMessage);
-
-    // Helper function to capture SVG as base64
-    const captureSVG = (svgElement) => {
-      if (!svgElement) return null;
-      
-      try {
-        // Clone the SVG to avoid modifying the original
-        const clonedSvg = svgElement.cloneNode(true);
-        
-        // Add white background
-        const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        background.setAttribute('width', '100%');
-        background.setAttribute('height', '100%');
-        background.setAttribute('fill', 'white');
-        clonedSvg.insertBefore(background, clonedSvg.firstChild);
-        
-        // Serialize to string
-        const svgData = new XMLSerializer().serializeToString(clonedSvg);
-        
-        // Convert to base64
-        const base64 = btoa(unescape(encodeURIComponent(svgData)));
-        return `data:image/svg+xml;base64,${base64}`;
-      } catch (error) {
-        console.error('Error capturing SVG:', error);
-        return null;
-      }
-    };
-
-    // Capture floor plan
-    let floorPlanImage = null;
-    if (viewMode !== 'floor') {
-      setViewMode('floor');
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    const floorCanvas = canvasRef.current;
-    if (floorCanvas) {
-      floorPlanImage = captureSVG(floorCanvas);
+  const sendQuote = async () => {
+    // Validate required client information
+    if (!clientInfo.name || (clientInfo.contactPreference === 'email' && !clientInfo.email) ||
+      (clientInfo.contactPreference !== 'email' && !clientInfo.phone)) {
+      alert('Please fill in all required contact information.');
+      return;
     }
 
-    // Capture wall views
-    const wallViewImages = [];
-    setViewMode('wall');
-    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      // Show loading state
+      const loadingMessage = document.createElement('div');
+      loadingMessage.innerHTML = 'Capturing your design...';
+      loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;';
+      document.body.appendChild(loadingMessage);
 
-    for (let wall = 1; wall <= 4; wall++) {
-      setSelectedWall(wall);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const wallCanvas = wallViewRef.current;
-      if (wallCanvas) {
-        const wallImage = captureSVG(wallCanvas);
-        if (wallImage) {
-          wallViewImages.push({
-            wall: wall,
-            image: wallImage
-          });
-        }
-      }
-    }
-
-    // Return to floor view
-    setViewMode('floor');
-
-    loadingMessage.innerHTML = 'Generating PDF...';
-
-    // Generate PDF
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let currentY = 20;
-
-    // PDF Header
-    pdf.setFontSize(20);
-    pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 10;
-
-    pdf.setFontSize(12);
-    pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
-    currentY += 15;
-
-    // Client Information
-    pdf.setFontSize(12);
-    pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
-    currentY += 15;
-
-    // Add floor plan to PDF
-    if (floorPlanImage) {
-      pdf.setFontSize(14);
-      pdf.text('Floor Plan Design', 20, currentY);
-      currentY += 10;
-      
-      try {
-        pdf.addImage(floorPlanImage, 'PNG', 20, currentY, 170, 100);
-        currentY += 110;
-      } catch (e) {
-        console.error('Error adding floor plan to PDF:', e);
-        pdf.text('(Floor plan preview available in admin panel)', 20, currentY);
-        currentY += 10;
-      }
-    }
-
-    // Calculate totals
-    let grandTotal = 0;
-    if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
-    if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
-
-    // Add wall views on new page
-    if (wallViewImages.length > 0) {
-      pdf.addPage();
-      currentY = 20;
-      
-      pdf.setFontSize(16);
-      pdf.text('Wall Elevation Views', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 15;
-
-      for (let i = 0; i < wallViewImages.length; i++) {
-        if (i % 2 === 0 && i > 0) {
-          pdf.addPage();
-          currentY = 20;
-        }
-
-        pdf.setFontSize(12);
-        pdf.text(`Wall ${wallViewImages[i].wall}`, 20, currentY);
-        currentY += 5;
+      // Helper function to capture SVG as base64
+      const captureSVG = (svgElement) => {
+        if (!svgElement) return null;
 
         try {
-          pdf.addImage(wallViewImages[i].image, 'PNG', 20, currentY, 170, 80);
-          currentY += 90;
+          // Clone the SVG to avoid modifying the original
+          const clonedSvg = svgElement.cloneNode(true);
+
+          // Add white background
+          const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          background.setAttribute('width', '100%');
+          background.setAttribute('height', '100%');
+          background.setAttribute('fill', 'white');
+          clonedSvg.insertBefore(background, clonedSvg.firstChild);
+
+          // Serialize to string
+          const svgData = new XMLSerializer().serializeToString(clonedSvg);
+
+          // Convert to base64
+          const base64 = btoa(unescape(encodeURIComponent(svgData)));
+          return `data:image/svg+xml;base64,${base64}`;
+        } catch (error) {
+          console.error('Error capturing SVG:', error);
+          return null;
+        }
+      };
+
+      // Capture floor plan
+      let floorPlanImage = null;
+      if (viewMode !== 'floor') {
+        setViewMode('floor');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      const floorCanvas = canvasRef.current;
+      if (floorCanvas) {
+        floorPlanImage = captureSVG(floorCanvas);
+      }
+
+      // Capture wall views
+      const wallViewImages = [];
+      setViewMode('wall');
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      for (let wall = 1; wall <= 4; wall++) {
+        setSelectedWall(wall);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const wallCanvas = wallViewRef.current;
+        if (wallCanvas) {
+          const wallImage = captureSVG(wallCanvas);
+          if (wallImage) {
+            wallViewImages.push({
+              wall: wall,
+              image: wallImage
+            });
+          }
+        }
+      }
+
+      // Return to floor view
+      setViewMode('floor');
+
+      loadingMessage.innerHTML = 'Generating PDF...';
+
+      // Generate PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let currentY = 20;
+
+      // PDF Header
+      pdf.setFontSize(20);
+      pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 10;
+
+      pdf.setFontSize(12);
+      pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 15;
+
+      // Client Information
+      pdf.setFontSize(12);
+      pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
+      currentY += 8;
+      pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
+      currentY += 8;
+      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
+      currentY += 15;
+
+      // Add floor plan to PDF
+      if (floorPlanImage) {
+        pdf.setFontSize(14);
+        pdf.text('Floor Plan Design', 20, currentY);
+        currentY += 10;
+
+        try {
+          pdf.addImage(floorPlanImage, 'PNG', 20, currentY, 170, 100);
+          currentY += 110;
         } catch (e) {
-          console.error('Error adding wall view to PDF:', e);
+          console.error('Error adding floor plan to PDF:', e);
           pdf.text('(Wall view available in admin panel)', 20, currentY);
           currentY += 10;
         }
       }
-    }
 
-    // Add specifications
-    pdf.addPage();
-    currentY = 20;
+      // Calculate totals
+      let grandTotal = 0;
+      if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
+      if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
 
-    pdf.setFontSize(16);
-    pdf.text('Cabinet Specifications', 20, currentY);
-    currentY += 15;
+      // Add wall views on new page
+      if (wallViewImages.length > 0) {
+        pdf.addPage();
+        currentY = 20;
 
-    // Process each room
-    const roomsToInclude = [];
-    if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
-      roomsToInclude.push({ name: 'Kitchen', data: kitchenData });
-    }
-    if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
-      roomsToInclude.push({ name: 'Bathroom', data: bathroomData });
-    }
+        pdf.setFontSize(16);
+        pdf.text('Wall Elevation Views', pageWidth / 2, currentY, { align: 'center' });
+        currentY += 15;
 
-    for (const room of roomsToInclude) {
-      pdf.setFontSize(14);
-      pdf.text(`${room.name} (${room.data.dimensions.width}' × ${room.data.dimensions.height}')`, 20, currentY);
-      currentY += 8;
+        for (let i = 0; i < wallViewImages.length; i++) {
+          if (i % 2 === 0 && i > 0) {
+            pdf.addPage();
+            currentY = 20;
+          }
 
-      const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
-      
-      pdf.setFontSize(10);
-      cabinets.forEach((cabinet, index) => {
-        const material = room.data.materials[cabinet.id] || 'laminate';
-        pdf.text(`${index + 1}. ${cabinet.type}: ${cabinet.width}" × ${cabinet.depth}" - ${material}`, 25, currentY);
-        currentY += 6;
+          pdf.setFontSize(12);
+          pdf.text(`Wall ${wallViewImages[i].wall}`, 20, currentY);
+          currentY += 5;
 
-        if (currentY > pageHeight - 30) {
-          pdf.addPage();
-          currentY = 20;
+          try {
+            pdf.addImage(wallViewImages[i].image, 'PNG', 20, currentY, 170, 80);
+            currentY += 90;
+          } catch (e) {
+            console.error('Error adding wall view to PDF:', e);
+            pdf.text('(Wall view available in admin panel)', 20, currentY);
+            currentY += 10;
+          }
         }
-      });
-
-      const roomTotal = calculateTotalPrice(room.data);
-      pdf.setFontSize(11);
-      pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
-      currentY += 10;
-    }
-
-    // Grand total
-    pdf.setFontSize(14);
-    pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
-
-    // Get PDF blob
-    const pdfBlob = pdf.output('blob');
-
-    loadingMessage.innerHTML = 'Sending design...';
-
-    // Create form data
-    const formData = new FormData();
-    formData.append('pdf', pdfBlob, 'design.pdf');
-    
-    // Design data with images
-    const designData = {
-      client_name: clientInfo.name,
-      client_email: clientInfo.email || '',
-      client_phone: clientInfo.phone || '',
-      contact_preference: clientInfo.contactPreference,
-      kitchen_data: clientInfo.includeKitchen ? kitchenData : null,
-      bathroom_data: clientInfo.includeBathroom ? bathroomData : null,
-      include_kitchen: clientInfo.includeKitchen,
-      include_bathroom: clientInfo.includeBathroom,
-      total_price: grandTotal,
-      comments: clientInfo.comments || '',
-      floor_plan_image: floorPlanImage,
-      wall_view_images: wallViewImages
-    };
-    
-    console.log('Sending design:', {
-      hasFloorPlan: !!floorPlanImage,
-      wallViews: wallViewImages.length,
-      dataSize: JSON.stringify(designData).length
-    });
-    
-    formData.append('designData', JSON.stringify(designData));
-
-    // Send to backend
-    const response = await fetch(`${API_BASE}/api/designs`, {
-      method: 'POST',
-      body: formData
-    });
-
-    document.body.removeChild(loadingMessage);
-
-    if (response.ok) {
-      const result = await response.json();
-      
-      alert(`Thank you! Your design has been sent to ${COMPANY_NAME}.`);
-      
-      // Reset form
-      setClientInfo({
-        name: '',
-        email: '',
-        phone: '',
-        contactPreference: 'email',
-        includeKitchen: true,
-        includeBathroom: false,
-        comments: ''
-      });
-      
-      // Offer download
-      if (window.confirm('Would you like to download a copy?')) {
-        pdf.save(`cabinet-design-${clientInfo.name.replace(/\s+/g, '-')}.pdf`);
       }
-    } else {
-      throw new Error('Failed to send design');
-    }
 
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Error sending your design. Please try again.');
-  }
-};
+      // Add specifications
+      pdf.addPage();
+      currentY = 20;
+
+      pdf.setFontSize(16);
+      pdf.text('Cabinet Specifications', 20, currentY);
+      currentY += 15;
+
+      // Process each room
+      const roomsToInclude = [];
+      if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
+        roomsToInclude.push({ name: 'Kitchen', data: kitchenData });
+      }
+      if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
+        roomsToInclude.push({ name: 'Bathroom', data: bathroomData });
+      }
+
+      for (const room of roomsToInclude) {
+        pdf.setFontSize(14);
+        pdf.text(`${room.name} (${room.data.dimensions.width}' × ${room.data.dimensions.height}')`, 20, currentY);
+        currentY += 8;
+
+        const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
+
+        pdf.setFontSize(10);
+        cabinets.forEach((cabinet, index) => {
+          const material = room.data.materials[cabinet.id] || 'laminate';
+          pdf.text(`${index + 1}. ${cabinet.type}: ${cabinet.width}" × ${cabinet.depth}" - ${material}`, 25, currentY);
+          currentY += 6;
+
+          if (currentY > pageHeight - 30) {
+            pdf.addPage();
+            currentY = 20;
+          }
+        });
+
+        const roomTotal = calculateTotalPrice(room.data);
+        pdf.setFontSize(11);
+        pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
+        currentY += 10;
+      }
+
+      // Grand total
+      pdf.setFontSize(14);
+      pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
+
+      // Get PDF blob
+      const pdfBlob = pdf.output('blob');
+
+      loadingMessage.innerHTML = 'Sending design...';
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('pdf', pdfBlob, 'design.pdf');
+
+      // Design data with images
+      const designData = {
+        client_name: clientInfo.name,
+        client_email: clientInfo.email || '',
+        client_phone: clientInfo.phone || '',
+        contact_preference: clientInfo.contactPreference,
+        kitchen_data: clientInfo.includeKitchen ? kitchenData : null,
+        bathroom_data: clientInfo.includeBathroom ? bathroomData : null,
+        include_kitchen: clientInfo.includeKitchen,
+        include_bathroom: clientInfo.includeBathroom,
+        total_price: grandTotal,
+        comments: clientInfo.comments || '',
+        floor_plan_image: floorPlanImage,
+        wall_view_images: wallViewImages
+      };
+
+      console.log('Sending design:', {
+        hasFloorPlan: !!floorPlanImage,
+        wallViews: wallViewImages.length,
+        dataSize: JSON.stringify(designData).length
+      });
+
+      formData.append('designData', JSON.stringify(designData));
+
+      // Send to backend
+      const response = await fetch(`${API_BASE}/api/designs`, {
+        method: 'POST',
+        body: formData
+      });
+
+      document.body.removeChild(loadingMessage);
+
+      if (response.ok) {
+        const result = await response.json();
+
+        alert(`Thank you! Your design has been sent to ${COMPANY_NAME}.`);
+
+        // Reset form
+        setClientInfo({
+          name: '',
+          email: '',
+          phone: '',
+          contactPreference: 'email',
+          includeKitchen: true,
+          includeBathroom: false,
+          comments: ''
+        });
+
+        // Offer download
+        if (window.confirm('Would you like to download a copy?')) {
+          pdf.save(`cabinet-design-${clientInfo.name.replace(/\s+/g, '-')}.pdf`);
+        }
+      } else {
+        throw new Error('Failed to send design');
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error sending your design. Please try again.');
+    }
+  };
 
   // -----------------------------
   // Wall View Rendering Function
@@ -1329,7 +1329,7 @@ const sendQuote = async () => {
           const x = wall === 1 || wall === 3 ? element.x / scale : element.y / scale;
           const width = element.width;
           const height = element.actualHeight || elementSpec.fixedHeight;
-          
+
           // Calculate Y position based on mount height or floor placement
           const yPos = element.mountHeight
             ? wallHeight - height - element.mountHeight
@@ -1508,7 +1508,7 @@ const sendQuote = async () => {
             <p className="text-gray-600 mb-8 text-center">
               Design your {activeRoom}
             </p>
-            
+
             <div className="space-y-6">
               {/* Room Type Selection */}
               {/* Toggle between kitchen and bathroom design modes */}
@@ -1633,7 +1633,7 @@ const sendQuote = async () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex h-screen">
-        
+
         {/* ========== LEFT SIDEBAR ========== */}
         {/* Control panel containing all design tools and element properties */}
         <div className="w-80 bg-white shadow-lg p-6 overflow-y-auto">
@@ -1744,7 +1744,7 @@ const sendQuote = async () => {
                     <div>
                       <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
                     </div>
-                    
+
                     {/* Mount height controls for wall cabinets */}
                     {/* Only show for wall-mounted cabinet types */}
                     {(element.type === 'wall' || element.type === 'medicine') && (
@@ -1835,14 +1835,14 @@ const sendQuote = async () => {
 
                 // Return null if no element selected
                 if (!element) return null;
-                
+
                 return (
                   <div className="space-y-4">
                     {/* Element identification */}
                     <div>
                       <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
                     </div>
-                    
+
                     {/* Material selection for cabinets */}
                     {/* Only show material options for cabinet elements */}
                     {element.category === 'cabinet' && (
@@ -1856,13 +1856,19 @@ const sendQuote = async () => {
                           })}
                           className="w-full p-2 border rounded"
                         >
-                          <option value="laminate">Laminate (Standard)</option>
-                          <option value="wood">Solid Wood (+50%)</option>
-                          <option value="plywood">Plywood (+30%)</option>
+                          {Object.entries(materialMultipliers).map(([material, multiplier]) => {
+                            const percentage = multiplier === 1 ? 'Included' : `+${Math.round((multiplier - 1) * 100)}%`;
+                            const displayName = material.charAt(0).toUpperCase() + material.slice(1).replace(/-/g, ' ');
+                            return (
+                              <option key={material} value={material}>
+                                {displayName} ({percentage})
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                     )}
-                    
+
                     {/* Width - customizable for cabinets */}
                     {/* Allow width adjustment for cabinet elements only */}
                     {element.category === 'cabinet' && (
@@ -1878,7 +1884,7 @@ const sendQuote = async () => {
                         />
                       </div>
                     )}
-                    
+
                     {/* Depth - for specific cabinet types */}
                     {/* Show depth controls for base cabinets, tall cabinets, and vanities */}
                     {(element.type === 'base' || element.type === 'tall' || element.type === 'sink-base' ||
@@ -1895,7 +1901,7 @@ const sendQuote = async () => {
                           />
                         </div>
                       )}
-                    
+
                     {/* Height - for variable height elements */}
                     {/* Show height controls for wall cabinets, tall cabinets, medicine cabinets, and linen cabinets */}
                     {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen') && (
@@ -1917,7 +1923,7 @@ const sendQuote = async () => {
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Mount height for wall cabinets */}
                     {/* Controls for adjusting wall-mounted cabinet height from floor */}
                     {(element.type === 'wall' || element.type === 'medicine') && (
@@ -1936,7 +1942,7 @@ const sendQuote = async () => {
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Rotation Controls */}
                     {/* Left and right rotation buttons for element orientation */}
                     <div>
@@ -1962,8 +1968,8 @@ const sendQuote = async () => {
                       {/* Current rotation display */}
                       <p className="text-xs text-gray-500 mt-1">Current: {element.rotation}°</p>
                     </div>
-                    
-                                       
+
+
                     {/* Corner cabinet hinge direction */}
                     {/* Special controls for corner cabinet door orientation */}
                     {element.type === 'corner' && (
@@ -1987,7 +1993,7 @@ const sendQuote = async () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Delete Element Button */}
                     {/* Remove selected element from design */}
                     <button
@@ -2002,7 +2008,7 @@ const sendQuote = async () => {
               })()}
             </div>
           )}
-          
+
           {/* Reset Design Button */}
           {/* Clear all elements and start over */}
           <button
@@ -2012,12 +2018,12 @@ const sendQuote = async () => {
             Reset {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Design
           </button>
         </div>
-        
+
         {/* ========== MAIN CANVAS AREA ========== */}
         {/* Primary design workspace containing the visual interface */}
         <div className="flex-1 p-8 overflow-auto">
           <div className="bg-white rounded-lg shadow-lg p-6">
-            
+
             {/* Header */}
             {/* Title bar with room name and date */}
             <div className="flex justify-between items-start mb-6 border-b pb-4">
@@ -2029,7 +2035,7 @@ const sendQuote = async () => {
                 <p className="text-xs text-gray-600">Not To Scale</p>
               </div>
             </div>
-            
+
             {/* Pricing Summary */}
             {/* Expandable pricing panel showing cost breakdown */}
             {showPricing && currentRoomData.elements.some(el => el.category === 'cabinet') && (
@@ -2039,9 +2045,9 @@ const sendQuote = async () => {
                   {/* Base cabinet pricing */}
                   <div className="flex justify-between">
                     <span>Base Cabinet Price:</span>
-                                       <span>${(calculateTotalPrice() - (colorPricing[currentRoomData.colorCount] || 0)).toFixed(2)}</span>
+                    <span>${(calculateTotalPrice() - (colorPricing[currentRoomData.colorCount] || 0)).toFixed(2)}</span>
                   </div>
-                  
+
                   {/* Color options selector */}
                   <div className="flex justify-between">
                     <span>Color Options:</span>
@@ -2059,13 +2065,13 @@ const sendQuote = async () => {
                       <option value="custom">Custom Colors (+$500)</option>
                     </select>
                   </div>
-                  
+
                   {/* Total price display */}
                   <div className="border-t pt-2 font-semibold flex justify-between">
                     <span>Total Estimate:</span>
                     <span>${calculateTotalPrice().toFixed(2)}</span>
                   </div>
-                  
+
                   {/* Pricing disclaimer */}
                   <p className="text-xs text-gray-600 mt-2">
                     * This is an estimate. Final pricing may vary based on specific requirements.
@@ -2079,7 +2085,7 @@ const sendQuote = async () => {
                 <p className="text-sm text-gray-600 mb-4">
                   Click and drag cabinets to position them. They will snap to walls and other cabinets.
                 </p>
-                
+
                 {/* Floor Plan SVG Container */}
                 {/* Main interactive canvas for cabinet placement and arrangement */}
                 <div className="inline-block bg-white" ref={floorPlanRef}>
@@ -2105,10 +2111,10 @@ const sendQuote = async () => {
                         <path d={`M ${12 * scale} 0 L 0 0 0 ${12 * scale}`} fill="none" stroke="#f0f0f0" strokeWidth="0.5" />
                       </pattern>
                     </defs>
-                    
+
                     {/* Canvas Background */}
                     <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                    
+
                     {/* Room Floor with Grid Overlay */}
                     {/* Visual representation of room floor space with measurement grid */}
                     <rect
@@ -2118,7 +2124,7 @@ const sendQuote = async () => {
                       height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale}
                       fill="url(#grid)"
                     />
-                    
+
                     {/* Wall Structures with Thickness */}
                     {/* Gray rectangles representing physical walls with realistic thickness */}
                     <g>
@@ -2131,7 +2137,7 @@ const sendQuote = async () => {
                       {/* Right wall */}
                       <rect x={30 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y="20" width="10" height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 20} fill="#666" />
                     </g>
-                    
+
                     {/* Room Dimension Labels */}
                     {/* Text labels showing room measurements */}
                     <g>
@@ -2140,28 +2146,28 @@ const sendQuote = async () => {
                       <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="7" textAnchor="middle" fontSize="10" fill="#333">
                         {currentRoomData.dimensions.width}'
                       </text>
-                      
+
                       {/* Height dimension label at left */}
                       <line x1="10" y1="30" x2="10" y2={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} stroke="#333" strokeWidth="1" />
                       <text x="5" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#333" transform={`rotate(-90, 5, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
                         {currentRoomData.dimensions.height}'
                       </text>
                     </g>
-                    
+
                     {/* Render Design Elements */}
                     {/* Container for all cabinets and appliances, sorted by z-index for proper layering */}
                     <g transform="translate(30, 30)">
                       {currentRoomData.elements.sort((a, b) => a.zIndex - b.zIndex).map((element, index) => {
                         const isSelected = element.id === selectedElement;
                         const elementSpec = elementTypes[element.type];
-                        
-                        {/* Special Rendering for Corner Cabinets */}
-                        {/* Corner cabinets have unique L-shaped rendering */}
+
+                        {/* Special Rendering for Corner Cabinets */ }
+                        {/* Corner cabinets have unique L-shaped rendering */ }
                         if (element.type === 'corner') {
                           return (
                             <g key={element.id}>
                               {renderCornerCabinet(element)}
-                              
+
                               {/* Corner cabinet number badge */}
                               <circle
                                 cx={element.x + (element.width * scale) / 2}
@@ -2182,7 +2188,7 @@ const sendQuote = async () => {
                               >
                                 {currentRoomData.elements.indexOf(element) + 1}
                               </text>
-                              
+
                               {/* Selection indicator for corner cabinets */}
                               {isSelected && (
                                 <rect
@@ -2199,19 +2205,19 @@ const sendQuote = async () => {
                             </g>
                           );
                         }
-                        
-                        {/* Standard Element Rendering */}
-                        {/* Calculate display dimensions based on rotation */}
+
+                        {/* Standard Element Rendering */ }
+                        {/* Calculate display dimensions based on rotation */ }
                         const displayWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
                         const displayDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-                        
+
                         // Visual styling based on element category
                         const fillColor = element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3';
                         const strokeColor = isSelected ? '#3b82f6' : '#333';
-                        
+
                         return (
                           <g key={element.id} transform={`translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`}>
-                            
+
                             {/* Main Element Body */}
                             {/* Rectangle representing the cabinet or appliance footprint */}
                             <rect
@@ -2225,11 +2231,11 @@ const sendQuote = async () => {
                               style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
                               onMouseDown={(e) => handleMouseDown(e, element.id)}
                             />
-                            
+
                             {/* Door Indication for Cabinets */}
                             {/* Arc showing door swing direction for standard cabinets */}
                             {element.category === 'cabinet' && element.type !== 'sink-base' && element.type !== 'vanity-sink' && renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
-                            
+
                             {/* Special Sink Cabinet Graphics */}
                             {/* Detailed sink representation for sink-base and vanity-sink cabinets */}
                             {(element.type === 'sink-base' || element.type === 'vanity-sink') && (
@@ -2265,7 +2271,7 @@ const sendQuote = async () => {
                                 />
                               </>
                             )}
-                            
+
                             {/* Stove/Range Graphics */}
                             {/* Detailed representation of cooktop with burners */}
                             {element.type === 'stove' && (
@@ -2279,7 +2285,7 @@ const sendQuote = async () => {
                                 <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">ST{element.width}</text>
                               </>
                             )}
-                            
+
                             {/* Dishwasher Graphics */}
                             {/* Simple rectangular border with label */}
                             {element.type === 'dishwasher' && (
@@ -2288,7 +2294,7 @@ const sendQuote = async () => {
                                 <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">DW{element.width}</text>
                               </>
                             )}
-                            
+
                             {/* Refrigerator Graphics */}
                             {/* Detailed fridge representation with doors and handles */}
                             {element.type === 'refrigerator' && (
@@ -2321,7 +2327,7 @@ const sendQuote = async () => {
                                 </text>
                               </>
                             )}
-                            
+
                             {/* Toilet Graphics */}
                             {/* Detailed toilet representation with tank and bowl */}
                             {element.type === 'toilet' && (
@@ -2367,7 +2373,7 @@ const sendQuote = async () => {
                                 />
                               </>
                             )}
-                            
+
                             {/* Bathtub Graphics */}
                             {/* Detailed bathtub with rim, interior, faucet, and drain */}
                             {element.type === 'bathtub' && (
@@ -2410,7 +2416,7 @@ const sendQuote = async () => {
                                 />
                               </>
                             )}
-                            
+
                             {/* Shower Graphics */}
                             {/* Shower stall with base, pan, door, and fixtures */}
                             {element.type === 'shower' && (
@@ -2526,7 +2532,7 @@ const sendQuote = async () => {
                         );
                       })}
                     </g>
-                    
+
                     {/* Wall Number Labels */}
                     {/* Numbered labels on each wall for reference in wall view */}
                     <g>
@@ -2558,7 +2564,7 @@ const sendQuote = async () => {
                 {renderWallView()}
               </div>
             )}
-            
+
             {/* Element List Summary */}
             {/* Table showing all placed elements with their specifications */}
             {currentRoomData.elements.length > 0 && viewMode === 'floor' && (
@@ -2584,7 +2590,7 @@ const sendQuote = async () => {
           </div>
         </div>
       </div>
-      
+
       {/* Quote Form Modal */}
       {/* Overlay modal for collecting customer information and generating quotes */}
       {showQuoteForm && (
@@ -2595,7 +2601,7 @@ const sendQuote = async () => {
             <p className="text-sm text-gray-600 mb-4">
               Fill out your information below and we'll send you a detailed quote.
             </p>
-            
+
             <div className="space-y-4">
               {/* Customer name input */}
               <div>
@@ -2608,7 +2614,7 @@ const sendQuote = async () => {
                   placeholder="Your full name"
                 />
               </div>
-              
+
               {/* Contact preference selector */}
               <div>
                 <label className="block text-sm font-medium mb-1">Preferred Contact Method *</label>
@@ -2622,7 +2628,7 @@ const sendQuote = async () => {
                   <option value="text">Text Message</option>
                 </select>
               </div>
-              
+
               {/* Conditional contact information based on preference */}
               {clientInfo.contactPreference === 'email' ? (
                 <div>
@@ -2647,7 +2653,7 @@ const sendQuote = async () => {
                   />
                 </div>
               )}
-              
+
               {/* Room inclusion options */}
               <div>
                 <label className="block text-sm font-medium mb-2">Include in Quote:</label>
@@ -2678,7 +2684,7 @@ const sendQuote = async () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Additional comments field */}
               <div>
                 <label className="block text-sm font-medium mb-1">Comments/Special Requests</label>
@@ -2689,7 +2695,7 @@ const sendQuote = async () => {
                   placeholder="Any specific requirements, questions, or notes about wall modifications..."
                 />
               </div>
-              
+
               {/* Process information panel */}
               <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
                 <p className="font-medium mb-1">What happens next?</p>
@@ -2700,7 +2706,7 @@ const sendQuote = async () => {
                   <li>We'll contact you within 1-4 business days via your preferred method</li>
                 </ul>
               </div>
-              
+
               {/* Modal action buttons */}
               <div className="flex gap-2 pt-4">
                 {/* Cancel button */}
@@ -2740,7 +2746,7 @@ function App() {
         <Route path="/" element={<KitchenDesigner />} />
         {/* Admin panel for price management, photo uploads as well as employee bio */}
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path ="/designpreview" element={<DesignPreview />} />
+        <Route path="/designpreview" element={<DesignPreview />} />
       </Routes>
     </Router>
   );

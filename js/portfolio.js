@@ -33,15 +33,7 @@ async function loadPhotos() {
             allPhotos = JSON.parse(savedPhotos);
         } else {
             // Demo photos if nothing is saved
-            allPhotos = [
-                { category: 'kitchen', title: 'Modern Kitchen 1', url: 'placeholder.jpg' },
-                { category: 'kitchen', title: 'Modern Kitchen 2', url: 'placeholder.jpg' },
-                { category: 'kitchen', title: 'Modern Kitchen 3', url: 'placeholder.jpg' },
-                { category: 'bathroom', title: 'Luxury Bathroom 1', url: 'placeholder.jpg' },
-                { category: 'bathroom', title: 'Luxury Bathroom 2', url: 'placeholder.jpg' },
-                { category: 'livingroom', title: 'Living Room Design', url: 'placeholder.jpg' },
-                { category: 'bedroom', title: 'Master Bedroom', url: 'placeholder.jpg' },
-                { category: 'laundryroom', title: 'Laundry Room Storage', url: 'placeholder.jpg' }
+            allPhotos = [             
             ];
         }
     }
@@ -129,7 +121,7 @@ function showSlideshow() {
     const fullSrc = `${API_BASE}/photos${photo.full || photo.url}`;
 
     slide.innerHTML = `
-      <img src="${thumbSrc}" 
+      <img src="${fullSrc}" 
            alt="${photo.title}"
            class="slideshow-image"
            style="cursor: zoom-in;"

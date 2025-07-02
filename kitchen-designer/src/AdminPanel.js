@@ -656,18 +656,6 @@ const AdminPanel = () => {
                   </div>
 </div>
 
-{hasUnsavedChanges && (
-  <div className="sticky bottom-4 flex justify-end">
-    <button
-      onClick={savePriceChanges}
-      disabled={saveStatus === 'saving'}
-      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-lg"
-    >
-      {saveStatus === 'saving' ? 'Saving...' : 'Save All Changes'}
-    </button>
-  </div>
-)}
-
                 {/* Refresh Button */}
                 <div className="text-center pt-4">
                   <button

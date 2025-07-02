@@ -41,14 +41,10 @@
  .slideshow-container {
      max-width: 25%;
      height: auto;
-     padding:20px;
      position: relative;
      margin: auto;
      display: none;
-     background-color: #222;
      border-radius: 10px;
-     overflow: hidden;
-     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
  }
 
  .slideshow-container.active {
@@ -112,17 +108,17 @@
      position: absolute;
      bottom: auto;
      left: 0;
-     top: 90%;
+     top: auto;
      width: 100%;
      text-align: center;
-     
+     border-radius: 10px;
      background-color: rgba(0, 0, 0, 0.7);
  }
 
  /* The dots/bullets/indicators */
  .dots-container {
      text-align: center;
-     padding: 20px;
+     padding: auto;
  }
 
  .dot {
@@ -215,3 +211,4 @@
          opacity: 1;
      }
  }
+ 
