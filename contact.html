@@ -10,7 +10,7 @@
 
 </head>
 
-<body>
+<body style="background-color:  rgb(110, 110, 110);">
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand" id="main-nav" style="background-color: rgb(0, 0, 0);">
         <a class="nav-link text-white" href="home.html">Home</a>
@@ -32,5 +32,87 @@
         crossorigin="anonymous">
     </script>
     <script src="js/contact.js"></script>
+
+    <div class="banner">
+        Contact Master Build Cabinets
+    </div>
+
+    <div class="introduction">
+        If you have any questions related to estimates or services please fill
+        out the contact form below. A team member will get back to you as soon
+        as possible.
+    </div>
+
+    <div class="description">
+        Please fill out all fields.
+    </div>
+
+    <div class="form">
+        <input type="text" id="firstName" placeholder="First name">
+    </div>
+
+    <div class="form">
+        <input type="text" id="lastName" placeholder="Last name">
+    </div> 
+
+    <div class="form">
+        <input type="text" id="email" placeholder="Email">
+    </div>
+
+    <div class="form">
+        <input type="tel" id="phone" placeholder="Phone number" 
+        inputmode="numeric" pattern="\d{10}" maxlength="10">
+    </div>
+
+    <div class="description">
+        What can we help you with?
+    </div>
+
+    <div class="check">
+        <label>
+            <input type="checkbox" value="kitchen">
+            <span>Kitchen</span>
+        </label>
+        <label>
+            <input type="checkbox" value="bathroom">
+            <span>Bathroom</span>
+        </label>
+        <label>
+            <input type="checkbox" value="other">
+            <span>Other</span>
+        </label>
+    </div>
+    
+    <div class="description">
+        Make sure all information is correct before submitting.
+    </div>
+
+    <button type="submit" onclick="makeContact()">Submit</button>
+
+    <script>
+        function makeContact() {
+            const first = document.getElementById("firstName").value.trim();
+            const last = document.getElementById("lastName").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const number = document.getElementById("phone").value.trim();
+
+            if(!first || !last || !email || !number){
+                alert("Fill in all fields to submit.")
+                return;
+            }
+            if(!email.includes("@")){
+                alert("Invalid email address.")
+                return;
+            }
+
+            document.getElementById("firstName").value ="";
+            document.getElementById("lastName").value ="";
+            document.getElementById("email").value ="";
+            document.getElementById("phone").value ="";
+
+            alert("Thank you, we will be in touch!")
+        }
+    </script>
+
 </body>
 </html>
