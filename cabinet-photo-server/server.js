@@ -684,14 +684,21 @@ app.get('/api/prices', async (req, res) => {
       materialMultipliers[item.material_type] = parseFloat(item.multiplier);
     });
     
-    // Get the color pricing
+    // Get color pricing
     const colors = await db.all('SELECT * FROM color_pricing');
     const colorPricing = {};
     colors.forEach(item => {
-      colorPricing[item.color_count] = parseFloat(item.price_addition);
+      const key = isNaN(item.color_count) ? item.color_count : parseInt(item.color_count);
+      colorPricing[key] = parseFloat(item.price_addition);
     });
     
     await db.close();
+    
+    console.log('Loaded prices with materials:', {
+      basePrices,
+      materialMultipliers,
+      colorPricing
+    });
     
     res.json({
       basePrices,
@@ -700,11 +707,10 @@ app.get('/api/prices', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching prices:', error);
-    res.status(500).json({ error: 'Failed to fetch prices' });
+    console.error('Error loading prices:', error);
+    res.status(500).json({ error: 'Failed to load prices' });
   }
 });
-
 // Update the cabinet prices
 app.put('/api/prices/cabinets', async (req, res) => {
   try {
@@ -732,32 +738,66 @@ app.put('/api/prices/cabinets', async (req, res) => {
     res.status(500).json({ error: 'Failed to update cabinet prices' });
   }
 });
-
+app.get('/api/prices/materials', async (req, res) => {
+  try {
+    const db = await getDb();
+    const materials = await db.all('SELECT * FROM material_pricing ORDER BY material_type');
+    
+    // Convert to object format for frontend
+    const materialObject = {};
+    materials.forEach(m => {
+      materialObject[m.material_type] = parseFloat(m.multiplier);
+    });
+    
+    await db.close();
+    console.log('Loaded materials:', materialObject);
+    res.json(materialObject);
+  } catch (error) {
+    console.error('Error fetching materials:', error);
+    res.status(500).json({ error: 'Failed to fetch materials' });
+  }
+});
 // Update the material multipliers
 app.put('/api/prices/materials', async (req, res) => {
   try {
-    const db = await getDb();
     const materials = req.body;
+    console.log('Saving materials:', materials);
     
-    console.log('Updating material multipliers:', materials);
+    const db = await getDb();
     
-    // Update each material multiplier
-    for (const [materialType, multiplier] of Object.entries(materials)) {
-      await db.run(
-        `UPDATE material_pricing 
-         SET multiplier = ?, updated_at = CURRENT_TIMESTAMP 
-         WHERE material_type = ?`,
-        [multiplier, materialType]
+    // Start a transaction
+    await db.run('BEGIN TRANSACTION');
+    
+    try {
+      // Delete all existing materials
+      await db.run('DELETE FROM material_pricing');
+      
+      // Insert all materials (including new ones)
+      const stmt = await db.prepare(
+        'INSERT INTO material_pricing (material_type, multiplier) VALUES (?, ?)'
       );
+      
+      for (const [material, multiplier] of Object.entries(materials)) {
+        await stmt.run(material, multiplier);
+        console.log(`Inserted material: ${material} with multiplier: ${multiplier}`);
+      }
+      
+      await stmt.finalize();
+      await db.run('COMMIT');
+      
+      console.log('Materials saved successfully');
+      res.json({ success: true, message: 'Materials saved successfully' });
+      
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
+    } finally {
+      await db.close();
     }
     
-    await db.close();
-    
-    res.json({ success: true, message: 'Material multipliers updated successfully' });
-    
   } catch (error) {
-    console.error('Error updating material multipliers:', error);
-    res.status(500).json({ error: 'Failed to update material multipliers' });
+    console.error('Error saving materials:', error);
+    res.status(500).json({ error: 'Failed to save materials: ' + error.message });
   }
 });
 

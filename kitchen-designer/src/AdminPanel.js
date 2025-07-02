@@ -1,5 +1,5 @@
 // React core & icon imports
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect} from 'react';
 import {
   Settings,
   DollarSign,
@@ -9,11 +9,15 @@ import {
   LogOut,
   Lock,
   IdCardLanyard,
-  FileText
+  FileText,
+  Plus,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 // Photo manager component for handling uploads to databse
 // This component will handle the photo upload, display, and management functionality
-import CategoryPhotoManager from './catergoryPhotoManager';
+import CategoryPhotoManager from './catergoryPhotoManager'; 
+
 // Employee management component for handling employee data
 import EmployeeManager from './EmployeeManager';
 // view designs from the admin panel
@@ -47,11 +51,13 @@ const AdminPanel = () => {
     'medicine': 120,
     'linen': 350
   });
-
+  const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({ name: '', multiplier: 1.0 });
+  const [editingMaterial, setEditingMaterial] = useState(null);
   const [materialMultipliers, setMaterialMultipliers] = useState({
     'laminate': 1.0,
     'wood': 1.5,
-    'plywood': 1.3
+    'plywood': 1.3,
   });
 
   const [colorPricing, setColorPricing] = useState({
@@ -97,7 +103,43 @@ const AdminPanel = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('adminAuth');
   };
+  const addMaterial = () => {
+    if (!newMaterial.name || newMaterial.name.trim() === '') {
+      alert('Please enter a material name');
+      return;
+    }
 
+    const key = newMaterial.name.toLowerCase().replace(/\s+/g, '-');
+
+    if (materialMultipliers[key]) {
+      alert('This material already exists');
+      return;
+    }
+
+    setMaterialMultipliers({
+      ...materialMultipliers,
+      [key]: parseFloat(newMaterial.multiplier)
+    });
+
+    setNewMaterial({ name: '', multiplier: 1.0 });
+    setShowMaterialForm(false);
+    setHasUnsavedChanges(true);
+  };
+
+  const deleteMaterial = (key) => {
+    const defaultMaterials = ['laminate', 'wood', 'plywood'];
+    if (defaultMaterials.includes(key)) {
+      alert('Cannot delete default materials');
+      return;
+    }
+
+    if (window.confirm(`Delete material "${key}"?`)) {
+      const newMaterials = { ...materialMultipliers };
+      delete newMaterials[key];
+      setMaterialMultipliers(newMaterials);
+      setHasUnsavedChanges(true);
+    }
+  };
   // -----------------------------
   // Load prices from the database on component mount
   // This function will fetch the prices from the backend API and update the state
@@ -145,61 +187,60 @@ const AdminPanel = () => {
   // This function will send the updated prices to the backend API
   // -----------------------------
   const savePriceChanges = async () => {
-    setSaveStatus('saving');
+  setSaveStatus('saving');
+  
+  try {
+    console.log('Saving prices to database...');
+    
+    // Save base prices
+    const cabinetResponse = await fetch(`${API_BASE}/api/prices/cabinets`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(basePrices)
+    });
 
-    try {
-      // Prepare data to send
-      console.log('Saving prices to database...');
-      //save base prices, material multipliers, and color pricing
-
-      const cabinetResponse = await fetch(`${API_BASE}/api/prices/cabinets`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(basePrices)
-      });
-
-      if (!cabinetResponse.ok) {
-        throw new Error('Failed to save cabinet prices');
-      }
-      // Save material multipliers
-      const materialResponse = await fetch(`${API_BASE}/api/prices/materials`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(materialMultipliers)
-      });
-
-      if (!materialResponse.ok) {
-        throw new Error('Failed to save material multipliers');
-      }
-
-      // Save color pricing
-      const colorResponse = await fetch(`${API_BASE}/api/prices/colors`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(colorPricing)
-      });
-
-      if (!colorResponse.ok) {
-        throw new Error('Failed to save color pricing');
-      }
-
-      setSaveStatus('saved');
-      setHasUnsavedChanges(false);
-      console.log('Prices saved successfully!');
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSaveStatus(''), 3000);
-
-    } catch (error) {
-      console.error('Error saving prices:', error);
-      setSaveStatus('error');
-      alert(`Failed to save prices: ${error.message}\n\nMake sure the server is running and the database is set up.`);
-
-      // Clear error message after 5 seconds
-      setTimeout(() => setSaveStatus(''), 5000);
+    if (!cabinetResponse.ok) {
+      throw new Error('Failed to save cabinet prices');
     }
-  };
+    
+    // Save material multipliers - MAKE SURE THIS IS HERE
+    console.log('Saving materials:', materialMultipliers);
+    const materialResponse = await fetch(`${API_BASE}/api/prices/materials`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(materialMultipliers)
+    });
 
+    if (!materialResponse.ok) {
+      const error = await materialResponse.text();
+      console.error('Material save error:', error);
+      throw new Error('Failed to save material multipliers');
+    }
+    
+    // Save color pricing
+    const colorResponse = await fetch(`${API_BASE}/api/prices/colors`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(colorPricing)
+    });
+
+    if (!colorResponse.ok) {
+      throw new Error('Failed to save color pricing');
+    }
+
+    setSaveStatus('saved');
+    setHasUnsavedChanges(false);
+    console.log('All prices saved successfully!');
+    
+    // Show success message
+    setTimeout(() => setSaveStatus(''), 2000);
+    
+  } catch (error) {
+    console.error('Error saving prices:', error);
+    alert('Failed to save prices: ' + error.message);
+    setSaveStatus('error');
+  }
+};
   // -----------------------------
   // check for authentication status
   // This will determine if the user is logged in or not
@@ -283,8 +324,8 @@ const AdminPanel = () => {
             <button
               onClick={() => setActiveTab('prices')}
               className={`py-4 px-6 border-b-2 transition ${activeTab === 'prices'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -295,8 +336,8 @@ const AdminPanel = () => {
             <button
               onClick={() => setActiveTab('photos')}
               className={`py-4 px-6 border-b-2 transition ${activeTab === 'photos'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -307,8 +348,8 @@ const AdminPanel = () => {
             <button
               onClick={() => setActiveTab('designs')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'designs'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               <FileText className="inline w-4 h-4 mr-2" />
@@ -317,8 +358,8 @@ const AdminPanel = () => {
             <button
               onClick={() => setActiveTab('employees')}
               className={`py-4 px-6 border-b-2 transition ${activeTab === 'employees'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
                 }`}
             >
               <div className="flex items-center gap-2">
@@ -402,36 +443,133 @@ const AdminPanel = () => {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Material Multipliers</h3>
+                    <button
+                      onClick={() => setShowMaterialForm(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Material
+                    </button>
+                  </div>
 
-                {/* Material Multipliers */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-xl font-semibold mb-4">Material Multipliers</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {Object.entries(materialMultipliers).map(([material, multiplier]) => (
-                      <div key={material} className="border rounded-lg p-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          {material.charAt(0).toUpperCase() + material.slice(1)}
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">×</span>
-                          <input
-                            type="number"
-                            value={multiplier}
-                            onChange={(e) => {
-                              setMaterialMultipliers({ ...materialMultipliers, [material]: parseFloat(e.target.value) || 1 });
-                              setHasUnsavedChanges(true);
-                            }}
-                            className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
-                            min="0.1"
-                            max="5"
-                            step="0.1"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {((multiplier - 1) * 100).toFixed(0)}% {multiplier > 1 ? 'increase' : 'decrease'}
-                        </p>
+                  {/* Add Material Form */}
+                  {showMaterialForm && (
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+                      <h4 className="font-medium mb-3">Add New Material</h4>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          placeholder="Material Name (e.g., Marble)"
+                          value={newMaterial.name}
+                          onChange={(e) => setNewMaterial({ ...newMaterial, name: e.target.value })}
+                          className="flex-1 px-3 py-2 border rounded"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Multiplier"
+                          value={newMaterial.multiplier}
+                          onChange={(e) => setNewMaterial({ ...newMaterial, multiplier: e.target.value })}
+                          step="0.1"
+                          min="0.1"
+                          className="w-32 px-3 py-2 border rounded"
+                        />
+                        <button
+                          onClick={addMaterial}
+                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMaterialForm(false);
+                            setNewMaterial({ name: '', multiplier: 1.0 });
+                          }}
+                          className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
                       </div>
-                    ))}
+                      <p className="text-sm text-gray-600 mt-2">
+                        Example: 1.0 = base price, 1.5 = 50% more, 2.0 = double price
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Material List */}
+                  <div className="bg-white rounded-lg border">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Multiplier</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Example ($100 base)</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {Object.entries(materialMultipliers).map(([material, multiplier]) => (
+                          <tr key={material}>
+                            <td className="px-4 py-3">
+                              <span className="font-medium">
+                                {material.charAt(0).toUpperCase() + material.slice(1).replace(/-/g, ' ')}
+                              </span>
+                              <span className="text-xs text-gray-500 block">({material})</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {editingMaterial === material ? (
+                                <input
+                                  type="number"
+                                  value={multiplier}
+                                  onChange={(e) => {
+                                    setMaterialMultipliers({
+                                      ...materialMultipliers,
+                                      [material]: parseFloat(e.target.value)
+                                    });
+                                    setHasUnsavedChanges(true);
+                                  }}
+                                  onBlur={() => setEditingMaterial(null)}
+                                  onKeyPress={(e) => e.key === 'Enter' && setEditingMaterial(null)}
+                                  step="0.1"
+                                  min="0.1"
+                                  className="w-20 px-2 py-1 border rounded"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span>{multiplier}x</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              ${(100 * multiplier).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => setEditingMaterial(material)}
+                                className="text-blue-600 hover:text-blue-800 mr-3"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              {!['laminate', 'wood', 'plywood'].includes(material) && (
+                                <button
+                                  onClick={() => deleteMaterial(material)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-blue-50 rounded text-sm">
+                    <p className="text-blue-800">
+                      <strong>How it works:</strong> Base price × Material multiplier × Size multiplier = Final price
+                    </p>
                   </div>
                 </div>
 
@@ -516,7 +654,19 @@ const AdminPanel = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+</div>
+
+{hasUnsavedChanges && (
+  <div className="sticky bottom-4 flex justify-end">
+    <button
+      onClick={savePriceChanges}
+      disabled={saveStatus === 'saving'}
+      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-lg"
+    >
+      {saveStatus === 'saving' ? 'Saving...' : 'Save All Changes'}
+    </button>
+  </div>
+)}
 
                 {/* Refresh Button */}
                 <div className="text-center pt-4">
