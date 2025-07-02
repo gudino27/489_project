@@ -284,6 +284,204 @@ const employeeDb = {
     return employees;
   }
 };
+const designDb = {
+  async saveDesign(designData) {
+    const db = await getDb();
+    
+    try {
+      const {
+        client_name,
+        client_email,
+        client_phone,
+        contact_preference,
+        kitchen_data,
+        bathroom_data,
+        include_kitchen,
+        include_bathroom,
+        total_price,
+        comments,
+        pdf_data,
+        floor_plan_image,
+        wall_view_images
+      } = designData;
 
+      console.log('Saving design with images:', {
+        has_floor_plan: !!floor_plan_image,
+        wall_view_count: wall_view_images?.length || 0
+      });
+
+      const result = await db.run(
+        `INSERT INTO designs (
+          client_name, client_email, client_phone, contact_preference,
+          kitchen_data, bathroom_data, include_kitchen, include_bathroom,
+          total_price, comments, pdf_data, floor_plan_image, wall_view_images
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          client_name, 
+          client_email, 
+          client_phone, 
+          contact_preference,
+          kitchen_data ? JSON.stringify(kitchen_data) : null,
+          bathroom_data ? JSON.stringify(bathroom_data) : null,
+          include_kitchen ? 1 : 0, 
+          include_bathroom ? 1 : 0,
+          total_price, 
+          comments, 
+          pdf_data,
+          floor_plan_image,
+          wall_view_images ? JSON.stringify(wall_view_images) : null
+        ]
+      );
+
+      console.log('Design saved with ID:', result.lastID);
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      console.error('Database save error:', error);
+      throw error;
+    }
+  },
+
+  async getDesign(id) {
+    const db = await getDb();
+    
+    try {
+      const design = await db.get('SELECT * FROM designs WHERE id = ?', id);
+      
+      if (design) {
+        // Parse JSON data
+        try {
+          if (design.kitchen_data) {
+            design.kitchen_data = JSON.parse(design.kitchen_data);
+          }
+        } catch (e) {
+          console.error('Failed to parse kitchen_data:', e);
+          design.kitchen_data = null;
+        }
+        
+        try {
+          if (design.bathroom_data) {
+            design.bathroom_data = JSON.parse(design.bathroom_data);
+          }
+        } catch (e) {
+          console.error('Failed to parse bathroom_data:', e);
+          design.bathroom_data = null;
+        }
+
+        try {
+          if (design.wall_view_images) {
+            design.wall_view_images = JSON.parse(design.wall_view_images);
+          }
+        } catch (e) {
+          console.error('Failed to parse wall_view_images:', e);
+          design.wall_view_images = null;
+        }
+        
+        // Update viewed status
+        await db.run(
+          'UPDATE designs SET status = ?, viewed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?',
+          ['viewed', id, 'new']
+        );
+      }
+      
+      await db.close();
+      return design;
+    } catch (error) {
+      await db.close();
+      console.error('Error retrieving design:', error);
+      throw error;
+    }
+  },
+
+  async getDesignPdf(id) {
+    const db = await getDb();
+    const result = await db.get('SELECT pdf_data FROM designs WHERE id = ?', id);
+    await db.close();
+    return result ? result.pdf_data : null;
+  },
+
+  async updateDesignStatus(id, status, viewedBy = null) {
+    const db = await getDb();
+    const result = await db.run(
+      'UPDATE designs SET status = ?, viewed_at = CURRENT_TIMESTAMP, viewed_by = ? WHERE id = ?',
+      [status, viewedBy, id]
+    );
+    await db.close();
+    return result.changes > 0;
+  },
+
+  async getDesignStats() {
+    const db = await getDb();
+    const stats = await db.get(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_count,
+        SUM(CASE WHEN status = 'viewed' THEN 1 ELSE 0 END) as viewed_count
+      FROM designs
+    `);
+    await db.close();
+    return stats;
+  },
+
+  // Get all designs
+  async getAllDesigns(status = null) {
+    const db = await getDb();
+    
+    try {
+      let query = 'SELECT * FROM designs';
+      const params = [];
+      
+      if (status) {
+        query += ' WHERE status = ?';
+        params.push(status);
+      }
+      
+      query += ' ORDER BY created_at DESC';
+      
+      const designs = await db.all(query, params);
+      
+      // Parse JSON data for each design
+      const processedDesigns = designs.map(design => {
+        try {
+          if (design.kitchen_data) {
+            design.kitchen_data = JSON.parse(design.kitchen_data);
+          }
+        } catch (e) {
+          console.error('Failed to parse kitchen_data for design', design.id, ':', e);
+          design.kitchen_data = null;
+        }
+        
+        try {
+          if (design.bathroom_data) {
+            design.bathroom_data = JSON.parse(design.bathroom_data);
+          }
+        } catch (e) {
+          console.error('Failed to parse bathroom_data for design', design.id, ':', e);
+          design.bathroom_data = null;
+        }
+
+        try {
+          if (design.wall_view_images) {
+            design.wall_view_images = JSON.parse(design.wall_view_images);
+          }
+        } catch (e) {
+          console.error('Failed to parse wall_view_images for design', design.id, ':', e);
+          design.wall_view_images = null;
+        }
+        
+        return design;
+      });
+      
+      await db.close();
+      return processedDesigns;
+      
+    } catch (error) {
+      await db.close();
+      console.error('Error retrieving designs:', error);
+      throw error;
+    }
+  },
+};
 // Export both photoDb and employeeDb
-module.exports = { photoDb, employeeDb };
+module.exports = { photoDb, employeeDb , designDb};

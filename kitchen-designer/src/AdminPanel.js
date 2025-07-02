@@ -1,37 +1,42 @@
 // React core & icon imports
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, 
-  DollarSign, 
-  Image, 
-  Save, 
+import {
+  Settings,
+  DollarSign,
+  Image,
+  Save,
   Check,
   LogOut,
   Lock,
-  IdCardLanyard
+  IdCardLanyard,
+  FileText
 } from 'lucide-react';
 // Photo manager component for handling uploads to databse
 // This component will handle the photo upload, display, and management functionality
 import CategoryPhotoManager from './catergoryPhotoManager';
 // Employee management component for handling employee data
 import EmployeeManager from './EmployeeManager';
+// view designs from the admin panel
+
+import DesignViewer from './DesignViewer';
+
 // Top-level AdminPanel component
 const AdminPanel = () => {
- // -----------------------------
+  // -----------------------------
   // Authentication state and login credentials
   // This state will track if the user is authenticated and hold login credentials
   // -----------------------------
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginCredentials, setLoginCredentials] = useState({ username: '', password: '' });
-    // UI tab state (either 'prices' or 'photos')
-    // This state will track which tab is currently active in the admin panel
+  // UI tab state (either 'prices' or 'photos')
+  // This state will track which tab is currently active in the admin panel
   const [activeTab, setActiveTab] = useState('prices');
-  
+
   // -----------------------------
   // Pricing configuration state updated dynamically
   // This state will hold the base prices, material multipliers, and color pricing
   // -----------------------------
-const [basePrices, setBasePrices] = useState({
+  const [basePrices, setBasePrices] = useState({
     'base': 250,
     'sink-base': 320,
     'wall': 180,
@@ -42,13 +47,13 @@ const [basePrices, setBasePrices] = useState({
     'medicine': 120,
     'linen': 350
   });
-  
+
   const [materialMultipliers, setMaterialMultipliers] = useState({
     'laminate': 1.0,
     'wood': 1.5,
     'plywood': 1.3
   });
-  
+
   const [colorPricing, setColorPricing] = useState({
     1: 0,
     2: 100,
@@ -56,27 +61,27 @@ const [basePrices, setBasePrices] = useState({
     'custom': 500
   });
 
-    // -----------------------------
-    // UI state for unsaved changes, save status, and loading state
-    // This state will track if there are unsaved changes, the status of the last save operation, and if prices are currently loading
-    // -----------------------------
+  // -----------------------------
+  // UI state for unsaved changes, save status, and loading state
+  // This state will track if there are unsaved changes, the status of the last save operation, and if prices are currently loading
+  // -----------------------------
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [loadingPrices, setLoadingPrices] = useState(true);
 
 
-    // -----------------------------
-    // API base URL - this will be used to connect to the backend server
-    // This URL will be used to fetch and save prices from/to the backend
-    // -----------------------------
+  // -----------------------------
+  // API base URL - this will be used to connect to the backend server
+  // This URL will be used to fetch and save prices from/to the backend
+  // -----------------------------
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-    // -----------------------------
-    // Authentication handlers
-    // These functions will handle user login and logout
-    // -----------------------------
-    // Handle login with hardcoded credentials for demo purposes
-    // In production, this will be replaced with a secure authentication method
+  // -----------------------------
+  // Authentication handlers
+  // These functions will handle user login and logout
+  // -----------------------------
+  // Handle login with hardcoded credentials for demo purposes
+  // In production, this will be replaced with a secure authentication method
   const handleLogin = (e) => {
     e.preventDefault();
     // In production, validate against backend for security
@@ -93,19 +98,19 @@ const [basePrices, setBasePrices] = useState({
     localStorage.removeItem('adminAuth');
   };
 
-    // -----------------------------
-    // Load prices from the database on component mount
-    // This function will fetch the prices from the backend API and update the state
-    // -----------------------------
+  // -----------------------------
+  // Load prices from the database on component mount
+  // This function will fetch the prices from the backend API and update the state
+  // -----------------------------
   const loadPrices = async () => {
     try {
       console.log('Loading prices from:', `${API_BASE}/api/prices`);
       const response = await fetch(`${API_BASE}/api/prices`);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Loaded prices:', data);
-        
+
         // Update state with prices from database
         if (data.basePrices) setBasePrices(data.basePrices);
         if (data.materialMultipliers) setMaterialMultipliers(data.materialMultipliers);
@@ -121,10 +126,10 @@ const [basePrices, setBasePrices] = useState({
       setLoadingPrices(false);
     }
   };
-    // -----------------------------
-    // Load prices and check authentication on component mount
-    // This effect will run once when the component mounts to load initial data
-    // -----------------------------
+  // -----------------------------
+  // Load prices and check authentication on component mount
+  // This effect will run once when the component mounts to load initial data
+  // -----------------------------
   useEffect(() => {
     // Check authentication
     const auth = localStorage.getItem('adminAuth');
@@ -135,17 +140,17 @@ const [basePrices, setBasePrices] = useState({
     loadPrices();
   }, []);
 
-    // -----------------------------
-    // Save price changes to the database
-    // This function will send the updated prices to the backend API
-    // -----------------------------
+  // -----------------------------
+  // Save price changes to the database
+  // This function will send the updated prices to the backend API
+  // -----------------------------
   const savePriceChanges = async () => {
     setSaveStatus('saving');
-    
+
     try {
-        // Prepare data to send
+      // Prepare data to send
       console.log('Saving prices to database...');
-        //save base prices, material multipliers, and color pricing
+      //save base prices, material multipliers, and color pricing
 
       const cabinetResponse = await fetch(`${API_BASE}/api/prices/cabinets`, {
         method: 'PUT',
@@ -156,7 +161,7 @@ const [basePrices, setBasePrices] = useState({
       if (!cabinetResponse.ok) {
         throw new Error('Failed to save cabinet prices');
       }
-        // Save material multipliers
+      // Save material multipliers
       const materialResponse = await fetch(`${API_BASE}/api/prices/materials`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +172,7 @@ const [basePrices, setBasePrices] = useState({
         throw new Error('Failed to save material multipliers');
       }
 
-        // Save color pricing
+      // Save color pricing
       const colorResponse = await fetch(`${API_BASE}/api/prices/colors`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -181,25 +186,25 @@ const [basePrices, setBasePrices] = useState({
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
       console.log('Prices saved successfully!');
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSaveStatus(''), 3000);
-      
+
     } catch (error) {
       console.error('Error saving prices:', error);
       setSaveStatus('error');
       alert(`Failed to save prices: ${error.message}\n\nMake sure the server is running and the database is set up.`);
-      
+
       // Clear error message after 5 seconds
       setTimeout(() => setSaveStatus(''), 5000);
     }
   };
 
-    // -----------------------------
-    // check for authentication status
-    // This will determine if the user is logged in or not
-    //will show the login form if not authenticated
-    // -----------------------------
+  // -----------------------------
+  // check for authentication status
+  // This will determine if the user is logged in or not
+  //will show the login form if not authenticated
+  // -----------------------------
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -221,7 +226,7 @@ const [basePrices, setBasePrices] = useState({
               />
             </div>
             {/* password input field*/}
-              <div className="mb-6">
+            <div className="mb-6">
               <label className="block text-sm font-medium mb-2">Password</label>
               <input
                 type="password"
@@ -246,10 +251,10 @@ const [basePrices, setBasePrices] = useState({
       </div>
     );
   }
-    // -----------------------------
-    // Render the admin panel UI
-    // This will display the header, navigation tabs, and content area based on the active tab
-    // -----------------------------
+  // -----------------------------
+  // Render the admin panel UI
+  // This will display the header, navigation tabs, and content area based on the active tab
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -277,11 +282,10 @@ const [basePrices, setBasePrices] = useState({
           <div className="flex gap-8">
             <button
               onClick={() => setActiveTab('prices')}
-              className={`py-4 px-6 border-b-2 transition ${
-                activeTab === 'prices'
+              className={`py-4 px-6 border-b-2 transition ${activeTab === 'prices'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 <DollarSign size={20} />
@@ -290,11 +294,10 @@ const [basePrices, setBasePrices] = useState({
             </button>
             <button
               onClick={() => setActiveTab('photos')}
-              className={`py-4 px-6 border-b-2 transition ${
-                activeTab === 'photos'
+              className={`py-4 px-6 border-b-2 transition ${activeTab === 'photos'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Image size={20} />
@@ -302,18 +305,27 @@ const [basePrices, setBasePrices] = useState({
               </div>
             </button>
             <button
+              onClick={() => setActiveTab('designs')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'designs'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              <FileText className="inline w-4 h-4 mr-2" />
+              Customer Designs
+            </button>
+            <button
               onClick={() => setActiveTab('employees')}
-              className={`py-4 px-6 border-b-2 transition ${
-                activeTab === 'employees'
+              className={`py-4 px-6 border-b-2 transition ${activeTab === 'employees'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
-              >
+                }`}
+            >
               <div className="flex items-center gap-2">
                 <IdCardLanyard size={20} />
                 Employee Management
               </div>
-              </button>
+            </button>
           </div>
         </div>
       </div>
@@ -361,7 +373,7 @@ const [basePrices, setBasePrices] = useState({
                   </div>
                 )}
 
-                
+
 
                 {/* Cabinet Base Prices */}
                 <div className="bg-white rounded-lg shadow p-6">
@@ -525,10 +537,13 @@ const [basePrices, setBasePrices] = useState({
          loaded in from a different component
          */}
         {activeTab === 'photos' && (<CategoryPhotoManager />)}
-        {/*
-
+        {/* Employee Management Tab
+         This component will handle employee data management, including adding, editing, and deleting employees
         */}
-        {activeTab === 'employees' && (<EmployeeManager/>)}
+        {activeTab === 'employees' && (<EmployeeManager />)}
+        {/* Design Viewer Tab
+        */}
+        {activeTab === 'designs' && (<DesignViewer />)}
 
       </div>
     </div>

@@ -228,5 +228,86 @@ async function addPriceTables() {
   }
 }
 
-// Run the setup
+async function addDesignsTable() {
+  console.log('Adding designs table to database...\n');
+  
+  const db = await open({
+    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
+    driver: sqlite3.Database
+  });
+
+  try {
+    // Create designs table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS designs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT NOT NULL,
+        client_email TEXT,
+        client_phone TEXT,
+        contact_preference TEXT NOT NULL,
+        kitchen_data TEXT,
+        bathroom_data TEXT,
+        include_kitchen BOOLEAN DEFAULT 0,
+        include_bathroom BOOLEAN DEFAULT 0,
+        total_price DECIMAL(10, 2),
+        comments TEXT,
+        pdf_data BLOB,
+        status TEXT DEFAULT 'new',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        viewed_at DATETIME,
+        viewed_by TEXT
+      )
+    `);
+    console.log('✓ Created designs table');
+
+    // Create indexes for better performance
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_designs_status ON designs(status);
+      CREATE INDEX IF NOT EXISTS idx_designs_created ON designs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_designs_client ON designs(client_name);
+    `);
+    console.log('✓ Created indexes for designs table');
+
+    console.log('\nDesigns table added successfully!');
+  } catch (error) {
+    console.error('Error adding designs table:', error);
+  } finally {
+    await db.close();
+  }
+}
+async function addImageColumns() {
+  console.log('Adding image columns to designs table...\n');
+  
+  const db = await open({
+    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
+    driver: sqlite3.Database
+  });
+
+  try {
+    // Add columns for storing design images
+    await db.exec(`
+      ALTER TABLE designs ADD COLUMN floor_plan_image TEXT;
+    `);
+    console.log('✓ Added floor_plan_image column');
+
+    await db.exec(`
+      ALTER TABLE designs ADD COLUMN wall_view_images TEXT;
+    `);
+    console.log('✓ Added wall_view_images column');
+
+    console.log('\nImage columns added successfully!');
+  } catch (error) {
+    if (error.message.includes('duplicate column name')) {
+      console.log('Columns already exist, skipping...');
+    } else {
+      console.error('Error adding columns:', error);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
+// Run the setups
+addImageColumns();
+addDesignsTable();
 addPriceTables();

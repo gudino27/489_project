@@ -2,24 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   RotateCw,        // Cabinet rotation icon
   Trash2,          // Delete element icon
-  Plus,            // Add element icon
-  Move,            // Move/drag icon
-  Save,            // Save design icon
-  Download,        // Export/download icon
-  Eye,             // View mode icon
   Calculator,      // Pricing calculator icon
   Send,            // Send quote icon
-  FileText,        // Document/quote icon
   Home,            // Kitchen room icon
   Bath             // Bathroom room icon
 } from 'lucide-react';
 import jsPDF from 'jspdf';               // PDF generation library
-import html2canvas from 'html2canvas';   // Canvas to image conversion
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
 
 // Component imports for different app sections
 import AdminPanel from './AdminPanel';         // Admin pricing and photo management
+import DesignPreview from './DesignPreview'; // Preview of design before submission
 
 // -----------------------------
 // Main Kitchen Designer Component
@@ -30,16 +24,13 @@ const KitchenDesigner = () => {
   // Business Configuration
   // In production, these would come from environment variables or database
   // -----------------------------
-  const CONTRACTOR_EMAIL = 'admin@gudinocustom.com';
   const COMPANY_NAME = 'Master Build Cabinets';
-
   // -----------------------------
   // Application State Management
   // Controls the current step and active room being designed
   // -----------------------------
   const [step, setStep] = useState('dimensions');        // 'dimensions' or 'design'
   const [activeRoom, setActiveRoom] = useState('kitchen'); // Currently designing room
-
   // -----------------------------
   // Room Data State
   // Separate state objects for kitchen and bathroom designs
@@ -1011,34 +1002,280 @@ const KitchenDesigner = () => {
   };
 
   // Send quote to contractor
-  const sendQuote = async () => {
-    // Validate required client information
-    if (!clientInfo.name || (clientInfo.contactPreference === 'email' && !clientInfo.email) ||
-      (clientInfo.contactPreference !== 'email' && !clientInfo.phone)) {
-      alert('Please fill in all required contact information.');
-      return;
-    }
+  // Send quote to contractor (modified to save to database)
 
-    // Generate PDF for client download
-    const pdfBlob = await generatePDF();
 
-    // In production, this would send an API request to backend email service
-    const quoteData = {
-      to: CONTRACTOR_EMAIL,
-      subject: `New Cabinet Quote Request from ${clientInfo.name}`,
-      clientInfo: clientInfo,
-      kitchenData: clientInfo.includeKitchen ? kitchenData : null,
-      bathroomData: clientInfo.includeBathroom ? bathroomData : null,
-      totalPrice: calculateTotalPrice(),
-      pdfAttachment: pdfBlob
+const sendQuote = async () => {
+  // Validate required client information
+  if (!clientInfo.name || (clientInfo.contactPreference === 'email' && !clientInfo.email) ||
+    (clientInfo.contactPreference !== 'email' && !clientInfo.phone)) {
+    alert('Please fill in all required contact information.');
+    return;
+  }
+
+  try {
+    // Show loading state
+    const loadingMessage = document.createElement('div');
+    loadingMessage.innerHTML = 'Capturing your design...';
+    loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;';
+    document.body.appendChild(loadingMessage);
+
+    // Helper function to capture SVG as base64
+    const captureSVG = (svgElement) => {
+      if (!svgElement) return null;
+      
+      try {
+        // Clone the SVG to avoid modifying the original
+        const clonedSvg = svgElement.cloneNode(true);
+        
+        // Add white background
+        const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        background.setAttribute('width', '100%');
+        background.setAttribute('height', '100%');
+        background.setAttribute('fill', 'white');
+        clonedSvg.insertBefore(background, clonedSvg.firstChild);
+        
+        // Serialize to string
+        const svgData = new XMLSerializer().serializeToString(clonedSvg);
+        
+        // Convert to base64
+        const base64 = btoa(unescape(encodeURIComponent(svgData)));
+        return `data:image/svg+xml;base64,${base64}`;
+      } catch (error) {
+        console.error('Error capturing SVG:', error);
+        return null;
+      }
     };
 
-    console.log('Sending quote to contractor:', quoteData);
+    // Capture floor plan
+    let floorPlanImage = null;
+    if (viewMode !== 'floor') {
+      setViewMode('floor');
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    const floorCanvas = canvasRef.current;
+    if (floorCanvas) {
+      floorPlanImage = captureSVG(floorCanvas);
+    }
 
-    // Success message for client
-    alert(`Thank you! Your quote request has been sent to ${COMPANY_NAME}. We'll contact you via ${clientInfo.contactPreference} within 24 hours.`);
-    setShowQuoteForm(false);
-  };
+    // Capture wall views
+    const wallViewImages = [];
+    setViewMode('wall');
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    for (let wall = 1; wall <= 4; wall++) {
+      setSelectedWall(wall);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const wallCanvas = wallViewRef.current;
+      if (wallCanvas) {
+        const wallImage = captureSVG(wallCanvas);
+        if (wallImage) {
+          wallViewImages.push({
+            wall: wall,
+            image: wallImage
+          });
+        }
+      }
+    }
+
+    // Return to floor view
+    setViewMode('floor');
+
+    loadingMessage.innerHTML = 'Generating PDF...';
+
+    // Generate PDF
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let currentY = 20;
+
+    // PDF Header
+    pdf.setFontSize(20);
+    pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 10;
+
+    pdf.setFontSize(12);
+    pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 15;
+
+    // Client Information
+    pdf.setFontSize(12);
+    pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
+    currentY += 8;
+    pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
+    currentY += 8;
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
+    currentY += 15;
+
+    // Add floor plan to PDF
+    if (floorPlanImage) {
+      pdf.setFontSize(14);
+      pdf.text('Floor Plan Design', 20, currentY);
+      currentY += 10;
+      
+      try {
+        pdf.addImage(floorPlanImage, 'PNG', 20, currentY, 170, 100);
+        currentY += 110;
+      } catch (e) {
+        console.error('Error adding floor plan to PDF:', e);
+        pdf.text('(Floor plan preview available in admin panel)', 20, currentY);
+        currentY += 10;
+      }
+    }
+
+    // Calculate totals
+    let grandTotal = 0;
+    if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
+    if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
+
+    // Add wall views on new page
+    if (wallViewImages.length > 0) {
+      pdf.addPage();
+      currentY = 20;
+      
+      pdf.setFontSize(16);
+      pdf.text('Wall Elevation Views', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 15;
+
+      for (let i = 0; i < wallViewImages.length; i++) {
+        if (i % 2 === 0 && i > 0) {
+          pdf.addPage();
+          currentY = 20;
+        }
+
+        pdf.setFontSize(12);
+        pdf.text(`Wall ${wallViewImages[i].wall}`, 20, currentY);
+        currentY += 5;
+
+        try {
+          pdf.addImage(wallViewImages[i].image, 'PNG', 20, currentY, 170, 80);
+          currentY += 90;
+        } catch (e) {
+          console.error('Error adding wall view to PDF:', e);
+          pdf.text('(Wall view available in admin panel)', 20, currentY);
+          currentY += 10;
+        }
+      }
+    }
+
+    // Add specifications
+    pdf.addPage();
+    currentY = 20;
+
+    pdf.setFontSize(16);
+    pdf.text('Cabinet Specifications', 20, currentY);
+    currentY += 15;
+
+    // Process each room
+    const roomsToInclude = [];
+    if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
+      roomsToInclude.push({ name: 'Kitchen', data: kitchenData });
+    }
+    if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
+      roomsToInclude.push({ name: 'Bathroom', data: bathroomData });
+    }
+
+    for (const room of roomsToInclude) {
+      pdf.setFontSize(14);
+      pdf.text(`${room.name} (${room.data.dimensions.width}' × ${room.data.dimensions.height}')`, 20, currentY);
+      currentY += 8;
+
+      const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
+      
+      pdf.setFontSize(10);
+      cabinets.forEach((cabinet, index) => {
+        const material = room.data.materials[cabinet.id] || 'laminate';
+        pdf.text(`${index + 1}. ${cabinet.type}: ${cabinet.width}" × ${cabinet.depth}" - ${material}`, 25, currentY);
+        currentY += 6;
+
+        if (currentY > pageHeight - 30) {
+          pdf.addPage();
+          currentY = 20;
+        }
+      });
+
+      const roomTotal = calculateTotalPrice(room.data);
+      pdf.setFontSize(11);
+      pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
+      currentY += 10;
+    }
+
+    // Grand total
+    pdf.setFontSize(14);
+    pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
+
+    // Get PDF blob
+    const pdfBlob = pdf.output('blob');
+
+    loadingMessage.innerHTML = 'Sending design...';
+
+    // Create form data
+    const formData = new FormData();
+    formData.append('pdf', pdfBlob, 'design.pdf');
+    
+    // Design data with images
+    const designData = {
+      client_name: clientInfo.name,
+      client_email: clientInfo.email || '',
+      client_phone: clientInfo.phone || '',
+      contact_preference: clientInfo.contactPreference,
+      kitchen_data: clientInfo.includeKitchen ? kitchenData : null,
+      bathroom_data: clientInfo.includeBathroom ? bathroomData : null,
+      include_kitchen: clientInfo.includeKitchen,
+      include_bathroom: clientInfo.includeBathroom,
+      total_price: grandTotal,
+      comments: clientInfo.comments || '',
+      floor_plan_image: floorPlanImage,
+      wall_view_images: wallViewImages
+    };
+    
+    console.log('Sending design:', {
+      hasFloorPlan: !!floorPlanImage,
+      wallViews: wallViewImages.length,
+      dataSize: JSON.stringify(designData).length
+    });
+    
+    formData.append('designData', JSON.stringify(designData));
+
+    // Send to backend
+    const response = await fetch(`${API_BASE}/api/designs`, {
+      method: 'POST',
+      body: formData
+    });
+
+    document.body.removeChild(loadingMessage);
+
+    if (response.ok) {
+      const result = await response.json();
+      
+      alert(`Thank you! Your design has been sent to ${COMPANY_NAME}.`);
+      
+      // Reset form
+      setClientInfo({
+        name: '',
+        email: '',
+        phone: '',
+        contactPreference: 'email',
+        includeKitchen: true,
+        includeBathroom: false,
+        comments: ''
+      });
+      
+      // Offer download
+      if (window.confirm('Would you like to download a copy?')) {
+        pdf.save(`cabinet-design-${clientInfo.name.replace(/\s+/g, '-')}.pdf`);
+      }
+    } else {
+      throw new Error('Failed to send design');
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error sending your design. Please try again.');
+  }
+};
 
   // -----------------------------
   // Wall View Rendering Function
@@ -2503,6 +2740,7 @@ function App() {
         <Route path="/" element={<KitchenDesigner />} />
         {/* Admin panel for price management, photo uploads as well as employee bio */}
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path ="/designpreview" element={<DesignPreview />} />
       </Routes>
     </Router>
   );
