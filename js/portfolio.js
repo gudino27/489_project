@@ -1,206 +1,366 @@
+        // Configuration
+        const API_BASE = 'http://localhost:3001'; // needs to be updated to match server
+        // State variables
+        let currentCategory = '';
+        let currentIndex = 0;
+        let photos = [];
+        let allPhotos = [];
+        let rotationAngle = 0;
 
-// Configuration
-const API_BASE = 'http://localhost:3001'; // Update this to match the photo server
-
-// State variables
-let currentCategory = '';
-let currentSlideIndex = 0;
-let photos = [];
-let allPhotos = [];
-
-// Initialize
-document.addEventListener('DOMContentLoaded', function () {
-    loadPhotos();
-    setupCategoryButtons();
-});
-
-// Load photos from API or localStorage
-async function loadPhotos() {
-    try {
-        // Try to load from API first
-        const response = await fetch(`${API_BASE}/api/photos`);
-        if (response.ok) {
-            allPhotos = await response.json();
-            console.log('Loaded photos from API:', allPhotos);
-        } else {
-            throw new Error('API not available');
-        }
-    } catch (error) {
-        console.log('Loading from localStorage fallback');
-        // Fallback to localStorage for demo
-        const savedPhotos = localStorage.getItem('cabinetPhotos');
-        if (savedPhotos) {
-            allPhotos = JSON.parse(savedPhotos);
-        } else {
-            // Demo photos if nothing is saved
-            allPhotos = [             
-            ];
-        }
-    }
-}
-
-// Setup category button clicks
-function setupCategoryButtons() {
-    const buttons = document.querySelectorAll('.category-button');
-    buttons.forEach(button => {
-        button.addEventListener('click', function () {
-            const category = this.getAttribute('data-category');
-            selectCategory(category);
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('Initializing portfolio...');
+            loadPhotos().then(() => {
+                console.log('Photos loaded:', allPhotos);
+                // Auto-select first category if photos are available
+                if (allPhotos.length > 0) {
+                    // Get unique categories
+                    const categories = ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom','showcase'];
+                    for (let cat of categories) {
+                        const catPhotos = allPhotos.filter(p => 
+                            (p.category && p.category.toLowerCase() === cat) || 
+                            (p.label && p.label.toLowerCase().includes(cat))
+                        );
+                        if (catPhotos.length > 0) {
+                            console.log(`Auto-selecting category: ${cat}`);
+                            selectCategory(cat);
+                            break;
+                        }
+                    }
+                }
+            });
+            setupCategoryButtons();
+            setupModal();
+            setupKeyboardNavigation();
         });
-    });
-}
 
-// Select a category and show its photos
-function selectCategory(category) {
-    currentCategory = category;
-    currentSlideIndex = 0;
-
-    // Update active button
-    document.querySelectorAll('.category-button').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-category') === category) {
-            btn.classList.add('active');
-        }
-    });
-
-    // Filter photos for this category
-    photos = allPhotos.filter(photo => {
-        // Handle both specific categories and general matching
-        if (photo.category === category) return true;
-
-        // Map livingroom -> showcase, bedroom -> showcase, etc.
-        const categoryMappings = {
-            'livingroom': ['showcase', 'living'],
-            'laundryroom': ['showcase', 'laundry'],
-            'bedroom': ['showcase', 'bedroom']
-        };
-
-        if (categoryMappings[category]) {
-            return categoryMappings[category].some(mapping =>
-                photo.category.includes(mapping) || photo.title.toLowerCase().includes(category)
-            );
+        // Load photos from API 
+        async function loadPhotos() {
+            try {
+                const response = await fetch(`${API_BASE}/api/photos`);
+                if (response.ok) {
+                    allPhotos = await response.json();
+                } else {
+                    throw new Error('API not available');
+                }
+            } catch (error) {
+                console.log('Loading from localStorage fallback');
+                const savedPhotos = localStorage.getItem('cabinetPhotos');
+                if (savedPhotos) {
+                    allPhotos = JSON.parse(savedPhotos);
+                } else {
+                    allPhotos = [ ];
+                }
+            }
         }
 
-        return false;
-    });
+        // Setup category button clicks
+        function setupCategoryButtons() {
+            const buttons = document.querySelectorAll('.category-button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const category = this.getAttribute('data-category');
+                    selectCategory(category);
+                });
+            });
+        }
 
-    // Show slideshow
-    showSlideshow();
-}
-// Modal logic
-const modal = document.getElementById("imageModal");
-const modalImg = document.getElementById("modalImage");
-const modalCaption = document.getElementById("modalCaption");
-const modalClose = document.getElementById("modalClose");
+        // Select a category and show its photos
+        function selectCategory(category) {
+            // Hide current carousel
+            const container = document.getElementById('carousel3dContainer');
+            container.classList.remove('active');
+            
+            // Wait for fade out before updating
+            setTimeout(() => {
+                currentCategory = category;
+                currentIndex = 0;
+                rotationAngle = 0;
 
-modalClose.onclick = () => {
-  modal.style.display = "none";
-};
-// Show the slideshow with current category photos
-function showSlideshow() {
-    const container = document.getElementById('slideshowContainer');
-    const wrapper = document.getElementById('slidesWrapper');
-    const dotsContainer = document.getElementById('dotsContainer');
+                // Update active button
+                document.querySelectorAll('.category-button').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-category') === category) {
+                        btn.classList.add('active');
+                    }
+                });
 
-    // Clear existing content
-    wrapper.innerHTML = '';
-    dotsContainer.innerHTML = '';
+                // Filter photos for this category 
+                if (allPhotos.length > 0 && !photos) {
+                    // If this is first load and no photos are in that category, will just show all photos
+                    photos = allPhotos;
+                    console.log('No category match found, showing all photos');
+                } else {
+                    photos = allPhotos.filter(photo => {
+                        // Check all fields for category match
+                        const photoStr = JSON.stringify(photo).toLowerCase();
+                        return photoStr.includes(category.toLowerCase());
+                    });
+                    
+                    // If no matches with strict filter, use looser filter
+                    if (photos.length === 0) {
+                        photos = allPhotos.filter(photo => {
+                            // Check if photo has a category field
+                            if (photo.category && photo.category.toLowerCase() === category.toLowerCase()) {
+                                return true;
+                            }
+                            
+                            // Check label field (from spreadsheet)
+                            if (photo.label && photo.label.toLowerCase().includes(category.toLowerCase())) {
+                                return true;
+                            }
 
-    if (photos.length === 0) {
-        wrapper.innerHTML = '<div class="no-photos">No photos available for this category</div>';
-        container.classList.add('active', 'fade-in');
-        return;
-    }
+                            // Check title
+                            if (photo.title && photo.title.toLowerCase().includes(category.toLowerCase())) {
+                                return true;
+                            }
 
-    // Create slides
-    photos.forEach((photo, index) => {
-    const slide = document.createElement('div');
-    slide.className = 'slide' + (index === 0 ? ' active' : '');
+                            return false;
+                        });
+                    }
+                    
+                    // If still no matches, show first 3 photos as fallback
+                    if (photos.length === 0 && allPhotos.length > 0) {
+                        photos = allPhotos.slice(0, Math.min(3, allPhotos.length));
+                    }
+                }
+                
+                console.log(`Selected category: ${category}`);
+                console.log(`Found ${photos.length} photos:`, photos);
 
-    const thumbSrc = `${API_BASE}${photo.thumbnail || photo.full || photo.url}`;
-    const fullSrc = `${API_BASE}/photos${photo.full || photo.url}`;
+                // Show 3D carousel
+                show3DCarousel();
+            }, 300);
+        }
 
-    slide.innerHTML = `
-      <img src="${fullSrc}" 
-           alt="${photo.title}"
-           class="slideshow-image"
-           style="cursor: zoom-in;"
-           data-full="${fullSrc}"
-           data-title="${photo.title}"
-           onerror="this.onerror=null; this.src='placeholder.jpg';">
-      <div class="caption">${photo.title}</div>
-    `;
+        // Show the 3D carousel
+        function show3DCarousel() {
+            const container = document.getElementById('carousel3dContainer');
+            const carousel = document.getElementById('carousel3d');
+            const dotsContainer = document.getElementById('dots3dContainer');
 
-    // After slide added, attach click handler to image
-    setTimeout(() => {
-      const img = slide.querySelector('img');
-      img.addEventListener('click', () => {
-        modalImg.src = img.getAttribute('data-full');
-        modalCaption.textContent = img.getAttribute('data-title');
-        modal.style.display = 'block';
-      });
-    }, 0);
+            // Clear existing content
+            carousel.innerHTML = '';
+            dotsContainer.innerHTML = '';
 
-    wrapper.appendChild(slide);
+            // Ensure photos is an array
+            if (!Array.isArray(photos)) {
+                console.error('Photos is not an array:', photos);
+                photos = [];
+            }
 
-        // Create dot
-        const dot = document.createElement('span');
-        dot.className = 'dot' + (index === 0 ? ' active' : '');
-        dot.onclick = () => goToSlide(index);
-        dotsContainer.appendChild(dot);
-    });
+            if (photos.length === 0) {
+            }
 
-    // Show container with animation
-    container.classList.add('active', 'fade-in');
+            const radius = 350;
+            const itemCount = photos.length;
+            const angleStep = 360 / itemCount;
 
-    // Hide arrows if only one photo
-    if (photos.length <= 1) {
-        document.querySelector('.prev').style.display = 'none';
-        document.querySelector('.next').style.display = 'none';
-    } else {
-        document.querySelector('.prev').style.display = 'block';
-        document.querySelector('.next').style.display = 'block';
-    }
-}
+            // Create carousel image items
+            photos.forEach((photo, index) => {
+                const item = document.createElement('div');
+                item.className = 'carousel-item-3d';
+                
+                // Calculate rotation for this image item
+                const itemAngle = angleStep * index;
+                item.style.transform = `rotateY(${itemAngle}deg) translateZ(${radius}px)`;
+                
+                // Get image source
+                let imageSrc = photo.path_active_chip_customer || 
+                               photo.path_active_chip || 
+                               photo.thumbnail || 
+                               photo.url || '';
 
-// Change slide by offset (-1 or 1)
-function changeSlide(offset) {
-    if (photos.length === 0) return;
+                let FullImageSrc = `${API_BASE}${photo.url}`;
+                // Create image
+                const img = document.createElement('img');
+                img.src = `${API_BASE}${imageSrc}`;
+                img.alt = photo.title || photo.label || `Image ${index + 1}`;
+                
+                // Create caption
+                const caption = document.createElement('div');
+                caption.className = 'caption';
+                caption.textContent = photo.title || photo.label || `Cabinet ${index + 1}`;
+                
+                item.appendChild(img);
+                item.appendChild(caption);
+                
+                item.addEventListener('click', () => {
+                    if (index === currentIndex) {
+                        openModal(FullImageSrc, caption.textContent);
+                    } else {
+                        goToSlide(index);
+                    }
+                });
+                
+                carousel.appendChild(item);
 
-    currentSlideIndex += offset;
-    if (currentSlideIndex >= photos.length) currentSlideIndex = 0;
-    if (currentSlideIndex < 0) currentSlideIndex = photos.length - 1;
+                // Create dot
+                const dot = document.createElement('span');
+                dot.className = 'dot-3d' + (index === 0 ? ' active' : '');
+                dot.onclick = () => goToSlide(index);
+                dotsContainer.appendChild(dot);
+            });
 
-    updateSlideDisplay();
-}
+            // Show container
+            container.classList.add('active');
+            
+            // Initialize
+            setTimeout(() => {
+                updateCarousel();
+            }, 100);
+        }
 
-// Go to specific slide
-function goToSlide(index) {
-    currentSlideIndex = index;
-    updateSlideDisplay();
-}
+        // Rotate the 3D carousel
+        function rotate3DCarousel(direction) {
+            if (photos.length === 0) return;
+            
+            const angleStep = 360 / photos.length;
+            rotationAngle -= direction * angleStep;
+            
+            currentIndex += direction;
+            if (currentIndex < 0) currentIndex = photos.length - 1;
+            if (currentIndex >= photos.length) currentIndex = 0;
+            
+            updateCarousel();
+        }
 
-// Update slide display
-function updateSlideDisplay() {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
+        // Go to specific slide
+        function goToSlide(index) {
+            if (photos.length === 0) return;
+            
+            const angleStep = 360 / photos.length;
+            const targetAngle = index * angleStep;
+            const currentAngle = rotationAngle % 360;
+            
+            // Calculate shortest path to target
+            let diff = targetAngle - currentAngle;
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+            
+            rotationAngle = currentAngle + diff;
+            currentIndex = index;
+            
+            updateCarousel();
+        }
 
-    slides.forEach((slide, index) => {
-        slide.classList.toggle('active', index === currentSlideIndex);
-    });
+        // Update carousel rotation
+        function updateCarousel() {
+            const carousel = document.getElementById('carousel3d');
+            const items = document.querySelectorAll('.carousel-item-3d');
+            
+            if (items.length === 0) return;
+            
+            // Rotate the entire carousel
+            carousel.style.transform = `rotateY(${-rotationAngle}deg)`;
+            
+            // Update dots
+            const dots = document.querySelectorAll('.dot-3d');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIndex);
+            });
+            
+            // Update each item's appearance
+            items.forEach((item, index) => {
+                const isCurrent = index === currentIndex;
+                
+                // Remove all active classes first
+                item.classList.remove('active');
+                
+                // Add active class to current item
+                if (isCurrent) {
+                    item.classList.add('active');
+                    item.style.zIndex = '999';
+                    item.style.opacity = '1';
+                    item.style.filter = 'brightness(1)';
+                } else {
+                    // Calculate distance from current
+                    let distance = Math.abs(index - currentIndex);
+                    if (distance > items.length / 2) {
+                        distance = items.length - distance;
+                    }
+                    
+                    // Set properties based on distance
+                    const zIndex = 100 - (distance * 10);
+                    const opacity = Math.max(0.5, 1 - (distance * 0.15));
+                    const brightness = 0.6 + (0.4 * (1 - distance / (items.length / 2)));
+                    
+                    item.style.zIndex = zIndex;
+                    item.style.opacity = opacity;
+                    item.style.filter = `brightness(${brightness})`;
+                }
+            });
+        }
 
-    dots.forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentSlideIndex);
-    });
-}
+        // Modal functionality
+        function setupModal() {
+            const modal = document.getElementById('imageModal');
+            const modalClose = document.getElementById('modalClose');
+            
+            modalClose.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
 
-// Keyboard navigation
-document.addEventListener('keydown', function (e) {
-    if (document.getElementById('slideshowContainer').classList.contains('active')) {
-        if (e.key === 'ArrowLeft') changeSlide(-1);
-        if (e.key === 'ArrowRight') changeSlide(1);
-    }
-});
+        function openModal(src, title) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            
+            modalImg.src = src;
+            modalCaption.textContent = title;
+            modal.style.display = 'block';
+        }
 
-// Refresh photos periodically (useful if admin is updating)
-setInterval(loadPhotos, 30000); // Reload every 30 seconds
+        // Keyboard navigation
+        function setupKeyboardNavigation() {
+            document.addEventListener('keydown', function (e) {
+                if (document.getElementById('carousel3dContainer').classList.contains('active')) {
+                    if (e.key === 'ArrowLeft') rotate3DCarousel(-1);
+                    if (e.key === 'ArrowRight') rotate3DCarousel(1);
+                    if (e.key === 'Escape') {
+                        document.getElementById('imageModal').style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Touch/swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) {
+                rotate3DCarousel(1); // Swipe left
+            }
+            if (touchEndX > touchStartX + 50) {
+                rotate3DCarousel(-1); // Swipe right
+            }
+        }
+
+        
+        
+        // Refresh photos periodically
+        setInterval(loadPhotos, 30000); // Reload every 30 seconds
+        // Save test data to localStorage
+        
+        
+        // Make functions available globally
+        window.rotate3DCarousel = rotate3DCarousel;
+        window.loadDemoPhotos = loadDemoPhotos;
+        window.saveTestData = saveTestData;
