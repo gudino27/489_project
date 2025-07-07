@@ -561,10 +561,7 @@ app.post('/api/users', authenticateUser, requireRole('super_admin'), async (req,
       created_by: req.user.id
     });
 
-    await userDb.logActivity(req.user.id, 'create_user', 'user', userId, {
-      username,
-      role
-    });
+    
 
     res.status(201).json({
       message: 'User created successfully',
