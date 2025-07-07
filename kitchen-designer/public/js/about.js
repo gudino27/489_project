@@ -21,7 +21,7 @@
                 const employees = await response.json();
                 
                 if (employees.length === 0) {
-                    teamGrid.innerHTML = '<p class="loading">No team members found.</p>';
+                    teamGrid.innerHTML = '<p class="loading" style="color:white; font-size: 1.2rem; font-weight:bold;">No team members found.</p>';
                     return;
                 }
                 

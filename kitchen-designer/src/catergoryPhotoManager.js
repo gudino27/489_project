@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Edit2, Save, Image, GripVertical, X } from 'lucide-react';
 
-const CategoryPhotoManager = () => {
+const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
   const [photos, setPhotos] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('kitchen');
   const [uploading, setUploading] = useState(false);
@@ -21,78 +21,110 @@ const CategoryPhotoManager = () => {
     { id: 'showcase', name: 'General Showcase', icon: '✨' }
   ];
 
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  // Use API_BASE from props or fallback
+  const apiBase = API_BASE || process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+  // Create headers with authentication
+  const getAuthHeaders = () => ({
+    'Authorization': `Bearer ${token}`
+  });
+
+  const getAuthHeadersJson = () => ({
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  });
 
   // Use useCallback to avoid the dependency warning
   const loadPhotos = useCallback(async () => {
+    if (!token) {
+      console.warn('No token available for photo loading');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/photos`);
+      const response = await fetch(`${apiBase}/api/photos`, {
+        headers: getAuthHeaders()
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setPhotos(data);
+      } else if (response.status === 401) {
+        console.error('Authentication failed - token may be expired');
+        // You might want to trigger a logout here
+      } else {
+        console.error('Failed to load photos:', response.status);
       }
     } catch (error) {
-      // Fallback to localStorage
+      console.error('Error loading photos:', error);
+      // Fallback to localStorage only if network error
       const saved = localStorage.getItem('cabinetPhotos');
       if (saved) {
         setPhotos(JSON.parse(saved));
       }
     }
-  }, [API_BASE]);
+  }, [apiBase, token]);
 
   useEffect(() => {
-    loadPhotos();
-  }, [loadPhotos]);
+    if (token) {
+      loadPhotos();
+    }
+  }, [loadPhotos, token]);
 
   const handlePhotoUpload = async (e) => {
-  const files = Array.from(e.target.files);
-  if (files.length === 0) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-  setUploading(true);
-  console.log('Uploading to category:', selectedCategory); // Debug
-
-  try {
-    for (const file of files) {
-      const formData = new FormData();
-      
-      // Create a custom filename that includes category info
-      const customFilename = `${selectedCategory}_${file.name}`;
-      
-      // Append in correct order
-      formData.append('category', selectedCategory);
-      formData.append('title', file.name.split('.')[0]);
-      formData.append('filename', customFilename);
-      formData.append('photo', file);
-      
-      // Log FormData contents (for debugging)
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
-      
-      const response = await fetch(`${API_BASE}/api/photos`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Upload failed:', error);
-      } else {
-        const result = await response.json();
-        console.log('Upload success:', result);
-      }
+    if (!token) {
+      alert('Authentication required for photo upload');
+      return;
     }
-    
-    await loadPhotos();
-    alert(`${files.length} photos uploaded successfully to ${selectedCategory}!`);
-  } catch (error) {
-    console.error('Upload error:', error);
-    alert('Failed to upload photos');
-  } finally {
-    setUploading(false);
-    e.target.value = '';
-  }
-};
+
+    setUploading(true);
+    console.log('Uploading to category:', selectedCategory);
+
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        
+        // Create a custom filename that includes category info
+        const customFilename = `${selectedCategory}_${file.name}`;
+        
+        // Append in correct order
+        formData.append('category', selectedCategory);
+        formData.append('title', file.name.split('.')[0]);
+        formData.append('filename', customFilename);
+        formData.append('photo', file);
+        
+        const response = await fetch(`${apiBase}/api/photos`, {
+          method: 'POST',
+          headers: getAuthHeaders(), // Add auth headers
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Upload failed:', error);
+          if (response.status === 401) {
+            alert('Authentication failed - please log in again');
+            return;
+          }
+        } else {
+          const result = await response.json();
+          console.log('Upload success:', result);
+        }
+      }
+      
+      await loadPhotos();
+      alert(`${files.length} photos uploaded successfully to ${selectedCategory}!`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload photos');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Drag and drop handlers
   const handleDragStart = (e, index) => {
@@ -132,54 +164,62 @@ const CategoryPhotoManager = () => {
   };
 
   // Save new order to server
- const saveOrder = async () => 
-{
-  const categoryPhotos = photos
-    .filter(p => p.category === selectedCategory)
-    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-  
-  const photoIds = categoryPhotos.map(p => p.id);
-
-  try {
-    const response = await fetch(`${API_BASE}/api/photos/reorder`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photoIds })
-    });
-
-    console.log('Save response status:', response.status);
-
-    // Log response text only if not 204
-    if (response.status !== 204) {
-      const text = await response.text();
-      console.log('Save response text:', text);
+  const saveOrder = async () => {
+    if (!token) {
+      alert('Authentication required');
+      return;
     }
 
-    if (response.ok || response.status === 204) {
-      setHasOrderChanges(false);
-      alert('Photo order saved successfully!');
-      await loadPhotos();
-    } else {
-      alert(`Failed to save photo order (status ${response.status})`);
+    const categoryPhotos = photos
+      .filter(p => p.category === selectedCategory)
+      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    
+    const photoIds = categoryPhotos.map(p => p.id);
+
+    try {
+      const response = await fetch(`${apiBase}/api/photos/reorder`, {
+        method: 'PUT',
+        headers: getAuthHeadersJson(), // Add auth headers
+        body: JSON.stringify({ photoIds })
+      });
+
+      console.log('Save response status:', response.status);
+
+      if (response.ok || response.status === 204) {
+        setHasOrderChanges(false);
+        alert('Photo order saved successfully!');
+        await loadPhotos();
+      } else if (response.status === 401) {
+        alert('Authentication failed - please log in again');
+      } else {
+        alert(`Failed to save photo order (status ${response.status})`);
+      }
+    } catch (error) {
+      console.error('Save order error:', error);
+      alert('Failed to save photo order');
     }
-  } catch (error) {
-    console.error('Save order error:', error);
-    alert('Failed to save photo order');
-  }
-};
+  };
 
   const updatePhotoCategory = async (photoId, newCategory) => {
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/photos/${photoId}`, {
+      const response = await fetch(`${apiBase}/api/photos/${photoId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeadersJson(), // Add auth headers
         body: JSON.stringify({ category: newCategory })
       });
       
       if (response.ok) {
         await loadPhotos();
+      } else if (response.status === 401) {
+        alert('Authentication failed - please log in again');
       }
     } catch (error) {
+      console.error('Error updating photo category:', error);
       // Fallback for demo
       const updatedPhotos = photos.map(p => 
         p.id === photoId ? { ...p, category: newCategory } : p
@@ -192,15 +232,24 @@ const CategoryPhotoManager = () => {
   const deletePhoto = async (photoId) => {
     if (!window.confirm('Are you sure you want to delete this photo?')) return;
 
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/photos/${photoId}`, {
-        method: 'DELETE'
+      const response = await fetch(`${apiBase}/api/photos/${photoId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders() // Add auth headers
       });
       
       if (response.ok) {
         await loadPhotos();
+      } else if (response.status === 401) {
+        alert('Authentication failed - please log in again');
       }
     } catch (error) {
+      console.error('Error deleting photo:', error);
       // Fallback for demo
       const updatedPhotos = photos.filter(p => p.id !== photoId);
       setPhotos(updatedPhotos);
@@ -209,18 +258,26 @@ const CategoryPhotoManager = () => {
   };
 
   const updatePhotoTitle = async (photoId, newTitle) => {
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/photos/${photoId}`, {
+      const response = await fetch(`${apiBase}/api/photos/${photoId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeadersJson(), // Add auth headers
         body: JSON.stringify({ title: newTitle })
       });
       
       if (response.ok) {
         await loadPhotos();
         setEditingPhoto(null);
+      } else if (response.status === 401) {
+        alert('Authentication failed - please log in again');
       }
     } catch (error) {
+      console.error('Error updating photo title:', error);
       // Fallback for demo
       const updatedPhotos = photos.map(p => 
         p.id === photoId ? { ...p, title: newTitle } : p
@@ -230,6 +287,18 @@ const CategoryPhotoManager = () => {
       setEditingPhoto(null);
     }
   };
+
+  // Show loading or no token message
+  if (!token) {
+    return (
+      <div className="p-6 bg-white rounded-lg shadow-lg">
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-3">Authentication required</div>
+          <p className="text-sm text-gray-400">Please log in to manage photos</p>
+        </div>
+      </div>
+    );
+  }
 
   // Group photos by category
   const photosByCategory = categories.reduce((acc, category) => {
@@ -376,7 +445,7 @@ const CategoryPhotoManager = () => {
                 )}
 
                 <img
-                  src={`${API_BASE}${photo.thumbnail || photo.full || photo.url}`}
+                  src={`${apiBase}${photo.thumbnail || photo.full || photo.url}`}
                   alt={photo.title}
                   className="w-full h-40 object-cover"
                   draggable={false}

@@ -1,16 +1,28 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const { photoDb,employeeDb,designDb } = require('./database/db-helpers');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { photoDb, employeeDb, designDb, userDb } = require('./database/db-helpers');
 const nodemailer = require('nodemailer');
-require('dotenv').config();
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5500','http://127.0.0.1:5500'],
+  credentials: true, // Allow cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+const JWT_SECRET = process.env.JWT_SECRET;
+
+
 app.use(express.json());
-const uploadMemory = multer({ 
+
+const uploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
@@ -18,26 +30,66 @@ const emailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS 
+    pass: process.env.EMAIL_PASS
   }
 });
+// Middleware for authentication
+const authenticateUser = async (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({ error: 'No authentication token provided' });
+  }
+
+  try {
+    const user = await userDb.validateSession(token);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};
+
+// Middleware for role-based access control
+const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const userRole = req.user.role;
+    const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+
+    if (!roles.includes(userRole)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    next();
+  };
+};
 // IMPORTANT: Serve static files from uploads directory
 app.use('/photos', express.static(path.join(__dirname, 'uploads')));
 
 //fully working to sort the photos by category on upload
-  const storage = multer.diskStorage({
+const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     // This function runs AFTER multer has parsed the multipart form
     // So req.body should have the category currently does not
     const category = req.body.category || 'showcase';
     console.log('[MULTER] Upload category from form:', category);
-    
+
     const uploadPath = path.join(__dirname, 'uploads', category);
     await fs.mkdir(uploadPath, { recursive: true });
-    
+
     // Store the category in the file object for later use
     file.uploadCategory = category;
-    
+
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -70,11 +122,14 @@ async function getImageDimensions(filePath) {
 
 // Routes
 
-// Gets all photos
+// Gets all photos - should be authenticated for admin use
 app.get('/api/photos', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+
+
   try {
     const photos = await photoDb.getAllPhotos();
-    
+
     // Sort by display_order first, then by uploaded_at
     const sortedPhotos = photos.sort((a, b) => {
       if (a.category === b.category) {
@@ -82,12 +137,12 @@ app.get('/api/photos', async (req, res) => {
       }
       return a.category.localeCompare(b.category);
     });
-    
+
     const formattedPhotos = sortedPhotos.map(photo => {
       const filePath = photo.file_path.replace(/\\/g, '/');
-      const thumbnailPath = photo.thumbnail_path ? 
+      const thumbnailPath = photo.thumbnail_path ?
         `thumbnails/${photo.thumbnail_path.split('/').pop()}` : null;
-      
+
       return {
         ...photo,
         full: `/${filePath}`,
@@ -96,7 +151,9 @@ app.get('/api/photos', async (req, res) => {
         featured: photo.featured === 1
       };
     });
-    
+
+    // Log activity
+
     res.json(formattedPhotos);
   } catch (error) {
     console.error('Error fetching photos:', error);
@@ -104,31 +161,29 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
-// Upload photo fully working now
-app.post('/api/photos', upload.single('photo'), async (req, res) => {
+// Upload photo - add authentication and logging
+app.post('/api/photos', authenticateUser, requireRole(['admin', 'super_admin']), upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Get the actual category where file was saved
     const category = req.file.uploadCategory || req.body.category || 'showcase';
-    
+
     console.log('[UPLOAD] Final category:', category);
     console.log('[UPLOAD] File saved to:', req.file.path);
     console.log('[UPLOAD] Filename:', req.file.filename);
-    
-    // Store relative path with forward slashes 
+
     const relativePath = `${category}/${req.file.filename}`;
-    
-    // Generates the thumbnails
+
+    // Generate thumbnails
     const thumbnailDir = path.join(__dirname, 'uploads', 'thumbnails');
     await fs.mkdir(thumbnailDir, { recursive: true });
-    
+
     const thumbnailFilename = `thumb_${req.file.filename}`;
     const thumbnailPath = `thumbnails/${thumbnailFilename}`;
     const thumbnailFullPath = path.join(__dirname, 'uploads', thumbnailPath);
-    
+
     try {
       await sharp(req.file.path)
         .resize(400, 300, { fit: 'inside' })
@@ -139,15 +194,13 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
       console.error('[THUMBNAIL] Error:', err);
     }
 
-    // Gets the image dimensions
     const dimensions = await getImageDimensions(req.file.path);
 
-    // Save to database currently sqllite 
     const photoId = await photoDb.insertPhoto({
       title: req.body.title || req.file.originalname.split('.')[0],
       filename: req.file.filename,
       original_name: req.file.originalname,
-      category: category, // Use the actual category where file was saved
+      category: category,
       file_path: relativePath,
       thumbnail_path: thumbnailPath,
       file_size: req.file.size,
@@ -159,9 +212,15 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
 
     console.log('[DATABASE] Saved with ID:', photoId);
 
-    // Gets the inserted photo
+    // Log activity
+    await userDb.logActivity(req.user.id, 'upload_photo', 'photo', photoId, {
+      filename: req.file.filename,
+      category: category,
+      size: req.file.size
+    });
+
     const photo = await photoDb.getPhoto(photoId);
-    
+
     res.json({
       success: true,
       photo: {
@@ -181,16 +240,20 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
 app.put('/api/photos/reorder', async (req, res) => {
   try {
     const { photoIds } = req.body;
-    
+
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
       return res.status(400).json({ error: 'Invalid photo IDs array' });
     }
 
     console.log('[REORDER] Updating order for photos:', photoIds);
 
-    // Update display_order for each photo using the function from db-helpers
     await photoDb.updateDisplayOrder(photoIds);
-    
+
+    // Log activity
+    await userDb.logActivity(req.user.id, 'reorder_photos', 'photo', null, {
+      photoIds: photoIds
+    });
+
     res.json({ success: true, message: 'Photo order updated successfully' });
   } catch (error) {
     console.error('[REORDER] Error:', error);
@@ -216,20 +279,18 @@ app.put('/api/photos/:id', async (req, res) => {
       }
     });
 
-    // If the category is being changed, we need to move the file to correct category
+    // Handle category change file moving logic (existing code)
     if (updates.category) {
       const photo = await photoDb.getPhoto(photoId);
       if (photo && photo.category !== updates.category) {
         const oldPath = path.join(__dirname, 'uploads', photo.category, photo.filename);
         const newPath = path.join(__dirname, 'uploads', updates.category, photo.filename);
-        
-        // Create new category directory if it doesn't exist, they currently all exist, did not make them so well sadly. may have to fix for future use
+
         await fs.mkdir(path.join(__dirname, 'uploads', updates.category), { recursive: true });
-        
+
         try {
           await fs.rename(oldPath, newPath);
           console.log(`[MOVE] Moved file from ${oldPath} to ${newPath}`);
-          // Update the file_path in database
           updates.file_path = `${updates.category}/${photo.filename}`;
           console.log('[MOVE] Updated file_path to:', updates.file_path);
         } catch (error) {
@@ -239,14 +300,17 @@ app.put('/api/photos/:id', async (req, res) => {
     }
 
     const success = await photoDb.updatePhoto(photoId, updates);
-    
+
     if (success) {
+      // Log activity
+      await userDb.logActivity(req.user.id, 'update_photo', 'photo', photoId, updates);
+
       const photo = await photoDb.getPhoto(photoId);
       const filePath = photo.file_path.replace(/\\/g, '/');
       const thumbnailPath = photo.thumbnail_path ? photo.thumbnail_path.replace(/\\/g, '/') : null;
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         photo: {
           ...photo,
           full: `/photos/${filePath}`,
@@ -265,12 +329,11 @@ app.put('/api/photos/:id', async (req, res) => {
   }
 });
 
-// Delete photo fixed to work correctly as well as show the info might remove
-app.delete('/api/photos/:id', async (req, res) => {
+// Delete photo - add authentication and logging
+app.delete('/api/photos/:id', authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
-    
-    // Get photo info before deleting
+
     const photo = await photoDb.getPhoto(photoId);
     if (!photo) {
       return res.status(404).json({ error: 'Photo not found' });
@@ -278,24 +341,21 @@ app.delete('/api/photos/:id', async (req, res) => {
 
     console.log('[DELETE] Photo info:', photo);
 
-    // Delete files from filesystem
+    // Delete files from filesystem (existing logic)
     try {
-      // Try's to delete from the path stored in the database
       const mainFilePath = path.join(__dirname, 'uploads', photo.file_path.replace(/\\/g, '/'));
       console.log('[DELETE] Attempting to delete:', mainFilePath);
-      
+
       try {
         await fs.unlink(mainFilePath);
         console.log('[DELETE] Successfully deleted main file');
       } catch (err) {
-        // If that fails, try with just category and filename hopefully no fail
         const altPath = path.join(__dirname, 'uploads', photo.category, photo.filename);
         console.log('[DELETE] First attempt failed, trying:', altPath);
         await fs.unlink(altPath);
         console.log('[DELETE] Successfully deleted main file (alt path)');
       }
-      
-      // Deletes thumbnail
+
       if (photo.thumbnail_path) {
         const thumbnailFilePath = path.join(__dirname, 'uploads', photo.thumbnail_path.replace(/\\/g, '/'));
         try {
@@ -307,13 +367,17 @@ app.delete('/api/photos/:id', async (req, res) => {
       }
     } catch (fileError) {
       console.warn('[DELETE] Error deleting files:', fileError.message);
-      // Continue  with the database deletion even if file deletion fails
     }
 
-    // Deletes from the database
     const success = await photoDb.deletePhoto(photoId);
-    
+
     if (success) {
+      // Log activity
+      await userDb.logActivity(req.user.id, 'delete_photo', 'photo', photoId, {
+        filename: photo.filename,
+        category: photo.category
+      });
+
       res.json({ success: true, message: 'Photo deleted successfully' });
     } else {
       res.status(404).json({ error: 'Photo not found in database' });
@@ -325,16 +389,19 @@ app.delete('/api/photos/:id', async (req, res) => {
   }
 });
 
+
 // Get a single photo
 app.get('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
     const photo = await photoDb.getPhoto(photoId);
-    
+
     if (photo) {
+      // Log activity
+
       const filePath = photo.file_path.replace(/\\/g, '/');
       const thumbnailPath = photo.thumbnail_path ? photo.thumbnail_path.replace(/\\/g, '/') : null;
-      
+
       res.json({
         ...photo,
         full: `/photos/${filePath}`,
@@ -355,7 +422,7 @@ app.get('/api/photos/:id', async (req, res) => {
 app.get('/api/storage-info', async (req, res) => {
   try {
     const db = await getDb();
-    
+
     const stats = await db.get(`
       SELECT 
         COUNT(*) as total_photos,
@@ -377,6 +444,9 @@ app.get('/api/storage-info', async (req, res) => {
       categoryBreakdown[stat.category] = stat.count;
     });
 
+    // Log activity
+    await userDb.logActivity(req.user.id, 'view_storage_info', 'system', null, {});
+
     res.json({
       totalPhotos: stats.total_photos || 0,
       totalStorageUsed: stats.total_size ? `${(stats.total_size / 1024 / 1024).toFixed(2)} MB` : '0 MB',
@@ -391,19 +461,189 @@ app.get('/api/storage-info', async (req, res) => {
     res.status(500).json({ error: 'Failed to get storage info' });
   }
 });
+
+// Add authentication to debug uploads
+app.get('/api/debug/uploads', authenticateUser, requireRole(['super_admin']), async (req, res) => {
+  try {
+    const uploadsDir = path.join(__dirname, 'uploads');
+    const categories = await fs.readdir(uploadsDir);
+
+    const structure = {};
+    for (const category of categories) {
+      const categoryPath = path.join(uploadsDir, category);
+      const stat = await fs.stat(categoryPath);
+      if (stat.isDirectory()) {
+        const files = await fs.readdir(categoryPath);
+        structure[category] = files;
+      }
+    }
+
+    // Log activity
+    await userDb.logActivity(req.user.id, 'debug_uploads', 'system', null, {});
+
+    res.json({ uploadsDir, structure });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+app.get('/api/auth/me', authenticateUser, (req, res) => {
+  res.json({ user: req.user });
+});
+// Login route
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await userDb.authenticateUser(username, password);
+
+    if (!result) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+  
+    res.json({
+      token: result.token,
+      user: result.user
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.post('/api/auth/logout', authenticateUser, async (req, res) => {
+  try {
+    // In a real implementation, you'd invalidate the session token
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+
+
+// User management endpoints (super admin only)
+app.get('/api/users', authenticateUser, requireRole('super_admin'), async (req, res) => {
+  try {
+    const includeInactive = req.query.includeInactive === 'true';
+    const users = await userDb.getAllUsers();
+    
+    // Filter out inactive users unless specifically requested
+    const filteredUsers = includeInactive ? users : users.filter(user => user.is_active === 1);
+    
+    res.json(filteredUsers);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', authenticateUser, requireRole('super_admin'), async (req, res) => {
+  const { username, email, password, role, full_name } = req.body;
+
+  try {
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    if (!['admin', 'super_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const userId = await userDb.createUser({
+      username,
+      email,
+      password,
+      role,
+      full_name,
+      created_by: req.user.id
+    });
+
+    await userDb.logActivity(req.user.id, 'create_user', 'user', userId, {
+      username,
+      role
+    });
+
+    res.status(201).json({
+      message: 'User created successfully',
+      userId
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    if (error.message.includes('UNIQUE constraint failed')) {
+      res.status(400).json({ error: 'Username or email already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to create user' });
+    }
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  const userId = parseInt(req.params.id);
+  const updates = req.body;
+
+  try {
+    // Prevent super admin from demoting themselves
+    if (userId === req.user.id && updates.role !== 'super_admin') {
+      return res.status(400).json({ error: 'Cannot change your own role' });
+    }
+
+    const success = await userDb.updateUser(userId, updates);
+
+    if (!success) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    await userDb.logActivity(req.user.id, 'update_user', 'user', userId, updates);
+
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:id', authenticateUser, requireRole('super_admin'), async (req, res) => {
+  const userId = parseInt(req.params.id);
+
+  try {
+    // Prevent super admin from deleting themselves
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    // Hard delete the user
+    const db = await getDb();
+    const result = await db.run('DELETE FROM users WHERE id = ?', userId);
+    await db.close();
+
+    if (result.changes > 0) {
+      res.json({ message: 'User deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+
 // Get all employees
 app.get('/api/employees', async (req, res) => {
   try {
     const includeInactive = req.query.includeInactive === 'true';
     const employees = await employeeDb.getAllEmployees(includeInactive);
-    
+
     // Add full photo URL to each employee
     const employeesWithPhotos = employees.map(emp => ({
       ...emp,
       photo_url: emp.photo_path ? `/photos/employees/${emp.photo_filename}` : null,
       is_active: emp.is_active === 1
     }));
-    
+
     res.json(employeesWithPhotos);
   } catch (error) {
     console.error('Error fetching employees:', error);
@@ -416,7 +656,7 @@ app.get('/api/employees/:id', async (req, res) => {
   try {
     const employeeId = parseInt(req.params.id);
     const employee = await employeeDb.getEmployee(employeeId);
-    
+
     if (employee) {
       employee.photo_url = employee.photo_path ? `/photos/employees/${employee.photo_filename}` : null;
       employee.is_active = employee.is_active === 1;
@@ -458,12 +698,12 @@ app.post('/api/employees', upload.single('photo'), async (req, res) => {
       // Create thumbnail
       const thumbnailDir = path.join(__dirname, 'uploads', 'employees', 'thumbnails');
       await fs.mkdir(thumbnailDir, { recursive: true });
-      
+
       const thumbnailPath = path.join(thumbnailDir, `thumb_${uniqueName}`);
-      
+
       try {
         await sharp(filePath)
-          .resize(200, 200, { 
+          .resize(200, 200, {
             fit: 'cover',
             position: 'center'
           })
@@ -492,7 +732,7 @@ app.post('/api/employees', upload.single('photo'), async (req, res) => {
 
     const employeeId = await employeeDb.insertEmployee(employeeData);
     const newEmployee = await employeeDb.getEmployee(employeeId);
-    
+
     res.json({
       success: true,
       employee: {
@@ -510,13 +750,13 @@ app.post('/api/employees', upload.single('photo'), async (req, res) => {
 app.put('/api/employees/reorder', async (req, res) => {
   try {
     const { employeeIds } = req.body;
-    
+
     if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
       return res.status(400).json({ error: 'Invalid employee IDs array' });
     }
 
     await employeeDb.updateEmployeeOrder(employeeIds);
-    
+
     res.json({ success: true, message: 'Employee order updated successfully' });
   } catch (error) {
     console.error('[REORDER] Error:', error);
@@ -545,7 +785,7 @@ app.put('/api/employees/:id', upload.single('photo'), async (req, res) => {
     if (req.file) {
       // Get current employee to delete old photo
       const currentEmployee = await employeeDb.getEmployee(employeeId);
-      
+
       // Delete old photo if exists
       if (currentEmployee && currentEmployee.photo_path) {
         const oldPhotoPath = path.join(__dirname, 'uploads', currentEmployee.photo_path);
@@ -553,7 +793,7 @@ app.put('/api/employees/:id', upload.single('photo'), async (req, res) => {
           await fs.unlink(oldPhotoPath);
           // Also delete old thumbnail
           const oldThumbPath = path.join(__dirname, 'uploads', 'employees', 'thumbnails', `thumb_${currentEmployee.photo_filename}`);
-          await fs.unlink(oldThumbPath).catch(() => {});
+          await fs.unlink(oldThumbPath).catch(() => { });
         } catch (err) {
           console.log('Could not delete old photo:', err.message);
         }
@@ -575,12 +815,12 @@ app.put('/api/employees/:id', upload.single('photo'), async (req, res) => {
       // Create thumbnail
       const thumbnailDir = path.join(__dirname, 'uploads', 'employees', 'thumbnails');
       await fs.mkdir(thumbnailDir, { recursive: true });
-      
+
       const thumbnailPath = path.join(thumbnailDir, `thumb_${uniqueName}`);
-      
+
       try {
         await sharp(filePath)
-          .resize(200, 200, { 
+          .resize(200, 200, {
             fit: 'cover',
             position: 'center'
           })
@@ -595,11 +835,11 @@ app.put('/api/employees/:id', upload.single('photo'), async (req, res) => {
     }
 
     const success = await employeeDb.updateEmployee(employeeId, updates);
-    
+
     if (success) {
       const employee = await employeeDb.getEmployee(employeeId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         employee: {
           ...employee,
           photo_url: employee.photo_path ? `/photos/${employee.photo_path}` : null,
@@ -621,7 +861,7 @@ app.delete('/api/employees/:id', async (req, res) => {
   try {
     const employeeId = parseInt(req.params.id);
     const hardDelete = req.query.hard === 'true';
-    
+
     if (hardDelete) {
       // Get employee to delete photo
       const employee = await employeeDb.getEmployee(employeeId);
@@ -631,15 +871,15 @@ app.delete('/api/employees/:id', async (req, res) => {
           await fs.unlink(photoPath);
           // Delete thumbnail too
           const thumbPath = path.join(__dirname, 'uploads', 'employees', 'thumbnails', `thumb_${employee.photo_filename}`);
-          await fs.unlink(thumbPath).catch(() => {});
+          await fs.unlink(thumbPath).catch(() => { });
         } catch (err) {
           console.log('Could not delete photo:', err.message);
         }
       }
     }
-    
+
     const success = await employeeDb.deleteEmployee(employeeId, hardDelete);
-    
+
     if (success) {
       res.json({ success: true, message: 'Employee deleted successfully' });
     } else {
@@ -658,7 +898,7 @@ app.delete('/api/employees/:id', async (req, res) => {
 async function getDb() {
   const sqlite3 = require('sqlite3').verbose();
   const { open } = require('sqlite');
-  
+
   return open({
     filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
     driver: sqlite3.Database
@@ -669,21 +909,21 @@ async function getDb() {
 app.get('/api/prices', async (req, res) => {
   try {
     const db = await getDb();
-    
+
     // Get cabinet prices
     const cabinetPrices = await db.all('SELECT * FROM cabinet_prices');
     const basePrices = {};
     cabinetPrices.forEach(item => {
       basePrices[item.cabinet_type] = parseFloat(item.base_price);
     });
-    
+
     // Get material multipliers
     const materials = await db.all('SELECT * FROM material_pricing');
     const materialMultipliers = {};
     materials.forEach(item => {
       materialMultipliers[item.material_type] = parseFloat(item.multiplier);
     });
-    
+
     // Get color pricing
     const colors = await db.all('SELECT * FROM color_pricing');
     const colorPricing = {};
@@ -691,21 +931,21 @@ app.get('/api/prices', async (req, res) => {
       const key = isNaN(item.color_count) ? item.color_count : parseInt(item.color_count);
       colorPricing[key] = parseFloat(item.price_addition);
     });
-    
+
     await db.close();
-    
+
     console.log('Loaded prices with materials:', {
       basePrices,
       materialMultipliers,
       colorPricing
     });
-    
+
     res.json({
       basePrices,
       materialMultipliers,
       colorPricing
     });
-    
+
   } catch (error) {
     console.error('Error loading prices:', error);
     res.status(500).json({ error: 'Failed to load prices' });
@@ -716,9 +956,9 @@ app.put('/api/prices/cabinets', async (req, res) => {
   try {
     const db = await getDb();
     const prices = req.body;
-    
+
     console.log('Updating cabinet prices:', prices);
-    
+
     // Update each cabinet price
     for (const [cabinetType, price] of Object.entries(prices)) {
       await db.run(
@@ -728,27 +968,28 @@ app.put('/api/prices/cabinets', async (req, res) => {
         [price, cabinetType]
       );
     }
-    
+
     await db.close();
-    
+
     res.json({ success: true, message: 'Cabinet prices updated successfully' });
-    
+
   } catch (error) {
     console.error('Error updating cabinet prices:', error);
     res.status(500).json({ error: 'Failed to update cabinet prices' });
   }
+
 });
 app.get('/api/prices/materials', async (req, res) => {
   try {
     const db = await getDb();
     const materials = await db.all('SELECT * FROM material_pricing ORDER BY material_type');
-    
+
     // Convert to object format for frontend
     const materialObject = {};
     materials.forEach(m => {
       materialObject[m.material_type] = parseFloat(m.multiplier);
     });
-    
+
     await db.close();
     console.log('Loaded materials:', materialObject);
     res.json(materialObject);
@@ -762,39 +1003,39 @@ app.put('/api/prices/materials', async (req, res) => {
   try {
     const materials = req.body;
     console.log('Saving materials:', materials);
-    
+
     const db = await getDb();
-    
+
     // Start a transaction
     await db.run('BEGIN TRANSACTION');
-    
+
     try {
       // Delete all existing materials
       await db.run('DELETE FROM material_pricing');
-      
+
       // Insert all materials (including new ones)
       const stmt = await db.prepare(
         'INSERT INTO material_pricing (material_type, multiplier) VALUES (?, ?)'
       );
-      
+
       for (const [material, multiplier] of Object.entries(materials)) {
         await stmt.run(material, multiplier);
         console.log(`Inserted material: ${material} with multiplier: ${multiplier}`);
       }
-      
+
       await stmt.finalize();
       await db.run('COMMIT');
-      
+
       console.log('Materials saved successfully');
       res.json({ success: true, message: 'Materials saved successfully' });
-      
+
     } catch (error) {
       await db.run('ROLLBACK');
       throw error;
     } finally {
       await db.close();
     }
-    
+
   } catch (error) {
     console.error('Error saving materials:', error);
     res.status(500).json({ error: 'Failed to save materials: ' + error.message });
@@ -806,9 +1047,9 @@ app.put('/api/prices/colors', async (req, res) => {
   try {
     const db = await getDb();
     const colors = req.body;
-    
+
     console.log('Updating color pricing:', colors);
-    
+
     // Update each color price
     for (const [colorCount, price] of Object.entries(colors)) {
       await db.run(
@@ -818,11 +1059,11 @@ app.put('/api/prices/colors', async (req, res) => {
         [price, colorCount]
       );
     }
-    
+
     await db.close();
-    
+
     res.json({ success: true, message: 'Color pricing updated successfully' });
-    
+
   } catch (error) {
     console.error('Error updating color pricing:', error);
     res.status(500).json({ error: 'Failed to update color pricing' });
@@ -833,7 +1074,7 @@ app.put('/api/prices/colors', async (req, res) => {
 app.get('/api/prices/history', async (req, res) => {
   try {
     const db = await getDb();
-    
+
     const history = await db.all(`
       SELECT 'cabinet' as type, cabinet_type as item, base_price as value, updated_at 
       FROM cabinet_prices 
@@ -846,32 +1087,35 @@ app.get('/api/prices/history', async (req, res) => {
       ORDER BY updated_at DESC
       LIMIT 50
     `);
-    
+
     await db.close();
-    
+
     res.json(history);
-    
+
   } catch (error) {
     console.error('Error fetching price history:', error);
     res.status(500).json({ error: 'Failed to fetch price history' });
   }
+  await userDb.logActivity(req.user.id, 'view_price_history', 'price_history', null, {});
 });
 // Get all designs (for admin panel)
 app.get('/api/designs', async (req, res) => {
   try {
     const status = req.query.status || null;
     const designs = await designDb.getAllDesigns(status);
+
     res.json(designs);
   } catch (error) {
     console.error('Error fetching designs:', error);
     res.status(500).json({ error: 'Failed to fetch designs' });
   }
 });
+
 // Send email notification
 app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
   try {
     console.log('\n=== NEW DESIGN SUBMISSION ===');
-    
+
     // Parse design data from form data
     let designData;
     try {
@@ -881,13 +1125,13 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
       console.error('Failed to parse design data:', parseError);
       return res.status(400).json({ error: 'Invalid design data format' });
     }
-    
+
     // Add PDF buffer
     if (req.file) {
       designData.pdf_data = req.file.buffer;
       console.log('PDF size:', req.file.buffer.length, 'bytes');
     }
-    
+
     // Log image data info
     console.log('Design images:', {
       has_floor_plan: !!designData.floor_plan_image,
@@ -959,29 +1203,28 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
             </div>
           `
         });
-        
+
         console.log('📧 Email sent:', info.messageId);
       } catch (emailError) {
         console.error('⚠️  Email failed:', emailError.message);
       }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       designId,
       message: 'Design saved successfully'
     });
 
   } catch (error) {
     console.error('❌ Error saving design:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to save design',
-      details: error.message 
+      details: error.message
     });
   }
 });
 
-// Get design statistics (must come before the :id route)
 app.get('/api/designs/stats', async (req, res) => {
   try {
     const stats = await designDb.getDesignStats();
@@ -992,14 +1235,15 @@ app.get('/api/designs/stats', async (req, res) => {
   }
 });
 
-
-// Get single design details
+// Also fix the single design route
 app.get('/api/designs/:id', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const design = await designDb.getDesign(designId);
-    
+
     if (design) {
+      // Log activity
+
       res.json(design);
     } else {
       res.status(404).json({ error: 'Design not found' });
@@ -1012,13 +1256,17 @@ app.get('/api/designs/:id', async (req, res) => {
 app.delete('/api/designs/:id', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
-    
+
     const db = await getDb();
     const result = await db.run('DELETE FROM designs WHERE id = ?', designId);
     await db.close();
-    
+
     if (result.changes > 0) {
       console.log(`Design #${designId} deleted`);
+
+      // Log activity
+      await userDb.logActivity(req.user.id, 'delete_design', 'design', designId, {});
+
       res.json({ success: true, message: 'Design deleted successfully' });
     } else {
       res.status(404).json({ error: 'Design not found' });
@@ -1028,13 +1276,15 @@ app.delete('/api/designs/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete design' });
   }
 });
+
 // Get design PDF
 app.get('/api/designs/:id/pdf', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const pdfData = await designDb.getDesignPdf(designId);
-    
+
     if (pdfData) {
+
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="design-${designId}.pdf"`
@@ -1054,10 +1304,16 @@ app.put('/api/designs/:id/status', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const { status, viewedBy } = req.body;
-    
-    const success = await designDb.updateDesignStatus(designId, status, viewedBy);
-    
+
+    const success = await designDb.updateDesignStatus(designId, status, viewedBy || req.user.username);
+
     if (success) {
+      // Log activity
+      await userDb.logActivity(req.user.id, 'update_design_status', 'design', designId, {
+        status: status,
+        viewedBy: viewedBy || req.user.username
+      });
+
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Design not found' });
@@ -1071,10 +1327,10 @@ app.get('/api/designs/:id/debug', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const db = await getDb();
-    
+
     // Get raw data from database
     const design = await db.get('SELECT * FROM designs WHERE id = ?', designId);
-    
+
     if (design) {
       // Check if kitchen_data and bathroom_data are stored
       const debugInfo = {
@@ -1088,12 +1344,12 @@ app.get('/api/designs/:id/debug', async (req, res) => {
         bathroom_data_preview: design.bathroom_data ? design.bathroom_data.substring(0, 200) : null,
         pdf_data_size: design.pdf_data ? design.pdf_data.length : 0
       };
-      
+
       res.json(debugInfo);
     } else {
       res.status(404).json({ error: 'Design not found' });
     }
-    
+
     await db.close();
   } catch (error) {
     console.error('Debug error:', error);
@@ -1102,8 +1358,8 @@ app.get('/api/designs/:id/debug', async (req, res) => {
 });
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uploadsDir: path.join(__dirname, 'uploads'),
     databasePath: path.join(__dirname, 'database', 'cabinet_photos.db')
@@ -1115,7 +1371,7 @@ app.get('/api/debug/uploads', async (req, res) => {
   try {
     const uploadsDir = path.join(__dirname, 'uploads');
     const categories = await fs.readdir(uploadsDir);
-    
+
     const structure = {};
     for (const category of categories) {
       const categoryPath = path.join(uploadsDir, category);
@@ -1125,7 +1381,10 @@ app.get('/api/debug/uploads', async (req, res) => {
         structure[category] = files;
       }
     }
-    
+
+    // Log activity
+    await userDb.logActivity(req.user.id, 'debug_uploads', 'system', null, {});
+
     res.json({ uploadsDir, structure });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1145,6 +1404,7 @@ app.use((error, req, res, next) => {
 });
 // 404 handler
 app.use((req, res) => {
+
   res.status(404).json({ error: 'Endpoint not found' });
 });
 const PORT = process.env.PORT || 3001;

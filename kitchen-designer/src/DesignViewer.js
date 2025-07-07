@@ -13,6 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
+
 const DesignViewer = () => {
   const [designs, setDesigns] = useState([]);
   const [selectedDesign, setSelectedDesign] = useState(null);
@@ -22,11 +23,21 @@ const DesignViewer = () => {
 
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+  // Add the auth headers helper function
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
+
   useEffect(() => {
     loadDesigns();
     loadStats();
   }, [filter]);
 
+  // Updated loadDesigns with auth headers
   const loadDesigns = async () => {
     setLoading(true);
     try {
@@ -35,9 +46,14 @@ const DesignViewer = () => {
         : `${API_BASE}/api/designs?status=${filter}`;
 
       const response = await fetch(url);
+      
       if (response.ok) {
         const data = await response.json();
         setDesigns(data);
+      } else if (response.status === 401) {
+        // Handle unauthorized access
+        console.error('Unauthorized access - please log in again');
+        // You might want to redirect to login here
       }
     } catch (error) {
       console.error('Error loading designs:', error);
@@ -46,28 +62,39 @@ const DesignViewer = () => {
     }
   };
 
+  // Updated loadStats with auth headers
   const loadStats = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/designs/stats`);
+      const response = await fetch(`${API_BASE}/api/designs/stats`, {
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else if (response.status === 401) {
+        console.error('Unauthorized access to stats');
       }
     } catch (error) {
       console.error('Error loading stats:', error);
     }
   };
 
+  // Updated viewDesign with auth headers
   const viewDesign = async (designId) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/designs/${designId}`);
+      const response = await fetch(`${API_BASE}/api/designs/${designId}`, {
+        headers: getAuthHeaders()
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setSelectedDesign(data);
         // Reload designs to update status
         loadDesigns();
         loadStats();
+      } else if (response.status === 401) {
+        console.error('Unauthorized access to design details');
       }
     } catch (error) {
       console.error('Error loading design:', error);
@@ -76,10 +103,49 @@ const DesignViewer = () => {
     }
   };
 
-  const downloadPDF = (designId, clientName) => {
-    window.open(`${API_BASE}/api/designs/${designId}/pdf`, '_blank');
+  const downloadPDF = async (designId, clientName) => {
+    try {
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch(`${API_BASE}/api/designs/${designId}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element and trigger download
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `design-${clientName.replace(/\s+/g, '-')}-${designId}.pdf`;
+      
+      // Append to body, click, and remove
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please make sure you are logged in.');
+    }
   };
 
+  // Updated deleteDesign with auth headers
   const deleteDesign = async (designId) => {
     if (!window.confirm('Are you sure you want to delete this design? This action cannot be undone.')) {
       return;
@@ -87,7 +153,8 @@ const DesignViewer = () => {
 
     try {
       const response = await fetch(`${API_BASE}/api/designs/${designId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {
@@ -99,6 +166,8 @@ const DesignViewer = () => {
         if (selectedDesign && selectedDesign.id === designId) {
           setSelectedDesign(null);
         }
+      } else if (response.status === 401) {
+        alert('Unauthorized - please log in again');
       } else {
         alert('Failed to delete design');
       }
@@ -115,10 +184,8 @@ const DesignViewer = () => {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true, // Use 12-hour format with AM/PM
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Use user's local timezone
-
-
+      hour12: true,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
   };
 
@@ -371,6 +438,7 @@ const DesignViewer = () => {
                   </div>
                 </div>
               </div>
+
               {/* Design Preview */}
               <div className="mb-6">
                 <h3 className="font-semibold mb-3">Design Visualization</h3>
@@ -380,6 +448,7 @@ const DesignViewer = () => {
                   hasBathroom={selectedDesign.include_bathroom && selectedDesign.bathroom_data}
                 />
               </div>
+
               {/* Room Details */}
               {selectedDesign.kitchen_data && selectedDesign.include_kitchen && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">

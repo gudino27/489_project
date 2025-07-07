@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { open } = require('sqlite');
+const bcrypt = require('bcryptjs');
 
 // Create database file
 const dbPath = path.join(__dirname,'database','cabinet_photos.db');
@@ -306,8 +307,243 @@ async function addImageColumns() {
     await db.close();
   }
 }
+async function addUserTables() {
+  console.log('Adding user management tables to database...\n');
+  
+  const db = await open({
+    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
+    driver: sqlite3.Database
+  });
 
+  try {
+    // Create users table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'admin',
+        full_name TEXT,
+        is_active BOOLEAN DEFAULT 1,
+        last_login DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      )
+    `);
+    console.log('✓ Created users table');
+
+    // Create user sessions table for secure authentication
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✓ Created user_sessions table');
+
+    // Create activity logs table for analytics
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        resource_type TEXT,
+        resource_id INTEGER,
+        ip_address TEXT,
+        user_agent TEXT,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    console.log('✓ Created activity_logs table');
+
+    // Create site analytics table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS site_analytics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        visitor_ip TEXT,
+        visitor_id TEXT,
+        referrer TEXT,
+        user_agent TEXT,
+        session_duration INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✓ Created site_analytics table');
+
+    // Create indexes for better performance
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+      CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
+      CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
+    `);
+    console.log('✓ Created indexes');
+
+    // Insert default super admin user
+    const bcrypt = require('bcryptjs');
+    const defaultPassword = await bcrypt.hash('superadmin123', 10);
+    
+    await db.run(
+      `INSERT OR IGNORE INTO users (username, email, password_hash, role, full_name) 
+       VALUES (?, ?, ?, ?, ?)`,
+      ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
+    );
+    console.log('✓ Created default super admin user (username: superadmin, password: superadmin123)');
+
+  } catch (error) {
+    console.error('Error setting up user tables:', error);
+  } finally {
+    await db.close();
+    console.log('\nUser management tables setup complete!');
+  }
+}
+async function setupAuthTables() {
+  console.log('Setting up authentication and analytics tables...\n');
+  
+  const db = await open({
+    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
+    driver: sqlite3.Database
+  });
+
+  try {
+    // Create users table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'admin',
+        full_name TEXT,
+        is_active BOOLEAN DEFAULT 1,
+        last_login DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      )
+    `);
+    console.log('✓ Created users table');
+
+    // Create user sessions table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✓ Created user_sessions table');
+
+    // Create activity logs table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        resource_type TEXT,
+        resource_id INTEGER,
+        ip_address TEXT,
+        user_agent TEXT,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    console.log('✓ Created activity_logs table');
+
+    // Create site analytics table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS site_analytics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        visitor_ip TEXT,
+        visitor_id TEXT,
+        referrer TEXT,
+        user_agent TEXT,
+        session_duration INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✓ Created site_analytics table');
+
+    // Create indexes
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+      CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
+      CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
+    `);
+    console.log('✓ Created indexes');
+
+    // Check if super admin already exists
+    const existingAdmin = await db.get(
+      'SELECT id FROM users WHERE username = ?',
+      ['superadmin']
+    );
+
+    if (!existingAdmin) {
+      // Create default super admin user
+      const defaultPassword = await bcrypt.hash('changeme123', 10);
+      
+      await db.run(
+        `INSERT INTO users (username, email, password_hash, role, full_name) 
+         VALUES (?, ?, ?, ?, ?)`,
+        ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
+      );
+      
+      console.log('\n✓ Created default super admin user');
+      console.log('\n========================================');
+      console.log('Default Super Admin Credentials:');
+      console.log('Username: superadmin');
+      console.log('Password: changeme123');
+      console.log('========================================');
+      console.log('\n⚠️  IMPORTANT: Change this password immediately after first login!');
+    } else {
+      console.log('\n✓ Super admin user already exists');
+    }
+
+    // Verify all tables exist
+    const tables = await db.all(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+    );
+    
+    console.log('\n✓ Database tables verified:');
+    tables.forEach(table => {
+      console.log(`  - ${table.name}`);
+    });
+
+  } catch (error) {
+    console.error('\n❌ Error setting up tables:', error);
+    throw error;
+  } finally {
+    await db.close();
+    console.log('\n✅ Setup completed successfully!');
+  }
+}
 // Run the setups
 addImageColumns();
 addDesignsTable();
 addPriceTables();
+addUserTables();

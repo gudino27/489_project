@@ -10,16 +10,54 @@
             padding: 0;
         }
 
-        /* Navigation Bar */
-        #main-nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 2000;
-            background-color: rgba(0, 0, 0, 0.95) !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
+        .nav-link {
+     position: relative;
+     transition: all 0.3s ease;
+     padding: 0.5rem 1rem !important;
+     border-radius: 4px;
+ }
+
+ /* Hover effects */
+ .nav-link:hover {
+     background-color: rgba(255, 255, 255, 0.1);
+     color: #e5e7eb !important;
+     transform: translateY(-1px);
+ }
+
+ /* Active page highlighting */
+ .nav-link.active {
+     background-color: rgba(255, 255, 255, 0.2);
+     color: #ffffff !important;
+     font-weight: 600;
+ }
+
+ /* Underline effect on hover */
+ .nav-link::after {
+     content: '';
+     position: absolute;
+     bottom: -2px;
+     left: 50%;
+     width: 0;
+     height: 2px;
+     background-color: #3b82f6;
+     transition: all 0.3s ease;
+     transform: translateX(-50%);
+ }
+
+ .nav-link:hover::after {
+     width: 80%;
+ }
+
+ .nav-link.active::after {
+     width: 80%;
+     background-color: #ffffff;
+ }
+
+ /* Focus effects for accessibility */
+ .nav-link:focus {
+     outline: 2px solid #3b82f6;
+     outline-offset: 2px;
+ }
 
         /* Category Container */
         .category-container {
