@@ -739,7 +739,6 @@ const userDb = {
   
 };
 
-// Export all modules including getDb
 module.exports = { 
   getDb,
   photoDb, 

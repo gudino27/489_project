@@ -1,14 +1,13 @@
+
 // Configuration
-const API_BASE = 'http://localhost:3001'; // needs to be updated to match server
+const API_BASE = "https://api.gudinocustom.com";
+console.log(`Using API base: ${API_BASE}`);
 // State variables
 let currentCategory = '';
 let currentIndex = 0;
 let photos = [];
 let allPhotos = [];
 let rotationAngle = 0;
-
-//cors 
-
 // Initialize
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Initializing portfolio...');
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setupCategoryButtons();
     setupModal();
     setupKeyboardNavigation();
-});
+
 
 // Load photos from API 
 async function loadPhotos() {
@@ -395,3 +394,4 @@ setInterval(loadPhotos, 30000); // Reload every 30 seconds
 
 // Make functions available globally
 window.rotate3DCarousel = rotate3DCarousel;
+});
