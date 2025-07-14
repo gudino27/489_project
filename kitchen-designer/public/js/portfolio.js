@@ -1,14 +1,13 @@
+
 // Configuration
-const API_BASE = 'http://localhost:3001'; // needs to be updated to match server
+const API_BASE = "https://api.gudinocustom.com";
+console.log(`Using API base: ${API_BASE}`);
 // State variables
 let currentCategory = '';
 let currentIndex = 0;
 let photos = [];
 let allPhotos = [];
 let rotationAngle = 0;
-
-//cors 
-
 // Initialize
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Initializing portfolio...');
@@ -34,27 +33,27 @@ document.addEventListener('DOMContentLoaded', function () {
     setupCategoryButtons();
     setupModal();
     setupKeyboardNavigation();
-});
 
-// Load photos from API 
+
+// Load photos from API
 async function loadPhotos() {
     try {
         const token = getAuthToken();
         const headers = {
             'Content-Type': 'application/json'
         };
-        
+
         // Add authorization header if token exists
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE}/api/photos`, {
             method: 'GET',
             headers: headers,
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             allPhotos = await response.json();
         } else {
@@ -74,7 +73,7 @@ async function loadPhotos() {
 // Get auth token from localStorage or cookies
 function getAuthToken() {
     // Try different sources for the token
-    return localStorage.getItem('authToken') || 
+    return localStorage.getItem('authToken') ||
            localStorage.getItem('token') ||
            sessionStorage.getItem('authToken') ||
            getCookie('authToken') ||
@@ -120,7 +119,7 @@ function selectCategory(category) {
             }
         });
 
-        // Filter photos for this category 
+        // Filter photos for this category
         if (allPhotos.length > 0 && !photos) {
             // If this is first load and no photos are in that category, will just show all photos
             photos = allPhotos;
@@ -395,3 +394,4 @@ setInterval(loadPhotos, 30000); // Reload every 30 seconds
 
 // Make functions available globally
 window.rotate3DCarousel = rotate3DCarousel;
+});

@@ -3,6 +3,7 @@
 //---------------------------------------
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
   Image,
@@ -18,7 +19,7 @@ import {
 // Importing components for different functionalities
 // These components will handle specific admin tasks
 //  like price management, photo uploads,
-//  employee management, etc 
+//  employee management, etc
 // -------------------------------------------------
 import sessionManager from './sessionManager';
 import PriceManagement from './PriceManagement';
@@ -38,6 +39,7 @@ import './AdminPanel.css';
 // ----------------------------------------------------
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -172,14 +174,8 @@ const AdminPanel = () => {
     return baseTabs;
   };
   const MainNavBar = () => {
-    const navigateToPage = (page) => {
-      const issameDomain = window.location.port === '3000';
-
-      if (issameDomain) {
-        window.location.href = `/pages/${page}`;
-      } else {
-        window.location.href = `http://127.0.0.1:5500/${page}`;
-      }
+    const navigateToPage = (path) => {
+     navigate(path);
     };
 
     return (
@@ -188,7 +184,7 @@ const AdminPanel = () => {
         style={{ backgroundColor: 'rgb(0, 0, 0)' }}
       >
         <button
-          onClick={() => navigateToPage('home.html')}
+          onClick={() => navigateToPage('/')}
           className="nav-link text-white"
         >
           Home
@@ -196,25 +192,25 @@ const AdminPanel = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigateToPage('portfolio.html')}
+            onClick={() => navigateToPage('/pages/portfolio.html')}
             className="nav-link text-white"
           >
             Portfolio
           </button>
           <button
-            onClick={() => navigateToPage('design.html')}
+            onClick={() => navigateToPage('/pages/design.html')}
             className="nav-link text-white"
           >
             Design
           </button>
           <button
-            onClick={() => navigateToPage('about.html')}
+            onClick={() => navigateToPage('/pages/about.html')}
             className="nav-link text-white"
           >
             About
           </button>
           <button
-            onClick={() => navigateToPage('contact.html')}
+            onClick={() => navigateToPage('/pages/contact.html')}
             className="nav-link text-white"
           >
             Contact
@@ -276,7 +272,7 @@ const AdminPanel = () => {
       </div></>
     );
   }
- 
+
 
   // -----------------------------
   // Render the admin panel UI
@@ -341,7 +337,7 @@ const AdminPanel = () => {
         {activeTab === 'prices' && (
           <div className="p-6">
             {/*
-             Price Management Tab 
+             Price Management Tab
              loaded in from a different component
              */}
             <PriceManagement token={token} API_BASE={API_BASE} />
@@ -349,7 +345,7 @@ const AdminPanel = () => {
         )}
 
         {/*
-         Photo Management Tab 
+         Photo Management Tab
          loaded in from a different component
          */}
         {activeTab === 'photos' && (
@@ -365,12 +361,12 @@ const AdminPanel = () => {
         */}
         {activeTab === 'designs' && (<DesignViewer token={token} API_BASE={API_BASE} />)}
         {/*
-         User Management Tab 
+         User Management Tab
         */}
         {activeTab === 'users' && user?.role === 'super_admin' && (
           <UserManagement token={token} API_BASE={API_BASE} />
         )}
-      
+
       </div>
     </div>
   );

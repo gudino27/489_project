@@ -1,3 +1,6 @@
+ const baseUrl = location.hostname === "localhost:3000/designer"
+    ? "http://localhost:3000/designer"
+    : "https://gudinocustom.com/designer";
  function hideLoading() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('react-app').style.display = 'block';
@@ -14,7 +17,7 @@
 
         function checkConnection() {
             if (retryCount < maxRetries) {
-                fetch('http://localhost:3000')
+                fetch(baseURL)
                     .then(response => {
                         if (response.ok) {
                             location.reload();
