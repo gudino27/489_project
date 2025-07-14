@@ -1,3 +1,12 @@
+ * {
+     margin: 0;
+     padding: 0;
+     box-sizing: border-box;
+ }
+body {
+    background-color: rgb(110, 110, 110);
+}
+
 /* Navigation highlighting */
 .nav-link {
     position: relative;
@@ -51,86 +60,80 @@
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px); /* 30 px lower */
+        transform: translateY(30px);
+        /* 30 px lower */
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-.banner{
+.banner {
     text-align: center;
     font-size: 3rem;
     color: rgb(255, 255, 255);
     margin-top: 55px;
-    font-family:Georgia, 'Times New Roman', Times, serif;
-    animation: fadeInUp
-                   0.8s
-                   ease-out
-                   0s
-                   forwards;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    animation: fadeInUp 0.8s ease-out 0s forwards;
 }
 
 
-.introduction{
+.introduction {
     text-align: center;
-    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
     font-size: 2rem;
     color: rgb(255, 255, 255);
     margin-top: 45px;
-    animation: fadeInUp
-                   0.8s
-                   ease-out
-                   0.2s
-                   forwards;
+    animation: fadeInUp 0.8s ease-out 0.2s forwards;
 }
 
-.intro-image{
+.intro-image {
     text-align: center;
     margin-top: 45px;
 }
 
-.intro-image img{
+.intro-image img {
     max-width: 90%;
     height: auto;
     border-radius: 5px;
 }
 
-.quote{
+.quote {
     text-align: center;
-    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
     font-size: 2rem;
     color: rgb(255, 255, 255);
     margin-top: 50px;
 }
 
-.description-header{
+.description-header {
     text-align: left;
-    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
     font-size: 2rem;
     color: rgb(255, 255, 255);
     margin-top: 20px;
     margin-left: 35px;
 }
 
-.description{
+.description {
     text-align: left;
-    font-family:Georgia, 'Times New Roman', Times, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
     font-size: 20px;
     color: rgb(255, 255, 255);
     margin-top: 5px;
     margin-left: 35px;
 }
 
-.button{
+.button {
     text-align: center;
     margin-top: 30px;
 }
 
-.button .btn{
+.button .btn {
     font-size: 1em;
+    background-color: #333333;
     background-color: #333333;
     padding: 10px 20px;
 }
-

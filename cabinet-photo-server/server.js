@@ -12,7 +12,7 @@ const { photoDb, employeeDb, designDb, userDb } = require('./database/db-helpers
 const nodemailer = require('nodemailer');
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5500','http://127.0.0.1:5500'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gudinocustom.com', 'https://www.gudinocustom.com','https://api.gudinocustom.com'],
   credentials: true, // Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -152,7 +152,6 @@ app.get('/api/photos', async (req, res) => {
       };
     });
 
-    // Log activity
 
     res.json(formattedPhotos);
   } catch (error) {
@@ -196,7 +195,7 @@ app.post('/api/photos', authenticateUser, requireRole(['admin', 'super_admin']),
 
     const dimensions = await getImageDimensions(req.file.path);
 
-    const photoId = await photoDb.insertPhoto({
+    const photoId = await photoDb.createPhoto({
       title: req.body.title || req.file.originalname.split('.')[0],
       filename: req.file.filename,
       original_name: req.file.originalname,
@@ -212,12 +211,7 @@ app.post('/api/photos', authenticateUser, requireRole(['admin', 'super_admin']),
 
     console.log('[DATABASE] Saved with ID:', photoId);
 
-    // Log activity
-    await userDb.logActivity(req.user.id, 'upload_photo', 'photo', photoId, {
-      filename: req.file.filename,
-      category: category,
-      size: req.file.size
-    });
+   
 
     const photo = await photoDb.getPhoto(photoId);
 
@@ -249,10 +243,7 @@ app.put('/api/photos/reorder', async (req, res) => {
 
     await photoDb.updateDisplayOrder(photoIds);
 
-    // Log activity
-    await userDb.logActivity(req.user.id, 'reorder_photos', 'photo', null, {
-      photoIds: photoIds
-    });
+
 
     res.json({ success: true, message: 'Photo order updated successfully' });
   } catch (error) {
@@ -302,8 +293,6 @@ app.put('/api/photos/:id', async (req, res) => {
     const success = await photoDb.updatePhoto(photoId, updates);
 
     if (success) {
-      // Log activity
-      await userDb.logActivity(req.user.id, 'update_photo', 'photo', photoId, updates);
 
       const photo = await photoDb.getPhoto(photoId);
       const filePath = photo.file_path.replace(/\\/g, '/');
@@ -372,11 +361,7 @@ app.delete('/api/photos/:id', authenticateUser, requireRole(['admin', 'super_adm
     const success = await photoDb.deletePhoto(photoId);
 
     if (success) {
-      // Log activity
-      await userDb.logActivity(req.user.id, 'delete_photo', 'photo', photoId, {
-        filename: photo.filename,
-        category: photo.category
-      });
+      
 
       res.json({ success: true, message: 'Photo deleted successfully' });
     } else {
@@ -397,7 +382,6 @@ app.get('/api/photos/:id', async (req, res) => {
     const photo = await photoDb.getPhoto(photoId);
 
     if (photo) {
-      // Log activity
 
       const filePath = photo.file_path.replace(/\\/g, '/');
       const thumbnailPath = photo.thumbnail_path ? photo.thumbnail_path.replace(/\\/g, '/') : null;
@@ -444,8 +428,6 @@ app.get('/api/storage-info', async (req, res) => {
       categoryBreakdown[stat.category] = stat.count;
     });
 
-    // Log activity
-    await userDb.logActivity(req.user.id, 'view_storage_info', 'system', null, {});
 
     res.json({
       totalPhotos: stats.total_photos || 0,
@@ -453,7 +435,7 @@ app.get('/api/storage-info', async (req, res) => {
       featuredCount: stats.featured_count || 0,
       byCategory: categoryBreakdown,
       storagePath: path.resolve('uploads'),
-      serverUrl: `http://localhost:${PORT}`
+      serverUrl: `https://api.gudinocustom.com:${PORT}`
     });
 
   } catch (error) {
@@ -478,8 +460,6 @@ app.get('/api/debug/uploads', authenticateUser, requireRole(['super_admin']), as
       }
     }
 
-    // Log activity
-    await userDb.logActivity(req.user.id, 'debug_uploads', 'system', null, {});
 
     res.json({ uploadsDir, structure });
   } catch (error) {
@@ -593,7 +573,6 @@ app.put('/api/users/:id', async (req, res) => {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
-    await userDb.logActivity(req.user.id, 'update_user', 'user', userId, updates);
 
     res.json({ message: 'User updated successfully' });
   } catch (error) {
@@ -1093,7 +1072,6 @@ app.get('/api/prices/history', async (req, res) => {
     console.error('Error fetching price history:', error);
     res.status(500).json({ error: 'Failed to fetch price history' });
   }
-  await userDb.logActivity(req.user.id, 'view_price_history', 'price_history', null, {});
 });
 // Get all designs (for admin panel)
 app.get('/api/designs', async (req, res) => {
@@ -1129,7 +1107,6 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
       console.log('PDF size:', req.file.buffer.length, 'bytes');
     }
 
-    // Log image data info
     console.log('Design images:', {
       has_floor_plan: !!designData.floor_plan_image,
       floor_plan_size: designData.floor_plan_image ? designData.floor_plan_image.length : 0,
@@ -1239,7 +1216,6 @@ app.get('/api/designs/:id', async (req, res) => {
     const design = await designDb.getDesign(designId);
 
     if (design) {
-      // Log activity
 
       res.json(design);
     } else {
@@ -1261,8 +1237,6 @@ app.delete('/api/designs/:id', async (req, res) => {
     if (result.changes > 0) {
       console.log(`Design #${designId} deleted`);
 
-      // Log activity
-      await userDb.logActivity(req.user.id, 'delete_design', 'design', designId, {});
 
       res.json({ success: true, message: 'Design deleted successfully' });
     } else {
@@ -1305,12 +1279,7 @@ app.put('/api/designs/:id/status', async (req, res) => {
     const success = await designDb.updateDesignStatus(designId, status, viewedBy || req.user.username);
 
     if (success) {
-      // Log activity
-      await userDb.logActivity(req.user.id, 'update_design_status', 'design', designId, {
-        status: status,
-        viewedBy: viewedBy || req.user.username
-      });
-
+     
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Design not found' });
@@ -1379,8 +1348,6 @@ app.get('/api/debug/uploads', async (req, res) => {
       }
     }
 
-    // Log activity
-    await userDb.logActivity(req.user.id, 'debug_uploads', 'system', null, {});
 
     res.json({ uploadsDir, structure });
   } catch (error) {

@@ -10,7 +10,7 @@ const EmployeeManager = () => {
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
 
-  const API_BASE = 'http://localhost:3001';
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   // New employee form state
   const [newEmployee, setNewEmployee] = useState({
