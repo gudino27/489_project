@@ -27,7 +27,8 @@ import CategoryPhotoManager from './catergoryPhotoManager';
 import EmployeeManager from './EmployeeManager';
 import DesignViewer from './DesignViewer';
 import UserManagement from './UserManagement';
-import './AdminPanel.css';
+import './css/AdminPanel.css';
+import MainNavBar from './Navigation';
 // ----------------------------------------------------
 // Admin Panel Component
 // This component handles the admin panel functionality
@@ -172,55 +173,6 @@ const AdminPanel = () => {
       return [...baseTabs, 'users'];
     }
     return baseTabs;
-  };
-  const MainNavBar = () => {
-    const navigateToPage = (path) => {
-     navigate(path);
-    };
-
-    return (
-      <nav
-        className="w-full flex items-center justify-between px-6 py-3"
-        style={{ backgroundColor: 'rgb(0, 0, 0)' }}
-      >
-        <button
-          onClick={() => navigateToPage('/')}
-          className="nav-link text-white"
-        >
-          Home
-        </button>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigateToPage('/pages/portfolio.html')}
-            className="nav-link text-white"
-          >
-            Portfolio
-          </button>
-          <button
-            onClick={() => navigateToPage('/pages/design.html')}
-            className="nav-link text-white"
-          >
-            Design
-          </button>
-          <button
-            onClick={() => navigateToPage('/pages/about.html')}
-            className="nav-link text-white"
-          >
-            About
-          </button>
-          <button
-            onClick={() => navigateToPage('/pages/contact.html')}
-            className="nav-link text-white"
-          >
-            Contact
-          </button>
-          <span className="nav-link active text-white">
-            Login
-          </span>
-        </div>
-      </nav>
-    );
   };
   // Login screen
   if (!isAuthenticated) {

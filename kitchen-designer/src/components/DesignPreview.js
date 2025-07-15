@@ -5,7 +5,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
     const [viewMode, setViewMode] = useState('floor');
     const [selectedWall, setSelectedWall] = useState(1);
     const [showFullscreen, setShowFullscreen] = useState(false);
-    const [activeRoom, setActiveRoom] = useState('kitchen'); // Add room state
+    const [activeRoom, setActiveRoom] = useState('kitchen');
 
     // Set initial active room based on what's available
     useEffect(() => {

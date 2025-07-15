@@ -8,6 +8,7 @@ import {
   Bath             // Bathroom room icon
 } from 'lucide-react';
 import jsPDF from 'jspdf';               // PDF generation library
+import MainNavBar from './Navigation';
 const KitchenDesigner = () => {
   // -----------------------------
   // Business Configuration
@@ -1487,7 +1488,10 @@ const KitchenDesigner = () => {
   // Initial configuration screen where users input room measurements and select room type
   if (step === 'dimensions') {
     return (
-      <div className="min-h-screen p-8" style={{ background: 'rgb(110,110,110)' }}>
+      <>
+        <MainNavBar />
+        
+        <div className="min-h-screen p-8" style={{ background: 'rgb(110,110,110)' }}>
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             {/* Application header and branding */}
@@ -1614,12 +1618,15 @@ const KitchenDesigner = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   // STEP 2: Main Design Interface
   // Full-featured design environment with sidebar controls and main canvas
   return (
+    <>
+      <MainNavBar />
     <div className="min-h-screen bg-gray-100" >
       <div className="flex h-screen">
 
@@ -2719,6 +2726,7 @@ const KitchenDesigner = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
