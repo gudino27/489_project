@@ -8,7 +8,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { photoDb, employeeDb, designDb, userDb } = require('./database/db-helpers');
+const { photoDb, employeeDb, designDb, userDb } = require('./db-helpers');
 const nodemailer = require('nodemailer');
 const app = express();
 app.use(cors({
@@ -161,7 +161,7 @@ app.get('/api/photos', async (req, res) => {
 });
 
 // Upload photo - add authentication and logging
-app.post('/api/photos', authenticateUser, requireRole(['admin', 'super_admin']), upload.single('photo'), async (req, res) => {
+app.post('/api/photos', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -319,7 +319,7 @@ app.put('/api/photos/:id', async (req, res) => {
 });
 
 // Delete photo - add authentication and logging
-app.delete('/api/photos/:id', authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
+app.delete('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);
 
@@ -955,6 +955,25 @@ app.put('/api/prices/cabinets', async (req, res) => {
   }
 
 });
+app.get('/api/prices/cabinets', async (req, res) => {
+  try {
+    const db = await getDb();
+    const rows = await db.all('SELECT * FROM cabinet_prices ORDER BY cabinet_type');
+    
+    const cabinets = {};
+    rows.forEach(row => {
+      cabinets[row.cabinet_type] = parseFloat(row.base_price);
+    });
+    
+    await db.close();
+    
+    console.log('Loaded cabinet prices:', cabinets);
+    res.json(cabinets);
+  } catch (error) {
+    console.error('Error fetching cabinet prices:', error);
+    res.status(500).json({ error: 'Failed to fetch cabinet prices' });
+  }
+});
 app.get('/api/prices/materials', async (req, res) => {
   try {
     const db = await getDb();
@@ -1045,7 +1064,26 @@ app.put('/api/prices/colors', async (req, res) => {
     res.status(500).json({ error: 'Failed to update color pricing' });
   }
 });
-
+app.get('/api/prices/colors', async (req, res) => {
+  try {
+    const db = await getDb();
+    const rows = await db.all('SELECT * FROM color_pricing ORDER BY color_count');
+    
+    const colors = {};
+    rows.forEach(row => {
+      const key = isNaN(row.color_count) ? row.color_count : parseInt(row.color_count);
+      colors[key] = parseFloat(row.price_addition);
+    });
+    
+    await db.close();
+    
+    console.log('Loaded color pricing:', colors);
+    res.json(colors);
+  } catch (error) {
+    console.error('Error fetching color pricing:', error);
+    res.status(500).json({ error: 'Failed to fetch color pricing' });
+  }
+});
 // Get price history if you want to see it but not really needed
 app.get('/api/prices/history', async (req, res) => {
   try {

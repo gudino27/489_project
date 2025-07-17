@@ -19,7 +19,7 @@ function App() {
         {/* React components */}
         <Route path="/" element={<Home />} />
         <Route path="/portfolio" element={<Portfolio />} />
-        <Route path="/designer" element={<KitchenDesigner />} />
+        <Route path="/design" element={<KitchenDesigner />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin" element={<AdminPanel />} />

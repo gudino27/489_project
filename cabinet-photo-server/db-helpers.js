@@ -6,12 +6,15 @@ const crypto = require('crypto');
 // Database connection helper
 async function getDb() {
   const db = await open({
-    filename: path.join(__dirname, 'cabinet_photos.db'),
+    filename: path.join(__dirname,'database' ,'cabinet_photos.db'),
     driver: sqlite3.Database
   });
   return db;
 }
-
+var fullpath= path.join(__dirname,'database' ,'cabinet_photos.db');
+console.log(fullpath);
+fullpath =path.join(__dirname, '..', 'database', 'cabinet_photos.db');
+console.log(fullpath);
 // Photo database operations
 const photoDb = {
   async getAllPhotos() {

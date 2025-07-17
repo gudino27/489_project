@@ -19,9 +19,11 @@ const DesignViewer = () => {
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all'); // all, new, viewed
-  const [stats, setStats] = useState({ total: 0, new_count: 0, viewed_count: 0 });
+  const [stats, setStats] = useState({ totalDesigns: 0,
+statusBreakdown: { pending: 0, new: 0, viewed: 0 },
+totalRevenue:0, averageOrderValue:0,recentDesigns:0 });
 
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
   // Add the auth headers helper function
   const getAuthHeaders = () => {
@@ -70,10 +72,16 @@ const DesignViewer = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Stats data received:', data);
         setStats(data);
       } else if (response.status === 401) {
         console.error('Unauthorized access to stats');
       }
+else {
+      console.error('Failed to fetch stats:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+    }
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -185,7 +193,7 @@ const DesignViewer = () => {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      timeZone: 'America/Los_Angeles'
     });
   };
 
@@ -202,36 +210,40 @@ const DesignViewer = () => {
     <div className="p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Designs</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-            <FileText className="w-8 h-8 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">New Designs</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.new_count}</p>
-            </div>
-            <AlertCircle className="w-8 h-8 text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Viewed</p>
-              <p className="text-2xl font-bold text-green-600">{stats.viewed_count}</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-400" />
-          </div>
-        </div>
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">Total Designs</p>
+        <p className="text-2xl font-bold">{stats.totalDesigns || 0}</p>
       </div>
+      <FileText className="w-8 h-8 text-gray-400" />
+    </div>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">New Designs</p>
+        <p className="text-2xl font-bold text-blue-600">
+          {(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)}
+        </p>
+      </div>
+      <AlertCircle className="w-8 h-8 text-blue-400" />
+    </div>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">Viewed</p>
+        <p className="text-2xl font-bold text-green-600">
+          {stats.statusBreakdown?.viewed || 0}
+        </p>
+      </div>
+      <CheckCircle className="w-8 h-8 text-green-400" />
+    </div>
+  </div>
+</div>
 
       {/* Filter Tabs */}
       <div className="mb-6">
@@ -253,7 +265,7 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              New ({stats.new_count})
+              New ({(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)})
             </button>
             <button
               onClick={() => setFilter('viewed')}
@@ -262,7 +274,7 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Viewed ({stats.viewed_count})
+              Viewed ({stats.statusBreakdown?.viewed || 0})
             </button>
           </nav>
         </div>

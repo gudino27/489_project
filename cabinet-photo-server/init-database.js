@@ -3,14 +3,46 @@ const path = require('path');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 
-// Create database file
-const dbPath = path.join(__dirname,'database','cabinet_photos.db');
-const db = new sqlite3.Database(dbPath);
+async function initializeDatabase() {
+  console.log('🚀 Starting database initialization...\n');
+  
+  const dbPath = path.join(__dirname, 'database', 'cabinet_photos.db');
+  
+  // Use a single database connection for all operations
+  const db = await open({
+    filename: dbPath,
+    driver: sqlite3.Database
+  });
 
-// Create tables
-db.serialize(() => {
+  try {
+    // Enable WAL mode for better concurrency
+    await db.exec('PRAGMA journal_mode=WAL');
+    
+    console.log('1️⃣ Creating basic tables...');
+    await createBasicTables(db);
+    
+    console.log('2️⃣ Adding design tables...');
+    await addDesignTables(db);
+    
+    console.log('3️⃣ Adding price tables...');
+    await addPriceTables(db);
+    
+    console.log('4️⃣ Adding user tables...');
+    await addUserTables(db);
+    
+    console.log('\n✅ Database initialization completed successfully!');
+    
+  } catch (error) {
+    console.error('❌ Error during database initialization:', error);
+    throw error;
+  } finally {
+    await db.close();
+  }
+}
+
+async function createBasicTables(db) {
   // Photos table
-  db.run(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS photos(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -30,8 +62,8 @@ db.serialize(() => {
     )
   `);
 
-  // Categories table (optional, for managing categories)
-  db.run(`
+  // Categories table
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
@@ -42,8 +74,8 @@ db.serialize(() => {
     )
   `);
 
-  // Photo metadata table (for additional info)
-  db.run(`
+  // Photo metadata table
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS photo_metadata (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       photo_id INTEGER NOT NULL,
@@ -52,34 +84,9 @@ db.serialize(() => {
       FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
     )
   `);
-  // Create indexes for better performance
-  db.run(`CREATE INDEX IF NOT EXISTS idx_photos_category ON photos(category)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_photos_featured ON photos(featured)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_photos_uploaded ON photos(uploaded_at)`);
 
-  // Insert default categories
-  const categories = [
-    { name: 'Kitchen', slug: 'kitchen', icon: '🍳', order: 1 },
-    { name: 'Bathroom', slug: 'bathroom', icon: '🚿', order: 2 },
-    { name: 'Living Room', slug: 'livingroom', icon: '🛋️', order: 3 },
-    { name: 'Bedroom', slug: 'bedroom', icon: '🛏️', order: 4 },
-    { name: 'Laundry Room', slug: 'laundryroom', icon: '🧺', order: 5 },
-    { name: 'Showcase', slug: 'showcase', icon: '✨', order: 6 }
-  ];
-
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO categories (name, slug, icon, display_order) 
-    VALUES (?, ?, ?, ?)
-  `);
-
-  categories.forEach(cat => {
-    stmt.run(cat.name, cat.slug, cat.icon, cat.order);
-  });
-
-  stmt.finalize();
-
-  console.log('Database initialized successfully!');
-  db.run(`
+  // Employees table
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS employees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -96,454 +103,234 @@ db.serialize(() => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  
-  // Create index for better performance
-  db.run(`CREATE INDEX IF NOT EXISTS idx_employees_active ON employees(is_active)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_employees_order ON employees(display_order)`);
-  
-  const insertEmployee = db.prepare(`
-    INSERT OR IGNORE INTO employees (name, position, bio, email, phone, display_order) 
-    VALUES (?, ?, ?, ?, ?, ?)
+
+  // Create indexes
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_photos_category ON photos(category);
+    CREATE INDEX IF NOT EXISTS idx_photos_featured ON photos(featured);
+    CREATE INDEX IF NOT EXISTS idx_photos_uploaded ON photos(uploaded_at);
+    CREATE INDEX IF NOT EXISTS idx_employees_active ON employees(is_active);
+    CREATE INDEX IF NOT EXISTS idx_employees_order ON employees(display_order);
   `);
-  
-  
-  
-  insertEmployee.finalize();
-});
 
-db.close();
+  // Insert default categories
+  const categories = [
+    { name: 'Kitchen', slug: 'kitchen', icon: '🍳', order: 1 },
+    { name: 'Bathroom', slug: 'bathroom', icon: '🚿', order: 2 },
+    { name: 'Living Room', slug: 'livingroom', icon: '🛋️', order: 3 },
+    { name: 'Bedroom', slug: 'bedroom', icon: '🛏️', order: 4 },
+    { name: 'Laundry Room', slug: 'laundryroom', icon: '🧺', order: 5 },
+    { name: 'Showcase', slug: 'showcase', icon: '✨', order: 6 }
+  ];
 
-async function addPriceTables() {
-  console.log('Adding price management tables to database...\n');
-  
-  const db = await open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
-  });
-
-  try {
-    // Create cabinet prices table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS cabinet_prices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cabinet_type TEXT NOT NULL UNIQUE,
-        base_price DECIMAL(10, 2) NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_by TEXT
-      )
-    `);
-    console.log('✓ Created cabinet_prices table');
-
-    // Create material pricing table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS material_pricing (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        material_type TEXT NOT NULL UNIQUE,
-        multiplier DECIMAL(3, 2) NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_by TEXT
-      )
-    `);
-    console.log('✓ Created material_pricing table');
-
-    // Create color pricing table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS color_pricing (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        color_count TEXT NOT NULL UNIQUE,
-        price_addition DECIMAL(10, 2) NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_by TEXT
-      )
-    `);
-    console.log('✓ Created color_pricing table');
-
-    // Insert default cabinet prices
-    const defaultCabinetPrices = [
-      ['base', 250.00],
-      ['sink-base', 320.00],
-      ['wall', 180.00],
-      ['tall', 450.00],
-      ['corner', 380.00],
-      ['vanity', 280.00],
-      ['vanity-sink', 350.00],
-      ['medicine', 120.00],
-      ['linen', 350.00]
-    ];
-
-    for (const [type, price] of defaultCabinetPrices) {
-      await db.run(
-        'INSERT OR IGNORE INTO cabinet_prices (cabinet_type, base_price) VALUES (?, ?)',
-        [type, price]
-      );
-    }
-    console.log('✓ Inserted default cabinet prices');
-
-    // Insert default material multipliers
-    const defaultMaterials = [
-      ['laminate', 1.0],
-      ['wood', 1.5],
-      ['plywood', 1.3]
-    ];
-
-    for (const [material, multiplier] of defaultMaterials) {
-      await db.run(
-        'INSERT OR IGNORE INTO material_pricing (material_type, multiplier) VALUES (?, ?)',
-        [material, multiplier]
-      );
-    }
-    console.log('✓ Inserted default material multipliers');
-
-    // Insert default color pricing
-    const defaultColors = [
-      ['1', 0],
-      ['2', 100],
-      ['3', 200],
-      ['custom', 500]
-    ];
-
-    for (const [count, price] of defaultColors) {
-      await db.run(
-        'INSERT OR IGNORE INTO color_pricing (color_count, price_addition) VALUES (?, ?)',
-        [count, price]
-      );
-    }
-    console.log('✓ Inserted default color pricing');
-
-    // Verify data
-    console.log('\nVerifying data:');
-    const cabinetPrices = await db.all('SELECT * FROM cabinet_prices');
-    console.log(`  Cabinet prices: ${cabinetPrices.length} entries`);
-    
-    const materials = await db.all('SELECT * FROM material_pricing');
-    console.log(`  Material multipliers: ${materials.length} entries`);
-    
-    const colors = await db.all('SELECT * FROM color_pricing');
-    console.log(`  Color pricing: ${colors.length} entries`);
-
-  } catch (error) {
-    console.error('Error setting up price tables:', error);
-  } finally {
-    await db.close();
-    console.log('\nDatabase setup complete!');
+  for (const cat of categories) {
+    await db.run(
+      'INSERT OR IGNORE INTO categories (name, slug, icon, display_order) VALUES (?, ?, ?, ?)',
+      [cat.name, cat.slug, cat.icon, cat.order]
+    );
   }
+
+  console.log('✓ Created basic tables and default categories');
 }
 
-async function addDesignsTable() {
-  console.log('Adding designs table to database...\n');
-  
-  const db = await open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
-  });
+async function addDesignTables(db) {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS designs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      client_email TEXT,
+      client_phone TEXT,
+      contact_preference TEXT NOT NULL,
+      kitchen_data TEXT,
+      bathroom_data TEXT,
+      include_kitchen BOOLEAN DEFAULT 0,
+      include_bathroom BOOLEAN DEFAULT 0,
+      total_price DECIMAL(10, 2),
+      comments TEXT,
+      pdf_data BLOB,
+      status TEXT DEFAULT 'new',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      viewed_at DATETIME,
+      viewed_by TEXT,
+      floor_plan_image TEXT,
+      wall_view_images TEXT
+    )
+  `);
 
-  try {
-    // Create designs table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS designs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_name TEXT NOT NULL,
-        client_email TEXT,
-        client_phone TEXT,
-        contact_preference TEXT NOT NULL,
-        kitchen_data TEXT,
-        bathroom_data TEXT,
-        include_kitchen BOOLEAN DEFAULT 0,
-        include_bathroom BOOLEAN DEFAULT 0,
-        total_price DECIMAL(10, 2),
-        comments TEXT,
-        pdf_data BLOB,
-        status TEXT DEFAULT 'new',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        viewed_at DATETIME,
-        viewed_by TEXT
-      )
-    `);
-    console.log('✓ Created designs table');
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_designs_status ON designs(status);
+    CREATE INDEX IF NOT EXISTS idx_designs_created ON designs(created_at);
+    CREATE INDEX IF NOT EXISTS idx_designs_client ON designs(client_name);
+  `);
 
-    // Create indexes for better performance
-    await db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_designs_status ON designs(status);
-      CREATE INDEX IF NOT EXISTS idx_designs_created ON designs(created_at);
-      CREATE INDEX IF NOT EXISTS idx_designs_client ON designs(client_name);
-    `);
-    console.log('✓ Created indexes for designs table');
-
-    console.log('\nDesigns table added successfully!');
-  } catch (error) {
-    console.error('Error adding designs table:', error);
-  } finally {
-    await db.close();
-  }
+  console.log('✓ Created designs table');
 }
-async function addImageColumns() {
-  console.log('Adding image columns to designs table...\n');
-  
-  const db = await open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
-  });
 
-  try {
-    // Add columns for storing design images
-    await db.exec(`
-      ALTER TABLE designs ADD COLUMN floor_plan_image TEXT;
-    `);
-    console.log('✓ Added floor_plan_image column');
+async function addPriceTables(db) {
+  // Cabinet prices table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS cabinet_prices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cabinet_type TEXT NOT NULL UNIQUE,
+      base_price DECIMAL(10, 2) NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  `);
 
-    await db.exec(`
-      ALTER TABLE designs ADD COLUMN wall_view_images TEXT;
-    `);
-    console.log('✓ Added wall_view_images column');
+  // Material pricing table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS material_pricing (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      material_type TEXT NOT NULL UNIQUE,
+      multiplier DECIMAL(3, 2) NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  `);
 
-    console.log('\nImage columns added successfully!');
-  } catch (error) {
-    if (error.message.includes('duplicate column name')) {
-      console.log('Columns already exist, skipping...');
-    } else {
-      console.error('Error adding columns:', error);
-    }
-  } finally {
-    await db.close();
+  // Color pricing table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS color_pricing (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      color_count TEXT NOT NULL UNIQUE,
+      price_addition DECIMAL(10, 2) NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  `);
+
+  // Insert default data
+  const defaultCabinetPrices = [
+    ['base', 250.00], ['sink-base', 320.00], ['wall', 180.00],
+    ['tall', 450.00], ['corner', 380.00], ['vanity', 280.00],
+    ['vanity-sink', 350.00], ['medicine', 120.00], ['linen', 350.00]
+  ];
+
+  for (const [type, price] of defaultCabinetPrices) {
+    await db.run(
+      'INSERT OR IGNORE INTO cabinet_prices (cabinet_type, base_price) VALUES (?, ?)',
+      [type, price]
+    );
   }
+
+  const defaultMaterials = [['laminate', 1.0], ['wood', 1.5], ['plywood', 1.3]];
+  for (const [material, multiplier] of defaultMaterials) {
+    await db.run(
+      'INSERT OR IGNORE INTO material_pricing (material_type, multiplier) VALUES (?, ?)',
+      [material, multiplier]
+    );
+  }
+
+  const defaultColors = [['1', 0], ['2', 100], ['3', 200], ['custom', 500]];
+  for (const [count, price] of defaultColors) {
+    await db.run(
+      'INSERT OR IGNORE INTO color_pricing (color_count, price_addition) VALUES (?, ?)',
+      [count, price]
+    );
+  }
+
+  console.log('✓ Created price tables and default data');
 }
-async function addUserTables() {
-  console.log('Adding user management tables to database...\n');
-  
-  const db = await open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
-  });
 
-  try {
-    // Create users table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'admin',
-        full_name TEXT,
-        is_active BOOLEAN DEFAULT 1,
-        last_login DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        created_by INTEGER,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id)
-      )
-    `);
-    console.log('✓ Created users table');
+async function addUserTables(db) {
+  // Users table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'admin',
+      full_name TEXT,
+      is_active BOOLEAN DEFAULT 1,
+      last_login DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_by INTEGER,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `);
 
-    // Create user sessions table for secure authentication
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS user_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        token TEXT NOT NULL UNIQUE,
-        expires_at DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('✓ Created user_sessions table');
+  // User sessions table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
 
-    // Create activity logs table for analytics
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS activity_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        action TEXT NOT NULL,
-        resource_type TEXT,
-        resource_id INTEGER,
-        ip_address TEXT,
-        user_agent TEXT,
-        metadata TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-    console.log('✓ Created activity_logs table');
+  // Activity logs table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      resource_type TEXT,
+      resource_id INTEGER,
+      ip_address TEXT,
+      user_agent TEXT,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
 
-    // Create site analytics table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS site_analytics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        page_path TEXT NOT NULL,
-        visitor_ip TEXT,
-        visitor_id TEXT,
-        referrer TEXT,
-        user_agent TEXT,
-        session_duration INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✓ Created site_analytics table');
+  // Site analytics table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS site_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_path TEXT NOT NULL,
+      visitor_ip TEXT,
+      visitor_id TEXT,
+      referrer TEXT,
+      user_agent TEXT,
+      session_duration INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-    // Create indexes for better performance
-    await db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-      CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
-      CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
-      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
-      CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
-      CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
-      CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
-    `);
-    console.log('✓ Created indexes');
+  // Create indexes
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+    CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+    CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
+    CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
+    CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
+  `);
 
-    // Insert default super admin user
-    const bcrypt = require('bcryptjs');
-    const defaultPassword = await bcrypt.hash('superadmin123', 10);
+  // Create default admin user
+  const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', ['superadmin']);
+
+  if (!existingAdmin) {
+    const defaultPassword = await bcrypt.hash('changeme123', 10);
     
     await db.run(
-      `INSERT OR IGNORE INTO users (username, email, password_hash, role, full_name) 
-       VALUES (?, ?, ?, ?, ?)`,
+      'INSERT INTO users (username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
       ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
     );
-    console.log('✓ Created default super admin user (username: superadmin, password: superadmin123)');
-
-  } catch (error) {
-    console.error('Error setting up user tables:', error);
-  } finally {
-    await db.close();
-    console.log('\nUser management tables setup complete!');
-  }
-}
-async function setupAuthTables() {
-  console.log('Setting up authentication and analytics tables...\n');
-  
-  const db = await open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
-  });
-
-  try {
-    // Create users table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'admin',
-        full_name TEXT,
-        is_active BOOLEAN DEFAULT 1,
-        last_login DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        created_by INTEGER,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id)
-      )
-    `);
-    console.log('✓ Created users table');
-
-    // Create user sessions table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS user_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        token TEXT NOT NULL UNIQUE,
-        expires_at DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('✓ Created user_sessions table');
-
-    // Create activity logs table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS activity_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        action TEXT NOT NULL,
-        resource_type TEXT,
-        resource_id INTEGER,
-        ip_address TEXT,
-        user_agent TEXT,
-        metadata TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-    console.log('✓ Created activity_logs table');
-
-    // Create site analytics table
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS site_analytics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        page_path TEXT NOT NULL,
-        visitor_ip TEXT,
-        visitor_id TEXT,
-        referrer TEXT,
-        user_agent TEXT,
-        session_duration INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✓ Created site_analytics table');
-
-    // Create indexes
-    await db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-      CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
-      CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
-      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
-      CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
-      CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
-      CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
-    `);
-    console.log('✓ Created indexes');
-
-    // Check if super admin already exists
-    const existingAdmin = await db.get(
-      'SELECT id FROM users WHERE username = ?',
-      ['superadmin']
-    );
-
-    if (!existingAdmin) {
-      // Create default super admin user
-      const defaultPassword = await bcrypt.hash('changeme123', 10);
-      
-      await db.run(
-        `INSERT INTO users (username, email, password_hash, role, full_name) 
-         VALUES (?, ?, ?, ?, ?)`,
-        ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
-      );
-      
-      console.log('\n✓ Created default super admin user');
-      console.log('\n========================================');
-      console.log('Default Super Admin Credentials:');
-      console.log('Username: superadmin');
-      console.log('Password: changeme123');
-      console.log('========================================');
-      console.log('\n⚠️  IMPORTANT: Change this password immediately after first login!');
-    } else {
-      console.log('\n✓ Super admin user already exists');
-    }
-
-    // Verify all tables exist
-    const tables = await db.all(
-      "SELECT name FROM sqlite_master WHERE type='table'"
-    );
     
-    console.log('\n✓ Database tables verified:');
-    tables.forEach(table => {
-      console.log(`  - ${table.name}`);
-    });
-
-  } catch (error) {
-    console.error('\n❌ Error setting up tables:', error);
-    throw error;
-  } finally {
-    await db.close();
-    console.log('\n✅ Setup completed successfully!');
+    console.log('✓ Created default super admin user (username: superadmin, password: changeme123)');
+  } else {
+    console.log('✓ Super admin user already exists');
   }
+
+  console.log('✓ Created user authentication system');
 }
-// Run the setups
-addImageColumns();
-addDesignsTable();
-addPriceTables();
-addUserTables();
+
+// Only run if this file is executed directly
+if (require.main === module) {
+  initializeDatabase().catch(error => {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  });
+}
+
+module.exports = { initializeDatabase };

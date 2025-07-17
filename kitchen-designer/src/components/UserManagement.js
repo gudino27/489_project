@@ -146,9 +146,13 @@ const UserManagement = ({ token, API_BASE }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString();
-  };
-
+    return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short', 
+    day: 'numeric',
+    timeZone: 'America/Los_Angeles'
+  });
+};
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">

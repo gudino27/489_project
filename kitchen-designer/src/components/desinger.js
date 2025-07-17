@@ -14,7 +14,7 @@ const KitchenDesigner = () => {
   // Business Configuration
   // In production, these would come from environment variables or database
   // -----------------------------
-  const COMPANY_NAME = 'Master Build Cabinets';
+  const COMPANY_NAME = 'Gudino Custom';
   // -----------------------------
   // Application State Management
   // Controls the current step and active room being designed
@@ -119,7 +119,7 @@ const KitchenDesigner = () => {
   // API Configuration
   // Backend API endpoint for price loading
   // -----------------------------
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
   // -----------------------------
   // Load prices from backend on component mount

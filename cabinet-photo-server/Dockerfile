@@ -14,7 +14,8 @@ RUN npm install --only=production
 
 # Copy application files
 COPY . .
-
+RUN node init-database.js
+RUN chmod 664 database/cabinet_photos.db
 # Production stage
 FROM node:20-alpine
 
@@ -28,16 +29,20 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app .
 
 # Create necessary directories
-RUN mkdir -p uploads database
+RUN mkdir -p uploads 
+
+RUN chmod -R 755 /app
+RUN chmod 644 /app/db-helpers.js
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+#RUN addgroup -g 1000 -S nodejs && \
+ #   adduser -S nodejs -u 1000
 
 # Change ownership
-RUN chown -R nodejs:nodejs /app
-
-USER nodejs
+#RUN chown -R nodejs:nodejs /app
+RUN chown -R node:node /app
+USER node
+#USER nodejs
 
 EXPOSE 3001
 
