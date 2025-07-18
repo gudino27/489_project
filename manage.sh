@@ -11,7 +11,7 @@ case "$1" in
     rebuild)
         echo "Rebuilding images..."
         echo "Stopping all containers..."
-        docker-compose down -v         
+        docker-compose down         
         echo "Removing project containers..."
         docker-compose rm -f
         echo "Removing project images..."
