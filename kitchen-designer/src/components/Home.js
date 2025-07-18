@@ -7,8 +7,10 @@ const Home = () => {
     <>
       <Navigation />
       
-      <div className="banner">
-        Master Build Cabinets
+      <div class="container">
+        <div class="banner">
+            Master Build Cabinets
+        </div>
       </div>
 
       <div className="introduction">
@@ -44,6 +46,10 @@ const Home = () => {
         <Link to="/contact" className="btn btn-secondary">Contact Us</Link>
       </div>
 
+      <div class="intro-image">
+        <img src="home-page-images/diningroom.jpg"/>
+      </div>
+
       <div className="description-header">
         Our Creations
       </div>
@@ -57,6 +63,10 @@ const Home = () => {
 
       <div className="button">
         <Link to="/portfolio" className="btn btn-secondary">View our Portfolio</Link>
+      </div>
+
+      <div class="intro-image">
+        <img src="home-page-images/blueprint.jpg"/>
       </div>
 
       <div className="description-header">
