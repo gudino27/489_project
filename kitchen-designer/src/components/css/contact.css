@@ -83,7 +83,8 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     max-width: 1200px;
-    margin: 0 auto;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 3rem;
     font-family: Georgia, 'Times New Roman', Times, serif;
     animation: fadeInUp
@@ -157,4 +158,6 @@ button[type="submit"]{
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    color: white;
+    border-color: #444
 }
