@@ -177,51 +177,51 @@ const AdminPanel = () => {
   // Login screen
   if (!isAuthenticated) {
     return (
-            <><MainNavBar />
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center" style={{ backgroundColor: 'rgb(110, 110, 110)' }}>
-        <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-          <div className="flex items-center justify-center mb-6">
-            <Lock className="text-blue-600" size={48} />
-          </div>
-          <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Username</label>
-              <input
-                type="text"
-                value={loginCredentials.username}
-                onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Enter username"
-                required />
+      <><MainNavBar />
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center" style={{ backgroundColor: 'rgb(110, 110, 110)' }}>
+          <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+            <div className="flex items-center justify-center mb-6">
+              <Lock className="text-blue-600" size={48} />
             </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                value={loginCredentials.password}
-                onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Enter password"
-                required />
-            </div>
-            {loginError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {loginError}
+            <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
+            <form onSubmit={handleLogin}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Username</label>
+                <input
+                  type="text"
+                  value={loginCredentials.username}
+                  onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
+                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Enter username"
+                  required />
               </div>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
-            >
-              Login
-            </button>
-          </form>
-          <p className="text-xs text-gray-500 text-center mt-4">
-            Contact your super admin for access
-          </p>
-        </div>
-      </div></>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Password</label>
+                <input
+                  type="password"
+                  value={loginCredentials.password}
+                  onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
+                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Enter password"
+                  required />
+              </div>
+              {loginError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {loginError}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition mx-auto block"
+              >
+                Login
+              </button>
+            </form>
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Contact your super admin for access
+            </p>
+          </div>
+        </div></>
     );
   }
 
@@ -266,8 +266,8 @@ const AdminPanel = () => {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition ${activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
                 <div className="flex items-center gap-2">
