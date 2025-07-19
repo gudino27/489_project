@@ -19,9 +19,11 @@ const DesignViewer = () => {
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all'); // all, new, viewed
-  const [stats, setStats] = useState({ totalDesigns: 0,
-statusBreakdown: { pending: 0, new: 0, viewed: 0 },
-totalRevenue:0, averageOrderValue:0,recentDesigns:0 });
+  const [stats, setStats] = useState({
+    totalDesigns: 0,
+    statusBreakdown: { pending: 0, new: 0, viewed: 0 },
+    totalRevenue: 0, averageOrderValue: 0, recentDesigns: 0
+  });
 
   const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
@@ -48,7 +50,7 @@ totalRevenue:0, averageOrderValue:0,recentDesigns:0 });
         : `${API_BASE}/api/designs?status=${filter}`;
 
       const response = await fetch(url);
-      
+
       if (response.ok) {
         const data = await response.json();
         setDesigns(data);
@@ -69,7 +71,7 @@ totalRevenue:0, averageOrderValue:0,recentDesigns:0 });
     try {
       const response = await fetch(`${API_BASE}/api/designs/stats`, {
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Stats data received:', data);
@@ -77,11 +79,11 @@ totalRevenue:0, averageOrderValue:0,recentDesigns:0 });
       } else if (response.status === 401) {
         console.error('Unauthorized access to stats');
       }
-else {
-      console.error('Failed to fetch stats:', response.status, response.statusText);
-      const errorText = await response.text();
-      console.error('Error response:', errorText);
-    }
+      else {
+        console.error('Failed to fetch stats:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -94,7 +96,7 @@ else {
       const response = await fetch(`${API_BASE}/api/designs/${designId}`, {
         headers: getAuthHeaders()
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setSelectedDesign(data);
@@ -115,38 +117,38 @@ else {
     try {
       // Get the auth token from localStorage
       const token = localStorage.getItem('authToken');
-      
+
       const response = await fetch(`${API_BASE}/api/designs/${designId}/pdf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to download PDF');
       }
-      
+
       // Convert response to blob
       const blob = await response.blob();
-      
+
       // Create a temporary URL for the blob
       const url = window.URL.createObjectURL(blob);
-      
+
       // Create a temporary anchor element and trigger download
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
       a.download = `design-${clientName.replace(/\s+/g, '-')}-${designId}.pdf`;
-      
+
       // Append to body, click, and remove
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
     } catch (error) {
       console.error('Error downloading PDF:', error);
       alert('Failed to download PDF. Please make sure you are logged in.');
@@ -205,45 +207,63 @@ else {
       default: return null;
     }
   };
+  const formatPhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) return '';
 
+    // Remove all non-digit characters
+    const cleaned = phoneNumber.replace(/\D/g, '');
+
+    // Check if it's a valid US phone number (10 digits)
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)})-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+
+    // If it's 11 digits and starts with 1, format as +1 (xxx)-xxx-xxxx
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      return `+1 (${cleaned.slice(1, 4)})-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+    }
+
+    // If it doesn't match expected patterns, return as-is
+    return phoneNumber;
+  };
   return (
     <div className="p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-  <div className="bg-white rounded-lg shadow-md p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600">Total Designs</p>
-        <p className="text-2xl font-bold">{stats.totalDesigns || 0}</p>
-      </div>
-      <FileText className="w-8 h-8 text-gray-400" />
-    </div>
-  </div>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Designs</p>
+              <p className="text-2xl font-bold">{stats.totalDesigns || 0}</p>
+            </div>
+            <FileText className="w-8 h-8 text-gray-400" />
+          </div>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-md p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600">New Designs</p>
-        <p className="text-2xl font-bold text-blue-600">
-          {(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)}
-        </p>
-      </div>
-      <AlertCircle className="w-8 h-8 text-blue-400" />
-    </div>
-  </div>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">New Designs</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)}
+              </p>
+            </div>
+            <AlertCircle className="w-8 h-8 text-blue-400" />
+          </div>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-md p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600">Viewed</p>
-        <p className="text-2xl font-bold text-green-600">
-          {stats.statusBreakdown?.viewed || 0}
-        </p>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Viewed</p>
+              <p className="text-2xl font-bold text-green-600">
+                {stats.statusBreakdown?.viewed || 0}
+              </p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-green-400" />
+          </div>
+        </div>
       </div>
-      <CheckCircle className="w-8 h-8 text-green-400" />
-    </div>
-  </div>
-</div>
 
       {/* Filter Tabs */}
       <div className="mb-6">
@@ -328,11 +348,21 @@ else {
                     <div className="text-sm font-medium text-gray-900">{design.client_name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-500">
-                      {getContactIcon(design.contact_preference)}
-                      <span className="ml-2">
-                        {design.contact_preference === 'email' ? design.client_email : design.client_phone}
-                      </span>
+                    <div className="text-sm text-gray-500">
+                      <div className="flex items-center mt-1">
+                        <Phone className="w-3 h-3 mr-1" />
+                        <span className="text-xs">{design.client_phone ? formatPhoneNumber(design.client_phone) : 'open to see #' }</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Mail className="w-3 h-3 mr-1" />
+                        <span className="text-xs">{design.client_email}</span>
+                      </div>
+
+                      {/* Preference indicator with icon */}
+                      <div className="flex items-center mt-1">
+                        {getContactIcon(design.contact_preference)}
+                        <span className="ml-1 text-xs text-blue-600">preferred</span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -407,14 +437,9 @@ else {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">
-                      {selectedDesign.contact_preference === 'email' ? 'Email' : 'Phone'}
-                    </p>
-                    <p className="font-medium">
-                      {selectedDesign.contact_preference === 'email'
-                        ? selectedDesign.client_email
-                        : selectedDesign.client_phone}
-                    </p>
+                    <p className="text-sm text-gray-600">Contact Information</p>
+                    <p className=' font-medium'>email: {selectedDesign.client_email}</p>
+                    <p className=' font-medium'>phone: {formatPhoneNumber(selectedDesign.client_phone)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Submitted</p>

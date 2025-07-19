@@ -997,11 +997,21 @@ const KitchenDesigner = () => {
 
   const sendQuote = async () => {
     // Validate required client information
-    if (!clientInfo.name || (clientInfo.contactPreference === 'email' && !clientInfo.email) ||
-      (clientInfo.contactPreference !== 'email' && !clientInfo.phone)) {
-      alert('Please fill in all required contact information.');
-      return;
-    }
+      if (!clientInfo.name || !clientInfo.email || !clientInfo.phone) {
+        if (!clientInfo.name) {
+          alert('please fill in your name');
+          return;
+        }
+        else if (!clientInfo.email) {
+          alert('please fill in your email');
+          return;
+        }
+        else if (!clientInfo.phone) {
+          alert('please fill in your phone number');
+          return;
+        }
+      }
+    
 
     try {
       // Show loading state
@@ -1490,134 +1500,134 @@ const KitchenDesigner = () => {
     return (
       <>
         <MainNavBar />
-        
+
         <div className="min-h-screen p-8" style={{ background: 'rgb(110,110,110)' }}>
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Application header and branding */}
-            <h1 className="text-4xl font-bold text-gray-800 mb-2 text-center">
-              Cabinet Designer demo
-            </h1>
-            <p className="text-gray-600 mb-8 text-center">
-              Design your {activeRoom}
-            </p>
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              {/* Application header and branding */}
+              <h1 className="text-4xl font-bold text-gray-800 mb-2 text-center">
+                Cabinet Designer demo
+              </h1>
+              <p className="text-gray-600 mb-8 text-center">
+                Design your {activeRoom}
+              </p>
 
-            <div className="space-y-6">
-              {/* Room Type Selection */}
-              {/* Toggle between kitchen and bathroom design modes */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Room Type
-                </label>
-                <div className="flex gap-4">
-                  {/* Kitchen selection button */}
-                  <button
-                    onClick={() => switchRoom('kitchen')}
-                    className={`flex-1 p-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${activeRoom === 'kitchen'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}>
-                    <Home size={20} />Kitchen
-                  </button>
-                  {/* Bathroom selection button */}
-                  <button
-                    onClick={() => switchRoom('bathroom')}
-                    className={`flex-1 p-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${activeRoom === 'bathroom'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                  >
-                    <Bath size={20} />
-                    Bathroom
-                  </button>
-                </div>
-              </div>
-
-              {/* Room Dimensions Input */}
-              {/* Grid layout for width and depth input fields */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Room width input */}
+              <div className="space-y-6">
+                {/* Room Type Selection */}
+                {/* Toggle between kitchen and bathroom design modes */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Room Width (feet)
+                    Room Type
+                  </label>
+                  <div className="flex gap-4">
+                    {/* Kitchen selection button */}
+                    <button
+                      onClick={() => switchRoom('kitchen')}
+                      className={`flex-1 p-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${activeRoom === 'kitchen'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}>
+                      <Home size={20} />Kitchen
+                    </button>
+                    {/* Bathroom selection button */}
+                    <button
+                      onClick={() => switchRoom('bathroom')}
+                      className={`flex-1 p-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${activeRoom === 'bathroom'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                      <Bath size={20} />
+                      Bathroom
+                    </button>
+                  </div>
+                </div>
+
+                {/* Room Dimensions Input */}
+                {/* Grid layout for width and depth input fields */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Room width input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Room Width (feet)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={currentRoomData.dimensions.width}
+                      onChange={(e) => setCurrentRoomData({
+                        ...currentRoomData,
+                        dimensions: { ...currentRoomData.dimensions, width: e.target.value }
+                      })}
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                      placeholder="e.g. 12"
+                      min="5"
+                      max="50"
+                    />
+                  </div>
+                  {/* Room depth input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Room Depth (feet)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={currentRoomData.dimensions.height}
+                      onChange={(e) => setCurrentRoomData({
+                        ...currentRoomData,
+                        dimensions: { ...currentRoomData.dimensions, height: e.target.value }
+                      })}
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                      placeholder="e.g. 10"
+                      min="5"
+                      max="40"
+                    />
+                  </div>
+                </div>
+
+                {/* Wall height input */}
+                {/* Single input for ceiling/wall height measurement */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Wall Height (inches)
                   </label>
                   <input
                     type="number"
-                    step="0.5"
-                    value={currentRoomData.dimensions.width}
+                    value={currentRoomData.dimensions.wallHeight}
                     onChange={(e) => setCurrentRoomData({
                       ...currentRoomData,
-                      dimensions: { ...currentRoomData.dimensions, width: e.target.value }
+                      dimensions: { ...currentRoomData.dimensions, wallHeight: e.target.value }
                     })}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                    placeholder="e.g. 12"
-                    min="5"
-                    max="50"
+                    placeholder="96"
+                    min="84"
+                    max="144"
                   />
                 </div>
-                {/* Room depth input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Room Depth (feet)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={currentRoomData.dimensions.height}
-                    onChange={(e) => setCurrentRoomData({
-                      ...currentRoomData,
-                      dimensions: { ...currentRoomData.dimensions, height: e.target.value }
-                    })}
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                    placeholder="e.g. 10"
-                    min="5"
-                    max="40"
-                  />
+
+                {/* Submit button to proceed to design interface */}
+                <button
+                  onClick={handleDimensionsSubmit}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 px-8 rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg"
+                >
+                  Start Designing
+                </button>
+
+                {/* Show existing design status */}
+                {/* Display current progress if user has existing designs */}
+                <div className="text-center text-sm text-gray-600">
+                  {kitchenData.elements.length > 0 && (
+                    <p>Kitchen design in progress ({kitchenData.elements.length} items)</p>
+                  )}
+                  {bathroomData.elements.length > 0 && (
+                    <p>Bathroom design in progress ({bathroomData.elements.length} items)</p>
+                  )}
                 </div>
-              </div>
-
-              {/* Wall height input */}
-              {/* Single input for ceiling/wall height measurement */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Wall Height (inches)
-                </label>
-                <input
-                  type="number"
-                  value={currentRoomData.dimensions.wallHeight}
-                  onChange={(e) => setCurrentRoomData({
-                    ...currentRoomData,
-                    dimensions: { ...currentRoomData.dimensions, wallHeight: e.target.value }
-                  })}
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  placeholder="96"
-                  min="84"
-                  max="144"
-                />
-              </div>
-
-              {/* Submit button to proceed to design interface */}
-              <button
-                onClick={handleDimensionsSubmit}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 px-8 rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg"
-              >
-                Start Designing
-              </button>
-
-              {/* Show existing design status */}
-              {/* Display current progress if user has existing designs */}
-              <div className="text-center text-sm text-gray-600">
-                {kitchenData.elements.length > 0 && (
-                  <p>Kitchen design in progress ({kitchenData.elements.length} items)</p>
-                )}
-                {bathroomData.elements.length > 0 && (
-                  <p>Bathroom design in progress ({bathroomData.elements.length} items)</p>
-                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
       </>
     );
   }
@@ -1627,1006 +1637,991 @@ const KitchenDesigner = () => {
   return (
     <>
       <MainNavBar />
-    <div className="min-h-screen bg-gray-100" >
-      <div className="flex h-screen">
+      <div className="min-h-screen bg-gray-100" >
+        <div className="flex h-screen">
 
-        {/* ========== LEFT SIDEBAR ========== */}
-        {/* Control panel containing all design tools and element properties */}
-        <div className="w-80 bg-white shadow-lg p-6 overflow-y-auto">
-          <h2 className="text-2xl font-bold mb-6">Cabinet Designer</h2>
+          {/* ========== LEFT SIDEBAR ========== */}
+          {/* Control panel containing all design tools and element properties */}
+          <div className="w-80 bg-white shadow-lg p-6 overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6">Cabinet Designer</h2>
 
-          {/* Room Switcher */}
-          {/* Toggle between kitchen and bathroom designs without losing progress */}
-          <div className="mb-6 bg-gray-50 p-3 rounded-lg">
-            <div className="flex gap-2">
-              {/* Kitchen switcher button */}
-              <button
-                onClick={() => switchRoom('kitchen')}
-                className={`flex-1 p-2 rounded flex items-center justify-center gap-1 text-sm ${activeRoom === 'kitchen' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-                  }`}
-              >
-                <Home size={16} />
-                Kitchen
-              </button>
-              {/* Bathroom switcher button */}
-              <button
-                onClick={() => switchRoom('bathroom')}
-                className={`flex-1 p-2 rounded flex items-center justify-center gap-1 text-sm ${activeRoom === 'bathroom' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-                  }`}
-              >
-                <Bath size={16} />
-                Bathroom
-              </button>
-            </div>
-            {/* Current room dimensions display */}
-            <p className="text-xs text-gray-600 mt-2 text-center">
-              {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}: {currentRoomData.dimensions.width}' × {currentRoomData.dimensions.height}'
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          {/* Main action buttons for pricing and quote generation */}
-          <div className="mb-6 space-y-2">
-            {/* Toggle pricing display */}
-            <button
-              onClick={() => setShowPricing(!showPricing)}
-              className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2"
-            >
-              <Calculator size={16} />
-              {showPricing ? 'Hide Pricing' : 'Show Pricing'}
-            </button>
-            {/* Open quote request form */}
-            <button
-              onClick={() => setShowQuoteForm(true)}
-              className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-            >
-              <Send size={16} />
-              Send Quote
-            </button>
-          </div>
-
-          {/* View Toggle */}
-          {/* Switch between floor plan and wall elevation views */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">View Mode</label>
-            <div className="flex gap-2">
-              {/* Floor plan view button */}
-              <button
-                onClick={() => setViewMode('floor')}
-                className={`flex-1 p-2 rounded ${viewMode === 'floor' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-              >
-                Floor Plan
-              </button>
-              {/* Wall elevation view button */}
-              <button
-                onClick={() => setViewMode('wall')}
-                className={`flex-1 p-2 rounded ${viewMode === 'wall' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-              >
-                Wall View
-              </button>
-            </div>
-          </div>
-
-          {/* Wall Selection (only visible in wall view mode) */}
-          {/* Grid of buttons to select which wall to view in elevation */}
-          {viewMode === 'wall' && (
-            <div className="mb-6">
-              <label className="block text-sm font-semibold mb-2">Select Wall</label>
-              <div className="grid grid-cols-2 gap-2">
-                {/* Generate wall selection buttons 1-4 */}
-                {[1, 2, 3, 4].map(wall => (
-                  <button
-                    key={wall}
-                    onClick={() => setSelectedWall(wall)}
-                    className={`p-2 rounded ${selectedWall === wall ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                  >
-                    Wall {wall}
-                  </button>
-                ))}
+            {/* Room Switcher */}
+            {/* Toggle between kitchen and bathroom designs without losing progress */}
+            <div className="mb-6 bg-gray-50 p-3 rounded-lg">
+              <div className="flex gap-2">
+                {/* Kitchen switcher button */}
+                <button
+                  onClick={() => switchRoom('kitchen')}
+                  className={`flex-1 p-2 rounded flex items-center justify-center gap-1 text-sm ${activeRoom === 'kitchen' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
+                    }`}
+                >
+                  <Home size={16} />
+                  Kitchen
+                </button>
+                {/* Bathroom switcher button */}
+                <button
+                  onClick={() => switchRoom('bathroom')}
+                  className={`flex-1 p-2 rounded flex items-center justify-center gap-1 text-sm ${activeRoom === 'bathroom' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
+                    }`}
+                >
+                  <Bath size={16} />
+                  Bathroom
+                </button>
               </div>
-
-              {/* Wall-mounted element properties */}
-              {/* Show mount height controls for selected wall cabinets */}
-              {(() => {
-                const element = currentRoomData.elements.find(el => el.id === selectedElement);
-                const elementSpec = elementTypes[element?.type];
-
-                // Only show controls if an element is selected
-                if (!element) return null;
-
-                return (
-                  <div className="space-y-4">
-                    {/* Element name display */}
-                    <div>
-                      <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
-                    </div>
-
-                    {/* Mount height controls for wall cabinets */}
-                    {/* Only show for wall-mounted cabinet types */}
-                    {(element.type === 'wall' || element.type === 'medicine') && (
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Mount Height from Floor (inches)</label>
-                        <input
-                          type="number"
-                          value={element.mountHeight}
-                          onChange={(e) => updateElementDimensions(element.id, 'mountHeight', e.target.value)}
-                          className="w-full p-2 border rounded"
-                          min="0"
-                          max={parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Distance from floor to bottom of cabinet
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Current room dimensions display */}
+              <p className="text-xs text-gray-600 mt-2 text-center">
+                {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}: {currentRoomData.dimensions.width}' × {currentRoomData.dimensions.height}'
+              </p>
             </div>
-          )}
 
-          {/* Cabinet Options */}
-          {/* List of available cabinet types for the current room */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-4">
-              {activeRoom === 'kitchen' ? 'Kitchen Cabinets' : 'Bathroom Cabinets'}
-            </h3>
-            <div className="space-y-2">
-              {/* Filter and display cabinet options by room and category */}
-              {Object.entries(elementTypes)
-                .filter(([_, spec]) => spec.room === activeRoom && spec.category === 'cabinet')
-                .map(([key, spec]) => (
-                  <button
-                    key={key}
-                    onClick={() => addElement(key)}
-                    className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    {/* Cabinet name */}
-                    <div className="font-medium">{spec.name}</div>
-                    {/* Default dimensions display */}
-                    <div className="text-xs text-gray-500">
-                      {spec.defaultWidth}"W × {spec.defaultDepth}"D × {spec.fixedHeight || spec.defaultHeight}"H
-                    </div>
-                  </button>
-                ))}
+            {/* Action Buttons */}
+            {/* Main action buttons for pricing and quote generation */}
+            <div className="mb-6 space-y-2">
+              {/* Toggle pricing display */}
+              <button
+                onClick={() => setShowPricing(!showPricing)}
+                className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2"
+              >
+                <Calculator size={16} />
+                {showPricing ? 'Hide Pricing' : 'Show Pricing'}
+              </button>
+              {/* Open quote request form */}
+              <button
+                onClick={() => setShowQuoteForm(true)}
+                className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
+              >
+                <Send size={16} />
+                Send Quote
+              </button>
             </div>
-          </div>
 
-          {/* Appliances/Fixtures */}
-          {/* List of available appliances and fixtures for the current room */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-4">
-              {activeRoom === 'kitchen' ? 'Appliances' : 'Fixtures'}
-            </h3>
-            <div className="space-y-2">
-              {/* Filter and display appliance options by room and category */}
-              {Object.entries(elementTypes)
-                .filter(([_, spec]) => spec.room === activeRoom && spec.category === 'appliance')
-                .map(([key, spec]) => (
-                  <button
-                    key={key}
-                    onClick={() => addElement(key)}
-                    className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    {/* Appliance name */}
-                    <div className="font-medium">{spec.name}</div>
-                    {/* Fixed dimensions display */}
-                    <div className="text-xs text-gray-500">
-                      {spec.defaultWidth}"W × {spec.defaultDepth}"D × {spec.fixedHeight}"H
-                    </div>
-                  </button>
-                ))}
+            {/* View Toggle */}
+            {/* Switch between floor plan and wall elevation views */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2">View Mode</label>
+              <div className="flex gap-2">
+                {/* Floor plan view button */}
+                <button
+                  onClick={() => setViewMode('floor')}
+                  className={`flex-1 p-2 rounded ${viewMode === 'floor' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Floor Plan
+                </button>
+                {/* Wall elevation view button */}
+                <button
+                  onClick={() => setViewMode('wall')}
+                  className={`flex-1 p-2 rounded ${viewMode === 'wall' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Wall View
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Selected Element Properties */}
-          {/* Property panel for the currently selected element (floor plan view only) */}
-          {selectedElement && viewMode === 'floor' && (
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4">Properties</h3>
-              {(() => {
-                // Get selected element data and specifications
-                const element = currentRoomData.elements.find(el => el.id === selectedElement);
-                const elementSpec = elementTypes[element?.type];
+            {/* Wall Selection (only visible in wall view mode) */}
+            {/* Grid of buttons to select which wall to view in elevation */}
+            {viewMode === 'wall' && (
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2">Select Wall</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Generate wall selection buttons 1-4 */}
+                  {[1, 2, 3, 4].map(wall => (
+                    <button
+                      key={wall}
+                      onClick={() => setSelectedWall(wall)}
+                      className={`p-2 rounded ${selectedWall === wall ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    >
+                      Wall {wall}
+                    </button>
+                  ))}
+                </div>
 
-                // Return null if no element selected
-                if (!element) return null;
+                {/* Wall-mounted element properties */}
+                {/* Show mount height controls for selected wall cabinets */}
+                {(() => {
+                  const element = currentRoomData.elements.find(el => el.id === selectedElement);
+                  const elementSpec = elementTypes[element?.type];
 
-                return (
-                  <div className="space-y-4">
-                    {/* Element identification */}
-                    <div>
-                      <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
-                    </div>
+                  // Only show controls if an element is selected
+                  if (!element) return null;
 
-                    {/* Material selection for cabinets */}
-                    {/* Only show material options for cabinet elements */}
-                    {element.category === 'cabinet' && (
+                  return (
+                    <div className="space-y-4">
+                      {/* Element name display */}
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">Material</label>
-                        <select
-                          value={currentRoomData.materials[element.id] || 'laminate'}
-                          onChange={(e) => setCurrentRoomData({
-                            ...currentRoomData,
-                            materials: { ...currentRoomData.materials, [element.id]: e.target.value }
-                          })}
-                          className="w-full p-2 border rounded"
-                        >
-                          {Object.entries(materialMultipliers).map(([material, multiplier]) => {
-                            const percentage = multiplier === 1 ? 'Included' : `+${Math.round((multiplier - 1) * 100)}%`;
-                            const displayName = material.charAt(0).toUpperCase() + material.slice(1).replace(/-/g, ' ');
-                            return (
-                              <option key={material} value={material}>
-                                {displayName} ({percentage})
-                              </option>
-                            );
-                          })}
-                        </select>
+                        <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
                       </div>
-                    )}
 
-                    {/* Width - customizable for cabinets */}
-                    {/* Allow width adjustment for cabinet elements only */}
-                    {element.category === 'cabinet' && (
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Width (inches)</label>
-                        <input
-                          type="number"
-                          value={element.width}
-                          onChange={(e) => updateElementDimensions(element.id, 'width', e.target.value)}
-                          className="w-full p-2 border rounded"
-                          min="12"
-                          max="60"
-                        />
-                      </div>
-                    )}
-
-                    {/* Depth - for specific cabinet types */}
-                    {/* Show depth controls for base cabinets, tall cabinets, and vanities */}
-                    {(element.type === 'base' || element.type === 'tall' || element.type === 'sink-base' ||
-                      element.type === 'vanity' || element.type === 'linen' || element.type === 'vanity-sink') && (
+                      {/* Mount height controls for wall cabinets */}
+                      {/* Only show for wall-mounted cabinet types */}
+                      {(element.type === 'wall' || element.type === 'medicine') && (
                         <div>
-                          <label className="block text-sm text-gray-600 mb-1">Depth (inches)</label>
+                          <label className="block text-sm text-gray-600 mb-1">Mount Height from Floor (inches)</label>
                           <input
                             type="number"
-                            value={element.depth}
-                            onChange={(e) => updateElementDimensions(element.id, 'depth', e.target.value)}
+                            value={element.mountHeight}
+                            onChange={(e) => updateElementDimensions(element.id, 'mountHeight', e.target.value)}
+                            className="w-full p-2 border rounded"
+                            min="0"
+                            max={parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Distance from floor to bottom of cabinet
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Cabinet Options */}
+            {/* List of available cabinet types for the current room */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-4">
+                {activeRoom === 'kitchen' ? 'Kitchen Cabinets' : 'Bathroom Cabinets'}
+              </h3>
+              <div className="space-y-2">
+                {/* Filter and display cabinet options by room and category */}
+                {Object.entries(elementTypes)
+                  .filter(([_, spec]) => spec.room === activeRoom && spec.category === 'cabinet')
+                  .map(([key, spec]) => (
+                    <button
+                      key={key}
+                      onClick={() => addElement(key)}
+                      className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      {/* Cabinet name */}
+                      <div className="font-medium">{spec.name}</div>
+                      {/* Default dimensions display */}
+                      <div className="text-xs text-gray-500">
+                        {spec.defaultWidth}"W × {spec.defaultDepth}"D × {spec.fixedHeight || spec.defaultHeight}"H
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Appliances/Fixtures */}
+            {/* List of available appliances and fixtures for the current room */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-4">
+                {activeRoom === 'kitchen' ? 'Appliances' : 'Fixtures'}
+              </h3>
+              <div className="space-y-2">
+                {/* Filter and display appliance options by room and category */}
+                {Object.entries(elementTypes)
+                  .filter(([_, spec]) => spec.room === activeRoom && spec.category === 'appliance')
+                  .map(([key, spec]) => (
+                    <button
+                      key={key}
+                      onClick={() => addElement(key)}
+                      className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      {/* Appliance name */}
+                      <div className="font-medium">{spec.name}</div>
+                      {/* Fixed dimensions display */}
+                      <div className="text-xs text-gray-500">
+                        {spec.defaultWidth}"W × {spec.defaultDepth}"D × {spec.fixedHeight}"H
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Selected Element Properties */}
+            {/* Property panel for the currently selected element (floor plan view only) */}
+            {selectedElement && viewMode === 'floor' && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Properties</h3>
+                {(() => {
+                  // Get selected element data and specifications
+                  const element = currentRoomData.elements.find(el => el.id === selectedElement);
+                  const elementSpec = elementTypes[element?.type];
+
+                  // Return null if no element selected
+                  if (!element) return null;
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Element identification */}
+                      <div>
+                        <p className="text-sm font-medium mb-1">{elementSpec.name}</p>
+                      </div>
+
+                      {/* Material selection for cabinets */}
+                      {/* Only show material options for cabinet elements */}
+                      {element.category === 'cabinet' && (
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Material</label>
+                          <select
+                            value={currentRoomData.materials[element.id] || 'laminate'}
+                            onChange={(e) => setCurrentRoomData({
+                              ...currentRoomData,
+                              materials: { ...currentRoomData.materials, [element.id]: e.target.value }
+                            })}
+                            className="w-full p-2 border rounded"
+                          >
+                            {Object.entries(materialMultipliers).map(([material, multiplier]) => {
+                              const percentage = multiplier === 1 ? 'Included' : `+${Math.round((multiplier - 1) * 100)}%`;
+                              const displayName = material.charAt(0).toUpperCase() + material.slice(1).replace(/-/g, ' ');
+                              return (
+                                <option key={material} value={material}>
+                                  {displayName} ({percentage})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Width - customizable for cabinets */}
+                      {/* Allow width adjustment for cabinet elements only */}
+                      {element.category === 'cabinet' && (
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Width (inches)</label>
+                          <input
+                            type="number"
+                            value={element.width}
+                            onChange={(e) => updateElementDimensions(element.id, 'width', e.target.value)}
                             className="w-full p-2 border rounded"
                             min="12"
-                            max="36"
+                            max="60"
                           />
                         </div>
                       )}
 
-                    {/* Height - for variable height elements */}
-                    {/* Show height controls for wall cabinets, tall cabinets, medicine cabinets, and linen cabinets */}
-                    {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen') && (
+                      {/* Depth - for specific cabinet types */}
+                      {/* Show depth controls for base cabinets, tall cabinets, and vanities */}
+                      {(element.type === 'base' || element.type === 'tall' || element.type === 'sink-base' ||
+                        element.type === 'vanity' || element.type === 'linen' || element.type === 'vanity-sink') && (
+                          <div>
+                            <label className="block text-sm text-gray-600 mb-1">Depth (inches)</label>
+                            <input
+                              type="number"
+                              value={element.depth}
+                              onChange={(e) => updateElementDimensions(element.id, 'depth', e.target.value)}
+                              className="w-full p-2 border rounded"
+                              min="12"
+                              max="36"
+                            />
+                          </div>
+                        )}
+
+                      {/* Height - for variable height elements */}
+                      {/* Show height controls for wall cabinets, tall cabinets, medicine cabinets, and linen cabinets */}
+                      {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen') && (
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Height (inches)</label>
+                          <input
+                            type="number"
+                            value={element.actualHeight}
+                            onChange={(e) => updateElementDimensions(element.id, 'actualHeight', e.target.value)}
+                            className="w-full p-2 border rounded"
+                            min={elementSpec.minHeight || 12}
+                            max={element.type === 'wall' || element.type === 'medicine' ? parseFloat(currentRoomData.dimensions.wallHeight) - element.mountHeight : currentRoomData.dimensions.wallHeight}
+                          />
+                          {/* Height constraint information */}
+                          <p className="text-xs text-gray-500 mt-1">
+                            {element.type === 'wall' || element.type === 'medicine'
+                              ? `Min: ${elementSpec.minHeight || 12}", Max: ${parseFloat(currentRoomData.dimensions.wallHeight) - element.mountHeight}"`
+                              : `Min: ${elementSpec.minHeight || 40}", Max: ${currentRoomData.dimensions.wallHeight}"`}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Mount height for wall cabinets */}
+                      {/* Controls for adjusting wall-mounted cabinet height from floor */}
+                      {(element.type === 'wall' || element.type === 'medicine') && (
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-1">Mount Height from Floor (inches)</label>
+                          <input
+                            type="number"
+                            value={element.mountHeight}
+                            onChange={(e) => updateElementDimensions(element.id, 'mountHeight', e.target.value)}
+                            className="w-full p-2 border rounded"
+                            min="0"
+                            max={parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Distance from floor to bottom of cabinet
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Rotation Controls */}
+                      {/* Left and right rotation buttons for element orientation */}
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">Height (inches)</label>
-                        <input
-                          type="number"
-                          value={element.actualHeight}
-                          onChange={(e) => updateElementDimensions(element.id, 'actualHeight', e.target.value)}
-                          className="w-full p-2 border rounded"
-                          min={elementSpec.minHeight || 12}
-                          max={element.type === 'wall' || element.type === 'medicine' ? parseFloat(currentRoomData.dimensions.wallHeight) - element.mountHeight : currentRoomData.dimensions.wallHeight}
-                        />
-                        {/* Height constraint information */}
-                        <p className="text-xs text-gray-500 mt-1">
-                          {element.type === 'wall' || element.type === 'medicine'
-                            ? `Min: ${elementSpec.minHeight || 12}", Max: ${parseFloat(currentRoomData.dimensions.wallHeight) - element.mountHeight}"`
-                            : `Min: ${elementSpec.minHeight || 40}", Max: ${currentRoomData.dimensions.wallHeight}"`}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Mount height for wall cabinets */}
-                    {/* Controls for adjusting wall-mounted cabinet height from floor */}
-                    {(element.type === 'wall' || element.type === 'medicine') && (
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Mount Height from Floor (inches)</label>
-                        <input
-                          type="number"
-                          value={element.mountHeight}
-                          onChange={(e) => updateElementDimensions(element.id, 'mountHeight', e.target.value)}
-                          className="w-full p-2 border rounded"
-                          min="0"
-                          max={parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Distance from floor to bottom of cabinet
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Rotation Controls */}
-                    {/* Left and right rotation buttons for element orientation */}
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-2">Rotation</label>
-                      <div className="flex gap-2">
-                        {/* Rotate left (counter-clockwise) */}
-                        <button
-                          onClick={() => rotateElement(element.id, -90)}
-                          className="flex-1 p-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
-                        >
-                          <RotateCw size={16} className="transform scale-x-[-1]" />
-                          Left
-                        </button>
-                        {/* Rotate right (clockwise) */}
-                        <button
-                          onClick={() => rotateElement(element.id, 90)}
-                          className="flex-1 p-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
-                        >
-                          <RotateCw size={16} />
-                          Right
-                        </button>
-                      </div>
-                      {/* Current rotation display */}
-                      <p className="text-xs text-gray-500 mt-1">Current: {element.rotation}°</p>
-                    </div>
-
-
-                    {/* Corner cabinet hinge direction */}
-                    {/* Special controls for corner cabinet door orientation */}
-                    {element.type === 'corner' && (
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-2">Hinge Direction</label>
+                        <label className="block text-sm text-gray-600 mb-2">Rotation</label>
                         <div className="flex gap-2">
-                          {/* Left hinge option */}
+                          {/* Rotate left (counter-clockwise) */}
                           <button
-                            onClick={() => rotateCornerCabinet(element.id, 'left')}
-                            className={`flex-1 p-2 rounded ${element.hingeDirection === 'left' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                            onClick={() => rotateElement(element.id, -90)}
+                            className="flex-1 p-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                           >
+                            <RotateCw size={16} className="transform scale-x-[-1]" />
                             Left
                           </button>
-                          {/* Right hinge option */}
+                          {/* Rotate right (clockwise) */}
                           <button
-                            onClick={() => rotateCornerCabinet(element.id, 'right')}
-                            className={`flex-1 p-2 rounded ${element.hingeDirection === 'right' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                            onClick={() => rotateElement(element.id, 90)}
+                            className="flex-1 p-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                           >
+                            <RotateCw size={16} />
                             Right
                           </button>
                         </div>
+                        {/* Current rotation display */}
+                        <p className="text-xs text-gray-500 mt-1">Current: {element.rotation}°</p>
                       </div>
-                    )}
 
-                    {/* Delete Element Button */}
-                    {/* Remove selected element from design */}
-                    <button
-                      onClick={() => deleteElement(element.id)}
-                      className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
 
-          {/* Reset Design Button */}
-          {/* Clear all elements and start over */}
-          <button
-            onClick={resetDesign}
-            className="w-full mt-6 p-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Reset {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Design
-          </button>
-        </div>
+                      {/* Corner cabinet hinge direction */}
+                      {/* Special controls for corner cabinet door orientation */}
+                      {element.type === 'corner' && (
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-2">Hinge Direction</label>
+                          <div className="flex gap-2">
+                            {/* Left hinge option */}
+                            <button
+                              onClick={() => rotateCornerCabinet(element.id, 'left')}
+                              className={`flex-1 p-2 rounded ${element.hingeDirection === 'left' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                            >
+                              Left
+                            </button>
+                            {/* Right hinge option */}
+                            <button
+                              onClick={() => rotateCornerCabinet(element.id, 'right')}
+                              className={`flex-1 p-2 rounded ${element.hingeDirection === 'right' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                            >
+                              Right
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
-        {/* ========== MAIN CANVAS AREA ========== */}
-        {/* Primary design workspace containing the visual interface */}
-        <div className="flex-1 p-8 overflow-auto">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-
-            {/* Header */}
-            {/* Title bar with room name and date */}
-            <div className="flex justify-between items-start mb-6 border-b pb-4">
-              <div>
-                <h2 className="text-2xl font-bold">{activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Layout</h2>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold">{new Date().toLocaleDateString()}</p>
-                <p className="text-xs text-gray-600">Not To Scale</p>
-              </div>
-            </div>
-
-            {/* Pricing Summary */}
-            {/* Expandable pricing panel showing cost breakdown */}
-            {showPricing && currentRoomData.elements.some(el => el.category === 'cabinet') && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-semibold mb-3">Pricing Summary - {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}</h3>
-                <div className="space-y-2 text-sm">
-                  {/* Base cabinet pricing */}
-                  <div className="flex justify-between">
-                    <span>Base Cabinet Price:</span>
-                    <span>${(calculateTotalPrice() - (colorPricing[currentRoomData.colorCount] || 0)).toFixed(2)}</span>
-                  </div>
-
-                  {/* Color options selector */}
-                  <div className="flex justify-between">
-                    <span>Color Options:</span>
-                    <select
-                      value={currentRoomData.colorCount}
-                      onChange={(e) => setCurrentRoomData({
-                        ...currentRoomData,
-                        colorCount: e.target.value
-                      })}
-                      className="px-2 py-1 border rounded text-xs"
-                    >
-                      <option value={1}>Single Color (Included)</option>
-                      <option value={2}>Two Colors (+$100)</option>
-                      <option value={3}>Three Colors (+$200)</option>
-                      <option value="custom">Custom Colors (+$500)</option>
-                    </select>
-                  </div>
-
-                  {/* Total price display */}
-                  <div className="border-t pt-2 font-semibold flex justify-between">
-                    <span>Total Estimate:</span>
-                    <span>${calculateTotalPrice().toFixed(2)}</span>
-                  </div>
-
-                  {/* Pricing disclaimer */}
-                  <p className="text-xs text-gray-600 mt-2">
-                    * This is an estimate. Final pricing may vary based on specific requirements.
-                  </p>
-                </div>
+                      {/* Delete Element Button */}
+                      {/* Remove selected element from design */}
+                      <button
+                        onClick={() => deleteElement(element.id)}
+                        className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             )}
-            {viewMode === 'floor' ? (
-              <>
-                {/* Floor Plan Instructions */}
-                <p className="text-sm text-gray-600 mb-4">
-                  Click and drag cabinets to position them. They will snap to walls and other cabinets.
-                </p>
 
-                {/* Floor Plan SVG Container */}
-                {/* Main interactive canvas for cabinet placement and arrangement */}
-                <div className="inline-block bg-white" ref={floorPlanRef}>
-                  <svg
-                    ref={canvasRef}
-                    width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 60}
-                    height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 60}
-                    className="cursor-crosshair"
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onClick={(e) => {
-                      // Deselect elements when clicking empty canvas
-                      if (e.target === e.currentTarget) {
-                        setSelectedElement(null);
-                      }
-                    }}
-                  >
-                    {/* Grid Pattern Definition */}
-                    {/* Creates visual grid overlay for measurement reference */}
-                    <defs>
-                      <pattern id="grid" width={12 * scale} height={12 * scale} patternUnits="userSpaceOnUse">
-                        <path d={`M ${12 * scale} 0 L 0 0 0 ${12 * scale}`} fill="none" stroke="#f0f0f0" strokeWidth="0.5" />
-                      </pattern>
-                    </defs>
+            {/* Reset Design Button */}
+            {/* Clear all elements and start over */}
+            <button
+              onClick={resetDesign}
+              className="w-full mt-6 p-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Reset {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Design
+            </button>
+          </div>
 
-                    {/* Canvas Background */}
-                    <rect x="0" y="0" width="100%" height="100%" fill="white" />
+          {/* ========== MAIN CANVAS AREA ========== */}
+          {/* Primary design workspace containing the visual interface */}
+          <div className="flex-1 p-8 overflow-auto">
+            <div className="bg-white rounded-lg shadow-lg p-6">
 
-                    {/* Room Floor with Grid Overlay */}
-                    {/* Visual representation of room floor space with measurement grid */}
-                    <rect
-                      x="30"
-                      y="30"
-                      width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale}
-                      height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale}
-                      fill="url(#grid)"
-                    />
+              {/* Header */}
+              {/* Title bar with room name and date */}
+              <div className="flex justify-between items-start mb-6 border-b pb-4">
+                <div>
+                  <h2 className="text-2xl font-bold">{activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Layout</h2>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{new Date().toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-600">Not To Scale</p>
+                </div>
+              </div>
 
-                    {/* Wall Structures with Thickness */}
-                    {/* Gray rectangles representing physical walls with realistic thickness */}
-                    <g>
-                      {/* Top wall */}
-                      <rect x="20" y="20" width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 20} height="10" fill="#666" />
-                      {/* Bottom wall */}
-                      <rect x="20" y={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 20} height="10" fill="#666" />
-                      {/* Left wall */}
-                      <rect x="20" y="20" width="10" height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 20} fill="#666" />
-                      {/* Right wall */}
-                      <rect x={30 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y="20" width="10" height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 20} fill="#666" />
-                    </g>
+              {/* Pricing Summary */}
+              {/* Expandable pricing panel showing cost breakdown */}
+              {showPricing && currentRoomData.elements.some(el => el.category === 'cabinet') && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Pricing Summary - {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}</h3>
+                  <div className="space-y-2 text-sm">
+                    {/* Base cabinet pricing */}
+                    <div className="flex justify-between">
+                      <span>Base Cabinet Price:</span>
+                      <span>${(calculateTotalPrice() - (colorPricing[currentRoomData.colorCount] || 0)).toFixed(2)}</span>
+                    </div>
 
-                    {/* Room Dimension Labels */}
-                    {/* Text labels showing room measurements */}
-                    <g>
-                      {/* Width dimension label at top */}
-                      <line x1="30" y1="10" x2={30 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y2="10" stroke="#333" strokeWidth="1" />
-                      <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="7" textAnchor="middle" fontSize="10" fill="#333">
-                        {currentRoomData.dimensions.width}'
-                      </text>
+                    {/* Color options selector */}
+                    <div className="flex justify-between">
+                      <span>Color Options:</span>
+                      <select
+                        value={currentRoomData.colorCount}
+                        onChange={(e) => setCurrentRoomData({
+                          ...currentRoomData,
+                          colorCount: e.target.value
+                        })}
+                        className="px-2 py-1 border rounded text-xs"
+                      >
+                        <option value={1}>Single Color (Included)</option>
+                        <option value={2}>Two Colors (+$100)</option>
+                        <option value={3}>Three Colors (+$200)</option>
+                        <option value="custom">Custom Colors (+$500)</option>
+                      </select>
+                    </div>
 
-                      {/* Height dimension label at left */}
-                      <line x1="10" y1="30" x2="10" y2={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} stroke="#333" strokeWidth="1" />
-                      <text x="5" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#333" transform={`rotate(-90, 5, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
-                        {currentRoomData.dimensions.height}'
-                      </text>
-                    </g>
+                    {/* Total price display */}
+                    <div className="border-t pt-2 font-semibold flex justify-between">
+                      <span>Total Estimate:</span>
+                      <span>${calculateTotalPrice().toFixed(2)}</span>
+                    </div>
 
-                    {/* Render Design Elements */}
-                    {/* Container for all cabinets and appliances, sorted by z-index for proper layering */}
-                    <g transform="translate(30, 30)">
-                      {currentRoomData.elements.sort((a, b) => a.zIndex - b.zIndex).map((element, index) => {
-                        const isSelected = element.id === selectedElement;
-                        const elementSpec = elementTypes[element.type];
+                    {/* Pricing disclaimer */}
+                    <p className="text-xs text-gray-600 mt-2">
+                      * This is an estimate. Final pricing may vary based on specific requirements.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {viewMode === 'floor' ? (
+                <>
+                  {/* Floor Plan Instructions */}
+                  <p className="text-sm text-gray-600 mb-4">
+                    Click and drag cabinets to position them. They will snap to walls and other cabinets.
+                  </p>
 
-                        {/* Special Rendering for Corner Cabinets */ }
-                        {/* Corner cabinets have unique L-shaped rendering */ }
-                        if (element.type === 'corner') {
-                          return (
-                            <g key={element.id}>
-                              {renderCornerCabinet(element)}
-
-                              {/* Corner cabinet number badge */}
-                              <circle
-                                cx={element.x + (element.width * scale) / 2}
-                                cy={element.y + (element.depth * scale) / 2}
-                                r="12"
-                                fill="white"
-                                stroke="#333"
-                                strokeWidth="1"
-                              />
-                              <text
-                                x={element.x + (element.width * scale) / 2}
-                                y={element.y + (element.depth * scale) / 2}
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                fontSize="10"
-                                fill="#333"
-                                fontWeight="bold"
-                              >
-                                {currentRoomData.elements.indexOf(element) + 1}
-                              </text>
-
-                              {/* Selection indicator for corner cabinets */}
-                              {isSelected && (
-                                <rect
-                                  x={element.x - 2}
-                                  y={element.y - 2}
-                                  width={element.width * scale + 4}
-                                  height={element.depth * scale + 4}
-                                  fill="none"
-                                  stroke="#3b82f6"
-                                  strokeWidth="2"
-                                  strokeDasharray="4"
-                                />
-                              )}
-                            </g>
-                          );
+                  {/* Floor Plan SVG Container */}
+                  {/* Main interactive canvas for cabinet placement and arrangement */}
+                  <div className="inline-block bg-white" ref={floorPlanRef}>
+                    <svg
+                      ref={canvasRef}
+                      width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 60}
+                      height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 60}
+                      className="cursor-crosshair"
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      onClick={(e) => {
+                        // Deselect elements when clicking empty canvas
+                        if (e.target === e.currentTarget) {
+                          setSelectedElement(null);
                         }
+                      }}
+                    >
+                      {/* Grid Pattern Definition */}
+                      {/* Creates visual grid overlay for measurement reference */}
+                      <defs>
+                        <pattern id="grid" width={12 * scale} height={12 * scale} patternUnits="userSpaceOnUse">
+                          <path d={`M ${12 * scale} 0 L 0 0 0 ${12 * scale}`} fill="none" stroke="#f0f0f0" strokeWidth="0.5" />
+                        </pattern>
+                      </defs>
 
-                        {/* Standard Element Rendering */ }
-                        {/* Calculate display dimensions based on rotation */ }
-                        const displayWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-                        const displayDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
+                      {/* Canvas Background */}
+                      <rect x="0" y="0" width="100%" height="100%" fill="white" />
 
-                        // Visual styling based on element category
-                        const fillColor = element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3';
-                        const strokeColor = isSelected ? '#3b82f6' : '#333';
+                      {/* Room Floor with Grid Overlay */}
+                      {/* Visual representation of room floor space with measurement grid */}
+                      <rect
+                        x="30"
+                        y="30"
+                        width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale}
+                        height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale}
+                        fill="url(#grid)"
+                      />
 
-                        return (
-                          <g key={element.id} transform={`translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`}>
+                      {/* Wall Structures with Thickness */}
+                      {/* Gray rectangles representing physical walls with realistic thickness */}
+                      <g>
+                        {/* Top wall */}
+                        <rect x="20" y="20" width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 20} height="10" fill="#666" />
+                        {/* Bottom wall */}
+                        <rect x="20" y={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 20} height="10" fill="#666" />
+                        {/* Left wall */}
+                        <rect x="20" y="20" width="10" height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 20} fill="#666" />
+                        {/* Right wall */}
+                        <rect x={30 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y="20" width="10" height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 20} fill="#666" />
+                      </g>
 
-                            {/* Main Element Body */}
-                            {/* Rectangle representing the cabinet or appliance footprint */}
-                            <rect
-                              x={0}
-                              y={0}
-                              width={element.width * scale}
-                              height={element.depth * scale}
-                              fill={fillColor}
-                              stroke={strokeColor}
-                              strokeWidth={isSelected ? '2' : '1'}
-                              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                              onMouseDown={(e) => handleMouseDown(e, element.id)}
-                            />
+                      {/* Room Dimension Labels */}
+                      {/* Text labels showing room measurements */}
+                      <g>
+                        {/* Width dimension label at top */}
+                        <line x1="30" y1="10" x2={30 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y2="10" stroke="#333" strokeWidth="1" />
+                        <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="7" textAnchor="middle" fontSize="10" fill="#333">
+                          {currentRoomData.dimensions.width}'
+                        </text>
 
-                            {/* Door Indication for Cabinets */}
-                            {/* Arc showing door swing direction for standard cabinets */}
-                            {element.category === 'cabinet' && element.type !== 'sink-base' && element.type !== 'vanity-sink' && renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
+                        {/* Height dimension label at left */}
+                        <line x1="10" y1="30" x2="10" y2={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} stroke="#333" strokeWidth="1" />
+                        <text x="5" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#333" transform={`rotate(-90, 5, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
+                          {currentRoomData.dimensions.height}'
+                        </text>
+                      </g>
 
-                            {/* Special Sink Cabinet Graphics */}
-                            {/* Detailed sink representation for sink-base and vanity-sink cabinets */}
-                            {(element.type === 'sink-base' || element.type === 'vanity-sink') && (
-                              <>
-                                {/* Outer sink rim */}
-                                <rect
-                                  x={(element.width * scale) * 0.15}
-                                  y={(element.depth * scale) * 0.15}
-                                  width={(element.width * scale) * 0.7}
-                                  height={(element.depth * scale) * 0.7}
-                                  fill="none"
-                                  stroke="#333"
-                                  strokeWidth="1"
-                                  rx="4"
-                                />
-                                {/* Inner sink bowl */}
-                                <rect
-                                  x={(element.width * scale) * 0.2}
-                                  y={(element.depth * scale) * 0.2}
-                                  width={(element.width * scale) * 0.6}
-                                  height={(element.depth * scale) * 0.6}
-                                  fill="none"
-                                  stroke="#333"
-                                  strokeWidth="0.5"
-                                  rx="2"
-                                />
-                                {/* Faucet indicator */}
+                      {/* Render Design Elements */}
+                      {/* Container for all cabinets and appliances, sorted by z-index for proper layering */}
+                      <g transform="translate(30, 30)">
+                        {currentRoomData.elements.sort((a, b) => a.zIndex - b.zIndex).map((element, index) => {
+                          const isSelected = element.id === selectedElement;
+                          const elementSpec = elementTypes[element.type];
+
+                          {/* Special Rendering for Corner Cabinets */ }
+                          {/* Corner cabinets have unique L-shaped rendering */ }
+                          if (element.type === 'corner') {
+                            return (
+                              <g key={element.id}>
+                                {renderCornerCabinet(element)}
+
+                                {/* Corner cabinet number badge */}
                                 <circle
-                                  cx={(element.width * scale) * 0.5}
-                                  cy={(element.depth * scale) * 0.3}
-                                  r="3"
-                                  fill="#333"
-                                />
-                              </>
-                            )}
-
-                            {/* Stove/Range Graphics */}
-                            {/* Detailed representation of cooktop with burners */}
-                            {element.type === 'stove' && (
-                              <>
-                                {/* Four burner circles */}
-                                <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                {/* Stove label */}
-                                <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">ST{element.width}</text>
-                              </>
-                            )}
-
-                            {/* Dishwasher Graphics */}
-                            {/* Simple rectangular border with label */}
-                            {element.type === 'dishwasher' && (
-                              <>
-                                <rect x="4" y="4" width={(element.width * scale) - 8} height={(element.depth * scale) - 8} fill="none" stroke="#666" strokeWidth="1" />
-                                <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">DW{element.width}</text>
-                              </>
-                            )}
-
-                            {/* Refrigerator Graphics */}
-                            {/* Detailed fridge representation with doors and handles */}
-                            {element.type === 'refrigerator' && (
-                              <>
-                                {/* Main refrigerator body */}
-                                <rect
-                                  x={2}
-                                  y={2}
-                                  width={(element.width * scale) - 4}
-                                  height={(element.depth * scale) - 4}
-                                  fill="none"
-                                  stroke="#666"
-                                  strokeWidth="2"
-                                />
-                                {/* Center door division line */}
-                                <line
-                                  x1={(element.width * scale) / 2}
-                                  y1={2}
-                                  x2={(element.width * scale) / 2}
-                                  y2={(element.depth * scale) - 2}
-                                  stroke="#666"
+                                  cx={element.x + (element.width * scale) / 2}
+                                  cy={element.y + (element.depth * scale) / 2}
+                                  r="12"
+                                  fill="white"
+                                  stroke="#333"
                                   strokeWidth="1"
                                 />
-                                {/* Door handles */}
-                                <rect x={(element.width * scale) * 0.4 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
-                                <rect x={(element.width * scale) * 0.6 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
-                                {/* Label */}
-                                <text x={(element.width * scale) / 2} y={(element.depth * scale) - 8} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
-                                  FRIDGE
+                                <text
+                                  x={element.x + (element.width * scale) / 2}
+                                  y={element.y + (element.depth * scale) / 2}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize="10"
+                                  fill="#333"
+                                  fontWeight="bold"
+                                >
+                                  {currentRoomData.elements.indexOf(element) + 1}
                                 </text>
-                              </>
-                            )}
 
-                            {/* Toilet Graphics */}
-                            {/* Detailed toilet representation with tank and bowl */}
-                            {element.type === 'toilet' && (
-                              <>
-                                {/* Toilet tank */}
-                                <rect
-                                  x={(element.width * scale) * 0.25}
-                                  y={2}
-                                  width={(element.width * scale) * 0.5}
-                                  height={(element.depth * scale) * 0.35}
-                                  fill="#fff"
-                                  stroke="#666"
-                                  strokeWidth="1"
-                                  rx="2"
-                                />
-                                {/* Toilet bowl */}
-                                <ellipse
-                                  cx={(element.width * scale) / 2}
-                                  cy={(element.depth * scale) * 0.65}
-                                  rx={(element.width * scale) * 0.4}
-                                  ry={(element.depth * scale) * 0.32}
-                                  fill="#fff"
-                                  stroke="#666"
-                                  strokeWidth="1"
-                                />
-                                {/* Toilet seat */}
-                                <ellipse
-                                  cx={(element.width * scale) / 2}
-                                  cy={(element.depth * scale) * 0.65}
-                                  rx={(element.width * scale) * 0.35}
-                                  ry={(element.depth * scale) * 0.28}
-                                  fill="none"
-                                  stroke="#666"
-                                  strokeWidth="1"
-                                />
-                                {/* Toilet bowl opening */}
-                                <ellipse
-                                  cx={(element.width * scale) / 2}
-                                  cy={(element.depth * scale) * 0.65}
-                                  rx={(element.width * scale) * 0.15}
-                                  ry={(element.depth * scale) * 0.12}
-                                  fill="#e0e0e0"
-                                />
-                              </>
-                            )}
+                                {/* Selection indicator for corner cabinets */}
+                                {isSelected && (
+                                  <rect
+                                    x={element.x - 2}
+                                    y={element.y - 2}
+                                    width={element.width * scale + 4}
+                                    height={element.depth * scale + 4}
+                                    fill="none"
+                                    stroke="#3b82f6"
+                                    strokeWidth="2"
+                                    strokeDasharray="4"
+                                  />
+                                )}
+                              </g>
+                            );
+                          }
 
-                            {/* Bathtub Graphics */}
-                            {/* Detailed bathtub with rim, interior, faucet, and drain */}
-                            {element.type === 'bathtub' && (
-                              <>
-                                {/* Outer tub rim */}
-                                <rect
-                                  x={4}
-                                  y={4}
-                                  width={(element.width * scale) - 8}
-                                  height={(element.depth * scale) - 8}
-                                  fill="#fff"
-                                  stroke="#666"
-                                  strokeWidth="2"
-                                  rx="6"
-                                />
-                                {/* Inner tub basin */}
-                                <rect
-                                  x={8}
-                                  y={8}
-                                  width={(element.width * scale) - 16}
-                                  height={(element.depth * scale) - 16}
-                                  fill="#f0f8ff"
-                                  stroke="#4682B4"
-                                  strokeWidth="1"
-                                  rx="4"
-                                />
-                                {/* Faucet */}
-                                <circle
-                                  cx={(element.width * scale) * 0.15}
-                                  cy={(element.depth * scale) / 2}
-                                  r="4"
-                                  fill="#666"
-                                />
-                                {/* Drain */}
-                                <circle
-                                  cx={(element.width * scale) * 0.85}
-                                  cy={(element.depth * scale) / 2}
-                                  r="3"
-                                  fill="#333"
-                                />
-                              </>
-                            )}
+                          {/* Standard Element Rendering */ }
+                          {/* Calculate display dimensions based on rotation */ }
+                          const displayWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
+                          const displayDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
 
-                            {/* Shower Graphics */}
-                            {/* Shower stall with base, pan, door, and fixtures */}
-                            {element.type === 'shower' && (
-                              <>
-                                {/* Shower enclosure */}
-                                <rect
-                                  x={2}
-                                  y={2}
-                                  width={(element.width * scale) - 4}
-                                  height={(element.depth * scale) - 4}
-                                  fill="#fff"
-                                  stroke="#666"
-                                  strokeWidth="2"
-                                />
-                                {/* Shower pan */}
-                                <rect
-                                  x={6}
-                                  y={6}
-                                  width={(element.width * scale) - 12}
-                                  height={(element.depth * scale) - 12}
-                                  fill="#f0f8ff"
-                                  stroke="#4682B4"
-                                  strokeWidth="1"
-                                />
-                                {/* Door indication line */}
-                                <line
-                                  x1={2}
-                                  y1={(element.depth * scale) / 2}
-                                  x2={(element.width * scale) * 0.3}
-                                  y2={(element.depth * scale) / 2}
-                                  stroke="#666"
-                                  strokeWidth="2"
-                                />
-                                {/* Shower head */}
-                                <circle
-                                  cx={(element.width * scale) - 10}
-                                  cy={10}
-                                  r="4"
-                                  fill="#666"
-                                />
-                                {/* Drain */}
-                                <circle
-                                  cx={(element.width * scale) / 2}
-                                  cy={(element.depth * scale) / 2}
-                                  r="3"
-                                  fill="#333"
-                                />
-                              </>
-                            )}
+                          // Visual styling based on element category
+                          const fillColor = element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3';
+                          const strokeColor = isSelected ? '#3b82f6' : '#333';
 
-                            {/* Standard Cabinet Door Graphics */}
-                            {/* Door lines and handles for regular cabinets */}
-                            {(element.type === 'base' || element.type === 'wall' || element.type === 'tall' ||
-                              element.type === 'vanity' || element.type === 'medicine' || element.type === 'linen') && (
+                          return (
+                            <g key={element.id} transform={`translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`}>
+
+                              {/* Main Element Body */}
+                              {/* Rectangle representing the cabinet or appliance footprint */}
+                              <rect
+                                x={0}
+                                y={0}
+                                width={element.width * scale}
+                                height={element.depth * scale}
+                                fill={fillColor}
+                                stroke={strokeColor}
+                                strokeWidth={isSelected ? '2' : '1'}
+                                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                                onMouseDown={(e) => handleMouseDown(e, element.id)}
+                              />
+
+                              {/* Door Indication for Cabinets */}
+                              {/* Arc showing door swing direction for standard cabinets */}
+                              {element.category === 'cabinet' && element.type !== 'sink-base' && element.type !== 'vanity-sink' && renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
+
+                              {/* Special Sink Cabinet Graphics */}
+                              {/* Detailed sink representation for sink-base and vanity-sink cabinets */}
+                              {(element.type === 'sink-base' || element.type === 'vanity-sink') && (
                                 <>
-                                  {/* Center door division line */}
-                                  <line
-                                    x1={(element.width * scale) / 2}
-                                    y1={0}
-                                    x2={(element.width * scale) / 2}
-                                    y2={element.depth * scale}
+                                  {/* Outer sink rim */}
+                                  <rect
+                                    x={(element.width * scale) * 0.15}
+                                    y={(element.depth * scale) * 0.15}
+                                    width={(element.width * scale) * 0.7}
+                                    height={(element.depth * scale) * 0.7}
+                                    fill="none"
                                     stroke="#333"
                                     strokeWidth="1"
+                                    rx="4"
                                   />
-                                  {/* Door handles */}
-                                  <circle cx={(element.width * scale) * 0.4} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
-                                  <circle cx={(element.width * scale) * 0.6} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
+                                  {/* Inner sink bowl */}
+                                  <rect
+                                    x={(element.width * scale) * 0.2}
+                                    y={(element.depth * scale) * 0.2}
+                                    width={(element.width * scale) * 0.6}
+                                    height={(element.depth * scale) * 0.6}
+                                    fill="none"
+                                    stroke="#333"
+                                    strokeWidth="0.5"
+                                    rx="2"
+                                  />
+                                  {/* Faucet indicator */}
+                                  <circle
+                                    cx={(element.width * scale) * 0.5}
+                                    cy={(element.depth * scale) * 0.3}
+                                    r="3"
+                                    fill="#333"
+                                  />
                                 </>
                               )}
 
-                            {/* Element Number Badge */}
-                            {/* Circular badge with element number, rotated to stay upright */}
-                            <g transform={`rotate(${-element.rotation}, ${element.width * scale / 2}, ${element.depth * scale / 2})`}>
-                              <circle
-                                cx={(element.width * scale) / 2}
-                                cy={(element.depth * scale) / 2}
-                                r="12"
-                                fill="white"
-                                stroke="#333"
-                                strokeWidth="1"
-                              />
-                              <text
-                                x={(element.width * scale) / 2}
-                                y={(element.depth * scale) / 2}
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                fontSize="10"
-                                fill="#333"
-                                fontWeight="bold"
-                              >
-                                {currentRoomData.elements.indexOf(element) + 1}
-                              </text>
-                            </g>
+                              {/* Stove/Range Graphics */}
+                              {/* Detailed representation of cooktop with burners */}
+                              {element.type === 'stove' && (
+                                <>
+                                  {/* Four burner circles */}
+                                  <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
+                                  <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
+                                  <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
+                                  <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
+                                  {/* Stove label */}
+                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">ST{element.width}</text>
+                                </>
+                              )}
 
-                            {/* Dimension Indicators for Selected Element */}
-                            {/* Show width and depth measurements when element is selected */}
-                            {isSelected && (
+                              {/* Dishwasher Graphics */}
+                              {/* Simple rectangular border with label */}
+                              {element.type === 'dishwasher' && (
+                                <>
+                                  <rect x="4" y="4" width={(element.width * scale) - 8} height={(element.depth * scale) - 8} fill="none" stroke="#666" strokeWidth="1" />
+                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">DW{element.width}</text>
+                                </>
+                              )}
+
+                              {/* Refrigerator Graphics */}
+                              {/* Detailed fridge representation with doors and handles */}
+                              {element.type === 'refrigerator' && (
+                                <>
+                                  {/* Main refrigerator body */}
+                                  <rect
+                                    x={2}
+                                    y={2}
+                                    width={(element.width * scale) - 4}
+                                    height={(element.depth * scale) - 4}
+                                    fill="none"
+                                    stroke="#666"
+                                    strokeWidth="2"
+                                  />
+                                  {/* Center door division line */}
+                                  <line
+                                    x1={(element.width * scale) / 2}
+                                    y1={2}
+                                    x2={(element.width * scale) / 2}
+                                    y2={(element.depth * scale) - 2}
+                                    stroke="#666"
+                                    strokeWidth="1"
+                                  />
+                                  {/* Door handles */}
+                                  <rect x={(element.width * scale) * 0.4 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
+                                  <rect x={(element.width * scale) * 0.6 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
+                                  {/* Label */}
+                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) - 8} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
+                                    FRIDGE
+                                  </text>
+                                </>
+                              )}
+
+                              {/* Toilet Graphics */}
+                              {/* Detailed toilet representation with tank and bowl */}
+                              {element.type === 'toilet' && (
+                                <>
+                                  {/* Toilet tank */}
+                                  <rect
+                                    x={(element.width * scale) * 0.25}
+                                    y={2}
+                                    width={(element.width * scale) * 0.5}
+                                    height={(element.depth * scale) * 0.35}
+                                    fill="#fff"
+                                    stroke="#666"
+                                    strokeWidth="1"
+                                    rx="2"
+                                  />
+                                  {/* Toilet bowl */}
+                                  <ellipse
+                                    cx={(element.width * scale) / 2}
+                                    cy={(element.depth * scale) * 0.65}
+                                    rx={(element.width * scale) * 0.4}
+                                    ry={(element.depth * scale) * 0.32}
+                                    fill="#fff"
+                                    stroke="#666"
+                                    strokeWidth="1"
+                                  />
+                                  {/* Toilet seat */}
+                                  <ellipse
+                                    cx={(element.width * scale) / 2}
+                                    cy={(element.depth * scale) * 0.65}
+                                    rx={(element.width * scale) * 0.35}
+                                    ry={(element.depth * scale) * 0.28}
+                                    fill="none"
+                                    stroke="#666"
+                                    strokeWidth="1"
+                                  />
+                                  {/* Toilet bowl opening */}
+                                  <ellipse
+                                    cx={(element.width * scale) / 2}
+                                    cy={(element.depth * scale) * 0.65}
+                                    rx={(element.width * scale) * 0.15}
+                                    ry={(element.depth * scale) * 0.12}
+                                    fill="#e0e0e0"
+                                  />
+                                </>
+                              )}
+
+                              {/* Bathtub Graphics */}
+                              {/* Detailed bathtub with rim, interior, faucet, and drain */}
+                              {element.type === 'bathtub' && (
+                                <>
+                                  {/* Outer tub rim */}
+                                  <rect
+                                    x={4}
+                                    y={4}
+                                    width={(element.width * scale) - 8}
+                                    height={(element.depth * scale) - 8}
+                                    fill="#fff"
+                                    stroke="#666"
+                                    strokeWidth="2"
+                                    rx="6"
+                                  />
+                                  {/* Inner tub basin */}
+                                  <rect
+                                    x={8}
+                                    y={8}
+                                    width={(element.width * scale) - 16}
+                                    height={(element.depth * scale) - 16}
+                                    fill="#f0f8ff"
+                                    stroke="#4682B4"
+                                    strokeWidth="1"
+                                    rx="4"
+                                  />
+                                  {/* Faucet */}
+                                  <circle
+                                    cx={(element.width * scale) * 0.15}
+                                    cy={(element.depth * scale) / 2}
+                                    r="4"
+                                    fill="#666"
+                                  />
+                                  {/* Drain */}
+                                  <circle
+                                    cx={(element.width * scale) * 0.85}
+                                    cy={(element.depth * scale) / 2}
+                                    r="3"
+                                    fill="#333"
+                                  />
+                                </>
+                              )}
+
+                              {/* Shower Graphics */}
+                              {/* Shower stall with base, pan, door, and fixtures */}
+                              {element.type === 'shower' && (
+                                <>
+                                  {/* Shower enclosure */}
+                                  <rect
+                                    x={2}
+                                    y={2}
+                                    width={(element.width * scale) - 4}
+                                    height={(element.depth * scale) - 4}
+                                    fill="#fff"
+                                    stroke="#666"
+                                    strokeWidth="2"
+                                  />
+                                  {/* Shower pan */}
+                                  <rect
+                                    x={6}
+                                    y={6}
+                                    width={(element.width * scale) - 12}
+                                    height={(element.depth * scale) - 12}
+                                    fill="#f0f8ff"
+                                    stroke="#4682B4"
+                                    strokeWidth="1"
+                                  />
+                                  {/* Door indication line */}
+                                  <line
+                                    x1={2}
+                                    y1={(element.depth * scale) / 2}
+                                    x2={(element.width * scale) * 0.3}
+                                    y2={(element.depth * scale) / 2}
+                                    stroke="#666"
+                                    strokeWidth="2"
+                                  />
+                                  {/* Shower head */}
+                                  <circle
+                                    cx={(element.width * scale) - 10}
+                                    cy={10}
+                                    r="4"
+                                    fill="#666"
+                                  />
+                                  {/* Drain */}
+                                  <circle
+                                    cx={(element.width * scale) / 2}
+                                    cy={(element.depth * scale) / 2}
+                                    r="3"
+                                    fill="#333"
+                                  />
+                                </>
+                              )}
+
+                              {/* Standard Cabinet Door Graphics */}
+                              {/* Door lines and handles for regular cabinets */}
+                              {(element.type === 'base' || element.type === 'wall' || element.type === 'tall' ||
+                                element.type === 'vanity' || element.type === 'medicine' || element.type === 'linen') && (
+                                  <>
+                                    {/* Center door division line */}
+                                    <line
+                                      x1={(element.width * scale) / 2}
+                                      y1={0}
+                                      x2={(element.width * scale) / 2}
+                                      y2={element.depth * scale}
+                                      stroke="#333"
+                                      strokeWidth="1"
+                                    />
+                                    {/* Door handles */}
+                                    <circle cx={(element.width * scale) * 0.4} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
+                                    <circle cx={(element.width * scale) * 0.6} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
+                                  </>
+                                )}
+
+                              {/* Element Number Badge */}
+                              {/* Circular badge with element number, rotated to stay upright */}
                               <g transform={`rotate(${-element.rotation}, ${element.width * scale / 2}, ${element.depth * scale / 2})`}>
-                                {/* Width dimension line and label */}
-                                <line x1={0} y1={-5} x2={element.width * scale} y2={-5} stroke="#666" strokeWidth="0.5" />
-                                <text x={(element.width * scale) / 2} y={-8} textAnchor="middle" fontSize="8" fill="#666">
-                                  {element.width}"
-                                </text>
-
-                                {/* Depth dimension line and label */}
-                                <line x1={element.width * scale + 5} y1={0} x2={element.width * scale + 5} y2={element.depth * scale} stroke="#666" strokeWidth="0.5" />
-                                <text x={element.width * scale + 15} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666" transform={`rotate(90, ${element.width * scale + 15}, ${(element.depth * scale) / 2})`}>
-                                  d={element.depth}"
+                                <circle
+                                  cx={(element.width * scale) / 2}
+                                  cy={(element.depth * scale) / 2}
+                                  r="12"
+                                  fill="white"
+                                  stroke="#333"
+                                  strokeWidth="1"
+                                />
+                                <text
+                                  x={(element.width * scale) / 2}
+                                  y={(element.depth * scale) / 2}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize="10"
+                                  fill="#333"
+                                  fontWeight="bold"
+                                >
+                                  {currentRoomData.elements.indexOf(element) + 1}
                                 </text>
                               </g>
-                            )}
-                          </g>
-                        );
-                      })}
-                    </g>
 
-                    {/* Wall Number Labels */}
-                    {/* Numbered labels on each wall for reference in wall view */}
-                    <g>
-                      {/* Wall 1 (bottom) */}
-                      <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y={50 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold">
-                        # 1
-                      </text>
-                      {/* Wall 2 (left) */}
-                      <text x="15" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold" transform={`rotate(-90, 15, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
-                        # 2
-                      </text>
-                      {/* Wall 3 (top) */}
-                      <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="15" textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold">
-                        # 3
-                      </text>
-                      {/* Wall 4 (right) */}
-                      <text x={45 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold" transform={`rotate(90, ${45 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale}, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
-                        # 4
-                      </text>
-                    </g>
-                  </svg>
-                </div>
-              </>
-            ) : (
-              /* Wall Elevation View */
-              /* Alternative view showing cabinet placement on selected wall */
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Wall {selectedWall} Elevation View</h3>
-                {renderWallView()}
-              </div>
-            )}
+                              {/* Dimension Indicators for Selected Element */}
+                              {/* Show width and depth measurements when element is selected */}
+                              {isSelected && (
+                                <g transform={`rotate(${-element.rotation}, ${element.width * scale / 2}, ${element.depth * scale / 2})`}>
+                                  {/* Width dimension line and label */}
+                                  <line x1={0} y1={-5} x2={element.width * scale} y2={-5} stroke="#666" strokeWidth="0.5" />
+                                  <text x={(element.width * scale) / 2} y={-8} textAnchor="middle" fontSize="8" fill="#666">
+                                    {element.width}"
+                                  </text>
 
-            {/* Element List Summary */}
-            {/* Table showing all placed elements with their specifications */}
-            {currentRoomData.elements.length > 0 && viewMode === 'floor' && (
-              <div className="mt-6 border-t pt-4">
-                <h4 className="font-semibold mb-2">Element List:</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {currentRoomData.elements.map((element, index) => (
-                    <div key={element.id} className="flex items-center gap-2">
-                      {/* Element number */}
-                      <span className="font-bold">#{index + 1}:</span>
-                      {/* Element name */}
-                      <span>{elementTypes[element.type].name}</span>
-                      {/* Element dimensions */}
-                      <span className="text-gray-500">
-                        {element.width}" × {element.depth}"d
-                        {element.actualHeight && ` × ${element.actualHeight}"h`}
-                      </span>
-                    </div>
-                  ))}
+                                  {/* Depth dimension line and label */}
+                                  <line x1={element.width * scale + 5} y1={0} x2={element.width * scale + 5} y2={element.depth * scale} stroke="#666" strokeWidth="0.5" />
+                                  <text x={element.width * scale + 15} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666" transform={`rotate(90, ${element.width * scale + 15}, ${(element.depth * scale) / 2})`}>
+                                    d={element.depth}"
+                                  </text>
+                                </g>
+                              )}
+                            </g>
+                          );
+                        })}
+                      </g>
+
+                      {/* Wall Number Labels */}
+                      {/* Numbered labels on each wall for reference in wall view */}
+                      <g>
+                        {/* Wall 1 (bottom) */}
+                        <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y={50 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold">
+                          # 1
+                        </text>
+                        {/* Wall 2 (left) */}
+                        <text x="15" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold" transform={`rotate(-90, 15, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
+                          # 2
+                        </text>
+                        {/* Wall 3 (top) */}
+                        <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="15" textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold">
+                          # 3
+                        </text>
+                        {/* Wall 4 (right) */}
+                        <text x={45 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale} y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold" transform={`rotate(90, ${45 + (parseFloat(currentRoomData.dimensions.width) * 12) * scale}, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
+                          # 4
+                        </text>
+                      </g>
+                    </svg>
+                  </div>
+                </>
+              ) : (
+                /* Wall Elevation View */
+                /* Alternative view showing cabinet placement on selected wall */
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Wall {selectedWall} Elevation View</h3>
+                  {renderWallView()}
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Element List Summary */}
+              {/* Table showing all placed elements with their specifications */}
+              {currentRoomData.elements.length > 0 && viewMode === 'floor' && (
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="font-semibold mb-2">Element List:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {currentRoomData.elements.map((element, index) => (
+                      <div key={element.id} className="flex items-center gap-2">
+                        {/* Element number */}
+                        <span className="font-bold">#{index + 1}:</span>
+                        {/* Element name */}
+                        <span>{elementTypes[element.type].name}</span>
+                        {/* Element dimensions */}
+                        <span className="text-gray-500">
+                          {element.width}" × {element.depth}"d
+                          {element.actualHeight && ` × ${element.actualHeight}"h`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Quote Form Modal */}
-      {/* Overlay modal for collecting customer information and generating quotes */}
-      {showQuoteForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            {/* Modal header */}
-            <h3 className="text-xl font-bold mb-4">Request Quote</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Fill out your information below and we'll send you a detailed quote.
-            </p>
+        {/* Quote Form Modal */}
+        {/* Overlay modal for collecting customer information and generating quotes */}
+        {showQuoteForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+              {/* Modal header */}
+              <h3 className="text-xl font-bold mb-4">Request Quote</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Fill out your information below and we'll send you a detailed quote.
+              </p>
 
-            <div className="space-y-4">
-              {/* Customer name input */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Your Name *</label>
-                <input
-                  type="text"
-                  value={clientInfo.name}
-                  onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
-                  className="w-full p-2 border rounded"
-                  placeholder="Your full name"
-                />
-              </div>
+              <div className="space-y-4">
+                {/* Customer name input */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Your Name *</label>
+                  <input
+                    type="text"
+                    value={clientInfo.name}
+                    onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
+                    className="w-full p-2 border rounded"
+                    placeholder="Your full name"
+                  />
+                </div>
 
-              {/* Contact preference selector */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Preferred Contact Method *</label>
-                <select
-                  value={clientInfo.contactPreference}
-                  onChange={(e) => setClientInfo({ ...clientInfo, contactPreference: e.target.value })}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="email">Email</option>
-                  <option value="phone">Phone Call</option>
-                  <option value="text">Text Message</option>
-                </select>
-              </div>
-
-              {/* Conditional contact information based on preference */}
-              {clientInfo.contactPreference === 'email' ? (
+                {/* Contact information - collect both email and phone */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Your Email *</label>
                   <input
@@ -2637,7 +2632,7 @@ const KitchenDesigner = () => {
                     placeholder="your.email@example.com"
                   />
                 </div>
-              ) : (
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Your Phone Number *</label>
                   <input
@@ -2648,84 +2643,100 @@ const KitchenDesigner = () => {
                     placeholder="(555) 123-4567"
                   />
                 </div>
-              )}
 
-              {/* Room inclusion options */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Include in Quote:</label>
-                <div className="space-y-2">
-                  {/* Kitchen inclusion checkbox */}
-                  {kitchenData.elements.length > 0 && (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={clientInfo.includeKitchen}
-                        onChange={(e) => setClientInfo({ ...clientInfo, includeKitchen: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span className="text-sm">Kitchen ({kitchenData.elements.length} items - ${calculateTotalPrice(kitchenData).toFixed(2)})</span>
-                    </label>
-                  )}
-                  {/* Bathroom inclusion checkbox */}
-                  {bathroomData.elements.length > 0 && (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={clientInfo.includeBathroom}
-                        onChange={(e) => setClientInfo({ ...clientInfo, includeBathroom: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span className="text-sm">Bathroom ({bathroomData.elements.length} items - ${calculateTotalPrice(bathroomData).toFixed(2)})</span>
-                    </label>
-                  )}
+                {/* Contact preference selector - now for preferred method only */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Preferred Contact Method *</label>
+                  <select
+                    value={clientInfo.contactPreference}
+                    onChange={(e) => setClientInfo({ ...clientInfo, contactPreference: e.target.value })}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="email">Email</option>
+                    <option value="phone">Phone Call</option>
+                    <option value="text">Text Message</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    We'll collect both your email and phone, but contact you via your preferred method first.
+                  </p>
                 </div>
-              </div>
 
-              {/* Additional comments field */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Comments/Special Requests</label>
-                <textarea
-                  value={clientInfo.comments}
-                  onChange={(e) => setClientInfo({ ...clientInfo, comments: e.target.value })}
-                  className="w-full p-2 border rounded h-24"
-                  placeholder="Any specific requirements, questions, or notes about wall modifications..."
-                />
-              </div>
+                {/* Room inclusion options */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Include in Quote:</label>
+                  <div className="space-y-2">
+                    {/* Kitchen inclusion checkbox */}
+                    {kitchenData.elements.length > 0 && (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={clientInfo.includeKitchen}
+                          onChange={(e) => setClientInfo({ ...clientInfo, includeKitchen: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-sm">Kitchen ({kitchenData.elements.length} items - ${calculateTotalPrice(kitchenData).toFixed(2)})</span>
+                      </label>
+                    )}
+                    {/* Bathroom inclusion checkbox */}
+                    {bathroomData.elements.length > 0 && (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={clientInfo.includeBathroom}
+                          onChange={(e) => setClientInfo({ ...clientInfo, includeBathroom: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-sm">Bathroom ({bathroomData.elements.length} items - ${calculateTotalPrice(bathroomData).toFixed(2)})</span>
+                      </label>
+                    )}
+                  </div>
+                </div>
 
-              {/* Process information panel */}
-              <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
-                <p className="font-medium mb-1">What happens next?</p>
-                <ul className="list-disc list-inside text-xs space-y-1">
-                  <li>Your design and quote will be sent to our team</li>
-                  <li>We'll review your requirements and contact you to get proper measurements</li>
-                  <li>You'll receive a PDF copy of your design after we plan with you</li>
-                  <li>We'll contact you within 1-4 business days via your preferred method</li>
-                </ul>
-              </div>
+                {/* Additional comments field */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Comments/Special Requests</label>
+                  <textarea
+                    value={clientInfo.comments}
+                    onChange={(e) => setClientInfo({ ...clientInfo, comments: e.target.value })}
+                    className="w-full p-2 border rounded h-24"
+                    placeholder="Any specific requirements, questions, or notes about wall modifications..."
+                  />
+                </div>
 
-              {/* Modal action buttons */}
-              <div className="flex gap-2 pt-4">
-                {/* Cancel button */}
-                <button
-                  onClick={() => setShowQuoteForm(false)}
-                  className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                {/* Submit quote request button */}
-                <button
-                  onClick={sendQuote}
-                  className="flex-1 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-                >
-                  <Send size={16} />
-                  Send Quote Request
-                </button>
+                {/* Process information panel */}
+                <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
+                  <p className="font-medium mb-1">What happens next?</p>
+                  <ul className="list-disc list-inside text-xs space-y-1">
+                    <li>Your design and quote will be sent to our team</li>
+                    <li>We'll review your requirements and contact you to get proper measurements</li>
+                    <li>You'll receive a PDF copy of your design after we plan with you</li>
+                    <li>We'll contact you within 1-4 business days via your preferred method</li>
+                  </ul>
+                </div>
+
+                {/* Modal action buttons */}
+                <div className="flex gap-2 pt-4">
+                  {/* Cancel button */}
+                  <button
+                    onClick={() => setShowQuoteForm(false)}
+                    className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  {/* Submit quote request button */}
+                  <button
+                    onClick={sendQuote}
+                    className="flex-1 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
+                  >
+                    <Send size={16} />
+                    Send Quote Request
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </>
   );
 };
