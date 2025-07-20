@@ -5,9 +5,6 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
 const { photoDb, employeeDb, designDb, userDb } = require('./db-helpers');
 const nodemailer = require('nodemailer');
 const app = express();
@@ -17,9 +14,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-const JWT_SECRET = process.env.JWT_SECRET;
-
-
 app.use(express.json());
 
 const uploadMemory = multer({
@@ -122,7 +116,7 @@ async function getImageDimensions(filePath) {
 
 // Routes
 
-// Gets all photos - should be authenticated for admin use
+// Gets all photos
 app.get('/api/photos', async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
 
@@ -160,7 +154,7 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
-// Upload photo - add authentication and logging
+// Upload photo 
 app.post('/api/photos', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
@@ -241,7 +235,7 @@ app.put('/api/photos/reorder', async (req, res) => {
 
     console.log('[REORDER] Updating order for photos:', photoIds);
 
-    await photoDb.updateDisplayOrder(photoIds);
+    await photoDb.updatePhotoOrder(photoIds);
 
 
 
@@ -270,7 +264,7 @@ app.put('/api/photos/:id', async (req, res) => {
       }
     });
 
-    // Handle category change file moving logic (existing code)
+    // Handle category change file moving logic
     if (updates.category) {
       const photo = await photoDb.getPhoto(photoId);
       if (photo && photo.category !== updates.category) {
@@ -318,7 +312,7 @@ app.put('/api/photos/:id', async (req, res) => {
   }
 });
 
-// Delete photo - add authentication and logging
+// Delete photo 
 app.delete('/api/photos/:id', async (req, res) => {
   try {
     const photoId = parseInt(req.params.id);

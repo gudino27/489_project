@@ -23,13 +23,13 @@ const PriceManagement = ({ token, API_BASE }) => {
     'medicine': 120,
     'linen': 350
   });
-  
+
   const [materialMultipliers, setMaterialMultipliers] = useState({
     'laminate': 1.0,
     'wood': 1.5,
     'plywood': 1.3,
   });
-  
+
   const [colorPricing, setColorPricing] = useState({
     1: 0,
     2: 100,
@@ -194,14 +194,13 @@ const PriceManagement = ({ token, API_BASE }) => {
 
       {/* Save Status Banner */}
       {saveStatus && (
-        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-          saveStatus === 'saved' ? 'bg-green-50 text-green-700' :
+        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${saveStatus === 'saved' ? 'bg-green-50 text-green-700' :
           saveStatus === 'saving' ? 'bg-blue-50 text-blue-700' :
-          'bg-red-50 text-red-700'
-        }`}>
+            'bg-red-50 text-red-700'
+          }`}>
           {saveStatus === 'saved' && <Check size={18} />}
           {saveStatus === 'saved' ? 'Prices saved successfully!' :
-           saveStatus === 'saving' ? 'Saving...' : 'Error saving prices'}
+            saveStatus === 'saving' ? 'Saving...' : 'Error saving prices'}
         </div>
       )}
 
@@ -223,8 +222,24 @@ const PriceManagement = ({ token, API_BASE }) => {
                   type="number"
                   value={price}
                   onChange={(e) => {
-                    setBasePrices({ ...basePrices, [type]: parseFloat(e.target.value) || 0 });
+                    const newValue = parseFloat(e.target.value);
+
+                    // Check if the value is negative
+                    if (newValue < 0) {
+                      alert('Price cannot be negative. Please enter a positive value.');
+                      return; // Don't update the state
+                    }
+
+                    setBasePrices({ ...basePrices, [type]: newValue || 0 });
                     setHasUnsavedChanges(true);
+                  }}
+                  onBlur={(e) => {
+                    // Additional validation on blur (when user leaves the field)
+                    const value = parseFloat(e.target.value);
+                    if (value < 0) {
+                      alert('Price cannot be negative. Resetting to 0.');
+                      setBasePrices({ ...basePrices, [type]: 0 });
+                    }
                   }}
                   className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
                   min="0"
@@ -267,7 +282,14 @@ const PriceManagement = ({ token, API_BASE }) => {
                 type="number"
                 placeholder="Multiplier"
                 value={newMaterial.multiplier}
-                onChange={(e) => setNewMaterial({ ...newMaterial, multiplier: e.target.value })}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  if (newValue < 0) {
+                    alert('Multiplier cannot be negative. Please enter a positive value.');
+                    return;
+                  }
+                  setNewMaterial({ ...newMaterial, multiplier: e.target.value });
+                }}
                 className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
                 min="0.1"
                 step="0.1"
@@ -304,8 +326,16 @@ const PriceManagement = ({ token, API_BASE }) => {
                   />
                   <input
                     type="number"
-                    value={editingMaterial.multiplier}
-                    onChange={(e) => setEditingMaterial({ ...editingMaterial, multiplier: e.target.value })}
+                    placeholder="Multiplier"
+                    value={editingMaterial.multiplier}  // ← Fixed
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      if (newValue < 0) {
+                        alert('Multiplier cannot be negative. Please enter a positive value.');
+                        return;
+                      }
+                      setEditingMaterial({ ...editingMaterial, multiplier: e.target.value }); // ← Fixed
+                    }}
                     className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
                     min="0.1"
                     step="0.1"
@@ -368,7 +398,12 @@ const PriceManagement = ({ token, API_BASE }) => {
                   type="number"
                   value={price}
                   onChange={(e) => {
-                    setColorPricing({ ...colorPricing, [count]: parseFloat(e.target.value) || 0 });
+                    const newValue = parseFloat(e.target.value);
+                    if (newValue < 0) {
+                      alert('Color pricing cannot be negative. Please enter a positive value.');
+                      return;
+                    }
+                    setColorPricing({ ...colorPricing, [count]: newValue || 0 });
                     setHasUnsavedChanges(true);
                   }}
                   className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -386,11 +421,10 @@ const PriceManagement = ({ token, API_BASE }) => {
         <button
           onClick={savePriceChanges}
           disabled={!hasUnsavedChanges || saveStatus === 'saving'}
-          className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition ${
-            hasUnsavedChanges && saveStatus !== 'saving'
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition ${hasUnsavedChanges && saveStatus !== 'saving'
+            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
         >
           <Save size={18} />
           {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
