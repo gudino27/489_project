@@ -45,13 +45,14 @@ const Contact = () => {
     const dateSubmitted = new Date().toLocaleString();
     doc.setFontSize(16);
     doc.text("Contact Submission", 20, 20);
+    doc.text("Please email this to contact@masterbuildcabinets.com", 20, 30);
     doc.setFontSize(12);
-    doc.text(`First Name: ${firstName}`, 20, 40);
-    doc.text(`Last Name: ${lastName}`, 20, 50);
-    doc.text(`Email: ${email}`, 20, 60);
-    doc.text(`Phone: ${phone}`, 20, 70);
-    doc.text(`Services Requested: ${selected}`, 20, 80);
-    doc.text(`Date Requested: ${dateSubmitted}`, 20, 30);
+    doc.text(`First Name: ${firstName}`, 20, 50);
+    doc.text(`Last Name: ${lastName}`, 20, 60);
+    doc.text(`Email: ${email}`, 20, 70);
+    doc.text(`Phone: ${phone}`, 20, 80);
+    doc.text(`Services Requested: ${selected}`, 20, 90);
+    doc.text(`Date Requested: ${dateSubmitted}`, 20, 100);
 
     doc.save("contact-form.pdf");
   };
@@ -97,7 +98,7 @@ const Contact = () => {
       other: false
     });
 
-    alert("Thank you, we will be in touch!");
+    alert("Submission successful! Generating contact form.");
     generatePDF();
   };
 
@@ -113,8 +114,7 @@ const Contact = () => {
 
       <div className="contact-introduction">
         If you have any questions related to estimates or services please fill
-        out the contact form below. A team member will get back to you as soon
-        as possible.
+        out the contact form below and email the resulting form to contact@masterbuildcabinets.com
       </div>
 
       <div className="instruction">
