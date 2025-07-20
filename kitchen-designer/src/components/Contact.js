@@ -19,7 +19,6 @@ const Contact = () => {
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    // For phone number, only allow digits and limit to 10
     if (id === 'phone') {
       const digits = value.replace(/\D/g, '').slice(0, 10);
       setFormData(prev => ({ ...prev, [id]: digits }));
@@ -86,7 +85,6 @@ const Contact = () => {
       return;
     }
 
-    // Clear form
     setFormData({
       firstName: '',
       lastName: '',
