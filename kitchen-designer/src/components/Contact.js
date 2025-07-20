@@ -125,6 +125,7 @@ const Contact = () => {
         <input 
           type="text" 
           id="firstName" 
+          maxLength="100"
           placeholder="First name"
           value={formData.firstName}
           onChange={handleInputChange}
@@ -135,6 +136,7 @@ const Contact = () => {
         <input 
           type="text" 
           id="lastName" 
+          maxLength="100"
           placeholder="Last name"
           value={formData.lastName}
           onChange={handleInputChange}
@@ -144,7 +146,8 @@ const Contact = () => {
       <div className="form">
         <input 
           type="text" 
-          id="email" 
+          id="email"
+          maxLength="100"
           placeholder="Email"
           value={formData.email}
           onChange={handleInputChange}
