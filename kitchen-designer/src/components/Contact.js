@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navigation from './Navigation';
 import './css/contact.css';
+import jsPDF from 'jspdf';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +19,6 @@ const Contact = () => {
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    // For phone number, only allow digits and limit to 10
     if (id === 'phone') {
       const digits = value.replace(/\D/g, '').slice(0, 10);
       setFormData(prev => ({ ...prev, [id]: digits }));
@@ -34,20 +34,58 @@ const Contact = () => {
     }));
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const { firstName, lastName, email, phone } = formData;
+    const selected = Object.entries(selectedServices)
+      .filter(([_, v]) => v)
+      .map(([k]) => k)
+      .join(", ") || "None";
+
+    const dateSubmitted = new Date().toLocaleString();
+    doc.setFontSize(16);
+    doc.text("Contact Submission", 20, 20);
+    doc.text("Please email this to contact@masterbuildcabinets.com", 20, 30);
+    doc.setFontSize(12);
+    doc.text(`First Name: ${firstName}`, 20, 50);
+    doc.text(`Last Name: ${lastName}`, 20, 60);
+    doc.text(`Email: ${email}`, 20, 70);
+    doc.text(`Phone: ${phone}`, 20, 80);
+    doc.text(`Services Requested: ${selected}`, 20, 90);
+    doc.text(`Date Requested: ${dateSubmitted}`, 20, 100);
+
+    doc.save("contact-form.pdf");
+  };
+
   const makeContact = () => {
     const { firstName, lastName, email, phone } = formData;
+    const isAnyServiceSelected = Object.values(selectedServices).some(value => value === true);
     
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
       alert("Fill in all fields to submit.");
       return;
     }
+
+    if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+    alert("First and last names must be at least 2 characters long.");
+    return;
+    }
+
+    if (phone.replace(/\D/g, '').length !== 10){
+      alert("Please enter a 10 digit phone number.")
+      return;
+    }
     
     if (!email.includes("@")) {
-      alert("Invalid email address.");
+      alert("Invalid email address. Please include an '@' symbol.");
       return;
     }
 
-    // Clear form
+    if (!isAnyServiceSelected) {
+      alert("Please select at least one service we can help you with.");
+      return;
+    }
+
     setFormData({
       firstName: '',
       lastName: '',
@@ -60,24 +98,26 @@ const Contact = () => {
       other: false
     });
 
-    alert("Thank you, we will be in touch!");
+    alert("Submission successful! Generating contact form.");
+    generatePDF();
   };
 
   return (
     <>
       <Navigation />
 
-      <div className="banner">
-        Contact Master Build Cabinets
+      <div className="contact-container">
+        <div className="contact-banner">
+          Contact Master Build Cabinets
+        </div>
       </div>
 
-      <div className="introduction">
+      <div className="contact-introduction">
         If you have any questions related to estimates or services please fill
-        out the contact form below. A team member will get back to you as soon
-        as possible.
+        out the contact form below and email the resulting form to contact@masterbuildcabinets.com
       </div>
 
-      <div className="description">
+      <div className="instruction">
         Please fill out all fields.
       </div>
 
@@ -85,6 +125,7 @@ const Contact = () => {
         <input 
           type="text" 
           id="firstName" 
+          maxLength="100"
           placeholder="First name"
           value={formData.firstName}
           onChange={handleInputChange}
@@ -95,6 +136,7 @@ const Contact = () => {
         <input 
           type="text" 
           id="lastName" 
+          maxLength="100"
           placeholder="Last name"
           value={formData.lastName}
           onChange={handleInputChange}
@@ -104,7 +146,8 @@ const Contact = () => {
       <div className="form">
         <input 
           type="text" 
-          id="email" 
+          id="email"
+          maxLength="100"
           placeholder="Email"
           value={formData.email}
           onChange={handleInputChange}
@@ -124,7 +167,7 @@ const Contact = () => {
         />
       </div>
 
-      <div className="description">
+      <div className="instruction">
         What can we help you with?
       </div>
 
@@ -158,7 +201,7 @@ const Contact = () => {
         </label>
       </div>
       
-      <div className="description">
+      <div className="instruction">
         Make sure all information is correct before submitting.
       </div>
 

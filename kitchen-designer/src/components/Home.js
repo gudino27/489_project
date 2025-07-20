@@ -7,13 +7,13 @@ const Home = () => {
     <>
       <Navigation />
       
-      <div class="container">
-        <div class="banner">
+      <div class="home-container">
+        <div class="home-banner">
             Master Build Cabinets
         </div>
       </div>
 
-      <div className="introduction">
+      <div className="quote">
         Proudly serving homeowners and businesses for decades.
         Trusted members of the Pullman and Everett communities.
       </div>
