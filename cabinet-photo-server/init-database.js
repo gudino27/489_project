@@ -4,11 +4,10 @@ const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 
 async function initializeDatabase() {
-  console.log('🚀 Starting database initialization...\n');
+  console.log('Starting database initialization...\n');
   
   const dbPath = path.join(__dirname, 'database', 'cabinet_photos.db');
   
-  // Use a single database connection for all operations
   const db = await open({
     filename: dbPath,
     driver: sqlite3.Database
@@ -18,22 +17,22 @@ async function initializeDatabase() {
     // Enable WAL mode for better concurrency
     await db.exec('PRAGMA journal_mode=WAL');
     
-    console.log('1️⃣ Creating basic tables...');
+    console.log(' Creating basic tables...');
     await createBasicTables(db);
-    
-    console.log('2️⃣ Adding design tables...');
+
+    console.log(' Adding design tables...');
     await addDesignTables(db);
-    
-    console.log('3️⃣ Adding price tables...');
+
+    console.log(' Adding price tables...');
     await addPriceTables(db);
-    
-    console.log('4️⃣ Adding user tables...');
+
+    console.log(' Adding user tables...');
     await addUserTables(db);
     
-    console.log('\n✅ Database initialization completed successfully!');
+    console.log('\n Database initialization completed successfully!');
     
   } catch (error) {
-    console.error('❌ Error during database initialization:', error);
+    console.error(' Error during database initialization:', error);
     throw error;
   } finally {
     await db.close();
@@ -130,7 +129,7 @@ async function createBasicTables(db) {
     );
   }
 
-  console.log('✓ Created basic tables and default categories');
+  console.log(' Created basic tables and default categories');
 }
 
 async function addDesignTables(db) {
@@ -163,7 +162,7 @@ async function addDesignTables(db) {
     CREATE INDEX IF NOT EXISTS idx_designs_client ON designs(client_name);
   `);
 
-  console.log('✓ Created designs table');
+  console.log(' Created designs table');
 }
 
 async function addPriceTables(db) {
@@ -230,7 +229,7 @@ async function addPriceTables(db) {
     );
   }
 
-  console.log('✓ Created price tables and default data');
+  console.log(' Created price tables and default data');
 }
 
 async function addUserTables(db) {
@@ -264,7 +263,7 @@ async function addUserTables(db) {
     )
   `);
 
-  // Activity logs table
+  // Activity logs table(not used yet but for future use)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -280,7 +279,7 @@ async function addUserTables(db) {
     )
   `);
 
-  // Site analytics table
+  // Site analytics table(not used yet but for future use)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS site_analytics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -317,12 +316,12 @@ async function addUserTables(db) {
       ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
     );
     
-    console.log('✓ Created default super admin user (username: superadmin, password: changeme123)');
+    console.log(' Created default super admin user (username: superadmin, password: changeme123)');
   } else {
-    console.log('✓ Super admin user already exists');
+    console.log(' Super admin user already exists');
   }
 
-  console.log('✓ Created user authentication system');
+  console.log(' Created user authentication system');
 }
 
 // Only run if this file is executed directly

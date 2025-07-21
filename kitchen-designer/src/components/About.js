@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
-import './css/about.css'; 
+import './css/about.css';
 
 const About = () => {
     const [teamMembers, setTeamMembers] = useState([]);
@@ -70,26 +70,22 @@ const About = () => {
     return (
         <>
             <Navigation />
-
             <div className="container">
                 {/* Hero Section */}
                 <div className="hero-section">
                     <h1>Meet Our Team</h1>
                     <p>Company General Description</p>
                 </div>
-
                 {/* Company Info */}
                 <div className="company-info">
                     <h3>Company History</h3>
                     <p>Company History/mission</p>
                 </div>
-
                 {/* Team Section */}
                 <div className="section-title">
                     <h2>Our Team</h2>
                     <p>Meet the Team who make Your Vision happen</p>
                 </div>
-
                 <div id="teamGrid" className="team-grid">
                     {loading && (
                         <div className="loading">
@@ -97,17 +93,14 @@ const About = () => {
                             <p>Loading team members...</p>
                         </div>
                     )}
-
                     {error && (
                         <div className="error-message">{error}</div>
                     )}
-
                     {!loading && !error && teamMembers.length === 0 && (
                         <p className="loading" style={{ color: 'white', fontSize: '1.2rem', fontWeight: 'bold' }}>
                             No team members found.
                         </p>
                     )}
-
                     {!loading && !error && teamMembers.map((employee, index) => (
                         <div
                             key={employee.id || index}

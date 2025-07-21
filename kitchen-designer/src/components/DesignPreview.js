@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, Maximize2, X, Home, Bath } from 'lucide-react';
+import React,{ useState, useEffect } from 'react';
+import {Maximize2, X, Home, Bath } from 'lucide-react';
 
 const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
     const [viewMode, setViewMode] = useState('floor');

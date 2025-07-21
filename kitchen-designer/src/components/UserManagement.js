@@ -4,13 +4,9 @@ import {
   UserPlus,
   Edit2,
   Trash2,
-  Key,
   Shield,
   User,
-  Mail,
-  Lock,
   Check,
-  X,
   AlertCircle
 } from 'lucide-react';
 

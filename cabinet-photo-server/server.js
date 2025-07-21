@@ -584,7 +584,7 @@ app.delete('/api/users/:id', authenticateUser, requireRole('super_admin'), async
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
-    // Hard delete the user
+    // delete the user
     const db = await getDb();
     const result = await db.run('DELETE FROM users WHERE id = ?', userId);
     await db.close();
@@ -862,8 +862,6 @@ app.delete('/api/employees/:id', async (req, res) => {
   }
 });
 
-// Reorder employees
-
 // Get the database connection helper
 async function getDb() {
   const sqlite3 = require('sqlite3').verbose();
@@ -1078,7 +1076,6 @@ app.get('/api/prices/colors', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch color pricing' });
   }
 });
-// Get price history if you want to see it but not really needed
 app.get('/api/prices/history', async (req, res) => {
   try {
     const db = await getDb();
@@ -1146,7 +1143,7 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
       total_size: JSON.stringify(designData).length
     });
 
-    // Check if data is too large (SQLite has limits)
+    // Check if data is too large since SQLite sadly has limnits
     const dataSize = JSON.stringify(designData).length;
     if (dataSize > 10 * 1024 * 1024) { // 10MB limit
       console.warn('Design data very large:', (dataSize / 1024 / 1024).toFixed(2), 'MB');
@@ -1155,7 +1152,7 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
     const designId = await designDb.saveDesign(designData);
     console.log(` Design #${designId} saved for ${designData.client_name}`);
 
-    // Try to send email notification
+    // email notification
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
         const info = await emailTransporter.sendMail({
@@ -1201,7 +1198,7 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
               </table>
               
               <div style="margin-top: 30px; text-align: center;">
-                <a href="${process.env.ADMIN_URL || 'http://localhost:3000'}/admin#designs" 
+                <a href="${process.env.ADMIN_URL || 'https://gudinocustom.com'}/admin#designs" 
                    style="background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   View Design in Admin Panel
                 </a>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React,{ useState, useEffect } from 'react';
 import { User, Trash2, Edit2, Save,Plus, GripVertical, Mail, Phone, Calendar } from 'lucide-react';
 
 const EmployeeManager = () => {

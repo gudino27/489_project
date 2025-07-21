@@ -51,7 +51,6 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         setPhotos(data);
       } else if (response.status === 401) {
         console.error('Authentication failed - token may be expired');
-        // You might want to trigger a logout here
       } else {
         console.error('Failed to load photos:', response.status);
       }

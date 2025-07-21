@@ -313,7 +313,7 @@ const employeeDb = {
     await db.close();
   },
 
-  // Delete employee (soft or hard delete)
+  // Delete employee
   async deleteEmployee(id, hardDelete = false) {
     const db = await getDb();
     
@@ -496,20 +496,17 @@ const designDb = {
         GROUP BY status
       `);
       
-      // Get total revenue
+      // Get total revenue(not implemented)
       const revenue = await db.get('SELECT SUM(total_price) as total FROM designs');
       
-      // Get average order value
+      // Get average order value(not implemented )
       const avgOrder = await db.get('SELECT AVG(total_price) as average FROM designs');
       
-      // Get recent designs (last 30 days)
       const recentDesigns = await db.get(`
         SELECT COUNT(*) as count 
         FROM designs 
         WHERE created_at >= date('now', '-30 days')
       `);
-      
-      // Get monthly breakdown
       const monthlyStats = await db.all(`
         SELECT 
           strftime('%Y-%m', created_at) as month,
