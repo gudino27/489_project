@@ -364,6 +364,228 @@ body {
     top: 50%;
     transform: translate(-50%, -50%);
 }
+.page-navigation.enhanced {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.current-range {
+  font-weight: 500;
+}
+
+.saved-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: #fbbf24;
+  animation: pulse 2s infinite;
+}
+
+.reset-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.5rem;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+}
+
+.reset-button:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: translateY(-1px);
+  color: white;
+}
+
+.reset-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.page-nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-nav-button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.page-nav-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.page-dots {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.page-dot {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-dot:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.page-dot.active {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: white;
+  transform: scale(1.15);
+  animation: scaleIn 0.3s ease-out;
+}
+
+.page-dot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-number {
+  font-weight: 500;
+}
+
+.saved-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  background-color: #fbbf24;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.keyboard-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Enhanced category button animation */
+.category-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.category-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.category-button:hover::before {
+  left: 100%;
+}
+
+/* Loading state for carousel during transitions */
+.carousel-3d-container.loading .carousel-3d {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Smooth transition for carousel items */
+.carousel-3d {
+  transform-origin: center center;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -383,4 +605,36 @@ body {
         height: 50px;
         font-size: 14px;
     }
+    .page-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .page-navigation.enhanced {
+    margin: 1rem 0;
+  }
+  
+  .page-controls {
+    gap: 1rem;
+  }
+  
+  .page-nav-button {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .page-dot {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+  
+  .keyboard-hint {
+    display: none;
+  }
+  
+  .reset-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
 }

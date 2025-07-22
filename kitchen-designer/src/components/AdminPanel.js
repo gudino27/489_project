@@ -26,7 +26,6 @@ import CategoryPhotoManager from './catergoryPhotoManager';
 import EmployeeManager from './EmployeeManager';
 import DesignViewer from './DesignViewer';
 import UserManagement from './UserManagement';
-import './css/AdminPanel.css';
 import MainNavBar from './Navigation';
 // ----------------------------------------------------
 // Admin Panel Component
