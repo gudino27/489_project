@@ -4,6 +4,7 @@ import './css/contact.css';
 import jsPDF from 'jspdf';
 
 const Contact = () => {
+  //String inputs
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -11,12 +12,14 @@ const Contact = () => {
     phone: ''
   });
 
+  //Togglable buttons for what services can we help you with
   const [selectedServices, setSelectedServices] = useState({
     kitchen: false,
     bathroom: false,
     other: false
   });
 
+  //Limits input to 10 digits 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     if (id === 'phone') {
@@ -27,6 +30,7 @@ const Contact = () => {
     }
   };
 
+  //Handels the kitchen, bathroom, and other boxes being toggled
   const handleCheckboxChange = (service) => {
     setSelectedServices(prev => ({
       ...prev,
@@ -34,6 +38,7 @@ const Contact = () => {
     }));
   };
 
+  //Submission from generator using jsPDF
   const generatePDF = () => {
     const doc = new jsPDF();
     const { firstName, lastName, email, phone } = formData;
@@ -57,6 +62,7 @@ const Contact = () => {
     doc.save("contact-form.pdf");
   };
 
+  //Validates inputs and makes contact form pdf
   const makeContact = () => {
     const { firstName, lastName, email, phone } = formData;
     const isAnyServiceSelected = Object.values(selectedServices).some(value => value === true);
@@ -86,6 +92,7 @@ const Contact = () => {
       return;
     }
 
+    //Reset inputs
     setFormData({
       firstName: '',
       lastName: '',
