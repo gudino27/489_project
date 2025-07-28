@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import './css/portfolio.css';
 import Navigation from './Navigation';
 const API_BASE = "https://api.gudinocustom.com";
@@ -16,7 +16,11 @@ const Portfolio = () => {
   const [allCategoryPhotos, setAllCategoryPhotos] = useState([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [savedPositions, setSavedPositions] = useState({});
-  const categories = ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom', 'showcase'];
+  const categories = useMemo(() => 
+    ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom', 'showcase'], 
+    []
+  );
+
   const radius = 350;
   const PHOTOS_PER_PAGE = 6;
   const TRANSITION_DURATION = 300; // in milliseconds
@@ -25,16 +29,19 @@ const Portfolio = () => {
     localStorage.getItem('token') ||
     sessionStorage.getItem('authToken') ||
     document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1] || null;
-  const loadPhotos = async () => {
+
+  const loadPhotos = useCallback(async () => {
     try {
       const token = getAuthToken();
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
+      
       const response = await fetch(`${API_BASE}/api/photos`, {
         method: 'GET',
         headers,
         credentials: 'include'
       });
+      
       if (response.ok) {
         const data = await response.json();
         setAllPhotos(data);
@@ -47,7 +54,8 @@ const Portfolio = () => {
         setAllPhotos(JSON.parse(saved));
       }
     }
-  };
+  }, []);
+
   const selectCategory = useCallback((category, resetPosition = false) => {
     setCurrentCategory(category);
     setCurrentIndex(0);
@@ -216,7 +224,7 @@ const Portfolio = () => {
     loadPhotos();
     const interval = setInterval(loadPhotos, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadPhotos]);
   // Auto-select first available category when photos load
   useEffect(() => {
     if (allPhotos.length > 0 && !currentCategory) {
@@ -231,7 +239,7 @@ const Portfolio = () => {
         }
       }
     }
-  }, [allPhotos, currentCategory, selectCategory]);
+  }, [allPhotos, currentCategory, selectCategory, categories]);
   useEffect(() => {
     const saved = localStorage.getItem('portfolioPositions');
     if (saved) {
@@ -419,4 +427,5 @@ const Portfolio = () => {
     </>
   );
 };
+
 export default Portfolio;

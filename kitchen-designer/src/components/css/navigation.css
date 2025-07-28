@@ -1,0 +1,147 @@
+/* Navigation Styles */
+.navbar {
+    position: fixed !important;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.navbar-brand img {
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover img {
+    transform: scale(1.05);
+}
+
+.nav-link {
+    position: relative;
+    transition: all 0.3s ease;
+    margin: 0 10px;
+    font-weight: 500;
+}
+
+.nav-link p {
+    font-size: 18px;
+    margin: 0;
+    transition: all 0.3s ease;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ffffff, #cccccc);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    width: 100%;
+}
+
+.nav-link:hover {
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+.nav-link.active {
+    color: #ffffff !important;
+}
+
+/* Mobile Navigation */
+.navbar-toggler {
+    border: none;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+}
+
+.navbar-toggler:focus {
+    box-shadow: none;
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+    .navbar-nav {
+        background: rgba(0, 0, 0, 0.95);
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 10px;
+        backdrop-filter: blur(20px);
+    }
+    
+    .nav-link {
+        margin: 5px 0;
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+    
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-link::after {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .navbar-brand img {
+        max-width: 180px;
+        height: auto;
+    }
+    
+    .nav-link p {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .navbar-brand img {
+        max-width: 150px;
+    }
+    
+    .nav-link p {
+        font-size: 14px;
+    }
+    
+    .navbar-nav {
+        padding: 15px;
+    }
+}
+
+/* Ensure navigation doesn't interfere with page content */
+body {
+    padding-top: 70px;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding-top: 55px;
+    }
+}
