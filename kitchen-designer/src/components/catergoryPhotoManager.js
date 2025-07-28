@@ -45,7 +45,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       const response = await fetch(`${apiBase}/api/photos`, {
         headers: getAuthHeaders()
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setPhotos(data);
@@ -85,22 +85,22 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     try {
       for (const file of files) {
         const formData = new FormData();
-        
+
         // Create a custom filename that includes category info
         const customFilename = `${selectedCategory}_${file.name}`;
-        
+
         // Append in correct order
         formData.append('category', selectedCategory);
         formData.append('title', file.name.split('.')[0]);
         formData.append('filename', customFilename);
         formData.append('photo', file);
-        
+
         const response = await fetch(`${apiBase}/api/photos`, {
           method: 'POST',
           headers: getAuthHeaders(), // Add auth headers
           body: formData
         });
-        
+
         if (!response.ok) {
           const error = await response.json();
           console.error('Upload failed:', error);
@@ -113,7 +113,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
           console.log('Upload success:', result);
         }
       }
-      
+
       await loadPhotos();
       alert(`${files.length} photos uploaded successfully to ${selectedCategory}!`);
     } catch (error) {
@@ -143,21 +143,21 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     const currentPhotos = photos.filter(p => p.category === selectedCategory);
     const draggedPhoto = currentPhotos[draggedItem];
     const newPhotos = [...currentPhotos];
-    
+
     // Remove dragged item and insert at new position
     newPhotos.splice(draggedItem, 1);
     newPhotos.splice(dropIndex, 0, draggedPhoto);
-    
+
     // Update display order
     const updatedCategoryPhotos = newPhotos.map((photo, index) => ({
       ...photo,
       display_order: index + 1
     }));
-    
+
     // Update the main photos array
     const otherPhotos = photos.filter(p => p.category !== selectedCategory);
     setPhotos([...otherPhotos, ...updatedCategoryPhotos]);
-    
+
     setDraggedItem(null);
     setHasOrderChanges(true);
   };
@@ -172,7 +172,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     const categoryPhotos = photos
       .filter(p => p.category === selectedCategory)
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-    
+
     const photoIds = categoryPhotos.map(p => p.id);
 
     try {
@@ -211,7 +211,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         headers: getAuthHeadersJson(), // Add auth headers
         body: JSON.stringify({ category: newCategory })
       });
-      
+
       if (response.ok) {
         await loadPhotos();
       } else if (response.status === 401) {
@@ -220,7 +220,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     } catch (error) {
       console.error('Error updating photo category:', error);
       // Fallback for demo
-      const updatedPhotos = photos.map(p => 
+      const updatedPhotos = photos.map(p =>
         p.id === photoId ? { ...p, category: newCategory } : p
       );
       setPhotos(updatedPhotos);
@@ -241,7 +241,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         method: 'DELETE',
         headers: getAuthHeaders() // Add auth headers
       });
-      
+
       if (response.ok) {
         await loadPhotos();
       } else if (response.status === 401) {
@@ -268,7 +268,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         headers: getAuthHeadersJson(), // Add auth headers
         body: JSON.stringify({ title: newTitle })
       });
-      
+
       if (response.ok) {
         await loadPhotos();
         setEditingPhoto(null);
@@ -278,7 +278,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     } catch (error) {
       console.error('Error updating photo title:', error);
       // Fallback for demo
-      const updatedPhotos = photos.map(p => 
+      const updatedPhotos = photos.map(p =>
         p.id === photoId ? { ...p, title: newTitle } : p
       );
       setPhotos(updatedPhotos);
@@ -328,11 +328,10 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                 }
               }
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isReordering 
-                ? 'bg-blue-600 text-white' 
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isReordering
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+              }`}
           >
             <GripVertical size={16} />
             {isReordering ? 'Done Reordering' : 'Reorder Photos'}
@@ -355,11 +354,10 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
           <button
             key={category.id}
             onClick={() => setSelectedCategory(category.id)}
-            className={`px-4 py-2 font-medium transition-all ${
-              selectedCategory === category.id
+            className={`px-4 py-2 font-medium transition-all ${selectedCategory === category.id
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 hover:text-gray-800'
-            }`}
+              }`}
           >
             <span className="mr-2">{category.icon}</span>
             {category.name}
@@ -374,7 +372,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       {isReordering && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Reordering Mode:</strong> Drag and drop photos to change their order. 
+            <strong>Reordering Mode:</strong> Drag and drop photos to change their order.
             Click "Save Order" when done.
           </p>
         </div>
@@ -386,8 +384,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
           <h3 className="text-lg font-semibold mb-3">
             Upload Photos to {categories.find(c => c.id === selectedCategory)?.name}
           </h3>
-          <label className="block">
-            <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors w-fit">
+          <label className="inline-block">
+            <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors ">
               <Upload size={20} />
               {uploading ? 'Uploading...' : 'Select Photos'}
             </div>
@@ -411,7 +409,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         <h3 className="text-lg font-semibold mb-3">
           {categories.find(c => c.id === selectedCategory)?.name} Photos ({currentPhotos.length})
         </h3>
-        
+
         {currentPhotos.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Image size={48} className="mx-auto text-gray-400 mb-3" />
@@ -423,9 +421,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
             {currentPhotos.map((photo, index) => (
               <div
                 key={photo.id}
-                className={`border rounded-lg overflow-hidden group relative ${
-                  isReordering ? 'cursor-move' : ''
-                } ${draggedItem === index ? 'opacity-50' : ''}`}
+                className={`border rounded-lg overflow-hidden group relative ${isReordering ? 'cursor-move' : ''
+                  } ${draggedItem === index ? 'opacity-50' : ''}`}
                 draggable={isReordering}
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragOver={handleDragOver}
@@ -453,7 +450,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                     e.target.src = 'placeholder.jpg';
                   }}
                 />
-                
+
                 <div className="p-3">
                   {editingPhoto === photo.id ? (
                     <div className="flex items-center gap-2">
@@ -495,7 +492,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                       )}
                     </div>
                   )}
-                  
+
                   {/* Category selector and delete button - hidden during reordering */}
                   {!isReordering && (
                     <div className="mt-2 flex items-center justify-between">

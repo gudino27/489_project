@@ -20,17 +20,21 @@
  .hero-section {
      background: linear-gradient(135deg, #414141 0%, #000000 100%);
      color: rgb(255, 255, 255);
-     padding: 80px 20px;
+     padding: 20px 20px;
      text-align: center;
+     display: list-item;
      border-radius: 12px;
-     margin-bottom: 60px;
+     margin-bottom: 50px;
      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+     height: auto;
+     min-height: 0px;
  }
 
  .hero-section h1 {
      font-size: 3rem;
      margin-bottom: 20px;
      animation: fadeInUp 0.8s ease-out;
+     display: block;
  }
 
  .hero-section p {
@@ -159,8 +163,8 @@
  .company-info {
      background: linear-gradient(315deg, #414141 0%, #000000 85%);
      border-radius: 12px;
-     padding: 40px;
-     margin-bottom: 40px;
+     padding: 20px 20px;
+     margin-bottom: 50px;
      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
      text-align: center;
  }
@@ -172,7 +176,7 @@
  }
 
  .company-info p {
-     color: #4b5563;
+     color: #ffffff;
      line-height: 1.8;
      margin-bottom: 15px;
  }
@@ -192,54 +196,7 @@
      border-radius: 50%;
  }
 
- .nav-link {
-     position: relative;
-     transition: all 0.3s ease;
-     padding: 0.5rem 1rem !important;
-     border-radius: 4px;
- }
 
- /* Hover effects */
- .nav-link:hover {
-     background-color: rgba(255, 255, 255, 0.1);
-     color: #e5e7eb !important;
-     transform: translateY(-1px);
- }
-
- /* Active page highlighting */
- .nav-link.active {
-     background-color: rgba(255, 255, 255, 0.2);
-     color: #ffffff !important;
-     font-weight: 600;
- }
-
- /* Underline effect on hover */
- .nav-link::after {
-     content: '';
-     position: absolute;
-     bottom: -2px;
-     left: 50%;
-     width: 0;
-     height: 2px;
-     background-color: #3b82f6;
-     transition: all 0.3s ease;
-     transform: translateX(-50%);
- }
-
- .nav-link:hover::after {
-     width: 80%;
- }
-
- .nav-link.active::after {
-     width: 80%;
-     background-color: #ffffff;
- }
-
- /* Focus effects for accessibility */
- .nav-link:focus {
-     outline: 2px solid #3b82f6;
-     outline-offset: 2px;
- }
 
  @keyframes fadeInUp {
      from {

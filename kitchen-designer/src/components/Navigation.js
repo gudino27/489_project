@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './css/navigation.css';
 
 const Navigation = () => {
     const location = useLocation();
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
+
+    // Add this useEffect to dynamically set body padding
+    useEffect(() => {
+        const updatePadding = () => {
+            const navbar = document.getElementById('main-nav');
+            if (navbar) {
+                const navHeight = navbar.offsetHeight;
+                document.body.style.paddingTop = `${navHeight + 1}px`;
+            }
+        };
+
+        updatePadding();
+        window.addEventListener('resize', updatePadding);
+        
+        return () => window.removeEventListener('resize', updatePadding);
+    }, []);
 
     // Helper function to determine if a link is active
     const isActive = (path) => {
@@ -51,7 +67,7 @@ const Navigation = () => {
                     </Link>
                 </div>
             </div>
-        
+
         </nav >
     );
 };

@@ -11,6 +11,29 @@ import jsPDF from 'jspdf';               // PDF generation library
 import MainNavBar from './Navigation';
 const KitchenDesigner = () => {
   // -----------------------------
+  // Device Detection and Compatibility
+  // Check screen size and device capabilities
+  // -----------------------------
+  const [deviceWarning, setDeviceWarning] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+  
+  useEffect(() => {
+    const checkDevice = () => {
+      const minWidth = 1024; // Minimum width for designer
+      const minHeight = 600; // Minimum height for designer
+      const isSmallScreen = window.innerWidth < minWidth || window.innerHeight < minHeight;
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      setDeviceWarning(isSmallScreen);
+      setIsTouch(isTouchDevice);
+    };
+    
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  // -----------------------------
   // Business Configuration
   // In production, these would come from environment variables or database
   // -----------------------------
@@ -524,23 +547,34 @@ const KitchenDesigner = () => {
   };
 
   // -----------------------------
-  // Mouse Event Handlers
-  // Handle dragging and interaction with elements on the canvas
+  // Touch and Mouse Event Handlers
+  // Handle dragging and interaction with elements on the canvas for both touch and mouse
   // -----------------------------
 
-  // Start dragging an element in floor plan view
+  // Get coordinates from either touch or mouse event
+  const getEventCoordinates = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+    }
+    return { clientX: e.clientX, clientY: e.clientY };
+  };
+
+  // Start dragging an element in floor plan view (supports both touch and mouse)
   const handleMouseDown = (e, elementId) => {
     e.preventDefault();
     const element = currentRoomData.elements.find(el => el.id === elementId);
     if (element) {
-      // Convert mouse coordinates to SVG coordinates
+      // Get coordinates from touch or mouse event
+      const coords = getEventCoordinates(e);
+      
+      // Convert coordinates to SVG coordinates
       const rect = canvasRef.current.getBoundingClientRect();
       const svgPt = canvasRef.current.createSVGPoint();
-      svgPt.x = e.clientX;
-      svgPt.y = e.clientY;
+      svgPt.x = coords.clientX;
+      svgPt.y = coords.clientY;
       const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
 
-      // Calculate offset from element position to mouse click
+      // Calculate offset from element position to cursor
       setDragOffset({
         x: cursorPt.x - element.x - 30, // Account for canvas offset
         y: cursorPt.y - element.y - 30
@@ -550,7 +584,7 @@ const KitchenDesigner = () => {
     }
   };
 
-  // Start dragging wall-mounted element in wall view
+  // Start dragging wall-mounted element in wall view (supports both touch and mouse)
   const handleWallViewMouseDown = (e, elementId) => {
     e.preventDefault();
     const element = currentRoomData.elements.find(el => el.id === elementId);
@@ -558,24 +592,29 @@ const KitchenDesigner = () => {
       setIsDraggingWallView(false);
       setSelectedElement(elementId);
 
+      // Get coordinates from touch or mouse event
+      const coords = getEventCoordinates(e);
       const rect = e.currentTarget.getBoundingClientRect();
       setDragOffset({
-        x: e.clientX,
-        y: e.clientY - rect.top,
+        x: coords.clientX,
+        y: coords.clientY - rect.top,
         startMount: element.mountHeight // Remember starting mount height
       });
     }
   };
 
-  // Handle mouse movement during dragging
+  // Handle touch/mouse movement during dragging
   const handleMouseMove = (e) => {
     if (isDragging && selectedElement) {
       const element = currentRoomData.elements.find(el => el.id === selectedElement);
       if (element && canvasRef.current) {
-        // Convert mouse coordinates to SVG coordinates
+        // Get coordinates from touch or mouse event
+        const coords = getEventCoordinates(e);
+        
+        // Convert coordinates to SVG coordinates
         const svgPt = canvasRef.current.createSVGPoint();
-        svgPt.x = e.clientX;
-        svgPt.y = e.clientY;
+        svgPt.x = coords.clientX;
+        svgPt.y = coords.clientY;
         const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
 
         const newX = cursorPt.x - dragOffset.x - 30;
@@ -1020,13 +1059,22 @@ const KitchenDesigner = () => {
       loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;';
       document.body.appendChild(loadingMessage);
 
-      // Helper function to capture SVG as base64
-      const captureSVG = (svgElement) => {
+      // Helper function to capture SVG and convert to canvas for PDF
+      const captureSVG = async (svgElement) => {
         if (!svgElement) return null;
 
         try {
           // Clone the SVG to avoid modifying the original
           const clonedSvg = svgElement.cloneNode(true);
+          
+          // Set explicit dimensions if missing
+          const rect = svgElement.getBoundingClientRect();
+          if (!clonedSvg.getAttribute('width')) {
+            clonedSvg.setAttribute('width', rect.width);
+          }
+          if (!clonedSvg.getAttribute('height')) {
+            clonedSvg.setAttribute('height', rect.height);
+          }
 
           // Add white background
           const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1035,12 +1083,36 @@ const KitchenDesigner = () => {
           background.setAttribute('fill', 'white');
           clonedSvg.insertBefore(background, clonedSvg.firstChild);
 
-          // Serialize to string
+          // Convert SVG to canvas for better PDF compatibility
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas size
+          canvas.width = parseFloat(clonedSvg.getAttribute('width')) || rect.width;
+          canvas.height = parseFloat(clonedSvg.getAttribute('height')) || rect.height;
+          
+          // Create image from SVG
+          const img = new Image();
           const svgData = new XMLSerializer().serializeToString(clonedSvg);
-
-          // Convert to base64
-          const base64 = btoa(unescape(encodeURIComponent(svgData)));
-          return `data:image/svg+xml;base64,${base64}`;
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          return new Promise((resolve) => {
+            img.onload = () => {
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0);
+              URL.revokeObjectURL(url);
+              const dataURL = canvas.toDataURL('image/png', 1.0);
+              resolve(dataURL);
+            };
+            img.onerror = () => {
+              console.error('Error loading SVG image');
+              URL.revokeObjectURL(url);
+              resolve(null);
+            };
+            img.src = url;
+          });
         } catch (error) {
           console.error('Error capturing SVG:', error);
           return null;
@@ -1056,7 +1128,7 @@ const KitchenDesigner = () => {
 
       const floorCanvas = canvasRef.current;
       if (floorCanvas) {
-        floorPlanImage = captureSVG(floorCanvas);
+        floorPlanImage = await captureSVG(floorCanvas);
       }
 
       // Capture wall views
@@ -1070,7 +1142,7 @@ const KitchenDesigner = () => {
 
         const wallCanvas = wallViewRef.current;
         if (wallCanvas) {
-          const wallImage = captureSVG(wallCanvas);
+          const wallImage = await captureSVG(wallCanvas);
           if (wallImage) {
             wallViewImages.push({
               wall: wall,
@@ -1307,7 +1379,12 @@ const KitchenDesigner = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isDraggingWallView ? 'ns-resize' : 'default' }}
+        onTouchMove={handleMouseMove}
+        onTouchEnd={handleMouseUp}
+        style={{ 
+          cursor: isDraggingWallView ? 'ns-resize' : 'default',
+          touchAction: isTouch ? 'manipulation' : 'auto'
+        }}
       >
         {/* Wall background */}
         <rect x="50" y="30" width={wallWidth * viewScale} height={wallHeight * viewScale} fill="#f5f5f5" stroke="#333" strokeWidth="2" />
@@ -1351,6 +1428,7 @@ const KitchenDesigner = () => {
                 strokeWidth={isSelected ? '2' : '1'}
                 style={{ cursor: isWallCabinet ? 'ns-resize' : 'default' }}
                 onMouseDown={(e) => isWallCabinet ? handleWallViewMouseDown(e, element.id) : null}
+                onTouchStart={(e) => isWallCabinet ? handleWallViewMouseDown(e, element.id) : null}
               />
 
               {/* Special rendering for sink cabinets */}
@@ -1637,6 +1715,48 @@ const KitchenDesigner = () => {
   return (
     <>
       <MainNavBar />
+      
+      {/* Device Warning Modal */}
+      {deviceWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mb-4">
+                <Calculator className="mx-auto h-12 w-12 text-yellow-500" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Screen Size Too Small</h3>
+              <p className="text-gray-600 mb-4">
+                The Kitchen Designer requires a minimum screen size of 1024x600 pixels for optimal functionality. 
+                Please use a tablet, laptop, or desktop computer for the best experience.
+              </p>
+              <div className="mb-4 text-sm text-gray-500">
+                Current: {window.innerWidth}×{window.innerHeight}px<br/>
+                Required: 1024×600px minimum
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeviceWarning(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                >
+                  Continue Anyway
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Go Back
+                </button>
+              </div>
+              {isTouch && (
+                <p className="text-xs text-green-600 mt-2">
+                  ✓ Touch support enabled for this device
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="min-h-screen bg-gray-100" >
         <div className="flex h-screen">
 
@@ -1772,6 +1892,48 @@ const KitchenDesigner = () => {
                     </div>
                   );
                 })()}
+              </div>
+            )}
+
+            {/* Change All Materials */}
+            {currentRoomData.elements.some(el => el.category === 'cabinet') && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3">Change All Cabinet Materials</h3>
+                <div className="flex gap-3">
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const newMaterials = {};
+                        currentRoomData.elements
+                          .filter(el => el.category === 'cabinet')
+                          .forEach(el => {
+                            newMaterials[el.id] = e.target.value;
+                          });
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          materials: { ...currentRoomData.materials, ...newMaterials }
+                        });
+                        e.target.value = '';
+                      }
+                    }}
+                    className="flex-1 p-2 border rounded"
+                    defaultValue=""
+                  >
+                    <option value="">Select material for all cabinets</option>
+                    {Object.entries(materialMultipliers).map(([material, multiplier]) => {
+                      const percentage = multiplier === 1 ? 'Included' : `+${Math.round((multiplier - 1) * 100)}%`;
+                      const displayName = material.charAt(0).toUpperCase() + material.slice(1).replace(/-/g, ' ');
+                      return (
+                        <option key={material} value={material}>
+                          {displayName} ({percentage})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  This will change the material for all {currentRoomData.elements.filter(el => el.category === 'cabinet').length} cabinet(s) in this room.
+                </p>
               </div>
             )}
 
@@ -2103,11 +2265,16 @@ const KitchenDesigner = () => {
                       onMouseMove={handleMouseMove}
                       onMouseUp={handleMouseUp}
                       onMouseLeave={handleMouseUp}
+                      onTouchMove={handleMouseMove}
+                      onTouchEnd={handleMouseUp}
                       onClick={(e) => {
                         // Deselect elements when clicking empty canvas
                         if (e.target === e.currentTarget) {
                           setSelectedElement(null);
                         }
+                      }}
+                      style={{
+                        touchAction: isTouch ? 'manipulation' : 'auto'
                       }}
                     >
                       {/* Grid Pattern Definition */}
@@ -2236,6 +2403,7 @@ const KitchenDesigner = () => {
                                 strokeWidth={isSelected ? '2' : '1'}
                                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
                                 onMouseDown={(e) => handleMouseDown(e, element.id)}
+                                onTouchStart={(e) => handleMouseDown(e, element.id)}
                               />
 
                               {/* Door Indication for Cabinets */}

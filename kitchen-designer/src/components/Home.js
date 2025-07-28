@@ -33,11 +33,15 @@ const Home = () => {
       <Navigation />
 
       {/* Hero Section with Video Background */}
-      <div className="hero-section">
+      <div className="hero-section" style={{
+        paddingBottom: isMobile ? '80px' : '250px',
+        paddingTop: isMobile ? '80px' : '250px'
+      }}>
         <div className="video-background">
-          <video autoPlay muted loop playsInline>
+          <video autoPlay muted loop playsInline onError={(e) => console.warn('Video failed to load:', e)}>
             <source src="/videos/woodworking-hero.mp4" type="video/mp4" />
             <source src="/videos/woodworking-hero.webm" type="video/webm" />
+            Your browser does not support the video tag.
           </video>
           <div className="video-overlay"></div>
         </div>

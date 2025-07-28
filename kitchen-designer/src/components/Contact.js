@@ -14,8 +14,8 @@ const Contact = () => {
 
   const contactInfo = {
     phone: "(509) 515-4089",
-    email: "fernando@gudinocustom.com",
-    address: "70 ray rd, sunnyside, WA 98944",
+    email: "Admin@gudinocustom.com",
+    address: "70 Ray Rd, Sunnyside, WA 98944",
     hours: {
       weekdays: "Monday - Friday: 8:00 AM - 6:00 PM",
       saturday: "Saturday: 9:00 AM - 4:00 PM",
