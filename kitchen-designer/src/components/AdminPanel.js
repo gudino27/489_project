@@ -12,7 +12,8 @@ import {
   IdCardLanyard,
   FileText,
   Users,
-  Shield
+  Shield,
+  BarChart3
 } from 'lucide-react';
 // -------------------------------------------------
 // Importing components for different functionalities
@@ -26,6 +27,7 @@ import CategoryPhotoManager from './catergoryPhotoManager';
 import EmployeeManager from './EmployeeManager';
 import DesignViewer from './DesignViewer';
 import UserManagement from './UserManagement';
+import Analytics from './Analytics';
 import MainNavBar from './Navigation';
 // ----------------------------------------------------
 // Admin Panel Component
@@ -168,7 +170,7 @@ const AdminPanel = () => {
   const getAvailableTabs = () => {
     const baseTabs = ['prices', 'photos', 'employees', 'designs'];
     if (user?.role === 'super_admin') {
-      return [...baseTabs, 'users'];
+      return [...baseTabs, 'users', 'analytics'];
     }
     return baseTabs;
   };
@@ -274,6 +276,7 @@ const AdminPanel = () => {
                   {tab === 'employees' && <IdCardLanyard size={18} />}
                   {tab === 'designs' && <FileText size={18} />}
                   {tab === 'users' && <Users size={18} />}
+                  {tab === 'analytics' && <BarChart3 size={18} />}
                   <span className="capitalize">{tab}</span>
                 </div>
               </button>
@@ -315,6 +318,12 @@ const AdminPanel = () => {
         */}
         {activeTab === 'users' && user?.role === 'super_admin' && (
           <UserManagement token={token} API_BASE={API_BASE} />
+        )}
+        {/*
+         Analytics Tab
+        */}
+        {activeTab === 'analytics' && user?.role === 'super_admin' && (
+          <Analytics token={token} API_BASE={API_BASE} />
         )}
 
       </div>

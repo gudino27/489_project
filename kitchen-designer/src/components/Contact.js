@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
 import './css/contact.css';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Contact = () => {
+  // Analytics tracking
+  useAnalytics('/contact');
+  
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
 

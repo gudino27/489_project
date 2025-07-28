@@ -739,10 +739,168 @@ const userDb = {
   
 };
 
+// Analytics database operations
+const analyticsDb = {
+  async recordPageView(pageData) {
+    const db = await getDb();
+    
+    try {
+      const {
+        page_path,
+        user_agent,
+        ip_address,
+        referrer,
+        session_id,
+        user_id
+      } = pageData;
+      
+      const result = await db.run(
+        `INSERT INTO page_analytics (
+          page_path, user_agent, ip_address, referrer, session_id, user_id, viewed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [page_path, user_agent, ip_address, referrer, session_id, user_id]
+      );
+      
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateTimeSpent(viewId, timeSpent) {
+    const db = await getDb();
+    
+    try {
+      await db.run(
+        'UPDATE page_analytics SET time_spent_seconds = ? WHERE id = ?',
+        [timeSpent, viewId]
+      );
+      
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getPageViewStats(dateRange = 30) {
+    const db = await getDb();
+    
+    try {
+      // Page views by path
+      const pageViews = await db.all(`
+        SELECT 
+          page_path,
+          COUNT(*) as view_count,
+          AVG(time_spent_seconds) as avg_time_spent,
+          COUNT(DISTINCT session_id) as unique_sessions
+        FROM page_analytics 
+        WHERE viewed_at >= date('now', '-${dateRange} days')
+        GROUP BY page_path
+        ORDER BY view_count DESC
+      `);
+
+      // Daily page views
+      const dailyViews = await db.all(`
+        SELECT 
+          date(viewed_at) as date,
+          COUNT(*) as views,
+          COUNT(DISTINCT session_id) as unique_sessions
+        FROM page_analytics 
+        WHERE viewed_at >= date('now', '-${dateRange} days')
+        GROUP BY date(viewed_at)
+        ORDER BY date DESC
+      `);
+
+      // Popular referrers
+      const referrers = await db.all(`
+        SELECT 
+          referrer,
+          COUNT(*) as count
+        FROM page_analytics 
+        WHERE viewed_at >= date('now', '-${dateRange} days')
+          AND referrer IS NOT NULL 
+          AND referrer != ''
+        GROUP BY referrer
+        ORDER BY count DESC
+        LIMIT 10
+      `);
+
+      // Browser stats
+      const browsers = await db.all(`
+        SELECT 
+          CASE 
+            WHEN user_agent LIKE '%Chrome%' THEN 'Chrome'
+            WHEN user_agent LIKE '%Firefox%' THEN 'Firefox'
+            WHEN user_agent LIKE '%Safari%' AND user_agent NOT LIKE '%Chrome%' THEN 'Safari'
+            WHEN user_agent LIKE '%Edge%' THEN 'Edge'
+            ELSE 'Other'
+          END as browser,
+          COUNT(*) as count
+        FROM page_analytics 
+        WHERE viewed_at >= date('now', '-${dateRange} days')
+        GROUP BY browser
+        ORDER BY count DESC
+      `);
+
+      await db.close();
+      
+      return {
+        pageViews,
+        dailyViews,
+        referrers,
+        browsers
+      };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getRealtimeStats() {
+    const db = await getDb();
+    
+    try {
+      // Active sessions in last 30 minutes
+      const activeSessions = await db.get(`
+        SELECT COUNT(DISTINCT session_id) as count
+        FROM page_analytics 
+        WHERE viewed_at >= datetime('now', '-30 minutes')
+      `);
+
+      // Recent page views
+      const recentViews = await db.all(`
+        SELECT 
+          page_path,
+          viewed_at,
+          time_spent_seconds
+        FROM page_analytics 
+        WHERE viewed_at >= datetime('now', '-1 hour')
+        ORDER BY viewed_at DESC
+        LIMIT 20
+      `);
+
+      await db.close();
+      
+      return {
+        activeSessions: activeSessions.count,
+        recentViews
+      };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  }
+};
+
 module.exports = { 
   getDb,
   photoDb, 
   employeeDb, 
   designDb, 
-  userDb 
+  userDb,
+  analyticsDb
 };

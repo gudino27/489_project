@@ -5,7 +5,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const { photoDb, employeeDb, designDb, userDb } = require('./db-helpers');
+const { photoDb, employeeDb, designDb, userDb, analyticsDb } = require('./db-helpers');
 const nodemailer = require('nodemailer');
 const app = express();
 app.use(cors({
@@ -1381,6 +1381,77 @@ app.get('/api/debug/uploads', async (req, res) => {
     res.json({ uploadsDir, structure });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Analytics endpoints
+app.post('/api/analytics/pageview', async (req, res) => {
+  try {
+    const {
+      page_path,
+      user_agent,
+      referrer,
+      session_id,
+      user_id
+    } = req.body;
+
+    // Get IP address from request
+    const ip_address = req.headers['x-forwarded-for'] || 
+                      req.headers['x-real-ip'] || 
+                      req.connection.remoteAddress || 
+                      req.socket.remoteAddress ||
+                      (req.connection.socket ? req.connection.socket.remoteAddress : null);
+
+    const viewId = await analyticsDb.recordPageView({
+      page_path,
+      user_agent,
+      ip_address,
+      referrer,
+      session_id,
+      user_id
+    });
+
+    res.json({ success: true, viewId });
+  } catch (error) {
+    console.error('Analytics pageview error:', error);
+    res.status(500).json({ error: 'Failed to record page view' });
+  }
+});
+
+app.post('/api/analytics/time', async (req, res) => {
+  try {
+    const { viewId, timeSpent } = req.body;
+
+    await analyticsDb.updateTimeSpent(viewId, timeSpent);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Analytics time tracking error:', error);
+    res.status(500).json({ error: 'Failed to update time spent' });
+  }
+});
+
+// Analytics dashboard endpoints (super admin only)
+app.get('/api/analytics/stats', authenticateUser, requireRole('super_admin'), async (req, res) => {
+  try {
+    const dateRange = parseInt(req.query.days) || 30;
+    const stats = await analyticsDb.getPageViewStats(dateRange);
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Analytics stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics stats' });
+  }
+});
+
+app.get('/api/analytics/realtime', authenticateUser, requireRole('super_admin'), async (req, res) => {
+  try {
+    const stats = await analyticsDb.getRealtimeStats();
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Analytics realtime error:', error);
+    res.status(500).json({ error: 'Failed to fetch realtime stats' });
   }
 });
 

@@ -12,7 +12,7 @@ services:
       - PORT=3001
     volumes:
       - ./data/uploads:/app/uploads
-      #- ./data/database:/app/database
+      - ./data/database:/app/database
     networks:
       - app-network
     healthcheck:

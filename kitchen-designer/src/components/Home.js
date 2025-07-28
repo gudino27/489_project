@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Navigation from './Navigation';
-import './css/home.css'; 
+import './css/home.css';
+import { useAnalytics } from '../hooks/useAnalytics'; 
 
 const Home = () => {
+  // Analytics tracking
+  useAnalytics('/');
+  
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 

@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import './css/portfolio.css';
 import Navigation from './Navigation';
+import { useAnalytics } from '../hooks/useAnalytics';
 const API_BASE = "https://api.gudinocustom.com";
 const Portfolio = () => {
+  // Analytics tracking
+  useAnalytics('/portfolio');
+  
   const [allPhotos, setAllPhotos] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [currentCategory, setCurrentCategory] = useState('');

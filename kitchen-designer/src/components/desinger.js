@@ -9,7 +9,11 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';               // PDF generation library
 import MainNavBar from './Navigation';
+import { useAnalytics } from '../hooks/useAnalytics';
+
 const KitchenDesigner = () => {
+  // Analytics tracking
+  useAnalytics('/designer');
   // -----------------------------
   // Device Detection and Compatibility
   // Check screen size and device capabilities

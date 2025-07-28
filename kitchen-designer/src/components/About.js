@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
 import './css/about.css';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const About = () => {
+    // Analytics tracking
+    useAnalytics('/about');
+    
     const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

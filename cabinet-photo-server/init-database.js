@@ -28,6 +28,9 @@ async function initializeDatabase() {
 
     console.log(' Adding user tables...');
     await addUserTables(db);
+
+    console.log(' Adding analytics tables...');
+    await addAnalyticsTables(db);
     
     console.log('\n Database initialization completed successfully!');
     
@@ -322,6 +325,34 @@ async function addUserTables(db) {
   }
 
   console.log(' Created user authentication system');
+}
+
+async function addAnalyticsTables(db) {
+  // Page analytics table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS page_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_path TEXT NOT NULL,
+      user_agent TEXT,
+      ip_address TEXT,
+      referrer TEXT,
+      session_id TEXT,
+      user_id INTEGER,
+      time_spent_seconds INTEGER,
+      viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Create indexes for analytics
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_page_analytics_path ON page_analytics(page_path);
+    CREATE INDEX IF NOT EXISTS idx_page_analytics_viewed ON page_analytics(viewed_at);
+    CREATE INDEX IF NOT EXISTS idx_page_analytics_session ON page_analytics(session_id);
+    CREATE INDEX IF NOT EXISTS idx_page_analytics_user ON page_analytics(user_id);
+  `);
+
+  console.log(' Created analytics tables');
 }
 
 // Only run if this file is executed directly
