@@ -115,7 +115,8 @@ export const useAnalytics = (pagePath) => {
         // Use sendBeacon for reliable delivery on page unload
         if (navigator.sendBeacon) {
           const data = JSON.stringify({ viewId, timeSpent });
-          navigator.sendBeacon(`${API_BASE}/api/analytics/time`, data);
+          const blob = new Blob([data], { type: 'application/json' });
+          navigator.sendBeacon(`${API_BASE}/api/analytics/time`, blob);
         }
       }
     };

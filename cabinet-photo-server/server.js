@@ -15,6 +15,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
+// Middleware to handle sendBeacon requests (sent as text/plain)
+app.use('/api/analytics/time', express.text({ type: 'text/plain' }));
+app.use('/api/analytics/time', (req, res, next) => {
+  if (req.headers['content-type'] === 'text/plain' && typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON in request body' });
+    }
+  }
+  next();
+});
 
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
@@ -1404,7 +1416,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       // Send email with reset link
       const resetUrl = `https://gudinocustom.com/reset-password?token=${resetData.token}`;
       
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER,
@@ -1524,7 +1536,22 @@ app.post('/api/analytics/pageview', async (req, res) => {
 
 app.post('/api/analytics/time', async (req, res) => {
   try {
+    // Validate request body
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'Invalid request body' });
+    }
+
     const { viewId, timeSpent } = req.body;
+
+    // Validate required fields
+    if (!viewId || typeof timeSpent !== 'number') {
+      return res.status(400).json({ error: 'viewId and timeSpent are required' });
+    }
+
+    // Validate timeSpent is a reasonable value (0 to 24 hours in seconds)
+    if (timeSpent < 0 || timeSpent > 86400) {
+      return res.status(400).json({ error: 'timeSpent must be between 0 and 86400 seconds' });
+    }
 
     await analyticsDb.updateTimeSpent(viewId, timeSpent);
 

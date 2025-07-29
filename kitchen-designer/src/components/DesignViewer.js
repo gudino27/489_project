@@ -407,8 +407,8 @@ const DesignViewer = () => {
       {/* Design Detail Modal */}
       {selectedDesign && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex-1 overflow-y-auto p-6">
               <div className="flex justify-between items-start mb-6">
                 <h2 className="text-2xl font-bold">Design Details</h2>
                 <button
@@ -547,7 +547,10 @@ const DesignViewer = () => {
                 </div>
               )}
 
-              {/* Actions */}
+            </div>
+            
+            {/* Actions - Fixed at bottom */}
+            <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-lg">
               <div className="flex justify-between">
                 <button
                   onClick={() => {
