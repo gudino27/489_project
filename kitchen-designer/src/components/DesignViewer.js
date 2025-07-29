@@ -230,39 +230,48 @@ const DesignViewer = () => {
     <div className="p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Designs</p>
-              <p className="text-2xl font-bold">{stats.totalDesigns || 0}</p>
+        {/* Total Designs - Always show if data exists */}
+        {typeof stats.totalDesigns === 'number' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Designs</p>
+                <p className="text-2xl font-bold">{stats.totalDesigns}</p>
+              </div>
+              <FileText className="w-8 h-8 text-gray-400" />
             </div>
-            <FileText className="w-8 h-8 text-gray-400" />
           </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">New Designs</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)}
-              </p>
+        {/* New Designs - Only show if there are new designs */}
+        {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">New Designs</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)}
+                </p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-blue-400" />
             </div>
-            <AlertCircle className="w-8 h-8 text-blue-400" />
           </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Viewed</p>
-              <p className="text-2xl font-bold text-green-600">
-                {stats.statusBreakdown?.viewed || 0}
-              </p>
+        {/* Viewed Designs - Only show if there are viewed designs */}
+        {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Viewed</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.statusBreakdown.viewed}
+                </p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
-            <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Filter Tabs */}
@@ -285,7 +294,8 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              New ({(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)})
+              New {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ? 
+                `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})` : ''}
             </button>
             <button
               onClick={() => setFilter('viewed')}
@@ -294,7 +304,8 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Viewed ({stats.statusBreakdown?.viewed || 0})
+              Viewed {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ? 
+                `(${stats.statusBreakdown.viewed})` : ''}
             </button>
           </nav>
         </div>
@@ -406,10 +417,11 @@ const DesignViewer = () => {
 
       {/* Design Detail Modal */}
       {selectedDesign && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="flex justify-between items-start mb-6">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 z-70 overflow-y-auto">
+          <div className="flex min-h-full items-start justify-center p-6 pt-32">
+            <div className="bg-white rounded-lg max-w-4xl w-full my-12">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
                 <h2 className="text-2xl font-bold">Design Details</h2>
                 <button
                   onClick={() => setSelectedDesign(null)}
@@ -419,7 +431,7 @@ const DesignViewer = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              </div>
+                </div>
 
               {/* Client Information */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -547,11 +559,8 @@ const DesignViewer = () => {
                 </div>
               )}
 
-            </div>
-            
-            {/* Actions - Fixed at bottom */}
-            <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-lg">
-              <div className="flex justify-between">
+              {/* Actions */}
+              <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => {
                     deleteDesign(selectedDesign.id);
@@ -578,6 +587,7 @@ const DesignViewer = () => {
                     Email Client
                   </a>
                 </div>
+              </div>
               </div>
             </div>
           </div>
