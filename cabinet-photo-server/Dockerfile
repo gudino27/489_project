@@ -2,8 +2,7 @@
 FROM node:20-alpine AS builder
 
 # Install build dependencies for SQLite
-RUN apk add --no-cache python3 py3-pip make g++ sqlite-dev
-RUN pip3 install setuptools
+RUN apk add --no-cache python3 py3-pip py3-setuptools make g++ sqlite-dev
 
 WORKDIR /app
 
