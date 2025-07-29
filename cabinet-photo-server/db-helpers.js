@@ -736,6 +736,109 @@ const userDb = {
     return result.changes > 0;
   },
 
+  // Password reset functionality
+  async createPasswordResetToken(email) {
+    const db = await getDb();
+    
+    try {
+      // Find user by email
+      const user = await db.get('SELECT id, username, email FROM users WHERE email = ? AND is_active = 1', [email]);
+      
+      if (!user) {
+        await db.close();
+        return null; // Don't reveal if email exists
+      }
+
+      // Generate secure token
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Store token
+      await db.run(
+        'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+        [user.id, token, expiresAt.toISOString()]
+      );
+
+      await db.close();
+      return {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async validatePasswordResetToken(token) {
+    const db = await getDb();
+    
+    try {
+      const resetRecord = await db.get(`
+        SELECT prt.*, u.username, u.email
+        FROM password_reset_tokens prt
+        JOIN users u ON prt.user_id = u.id
+        WHERE prt.token = ? AND prt.expires_at > datetime('now') AND prt.used_at IS NULL AND u.is_active = 1
+      `, [token]);
+
+      await db.close();
+      return resetRecord;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async resetPassword(token, newPassword) {
+    const db = await getDb();
+    
+    try {
+      // Validate token
+      const resetRecord = await this.validatePasswordResetToken(token);
+      if (!resetRecord) {
+        await db.close();
+        return false;
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await db.run(
+        'UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [hashedPassword, resetRecord.user_id]
+      );
+
+      // Mark token as used
+      await db.run(
+        'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = ?',
+        [token]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async cleanupExpiredTokens() {
+    const db = await getDb();
+    
+    try {
+      await db.run('DELETE FROM password_reset_tokens WHERE expires_at < datetime("now")');
+      await db.close();
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
   
 };
 

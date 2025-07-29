@@ -48,6 +48,9 @@ const AdminPanel = () => {
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('prices');
   const [isLoading, setIsLoading] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
 
   // Base API URL, can be set via environment variable
   // This allows flexibility for different environments (development, production, etc.)
@@ -166,6 +169,40 @@ const AdminPanel = () => {
     setToken(null);
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setResetMessage('');
+    setLoginError('');
+
+    if (!forgotPasswordEmail) {
+      setLoginError('Please enter your email address');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email: forgotPasswordEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResetMessage(data.message);
+        setForgotPasswordEmail('');
+      } else {
+        setLoginError(data.error || 'Failed to send reset email');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setLoginError('Failed to send reset email. Please try again.');
+    }
+  };
+
   // Tab access control
   const getAvailableTabs = () => {
     const baseTabs = ['prices', 'photos', 'employees', 'designs'];
@@ -183,42 +220,103 @@ const AdminPanel = () => {
             <div className="flex items-center justify-center mb-6">
               <Lock className="text-blue-600" size={48} />
             </div>
-            <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
-            <form onSubmit={handleLogin}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Username</label>
-                <input
-                  type="text"
-                  value={loginCredentials.username}
-                  onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
-                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Enter username"
-                  required />
-              </div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Password</label>
-                <input
-                  type="password"
-                  value={loginCredentials.password}
-                  onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
-                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Enter password"
-                  required />
-              </div>
-              {loginError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {loginError}
+            <h2 className="text-2xl font-bold text-center mb-6">
+              {showForgotPassword ? 'Reset Password' : 'Admin Login'}
+            </h2>
+
+            {!showForgotPassword ? (
+              <form onSubmit={handleLogin}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={loginCredentials.username}
+                    onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Enter username"
+                    required />
                 </div>
-              )}
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition mx-auto block"
-              >
-                Login
-              </button>
-            </form>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={loginCredentials.password}
+                    onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Enter password"
+                    required />
+                </div>
+                <div className="mb-6 text-right">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                {loginError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {loginError}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleForgotPassword}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Email Address</label>
+                  <input
+                    type="email"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Enter your email address"
+                    required />
+                </div>
+                {loginError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {loginError}
+                  </div>
+                )}
+                {resetMessage && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                    {resetMessage}
+                  </div>
+                )}
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Send Reset Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setResetMessage('');
+                      setLoginError('');
+                      setForgotPasswordEmail('');
+                    }}
+                    className="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </form>
+            )}
+
             <p className="text-xs text-gray-500 text-center mt-4">
-              Contact your super admin for access
+              {showForgotPassword 
+                ? 'Enter your email to receive a password reset link'
+                : 'Contact your super admin for access'
+              }
             </p>
           </div>
         </div></>

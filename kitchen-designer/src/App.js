@@ -6,6 +6,7 @@ import KitchenDesigner from './components/desinger';
 import About from './components/About';
 import Contact from './components/Contact';
 import AdminPanel from './components/AdminPanel';
+import PasswordReset from './components/PasswordReset';
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -23,6 +24,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/reset-password" element={<PasswordReset />} />
       </Routes>
     </Router>
   );

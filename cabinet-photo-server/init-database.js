@@ -282,6 +282,19 @@ async function addUserTables(db) {
     )
   `);
 
+  // Password reset tokens table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Site analytics table(not used yet but for future use)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS site_analytics (
@@ -306,6 +319,9 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
     CREATE INDEX IF NOT EXISTS idx_analytics_page ON site_analytics(page_path);
+    CREATE INDEX IF NOT EXISTS idx_reset_token ON password_reset_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_reset_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
   `);
 
   // Create default admin user
@@ -316,7 +332,7 @@ async function addUserTables(db) {
     
     await db.run(
       'INSERT INTO users (username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
-      ['superadmin', 'admin@masterbuildcabinets.com', defaultPassword, 'super_admin', 'Super Administrator']
+      ['superadmin', 'admin@gudinocustom.com', defaultPassword, 'super_admin', 'Super Administrator']
     );
     
     console.log(' Created default super admin user (username: superadmin, password: changeme123)');
