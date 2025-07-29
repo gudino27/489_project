@@ -88,8 +88,22 @@ case "$1" in
         docker-compose up -d
         echo "Restore completed from: $BACKUP_PATH"
         ;;
+    fresh-start)
+        echo "⚠️  WARNING: This will remove ALL existing data and start fresh!"
+        echo "This includes all photos, designs, users, and analytics data."
+        read -p "Are you sure? Type 'YES' to continue: " confirm
+        if [ "$confirm" = "YES" ]; then
+            ./scripts/fresh-start.sh
+        else
+            echo "Fresh start cancelled."
+        fi
+        ;;
+    init-analytics)
+        echo "Initializing system with analytics support..."
+        ./scripts/init-with-analytics.sh
+        ;;
     *)
-        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore} [service|backup_name]"
+        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore|fresh-start|init-analytics} [service|backup_name]"
         echo ""
         echo "Commands:"
         echo "  logs [service]     - Show logs for all services or specific service"
@@ -100,6 +114,8 @@ case "$1" in
         echo "  start             - Start all services and tunnel"
         echo "  backup            - Create backup of database and uploads"
         echo "  restore <name>    - Restore from backup"
+        echo "  fresh-start       - Complete fresh deployment (removes all data)"
+        echo "  init-analytics    - Initialize analytics on existing system"
         exit 1
         ;;
 esac

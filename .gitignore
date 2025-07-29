@@ -11,7 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-
+logs/*
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 .env.backup
+.env
+cabinet-photo-server/node_modules/.bin/nodemon
+cabinet-photo-server/database/cabinet_photos.db
