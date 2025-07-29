@@ -14,8 +14,6 @@ RUN npm install --only=production
 
 # Copy application files
 COPY . .
-RUN node init-database.js
-RUN chmod 664 database/cabinet_photos.db
 # Production stage
 FROM node:20-alpine
 
@@ -28,22 +26,21 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app .
 
-# Create necessary directories
-RUN mkdir -p uploads 
+# Create necessary directories and set permissions
+RUN mkdir -p uploads database
 
+# Copy and make entrypoint executable
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Set proper permissions
 RUN chmod -R 755 /app
-RUN chmod 644 /app/db-helpers.js
 
-# Create non-root user
-#RUN addgroup -g 1000 -S nodejs && \
- #   adduser -S nodejs -u 1000
-
-# Change ownership
-#RUN chown -R nodejs:nodejs /app
+# Change ownership to node user (uid 1000)
 RUN chown -R node:node /app
+
 USER node
-#USER nodejs
 
 EXPOSE 3001
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

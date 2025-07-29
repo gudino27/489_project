@@ -15,7 +15,8 @@ sudo rm -rf ./data/
 echo "📁 Creating fresh data directories..."
 mkdir -p ./data/database ./data/uploads ./data/certbot/conf ./data/certbot/www
 
-# Set correct permissions
+# Set correct permissions for Docker user (1000:1000)
+sudo chown -R 1000:1000 ./data/
 chmod -R 755 ./data/
 
 # Rebuild images
@@ -30,9 +31,8 @@ docker-compose up -d
 echo "⏳ Waiting for backend to initialize..."
 sleep 15
 
-# Initialize database with analytics
-echo "🗄️  Initializing database with analytics tables..."
-docker exec cabinet-photo-backend node init-database.js
+# The database will be automatically initialized by the entrypoint script
+echo "🗄️  Database initialization handled automatically by container"
 
 # Check if successful
 if [ $? -eq 0 ]; then
