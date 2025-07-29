@@ -453,11 +453,20 @@ const designDb = {
     }
   },
 
-  async getAllDesigns() {
+  async getAllDesigns(statusFilter = null) {
     const db = await getDb();
-    const designs = await db.all(
-      'SELECT id, client_name, client_email, client_phone, contact_preference, total_price, status, created_at, viewed_at, viewed_by, admin_note FROM designs ORDER BY created_at DESC'
-    );
+    
+    let query = 'SELECT id, client_name, client_email, client_phone, contact_preference, total_price, status, created_at, viewed_at, viewed_by, admin_note FROM designs';
+    let params = [];
+    
+    if (statusFilter) {
+      query += ' WHERE status = ?';
+      params.push(statusFilter);
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    
+    const designs = await db.all(query, params);
     await db.close();
     return designs;
   },

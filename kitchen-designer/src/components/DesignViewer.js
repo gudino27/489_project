@@ -13,6 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
+import sessionManager from './sessionManager';
 
 const DesignViewer = () => {
   const [designs, setDesigns] = useState([]);
@@ -37,7 +38,10 @@ const DesignViewer = () => {
 
   // Add the auth headers helper function
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('authToken');
+    const session = sessionManager.initSession();
+    const token = session ? session.token : null;
+    console.log('DesignViewer - Session:', session ? 'exists' : 'null');
+    console.log('DesignViewer - Token:', token ? 'exists' : 'null');
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''
@@ -123,8 +127,9 @@ const DesignViewer = () => {
 
   const downloadPDF = async (designId, clientName) => {
     try {
-      // Get the auth token from localStorage
-      const token = localStorage.getItem('authToken');
+      // Get the auth token from sessionManager
+      const session = sessionManager.initSession();
+      const token = session ? session.token : null;
 
       const response = await fetch(`${API_BASE}/api/designs/${designId}/pdf`, {
         method: 'GET',
@@ -356,20 +361,31 @@ const DesignViewer = () => {
 
   // Status change functionality
   const changeStatus = async (designId, newStatus) => {
+    console.log('Changing status for design:', designId, 'to:', newStatus);
     setStatusChanging(designId);
     try {
+      const headers = getAuthHeaders();
+      console.log('Request headers:', headers);
+      
       const response = await fetch(`${API_BASE}/api/designs/${designId}/status`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify({ status: newStatus })
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        console.log('Status update successful');
         // Update local state
         setDesigns(designs.map(d => 
           d.id === designId ? { ...d, status: newStatus } : d
         ));
         loadStats(); // Refresh stats
+      } else {
+        const errorText = await response.text();
+        console.error('Status update failed:', response.status, errorText);
+        alert(`Failed to change status: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error changing status:', error);
@@ -403,35 +419,7 @@ const DesignViewer = () => {
 
   return (
     <div className="p-6">
-      {/* Breadcrumb Navigation */}
-      <div className="mb-4">
-        <nav className="flex" aria-label="Breadcrumb">
-          <ol className="flex items-center space-x-2">
-            <li>
-              <span className="text-gray-500">Admin</span>
-            </li>
-            <li>
-              <span className="text-gray-400">/</span>
-            </li>
-            <li>
-              <span className="text-gray-900 font-medium">
-                Design Viewer
-                {filter !== 'all' && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                    {filter === 'new' ? 'New Only' : 'Viewed Only'}
-                  </span>
-                )}
-                {selectedDesigns.size > 0 && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                    {selectedDesigns.size} selected
-                  </span>
-                )}
-              </span>
-            </li>
-          </ol>
-        </nav>
-      </div>
-
+      
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Designs - Always show if data exists */}
