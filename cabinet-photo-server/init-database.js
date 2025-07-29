@@ -324,6 +324,17 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
   `);
 
+  // Add admin_note column to designs table if it doesn't exist (migration)
+  try {
+    await db.exec(`ALTER TABLE designs ADD COLUMN admin_note TEXT`);
+    console.log('✓ Added admin_note column to designs table');
+  } catch (error) {
+    // Column already exists, ignore error
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding admin_note column:', error);
+    }
+  }
+
   // Create default admin user
   const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', ['superadmin']);
 

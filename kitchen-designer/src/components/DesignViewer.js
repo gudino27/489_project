@@ -24,6 +24,14 @@ const DesignViewer = () => {
     statusBreakdown: { pending: 0, new: 0, viewed: 0 },
     totalRevenue: 0, averageOrderValue: 0, recentDesigns: 0
   });
+  
+  // New state for enhanced functionality
+  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+  const [selectedDesigns, setSelectedDesigns] = useState(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [noteValues, setNoteValues] = useState({});
+  const [statusChanging, setStatusChanging] = useState(null);
 
   const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
@@ -226,8 +234,204 @@ const DesignViewer = () => {
     // If it doesn't match expected patterns, return as-is
     return phoneNumber;
   };
+
+  // Sorting functionality
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedDesigns = () => {
+    const sortableDesigns = [...designs];
+    if (sortConfig.key) {
+      sortableDesigns.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
+        // Handle special cases
+        if (sortConfig.key === 'total_price') {
+          aValue = parseFloat(aValue) || 0;
+          bValue = parseFloat(bValue) || 0;
+        } else if (sortConfig.key === 'created_at') {
+          aValue = new Date(aValue);
+          bValue = new Date(bValue);
+        } else if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableDesigns;
+  };
+
+  // Bulk delete functionality
+  const toggleDesignSelection = (designId) => {
+    const newSelected = new Set(selectedDesigns);
+    if (newSelected.has(designId)) {
+      newSelected.delete(designId);
+    } else {
+      newSelected.add(designId);
+    }
+    setSelectedDesigns(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDesigns.size === designs.length) {
+      setSelectedDesigns(new Set());
+    } else {
+      setSelectedDesigns(new Set(designs.map(d => d.id)));
+    }
+  };
+
+  const bulkDeleteDesigns = async () => {
+    if (selectedDesigns.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedDesigns.size} design(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const deletePromises = Array.from(selectedDesigns).map(designId =>
+        fetch(`${API_BASE}/api/designs/${designId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        })
+      );
+      
+      await Promise.all(deletePromises);
+      
+      // Remove deleted designs from local state
+      setDesigns(designs.filter(d => !selectedDesigns.has(d.id)));
+      setSelectedDesigns(new Set());
+      
+      // Reload stats
+      loadStats();
+      
+      // Close detail view if it's one of the deleted designs
+      if (selectedDesign && selectedDesigns.has(selectedDesign.id)) {
+        setSelectedDesign(null);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting designs:', error);
+      alert('Error deleting some designs. Please try again.');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Quick note functionality
+  const saveNote = async (designId, note) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/designs/${designId}/note`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ note })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setDesigns(designs.map(d => 
+          d.id === designId ? { ...d, admin_note: note } : d
+        ));
+        setEditingNote(null);
+        setNoteValues({ ...noteValues, [designId]: note });
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Failed to save note');
+    }
+  };
+
+  // Status change functionality
+  const changeStatus = async (designId, newStatus) => {
+    setStatusChanging(designId);
+    try {
+      const response = await fetch(`${API_BASE}/api/designs/${designId}/status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setDesigns(designs.map(d => 
+          d.id === designId ? { ...d, status: newStatus } : d
+        ));
+        loadStats(); // Refresh stats
+      }
+    } catch (error) {
+      console.error('Error changing status:', error);
+      alert('Failed to change status');
+    } finally {
+      setStatusChanging(null);
+    }
+  };
+
+  // Keyboard shortcuts - moved after function declarations
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      // Only handle shortcuts when no modal is open and not typing in input
+      if (selectedDesign || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (event.key === 'Delete' && selectedDesigns.size > 0) {
+        event.preventDefault();
+        bulkDeleteDesigns();
+      }
+      
+      if (event.key === 'Escape') {
+        setSelectedDesigns(new Set());
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [selectedDesigns, selectedDesign]);
+
   return (
     <div className="p-6">
+      {/* Breadcrumb Navigation */}
+      <div className="mb-4">
+        <nav className="flex" aria-label="Breadcrumb">
+          <ol className="flex items-center space-x-2">
+            <li>
+              <span className="text-gray-500">Admin</span>
+            </li>
+            <li>
+              <span className="text-gray-400">/</span>
+            </li>
+            <li>
+              <span className="text-gray-900 font-medium">
+                Design Viewer
+                {filter !== 'all' && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                    {filter === 'new' ? 'New Only' : 'Viewed Only'}
+                  </span>
+                )}
+                {selectedDesigns.size > 0 && (
+                  <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                    {selectedDesigns.size} selected
+                  </span>
+                )}
+              </span>
+            </li>
+          </ol>
+        </nav>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Designs - Always show if data exists */}
@@ -311,30 +515,177 @@ const DesignViewer = () => {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedDesigns.size > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-700">
+              {selectedDesigns.size} design(s) selected
+            </span>
+            <button
+              onClick={bulkDeleteDesigns}
+              disabled={bulkActionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {bulkActionLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Selected
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Designs List */}
       {loading && !selectedDesign ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-500">Loading designs...</p>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+          {/* Mobile Card View */}
+          <div className="block sm:hidden">
+            {getSortedDesigns().map((design) => (
+              <div key={design.id} className="border-b border-gray-200 p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedDesigns.has(design.id)}
+                      onChange={() => toggleDesignSelection(design.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
+                    />
+                    <div>
+                      <h3 className="font-medium text-gray-900">{design.client_name}</h3>
+                      <p className="text-sm text-gray-500">${design.total_price?.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  {design.status === 'new' ? (
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                      NEW
+                    </span>
+                  ) : (
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                      Viewed
+                    </span>
+                  )}
+                </div>
+                <div className="mb-2">
+                  <div className="flex items-center text-sm text-gray-500 mb-1">
+                    <Phone className="w-3 h-3 mr-1" />
+                    {design.client_phone ? (
+                      <a href={`tel:${design.client_phone}`} className="text-blue-600 hover:underline">
+                        {formatPhoneNumber(design.client_phone)}
+                      </a>
+                    ) : (
+                      <span>Open to see #</span>
+                    )}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Mail className="w-3 h-3 mr-1" />
+                    <a href={`mailto:${design.client_email}`} className="text-blue-600 hover:underline">
+                      {design.client_email}
+                    </a>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">{formatDate(design.created_at)}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => viewDesign(design.id)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => downloadPDF(design.id, design.client_name)}
+                      className="text-gray-600 hover:text-gray-900"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteDesign(design.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedDesigns.size === designs.length && designs.length > 0}
+                    onChange={toggleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center gap-1">
+                    Status
+                    {sortConfig.key === 'status' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('client_name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Client
+                    {sortConfig.key === 'client_name' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('total_price')}
+                >
+                  <div className="flex items-center gap-1">
+                    Total
+                    {sortConfig.key === 'total_price' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submitted
+                  Notes
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('created_at')}
+                >
+                  <div className="flex items-center gap-1">
+                    Submitted
+                    {sortConfig.key === 'created_at' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -342,18 +693,30 @@ const DesignViewer = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {designs.map((design) => (
-                <tr key={design.id} className={design.status === 'new' ? 'bg-blue-50' : ''}>
+              {getSortedDesigns().map((design) => (
+                <tr key={design.id} className={`${design.status === 'new' ? 'bg-blue-50' : ''} ${selectedDesigns.has(design.id) ? 'bg-blue-25' : ''} hover:bg-gray-50`}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {design.status === 'new' ? (
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                        NEW
-                      </span>
-                    ) : (
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                        Viewed
-                      </span>
-                    )}
+                    <input
+                      type="checkbox"
+                      checked={selectedDesigns.has(design.id)}
+                      onChange={() => toggleDesignSelection(design.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <select
+                      value={design.status}
+                      onChange={(e) => changeStatus(design.id, e.target.value)}
+                      disabled={statusChanging === design.id}
+                      className={`text-xs rounded px-2 py-1 border-0 font-semibold ${
+                        design.status === 'new' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      } ${statusChanging === design.id ? 'opacity-50' : 'cursor-pointer hover:bg-opacity-80'}`}
+                    >
+                      <option value="new">New</option>
+                      <option value="viewed">Viewed</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{design.client_name}</div>
@@ -362,11 +725,27 @@ const DesignViewer = () => {
                     <div className="text-sm text-gray-500">
                       <div className="flex items-center mt-1">
                         <Phone className="w-3 h-3 mr-1" />
-                        <span className="text-xs">{design.client_phone ? formatPhoneNumber(design.client_phone) : 'open to see #' }</span>
+                        {design.client_phone ? (
+                          <a 
+                            href={`tel:${design.client_phone}`}
+                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                            title="Click to call"
+                          >
+                            {formatPhoneNumber(design.client_phone)}
+                          </a>
+                        ) : (
+                          <span className="text-xs">open to see #</span>
+                        )}
                       </div>
                       <div className="flex items-center">
                         <Mail className="w-3 h-3 mr-1" />
-                        <span className="text-xs">{design.client_email}</span>
+                        <a 
+                          href={`mailto:${design.client_email}`}
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                          title="Click to email"
+                        >
+                          {design.client_email}
+                        </a>
                       </div>
 
                       {/* Preference indicator with icon */}
@@ -378,6 +757,48 @@ const DesignViewer = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${design.total_price?.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingNote === design.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={noteValues[design.id] || design.admin_note || ''}
+                          onChange={(e) => setNoteValues({ ...noteValues, [design.id]: e.target.value })}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              saveNote(design.id, noteValues[design.id] || '');
+                            }
+                            if (e.key === 'Escape') {
+                              setEditingNote(null);
+                            }
+                          }}
+                          className="text-xs border border-gray-300 rounded px-2 py-1 w-32"
+                          placeholder="Add note..."
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveNote(design.id, noteValues[design.id] || '')}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingNote(null)}
+                          className="text-gray-600 hover:text-gray-800"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => setEditingNote(design.id)}
+                        className="text-xs text-gray-500 cursor-pointer hover:text-blue-600 min-h-[20px]"
+                        title="Click to add note"
+                      >
+                        {design.admin_note || 'Add note...'}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(design.created_at)}
@@ -408,8 +829,23 @@ const DesignViewer = () => {
           </table>
 
           {designs.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No designs found
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No designs found</h3>
+              <p className="text-gray-500 mb-4">
+                {filter === 'all' 
+                  ? "No design submissions yet. Designs will appear here when clients submit them."
+                  : `No ${filter} designs found. Try switching to a different filter.`
+                }
+              </p>
+              {filter !== 'all' && (
+                <button
+                  onClick={() => setFilter('all')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  View All Designs
+                </button>
+              )}
             </div>
           )}
         </div>

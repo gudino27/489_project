@@ -456,7 +456,7 @@ const designDb = {
   async getAllDesigns() {
     const db = await getDb();
     const designs = await db.all(
-      'SELECT id, client_name, client_email, total_price, status, created_at, viewed_at FROM designs ORDER BY created_at DESC'
+      'SELECT id, client_name, client_email, client_phone, contact_preference, total_price, status, created_at, viewed_at, viewed_by, admin_note FROM designs ORDER BY created_at DESC'
     );
     await db.close();
     return designs;
@@ -566,6 +566,42 @@ const designDb = {
       await db.close();
       
       return result ? result.pdf_data : null;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update design status
+  async updateDesignStatus(id, status, viewedBy) {
+    const db = await getDb();
+    
+    try {
+      const result = await db.run(
+        'UPDATE designs SET status = ?, viewed_by = ?, viewed_at = datetime("now") WHERE id = ?',
+        [status, viewedBy, id]
+      );
+      
+      await db.close();
+      return result.changes > 0;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update design note
+  async updateDesignNote(id, note) {
+    const db = await getDb();
+    
+    try {
+      const result = await db.run(
+        'UPDATE designs SET admin_note = ? WHERE id = ?',
+        [note, id]
+      );
+      
+      await db.close();
+      return result.changes > 0;
     } catch (error) {
       await db.close();
       throw error;

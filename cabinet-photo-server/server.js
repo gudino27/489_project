@@ -1316,7 +1316,7 @@ app.get('/api/designs/:id/pdf', async (req, res) => {
 });
 
 // Update design status
-app.put('/api/designs/:id/status', async (req, res) => {
+app.put('/api/designs/:id/status', authenticateUser, async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const { status, viewedBy } = req.body;
@@ -1334,6 +1334,26 @@ app.put('/api/designs/:id/status', async (req, res) => {
     res.status(500).json({ error: 'Failed to update design status' });
   }
 });
+
+// Update design note
+app.put('/api/designs/:id/note', authenticateUser, async (req, res) => {
+  try {
+    const designId = parseInt(req.params.id);
+    const { note } = req.body;
+
+    const success = await designDb.updateDesignNote(designId, note);
+
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Design not found' });
+    }
+  } catch (error) {
+    console.error('Error updating design note:', error);
+    res.status(500).json({ error: 'Failed to update design note' });
+  }
+});
+
 app.get('/api/designs/:id/debug', async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
