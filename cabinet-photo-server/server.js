@@ -1632,8 +1632,22 @@ app.get('/api/testimonials/validate-token/:token', async (req, res) => {
   }
 });
 
+// Test endpoint for debugging
+app.post('/api/testimonials/test', (req, res) => {
+  console.log('🔍 Test endpoint hit');
+  res.json({ success: true, message: 'Test endpoint working' });
+});
+
 // Public endpoint - Submit testimonial with photos
 app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req, res) => {
+  console.log('📝 Testimonial submission received:', {
+    method: req.method,
+    url: req.url,
+    contentType: req.headers['content-type'],
+    bodyKeys: Object.keys(req.body || {}),
+    hasFiles: !!(req.files && req.files.length)
+  });
+  
   try {
     const { client_name, message, rating, project_type, token } = req.body;
 
