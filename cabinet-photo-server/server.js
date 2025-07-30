@@ -1650,12 +1650,20 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
   
   try {
     const { client_name, message, rating, project_type, token } = req.body;
+    
+    console.log('📋 Form data received:', { client_name, message, rating, project_type, token });
 
     // Validate token
+    console.log('🔑 Validating token:', token);
     const tokenData = await testimonialDb.validateToken(token);
+    console.log('🔍 Token validation result:', tokenData);
+    
     if (!tokenData) {
+      console.log('❌ Token validation failed');
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
+    
+    console.log('✅ Token validation passed');
 
     // Create testimonial
     const testimonial = await testimonialDb.createTestimonial({
