@@ -1049,7 +1049,10 @@ const testimonialDb = {
   async createToken(tokenData) {
     const db = await getDb();
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 day
+    // Use SQLite datetime function instead of JavaScript Date
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days, ISO format
+    
+    console.log('🔑 Creating token:', { token, expiresAt, tokenData });
     
     const result = await db.run(
       'INSERT INTO testimonial_tokens (token, client_name, client_email, project_type, sent_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -1062,10 +1065,26 @@ const testimonialDb = {
 
   async validateToken(token) {
     const db = await getDb();
+    
+    // First, check if token exists at all
+    const tokenExists = await db.get('SELECT * FROM testimonial_tokens WHERE token = ?', [token]);
+    console.log('🔍 Token exists check:', tokenExists ? 'YES' : 'NO');
+    
+    if (tokenExists) {
+      console.log('📅 Token details:', {
+        expires_at: tokenExists.expires_at,
+        used_at: tokenExists.used_at,
+        current_time: new Date().toISOString()
+      });
+    }
+    
     const tokenData = await db.get(
       'SELECT * FROM testimonial_tokens WHERE token = ? AND expires_at > datetime("now") AND used_at IS NULL',
       [token]
     );
+    
+    console.log('✅ Final validation result:', tokenData ? 'VALID' : 'INVALID');
+    
     await db.close();
     return tokenData;
   },

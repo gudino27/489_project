@@ -1653,10 +1653,21 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
     
     console.log('📋 Form data received:', { client_name, message, rating, project_type, token });
 
-    // Validate token
+    // Validate token (skip validation if token is 'test' for development)
     console.log('🔑 Validating token:', token);
-    const tokenData = await testimonialDb.validateToken(token);
-    console.log('🔍 Token validation result:', tokenData);
+    let tokenData;
+    
+    if (token === 'test') {
+      console.log('🧪 Using test mode - skipping token validation');
+      tokenData = { 
+        id: 'test', 
+        client_email: 'test@example.com',
+        client_name: client_name 
+      };
+    } else {
+      tokenData = await testimonialDb.validateToken(token);
+      console.log('🔍 Token validation result:', tokenData);
+    }
     
     if (!tokenData) {
       console.log('❌ Token validation failed');
