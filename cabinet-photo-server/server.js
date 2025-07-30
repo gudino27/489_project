@@ -1606,17 +1606,6 @@ app.get('/api/analytics/realtime', authenticateUser, requireRole('super_admin'),
   }
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
-    }
-  }
-
-  console.error('Unhandled error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-});
 // =========================
 // TESTIMONIAL ENDPOINTS
 // =========================
@@ -1840,6 +1829,18 @@ app.delete('/api/admin/testimonials/:id', authenticateUser, async (req, res) => 
 
 // Serve testimonial photos
 app.use('/testimonial-photos', express.static(path.join(__dirname, 'public', 'testimonial-photos')));
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+    }
+  }
+
+  console.error('Unhandled error:', error);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // 404 handler
 app.use((req, res) => {
