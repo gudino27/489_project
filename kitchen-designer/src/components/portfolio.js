@@ -99,10 +99,9 @@ const Portfolio = () => {
   const changePage = useCallback((newPage) => {
     if (newPage < 0 || newPage >= totalPages || isTransitioning) return;
     setIsTransitioning(true);
-    // Start fade out animation
+    // Start transition animation
     const carousel = document.getElementById('carousel3d');
     if (carousel) {
-      carousel.style.opacity = '0';
       carousel.style.transform = `rotateY(${-rotationAngle}deg) scale(0.9)`;
     }
     setTimeout(() => {
@@ -114,10 +113,9 @@ const Portfolio = () => {
       const endIndex = Math.min(startIndex + PHOTOS_PER_PAGE, allCategoryPhotos.length);
       const pagePhotos = allCategoryPhotos.slice(startIndex, endIndex);
       setPhotos(pagePhotos);
-      // Fade in animation
+      // Scale in animation
       setTimeout(() => {
         if (carousel) {
-          carousel.style.opacity = '1';
           carousel.style.transform = `rotateY(0deg) scale(1)`;
         }
         setIsTransitioning(false);
@@ -130,7 +128,6 @@ const Portfolio = () => {
       setIsTransitioning(true);
       const carousel = document.getElementById('carousel3d');
       if (carousel) {
-        carousel.style.opacity = '0';
         carousel.style.transform = `rotateY(${-rotationAngle}deg) translateY(-20px)`;
       }
       setTimeout(() => {
@@ -143,7 +140,6 @@ const Portfolio = () => {
         selectCategory(currentCategory, true);
         setTimeout(() => {
           if (carousel) {
-            carousel.style.opacity = '1';
             carousel.style.transform = 'rotateY(0deg) translateY(0)';
           }
           setIsTransitioning(false);
@@ -363,15 +359,12 @@ const Portfolio = () => {
           style={{
             transform: `rotateY(${-rotationAngle}deg)`,
             transformStyle: 'preserve-3d',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            opacity: 1
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           {photos.map((photo, i) => {
             const itemAngle = angleStep * i;
             const zIndex = i === currentIndex ? 999 : 100 - Math.abs(i - currentIndex) * 10;
-            const opacity = i === currentIndex ? 1 : Math.max(0.5, 1 - Math.abs(i - currentIndex) * 0.15);
-            const brightness = i === currentIndex ? 1 : 0.6 + (0.4 * (1 - Math.abs(i - currentIndex) / (photos.length / 2)));
             const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`;
             const fullImg = `${API_BASE}${photo.url}`;
             const caption = photo.title || photo.label || `Cabinet ${i + 1}`;
@@ -382,15 +375,13 @@ const Portfolio = () => {
                 style={{
                   transform: `rotateY(${itemAngle}deg) translateZ(${radius}px)`,
                   zIndex,
-                  opacity,
-                  filter: `brightness(${brightness})`,
                   position: 'absolute',
                   left: '50%',
                   top: '50%',
                   marginLeft: '-200px',
                   marginTop: '-100px'
                 }}
-                onClick={() => i === currentIndex ? openModal(fullImg, caption) : goToSlide(i)}
+                onClick={() => openModal(fullImg, caption)}
               >
                 <img
                   src={imgSrc}
@@ -407,10 +398,7 @@ const Portfolio = () => {
             );
           })}
         </div>
-        <div className="carousel-controls">
-          <div className="carousel-prev" onClick={() => rotateCarousel(-1)}></div>
-          <div className="carousel-next" onClick={() => rotateCarousel(1)}></div>
-        </div>
+        
         <div className="dots-3d-container" id="dots3dContainer">
           {photos.map((_, i) => (
             <span

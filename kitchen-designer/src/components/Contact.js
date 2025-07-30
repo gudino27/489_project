@@ -17,18 +17,25 @@ const Contact = () => {
   }, []);
 
   const contactInfo = {
-    phone: "(509) 515-4089",
-    email: "Admin@gudinocustom.com",
+    phone: {
+      english: "(509) 515-4090",
+      spanish: "(509) 831-9816"
+    },
+    email: "Info@gudinocustom.com",
     address: "70 Ray Rd, Sunnyside, WA 98944",
     hours: {
-      weekdays: "Monday - Friday: 8:00 AM - 6:00 PM",
-      saturday: "Saturday: 9:00 AM - 4:00 PM",
+      weekdays: "Monday - Friday: 7:00 AM - 5:00 PM",
+      saturday: "Saturday: 8:00 AM - 5:00 PM",
       sunday: "Sunday: Closed"
     }
   };
 
-  const handlePhoneClick = () => {
-    window.location.href = `tel:${contactInfo.phone}`;
+  const handleEnglishPhoneClick = () => {
+    window.location.href = `tel:${contactInfo.phone.english}`;
+  };
+
+  const handleSpanishPhoneClick = () => {
+    window.location.href = `tel:${contactInfo.phone.spanish}`;
   };
 
   const handleEmailClick = () => {
@@ -60,7 +67,6 @@ const Contact = () => {
                 className={`contact-card phone-card ${hoveredCard === 'phone' ? 'hovered' : ''}`}
                 onMouseEnter={() => setHoveredCard('phone')}
                 onMouseLeave={() => setHoveredCard(null)}
-                onClick={handlePhoneClick}
               >
                 <div className="card-icon">
                   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -69,8 +75,18 @@ const Contact = () => {
                 </div>
                 <div className="card-content">
                   <h3>Call Us</h3>
-                  <p className="contact-detail">{contactInfo.phone}</p>
-                  <span className="card-action">Click to call</span>
+                  <div className="phone-options">
+                    <div className="phone-option" onClick={handleEnglishPhoneClick}>
+                      <span className="language-label">English</span>
+                      <p className="contact-detail">{contactInfo.phone.english}</p>
+                      <span className="card-action">Click to call</span>
+                    </div>
+                    <div className="phone-option" onClick={handleSpanishPhoneClick}>
+                      <span className="language-label">Español</span>
+                      <p className="contact-detail">{contactInfo.phone.spanish}</p>
+                      <span className="card-action">Click to call</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

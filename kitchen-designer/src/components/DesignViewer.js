@@ -751,11 +751,12 @@ const DesignViewer = () => {
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
-                          value={noteValues[design.id] || design.admin_note || ''}
+                          value={noteValues[design.id] !== undefined ? noteValues[design.id] : (design.admin_note || '')}
                           onChange={(e) => setNoteValues({ ...noteValues, [design.id]: e.target.value })}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
-                              saveNote(design.id, noteValues[design.id] || '');
+                              const noteValue = noteValues[design.id] !== undefined ? noteValues[design.id] : '';
+                              saveNote(design.id, noteValue);
                             }
                             if (e.key === 'Escape') {
                               setEditingNote(null);
@@ -766,7 +767,10 @@ const DesignViewer = () => {
                           autoFocus
                         />
                         <button
-                          onClick={() => saveNote(design.id, noteValues[design.id] || '')}
+                          onClick={() => {
+                            const noteValue = noteValues[design.id] !== undefined ? noteValues[design.id] : '';
+                            saveNote(design.id, noteValue);
+                          }}
                           className="text-green-600 hover:text-green-800"
                         >
                           ✓
@@ -780,7 +784,10 @@ const DesignViewer = () => {
                       </div>
                     ) : (
                       <div 
-                        onClick={() => setEditingNote(design.id)}
+                        onClick={() => {
+                          setEditingNote(design.id);
+                          setNoteValues({ ...noteValues, [design.id]: design.admin_note || '' });
+                        }}
                         className="text-xs text-gray-500 cursor-pointer hover:text-blue-600 min-h-[20px]"
                         title="Click to add note"
                       >

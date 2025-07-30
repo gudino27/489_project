@@ -10,6 +10,20 @@ const Home = () => {
   
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
+
+  const workTypes = [
+    { title: "Kitchen Remodeling", description: "Custom cabinets, countertops, and complete kitchen transformations" },
+    { title: "Bathroom Renovations", description: "Vanities, storage solutions, and spa-like bathroom designs" },
+    { title: "Living Room Built-ins", description: "Entertainment centers, bookshelves, and custom storage" },
+    { title: "Bedroom Solutions", description: "Closet organizers, wardrobes, and bedroom furniture" },
+    { title: "Laundry Room Design", description: "Efficient storage and organizational systems" },
+    { title: "Commercial Projects", description: "Office furniture, retail displays, and commercial woodwork" }
+  ];
+
+  const toggleWorkTypes = () => {
+    setIsWorkTypesOpen(!isWorkTypesOpen);
+  };
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -47,7 +61,6 @@ const Home = () => {
             <source src="/videos/woodworking-hero.webm" type="video/webm" />
             Your browser does not support the video tag.
           </video>
-          <div className="video-overlay"></div>
         </div>
         
         <div className="hero-content">
@@ -59,7 +72,32 @@ const Home = () => {
         </div>
         
         <div className="curved-bottom"></div>
-        <div className="scroll-indicator">
+        <div className="scroll-indicator" onClick={() => {
+          const targetPosition = window.innerHeight;
+          const startPosition = window.pageYOffset;
+          const distance = targetPosition - startPosition;
+          const duration = 1500; // 1.5 seconds
+          let start = null;
+          
+          const step = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = timestamp - start;
+            const progressPercentage = Math.min(progress / duration, 1);
+            
+            // Easing function for smooth acceleration and deceleration
+            const easeInOutCubic = progressPercentage < 0.5
+              ? 4 * progressPercentage * progressPercentage * progressPercentage
+              : 1 - Math.pow(-2 * progressPercentage + 2, 3) / 2;
+            
+            window.scrollTo(0, startPosition + distance * easeInOutCubic);
+            
+            if (progress < duration) {
+              requestAnimationFrame(step);
+            }
+          };
+          
+          requestAnimationFrame(step);
+        }}>
           <div className="scroll-arrow"></div>
         </div>
       </div>
@@ -124,6 +162,37 @@ const Home = () => {
               building a rich and diverse portfolio of work. From modern kitchen remodels to full-home renovations, 
               our team has delivered exceptional results across residential and commercial spaces.
             </div>
+            
+            <div className="work-types-dropdown">
+              <button 
+                className="dropdown-toggle"
+                onClick={toggleWorkTypes}
+                aria-expanded={isWorkTypesOpen}
+              >
+                <span>See What We Do</span>
+                <svg 
+                  className={`dropdown-arrow ${isWorkTypesOpen ? 'open' : ''}`}
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                >
+                  <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                </svg>
+              </button>
+              
+              <div className={`dropdown-content ${isWorkTypesOpen ? 'open' : ''}`}>
+                <div className="work-types-grid">
+                  {workTypes.map((workType, index) => (
+                    <div key={index} className="work-type-item">
+                      <h4>{workType.title}</h4>
+                      <p>{workType.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="feature-button">
               <Link to="/portfolio" className="cta-button">View our Portfolio</Link>
             </div>

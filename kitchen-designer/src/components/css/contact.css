@@ -366,10 +366,7 @@
   }
 }
 
-/* Special hover effects for different card types */
-.phone-card:hover {
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
-}
+/* Special hover effects for different card types - phone card excluded */
 
 .email-card:hover {
   background: linear-gradient(135deg, #000000 0%, #000000 100%);
@@ -381,4 +378,113 @@
 
 .hours-card:hover {
   background: linear-gradient(135deg, #000000 0%, #000000 100%);
+}
+
+/* Phone Options Styling */
+.phone-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.phone-option {
+  padding: 15px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.phone-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.language-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.phone-option .contact-detail {
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.phone-option .card-action {
+  font-size: 0.85rem;
+  color: #3b82f6;
+  opacity: 1;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: all 0.3s ease;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.phone-option:hover .card-action {
+  opacity: 1;
+  color: #ffffff;
+  background: #3b82f6;
+  border-color: #3b82f6;
+  transform: scale(1.05);
+  text-decoration: none;
+}
+
+/* Remove the original phone card hover and click behavior since we have individual options now */
+.phone-card {
+  cursor: default;
+}
+
+.phone-card:hover {
+  transform: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+  background: rgb(0, 0, 0) !important;
+}
+
+.phone-card.hovered {
+  transform: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+.phone-card:hover .card-icon {
+  color: #ffffff !important;
+  transform: none !important;
+}
+
+.phone-card:hover::before {
+  transform: scaleX(0) !important;
+}
+
+/* Mobile responsive for phone options */
+@media (max-width: 480px) {
+  .phone-options {
+    gap: 12px;
+  }
+  
+  .phone-option {
+    padding: 12px;
+  }
+  
+  .language-label {
+    font-size: 0.8rem;
+  }
+  
+  .phone-option .contact-detail {
+    font-size: 1rem;
+  }
 }

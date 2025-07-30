@@ -109,15 +109,12 @@ body {
     margin: 50px auto;
     perspective: 1000px;
     perspective-origin: center center;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.6s ease, visibility 0.6s ease;
+    visibility: visible;
     overflow: visible;
 }
 
 .carousel-3d-container.active {
     visibility: visible;
-    opacity: 1;
 }
 
 .carousel-3d-container.active {
@@ -141,19 +138,14 @@ body {
     top: 50%;
     margin-left: -200px;
     margin-top: -100px;
-    transition: opacity 0.6s ease, filter 0.6s ease;
     cursor: pointer;
     border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     background-color: #444;
-    opacity: 0.7;
-    filter: brightness(0.8);
 }
 
 .carousel-item-3d.active {
-    opacity: 1 !important;
-    filter: brightness(1) !important;
     box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
 }
 
@@ -167,8 +159,6 @@ body {
 
 .carousel-item-3d.active {
     z-index: 999 !important;
-    opacity: 1 !important;
-    filter: brightness(1) !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
 }
 
@@ -542,7 +532,6 @@ body {
 
 /* Loading state for carousel during transitions */
 .carousel-3d-container.loading .carousel-3d {
-  opacity: 0.3;
   pointer-events: none;
 }
 
@@ -551,7 +540,7 @@ body {
   transform-origin: center center;
 }
 
-/* Animations */
+/* Animations
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -562,6 +551,7 @@ body {
     transform: translateY(0);
   }
 }
+*/
 
 @keyframes scaleIn {
   from {
@@ -571,7 +561,7 @@ body {
     transform: scale(1.15);
   }
 }
-
+/*
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -579,7 +569,7 @@ body {
   50% {
     opacity: 0.5;
   }
-}
+}*/
 
 @keyframes spin {
   to {

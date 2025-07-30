@@ -29,6 +29,7 @@ import DesignViewer from './DesignViewer';
 import UserManagement from './UserManagement';
 import Analytics from './Analytics';
 import MainNavBar from './Navigation';
+import './css/admin.css';
 // ----------------------------------------------------
 // Admin Panel Component
 // This component handles the admin panel functionality
@@ -338,8 +339,8 @@ const AdminPanel = () => {
           <h1 className="text-2xl font-bold">Admin Panel</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Logged in as:</span>
-              <span className="font-medium">{user?.username}</span>
+              <span className="text-medium text-gray-800">Welcome:</span>
+              <span className="font-medium">{ user?.username}</span>
               {user?.role === 'super_admin' && (
                 <Shield className="text-purple-600" size={16} />
               )}
@@ -355,20 +356,20 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      {/* Seconday Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="px-6">
-          <nav className="flex space-x-8">
+      {/* Secondary Navigation Tabs with Glass Effect */}
+      <div className="admin-nav-glass">
+        <div className="px-6 py-2">
+          <nav className="flex flex-wrap gap-2">
             {getAvailableTabs().map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition ${activeTab === tab
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                className={`admin-tab-glass font-medium text-sm transition ${activeTab === tab
+                  ? 'active text-blue-700'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 tab-content">
                   {tab === 'prices' && <DollarSign size={18} />}
                   {tab === 'photos' && <Image size={18} />}
                   {tab === 'employees' && <IdCardLanyard size={18} />}
