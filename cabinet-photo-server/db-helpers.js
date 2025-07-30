@@ -1052,8 +1052,6 @@ const testimonialDb = {
     // Use SQLite datetime function instead of JavaScript Date
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days, ISO format
     
-    console.log('🔑 Creating token:', { token, expiresAt, tokenData });
-    
     const result = await db.run(
       'INSERT INTO testimonial_tokens (token, client_name, client_email, project_type, sent_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
       [token, tokenData.client_name, tokenData.client_email, tokenData.project_type, tokenData.sent_by, expiresAt]
@@ -1065,26 +1063,10 @@ const testimonialDb = {
 
   async validateToken(token) {
     const db = await getDb();
-    
-    // First, check if token exists at all
-    const tokenExists = await db.get('SELECT * FROM testimonial_tokens WHERE token = ?', [token]);
-    console.log('🔍 Token exists check:', tokenExists ? 'YES' : 'NO');
-    
-    if (tokenExists) {
-      console.log('📅 Token details:', {
-        expires_at: tokenExists.expires_at,
-        used_at: tokenExists.used_at,
-        current_time: new Date().toISOString()
-      });
-    }
-    
     const tokenData = await db.get(
       'SELECT * FROM testimonial_tokens WHERE token = ? AND expires_at > datetime("now") AND used_at IS NULL',
       [token]
     );
-    
-    console.log('✅ Final validation result:', tokenData ? 'VALID' : 'INVALID');
-    
     await db.close();
     return tokenData;
   },
@@ -1143,36 +1125,27 @@ const testimonialDb = {
 
   async getAllTestimonials(visibleOnly = false) {
     const db = await getDb();
-    let query = `
-      SELECT t.*, 
-             GROUP_CONCAT(
-               json_object(
-                 'id', tp.id,
-                 'filename', tp.filename,
-                 'file_path', tp.file_path,
-                 'thumbnail_path', tp.thumbnail_path
-               )
-             ) as photos_json
-      FROM testimonials t
-      LEFT JOIN testimonial_photos tp ON t.id = tp.testimonial_id
-    `;
     
+    // Get testimonials first
+    let testimonialQuery = 'SELECT * FROM testimonials';
     if (visibleOnly) {
-      query += ' WHERE t.is_visible = 1';
+      testimonialQuery += ' WHERE is_visible = 1';
+    }
+    testimonialQuery += ' ORDER BY created_at DESC';
+    
+    const testimonials = await db.all(testimonialQuery);
+    
+    // Get photos for each testimonial
+    for (let testimonial of testimonials) {
+      const photos = await db.all(
+        'SELECT * FROM testimonial_photos WHERE testimonial_id = ? ORDER BY display_order',
+        [testimonial.id]
+      );
+      testimonial.photos = photos;
     }
     
-    query += ' GROUP BY t.id ORDER BY t.created_at DESC';
-    
-    const rows = await db.all(query);
     await db.close();
-    
-    // Parse photos JSON
-    return rows.map(row => ({
-      ...row,
-      photos: row.photos_json ? 
-        row.photos_json.split(',').map(photoJson => JSON.parse(photoJson)).filter(p => p.id) : 
-        []
-    }));
+    return testimonials;
   },
 
   async getTestimonialById(id) {

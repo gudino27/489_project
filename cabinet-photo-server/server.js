@@ -1632,33 +1632,15 @@ app.get('/api/testimonials/validate-token/:token', async (req, res) => {
   }
 });
 
-// Test endpoint for debugging
-app.post('/api/testimonials/test', (req, res) => {
-  console.log('🔍 Test endpoint hit');
-  res.json({ success: true, message: 'Test endpoint working' });
-});
-
 // Public endpoint - Submit testimonial with photos
 app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req, res) => {
-  console.log('📝 Testimonial submission received:', {
-    method: req.method,
-    url: req.url,
-    contentType: req.headers['content-type'],
-    bodyKeys: Object.keys(req.body || {}),
-    hasFiles: !!(req.files && req.files.length)
-  });
-  
   try {
     const { client_name, message, rating, project_type, token } = req.body;
-    
-    console.log('📋 Form data received:', { client_name, message, rating, project_type, token });
 
     // Validate token (skip validation if token is 'test' for development)
-    console.log('🔑 Validating token:', token);
     let tokenData;
     
     if (token === 'test') {
-      console.log('🧪 Using test mode - skipping token validation');
       tokenData = { 
         id: 'test', 
         client_email: 'test@example.com',
@@ -1666,15 +1648,11 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
       };
     } else {
       tokenData = await testimonialDb.validateToken(token);
-      console.log('🔍 Token validation result:', tokenData);
     }
     
     if (!tokenData) {
-      console.log('❌ Token validation failed');
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
-    
-    console.log('✅ Token validation passed');
 
     // Create testimonial
     const testimonial = await testimonialDb.createTestimonial({
