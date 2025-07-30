@@ -13,12 +13,12 @@ const Home = () => {
   const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
 
   const workTypes = [
-    { title: "Kitchen Remodeling", description: "Custom cabinets, countertops, and complete kitchen transformations" },
-    { title: "Bathroom Renovations", description: "Vanities, storage solutions, and spa-like bathroom designs" },
-    { title: "Living Room Built-ins", description: "Entertainment centers, bookshelves, and custom storage" },
-    { title: "Bedroom Solutions", description: "Closet organizers, wardrobes, and bedroom furniture" },
-    { title: "Laundry Room Design", description: "Efficient storage and organizational systems" },
-    { title: "Commercial Projects", description: "Office furniture, retail displays, and commercial woodwork" }
+    { title: "Kitchen Remodeling", description: "Expert kitchen remodeling with custom cabinets, countertops, and complete kitchen transformations by skilled carpenters" },
+    { title: "Bathroom Renovations", description: "Professional bathroom remodeling with custom vanities, storage solutions, and spa-like bathroom designs" },
+    { title: "Custom Carpentry", description: "Master carpenters creating bespoke woodwork, built-ins, and custom furniture for your home" },
+    { title: "Cabinet Installation", description: "Custom cabinet design and professional installation for kitchens, bathrooms, and storage solutions" },
+    { title: "Home Remodeling", description: "Complete home renovations including kitchens, bathrooms, and custom carpentry work" },
+    { title: "Commercial Projects", description: "Commercial carpentry services including office furniture, retail displays, and custom woodwork" }
   ];
 
   const toggleWorkTypes = () => {
@@ -67,7 +67,7 @@ const Home = () => {
           <div className="hero-text">
             <h1 className="company-name">GUDINO</h1>
             <h2 className="company-tagline">Custom WoodWorking</h2>
-            <p className="hero-description">Crafting exceptional spaces with precision and artistry</p>
+            <p className="hero-description">Expert carpenters specializing in kitchen remodeling, bathroom renovations, and custom cabinet installation throughout Washington</p>
           </div>
         </div>
         
@@ -108,8 +108,8 @@ const Home = () => {
         <section className="content-section">
           <div className="section-content" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)`}}>
             <div className="quote">
-              Proudly serving homeowners and businesses for decades.
-              Trusted members of the Washington and surrounding state communities.
+              Washington's premier carpenters and cabinet makers serving homeowners and businesses for decades.
+              Trusted for kitchen remodeling, bathroom renovations, and custom carpentry throughout the Pacific Northwest.
             </div>
           </div>
         </section>
@@ -135,10 +135,10 @@ const Home = () => {
               <h2>Unlimited Scope</h2>
             </div>
             <div className="feature-description">
-              Gudino Custom Woodworking offers a wide range of services, materials, 
-              and expertise—so you don't have to juggle multiple contractors. 
-              Our diverse team brings experience across disciplines, 
-              ready to take on any project you can imagine.
+              Our master carpenters and cabinet makers offer comprehensive remodeling services
+              including kitchen renovations, bathroom remodels, and custom cabinet installation.
+              From concept to completion, our skilled craftsmen handle every aspect of your project
+              with precision and attention to detail that Washington homeowners trust.
             </div>
             <div className="feature-button">
               <Link to="/contact" className="cta-button">Contact Us</Link>

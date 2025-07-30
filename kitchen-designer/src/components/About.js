@@ -8,7 +8,9 @@ const About = () => {
     useAnalytics('/about');
     
     const [teamMembers, setTeamMembers] = useState([]);
+    const [testimonials, setTestimonials] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [testimonialsLoading, setTestimonialsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     // API base URL
@@ -45,6 +47,7 @@ const About = () => {
 
     useEffect(() => {
         loadTeamMembers();
+        loadTestimonials();
     }, []);
 
     const loadTeamMembers = async () => {
@@ -65,6 +68,23 @@ const About = () => {
         }
     };
 
+    const loadTestimonials = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/testimonials`);
+
+            if (response.ok) {
+                const testimonials = await response.json();
+                // Only show visible testimonials on the public page
+                const visibleTestimonials = testimonials.filter(t => t.is_visible !== false);
+                setTestimonials(visibleTestimonials);
+            }
+            setTestimonialsLoading(false);
+        } catch (err) {
+            console.error('Error loading testimonials:', err);
+            setTestimonialsLoading(false);
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -77,17 +97,17 @@ const About = () => {
             <div className="container">
                 {/* Hero Section */}
                 <div className="hero-section">
-                    <h1>Meet Our Team</h1>
-                    <p>Company General Description</p>
+                    <h1>Expert Carpenters & Cabinet Makers</h1>
+                    <p>Washington's trusted team for kitchen remodeling, bathroom renovations, and custom carpentry services</p>
                 </div>
                 {/* Company Info */}
                 <div className="company-info">
-                    <h3>Company History</h3>
-                    <p>Company History/mission</p>
+                    <h3>Master Craftsmen Since Day One</h3>
+                    <p>Gudino Custom Woodworking has been serving Washington homeowners and businesses with expert carpentry services, custom cabinet installation, kitchen remodeling, and bathroom renovations. Our skilled carpenters bring decades of experience in transforming spaces with precision craftsmanship and attention to detail.</p>
                 </div>
                 {/* Team Section */}
                 <div className="section-title">
-                    <h2>Our Team</h2>
+                    <h2>Meet Our Team</h2>
                     <p>Meet the Team who make Your Vision happen</p>
                 </div>
                 <div id="teamGrid" className="team-grid">
@@ -153,6 +173,63 @@ const About = () => {
                         </div>
                     ))}
                 </div>
+
+                {/* Testimonials Section */}
+                <div className="section-title">
+                    <h2>What Our Customers Say</h2>
+                    <p>Real experiences from homeowners who trusted us with their projects</p>
+                </div>
+
+                {testimonialsLoading ? (
+                    <div className="loading">
+                        <div className="loading-spinner"></div>
+                        <p>Loading testimonials...</p>
+                    </div>
+                ) : testimonials.length > 0 ? (
+                    <div className="testimonials-grid">
+                        {testimonials.map((testimonial, index) => (
+                            <div key={testimonial.id || index} className="testimonial-card" style={{ animationDelay: `${index * 0.1}s` }}>
+                                <div className="testimonial-content">
+                                    <div className="testimonial-stars">
+                                        {'★'.repeat(testimonial.rating || 5)}
+                                    </div>
+                                    <p className="testimonial-text">"{testimonial.message}"</p>
+                                    
+                                    {testimonial.photos && testimonial.photos.length > 0 && (
+                                        <div className="testimonial-photos">
+                                            {testimonial.photos.map((photo, photoIndex) => (
+                                                <div key={photoIndex} className="testimonial-photo">
+                                                    <img 
+                                                        src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`} 
+                                                        alt={`Project photo ${photoIndex + 1}`}
+                                                        onClick={() => {
+                                                            // Open full size image in modal or new tab
+                                                            window.open(`${API_BASE}${photo.file_path}`, '_blank');
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="testimonial-author">
+                                        <strong>{testimonial.client_name}</strong>
+                                        {testimonial.project_type && (
+                                            <span className="project-type">{testimonial.project_type}</span>
+                                        )}
+                                        <span className="testimonial-date">
+                                            {formatDate(testimonial.created_at)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="no-testimonials">
+                        <p>No testimonials yet. Be the first to share your experience!</p>
+                    </div>
+                )}
             </div>
         </>
     );

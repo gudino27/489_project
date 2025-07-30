@@ -8,12 +8,17 @@ import {
   Globe,
   Smartphone,
   Monitor,
-  RefreshCw
+  RefreshCw,
+  MessageSquare,
+  Star,
+  Camera,
+  Send
 } from 'lucide-react';
 
 const Analytics = ({ token, API_BASE }) => {
   const [stats, setStats] = useState(null);
   const [realtimeStats, setRealtimeStats] = useState(null);
+  const [testimonialStats, setTestimonialStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState(30);
   const [error, setError] = useState(null);
@@ -49,6 +54,17 @@ const Analytics = ({ token, API_BASE }) => {
       if (realtimeResponse.ok) {
         const realtimeData = await realtimeResponse.json();
         setRealtimeStats(realtimeData);
+      }
+
+      // Fetch testimonial analytics
+      const testimonialResponse = await fetch(`${API_BASE}/api/admin/testimonial-analytics?days=${dateRange}`, {
+        headers,
+        credentials: 'include'
+      });
+
+      if (testimonialResponse.ok) {
+        const testimonialData = await testimonialResponse.json();
+        setTestimonialStats(testimonialData);
       }
 
       setError(null);
@@ -214,6 +230,130 @@ const Analytics = ({ token, API_BASE }) => {
           </div>
         </div>
       </div>
+
+      {/* Testimonial Analytics Section */}
+      {testimonialStats && (
+        <>
+          <div className="border-t pt-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Testimonial Analytics</h3>
+            
+            {/* Testimonial Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Submissions</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {testimonialStats.submissions.total_submissions}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Star className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {testimonialStats.submissions.avg_rating ? testimonialStats.submissions.avg_rating.toFixed(1) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Camera className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">With Photos</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {testimonialStats.submissions.submissions_with_photos}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Send className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {testimonialStats.link_activity.conversion_rate}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Details */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Rating Distribution */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="p-6 border-b border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-900">Rating Distribution</h4>
+                </div>
+                <div className="p-6">
+                  {testimonialStats.rating_distribution.map((rating) => (
+                    <div key={rating.rating} className="flex items-center justify-between py-2">
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-gray-600 w-12">
+                          {rating.rating} ★
+                        </span>
+                        <div className="flex-1 mx-3">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-yellow-400 h-2 rounded-full" 
+                              style={{ 
+                                width: `${(rating.count / testimonialStats.submissions.total_submissions) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-600">{rating.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Project Types */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="p-6 border-b border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-900">Project Types</h4>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-3">
+                    {testimonialStats.project_types.map((project) => (
+                      <div key={project.project_type} className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {project.project_type}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-2">
+                            (Avg: {project.avg_rating?.toFixed(1)} ★)
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-600">{project.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

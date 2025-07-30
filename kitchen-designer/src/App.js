@@ -7,6 +7,7 @@ import About from './components/About';
 import Contact from './components/Contact';
 import AdminPanel from './components/AdminPanel';
 import PasswordReset from './components/PasswordReset';
+import TestimonialForm from './components/TestimonialForm';
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -25,6 +26,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/reset-password" element={<PasswordReset />} />
+        <Route path="/testimonial/:token" element={<TestimonialForm />} />
       </Routes>
     </Router>
   );

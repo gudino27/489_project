@@ -31,6 +31,9 @@ async function initializeDatabase() {
 
     console.log(' Adding analytics tables...');
     await addAnalyticsTables(db);
+
+    console.log(' Adding testimonial tables...');
+    await addTestimonialTables(db);
     
     console.log('\n Database initialization completed successfully!');
     
@@ -380,6 +383,76 @@ async function addAnalyticsTables(db) {
   `);
 
   console.log(' Created analytics tables');
+}
+
+async function addTestimonialTables(db) {
+  // Testimonial tokens table for tracking sent links
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS testimonial_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      client_name TEXT NOT NULL,
+      client_email TEXT NOT NULL,
+      project_type TEXT,
+      sent_by INTEGER,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sent_by) REFERENCES users(id)
+    )
+  `);
+
+  // Testimonials table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      client_email TEXT,
+      message TEXT NOT NULL,
+      rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+      project_type TEXT,
+      is_visible BOOLEAN DEFAULT 1,
+      token_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      approved_at DATETIME,
+      approved_by INTEGER,
+      FOREIGN KEY (token_id) REFERENCES testimonial_tokens(id),
+      FOREIGN KEY (approved_by) REFERENCES users(id)
+    )
+  `);
+
+  // Testimonial photos table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS testimonial_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      testimonial_id INTEGER NOT NULL,
+      filename TEXT NOT NULL,
+      original_name TEXT,
+      file_path TEXT NOT NULL,
+      thumbnail_path TEXT,
+      file_size INTEGER,
+      mime_type TEXT,
+      width INTEGER,
+      height INTEGER,
+      display_order INTEGER DEFAULT 0,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (testimonial_id) REFERENCES testimonials(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for testimonials
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_token ON testimonial_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_expires ON testimonial_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_email ON testimonial_tokens(client_email);
+    CREATE INDEX IF NOT EXISTS idx_testimonials_visible ON testimonials(is_visible);
+    CREATE INDEX IF NOT EXISTS idx_testimonials_rating ON testimonials(rating);
+    CREATE INDEX IF NOT EXISTS idx_testimonials_created ON testimonials(created_at);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_photos_testimonial ON testimonial_photos(testimonial_id);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_photos_order ON testimonial_photos(display_order);
+  `);
+
+  console.log(' Created testimonial tables and indexes');
 }
 
 // Only run if this file is executed directly

@@ -5,7 +5,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const { photoDb, employeeDb, designDb, userDb, analyticsDb } = require('./db-helpers');
+const { photoDb, employeeDb, designDb, userDb, analyticsDb, testimonialDb } = require('./db-helpers');
 const nodemailer = require('nodemailer');
 const app = express();
 app.use(cors({
@@ -1173,7 +1173,7 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
       try {
         const info = await emailTransporter.sendMail({
           from: `"Cabinet Designer" <${process.env.EMAIL_USER}>`,
-          to: 'admin@gudinocustom.com',
+          to: 'info@gudinocustom.com',
           subject: `New Cabinet Design - ${designData.client_name} - $${designData.total_price.toFixed(2)}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1617,6 +1617,218 @@ app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal server error' });
 });
+// =========================
+// TESTIMONIAL ENDPOINTS
+// =========================
+
+// Public endpoint - Get all visible testimonials
+app.get('/api/testimonials', async (req, res) => {
+  try {
+    const testimonials = await testimonialDb.getAllTestimonials(true);
+    res.json(testimonials);
+  } catch (error) {
+    console.error('Error getting testimonials:', error);
+    res.status(500).json({ error: 'Failed to get testimonials' });
+  }
+});
+
+// Public endpoint - Validate testimonial token
+app.get('/api/testimonials/validate-token/:token', async (req, res) => {
+  try {
+    const tokenData = await testimonialDb.validateToken(req.params.token);
+    res.json({ valid: !!tokenData });
+  } catch (error) {
+    console.error('Error validating token:', error);
+    res.status(500).json({ error: 'Failed to validate token' });
+  }
+});
+
+// Public endpoint - Submit testimonial with photos
+app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req, res) => {
+  try {
+    const { client_name, message, rating, project_type, token } = req.body;
+
+    // Validate token
+    const tokenData = await testimonialDb.validateToken(token);
+    if (!tokenData) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    // Create testimonial
+    const testimonial = await testimonialDb.createTestimonial({
+      client_name,
+      message,
+      rating: parseInt(rating),
+      project_type,
+      client_email: tokenData.client_email,
+      token_id: tokenData.id
+    });
+
+    // Process and save photos if any
+    if (req.files && req.files.length > 0) {
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const timestamp = Date.now();
+        const filename = `testimonial_${testimonial.id}_${timestamp}_${i}.jpg`;
+        const thumbnailFilename = `testimonial_${testimonial.id}_${timestamp}_${i}_thumb.jpg`;
+        
+        const filePath = `/testimonial-photos/${filename}`;
+        const thumbnailPath = `/testimonial-photos/${thumbnailFilename}`;
+        const fullPath = path.join(__dirname, 'public', 'testimonial-photos', filename);
+        const thumbnailFullPath = path.join(__dirname, 'public', 'testimonial-photos', thumbnailFilename);
+
+        // Ensure directory exists
+        await fs.mkdir(path.dirname(fullPath), { recursive: true });
+
+        // Process main image
+        const processedImage = await sharp(file.buffer)
+          .jpeg({ quality: 85 })
+          .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true });
+        
+        const metadata = await processedImage.metadata();
+        await processedImage.toFile(fullPath);
+
+        // Create thumbnail
+        await sharp(file.buffer)
+          .jpeg({ quality: 80 })
+          .resize(300, 300, { fit: 'cover' })
+          .toFile(thumbnailFullPath);
+
+        // Save to database
+        await testimonialDb.addTestimonialPhoto(testimonial.id, {
+          filename,
+          original_name: file.originalname,
+          file_path: filePath,
+          thumbnail_path: thumbnailPath,
+          file_size: file.size,
+          mime_type: 'image/jpeg',
+          width: metadata.width,
+          height: metadata.height,
+          display_order: i
+        });
+      }
+    }
+
+    // Mark token as used
+    await testimonialDb.markTokenUsed(token);
+
+    res.json({ success: true, testimonial_id: testimonial.id });
+  } catch (error) {
+    console.error('Error submitting testimonial:', error);
+    res.status(500).json({ error: 'Failed to submit testimonial' });
+  }
+});
+
+// Admin endpoint - Send testimonial link
+app.post('/api/admin/send-testimonial-link', authenticateUser, async (req, res) => {
+  try {
+    const { client_name, client_email, project_type } = req.body;
+
+    // Create token
+    const tokenData = await testimonialDb.createToken({
+      client_name,
+      client_email,
+      project_type,
+      sent_by: req.user.id
+    });
+
+    // Send email
+    const testimonialLink = `${req.protocol}://${req.get('host').replace('api.', '')}/testimonial/${tokenData.token}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: client_email,
+      subject: 'Share Your Experience with Gudino Custom Woodworking',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hi ${client_name},</h2>
+          <p>Thank you for choosing Gudino Custom Woodworking for your ${project_type} project!</p>
+          <p>We'd love to hear about your experience and see photos of your completed project. Your feedback helps other homeowners discover our carpentry services.</p>
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${testimonialLink}" style="background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">Share Your Experience</a>
+          </p>
+          <p><small>This link will expire in 30 days. If you have any questions, please don't hesitate to contact us.</small></p>
+          <p>Best regards,<br>Gudino Custom Woodworking Team</p>
+        </div>
+      `
+    };
+
+    await emailTransporter.sendMail(mailOptions);
+
+    res.json({ success: true, token: tokenData.token });
+  } catch (error) {
+    console.error('Error sending testimonial link:', error);
+    res.status(500).json({ error: 'Failed to send testimonial link' });
+  }
+});
+
+// Admin endpoint - Get all testimonials
+app.get('/api/admin/testimonials', authenticateUser, async (req, res) => {
+  try {
+    const testimonials = await testimonialDb.getAllTestimonials(false);
+    res.json(testimonials);
+  } catch (error) {
+    console.error('Error getting admin testimonials:', error);
+    res.status(500).json({ error: 'Failed to get testimonials' });
+  }
+});
+
+// Admin endpoint - Get testimonial tokens
+app.get('/api/admin/testimonial-tokens', authenticateUser, async (req, res) => {
+  try {
+    const tokens = await testimonialDb.getTokens();
+    res.json(tokens);
+  } catch (error) {
+    console.error('Error getting testimonial tokens:', error);
+    res.status(500).json({ error: 'Failed to get testimonial tokens' });
+  }
+});
+
+// Admin endpoint - Update testimonial visibility
+app.put('/api/admin/testimonials/:id/visibility', authenticateUser, async (req, res) => {
+  try {
+    const { is_visible } = req.body;
+    await testimonialDb.updateTestimonialVisibility(req.params.id, is_visible);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating testimonial visibility:', error);
+    res.status(500).json({ error: 'Failed to update testimonial visibility' });
+  }
+});
+
+// Admin endpoint - Delete testimonial (super admin only)
+app.delete('/api/admin/testimonials/:id', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Super admin access required' });
+    }
+
+    // Get testimonial photos to delete files
+    const testimonial = await testimonialDb.getTestimonialById(req.params.id);
+    if (testimonial && testimonial.photos) {
+      for (const photo of testimonial.photos) {
+        try {
+          await fs.unlink(path.join(__dirname, 'public', photo.file_path));
+          if (photo.thumbnail_path) {
+            await fs.unlink(path.join(__dirname, 'public', photo.thumbnail_path));
+          }
+        } catch (err) {
+          console.warn('Could not delete photo file:', err.message);
+        }
+      }
+    }
+
+    await testimonialDb.deleteTestimonial(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting testimonial:', error);
+    res.status(500).json({ error: 'Failed to delete testimonial' });
+  }
+});
+
+// Serve testimonial photos
+app.use('/testimonial-photos', express.static(path.join(__dirname, 'public', 'testimonial-photos')));
+
 // 404 handler
 app.use((req, res) => {
 

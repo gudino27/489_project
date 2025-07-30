@@ -13,7 +13,8 @@ import {
   FileText,
   Users,
   Shield,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 // -------------------------------------------------
 // Importing components for different functionalities
@@ -28,6 +29,7 @@ import EmployeeManager from './EmployeeManager';
 import DesignViewer from './DesignViewer';
 import UserManagement from './UserManagement';
 import Analytics from './Analytics';
+import TestimonialManager from './TestimonialManager';
 import MainNavBar from './Navigation';
 import './css/admin.css';
 // ----------------------------------------------------
@@ -206,7 +208,7 @@ const AdminPanel = () => {
 
   // Tab access control
   const getAvailableTabs = () => {
-    const baseTabs = ['prices', 'photos', 'employees', 'designs'];
+    const baseTabs = ['prices', 'photos', 'employees', 'designs', 'testimonials'];
     if (user?.role === 'super_admin') {
       return [...baseTabs, 'users', 'analytics'];
     }
@@ -374,6 +376,7 @@ const AdminPanel = () => {
                   {tab === 'photos' && <Image size={18} />}
                   {tab === 'employees' && <IdCardLanyard size={18} />}
                   {tab === 'designs' && <FileText size={18} />}
+                  {tab === 'testimonials' && <MessageSquare size={18} />}
                   {tab === 'users' && <Users size={18} />}
                   {tab === 'analytics' && <BarChart3 size={18} />}
                   <span className="capitalize">{tab}</span>
@@ -412,6 +415,10 @@ const AdminPanel = () => {
          Design Viewer Tab
         */}
         {activeTab === 'designs' && (<DesignViewer token={token} API_BASE={API_BASE} />)}
+        {/*
+         Testimonial Management Tab
+        */}
+        {activeTab === 'testimonials' && (<TestimonialManager token={token} API_BASE={API_BASE} userRole={user?.role} />)}
         {/*
          User Management Tab
         */}

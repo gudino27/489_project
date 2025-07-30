@@ -1044,11 +1044,258 @@ const analyticsDb = {
   }
 };
 
+// Testimonial database operations
+const testimonialDb = {
+  async createToken(tokenData) {
+    const db = await getDb();
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    
+    const result = await db.run(
+      'INSERT INTO testimonial_tokens (token, client_name, client_email, project_type, sent_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [token, tokenData.client_name, tokenData.client_email, tokenData.project_type, tokenData.sent_by, expiresAt]
+    );
+    
+    await db.close();
+    return { id: result.lastID, token, expires_at: expiresAt };
+  },
+
+  async validateToken(token) {
+    const db = await getDb();
+    const tokenData = await db.get(
+      'SELECT * FROM testimonial_tokens WHERE token = ? AND expires_at > datetime("now") AND used_at IS NULL',
+      [token]
+    );
+    await db.close();
+    return tokenData;
+  },
+
+  async getTokens(sentBy = null) {
+    const db = await getDb();
+    let query = 'SELECT * FROM testimonial_tokens ORDER BY created_at DESC';
+    let params = [];
+    
+    if (sentBy) {
+      query = 'SELECT * FROM testimonial_tokens WHERE sent_by = ? ORDER BY created_at DESC';
+      params = [sentBy];
+    }
+    
+    const tokens = await db.all(query, params);
+    await db.close();
+    return tokens;
+  },
+
+  async markTokenUsed(token) {
+    const db = await getDb();
+    await db.run(
+      'UPDATE testimonial_tokens SET used_at = datetime("now") WHERE token = ?',
+      [token]
+    );
+    await db.close();
+  },
+
+  async createTestimonial(testimonialData) {
+    const db = await getDb();
+    const result = await db.run(
+      'INSERT INTO testimonials (client_name, client_email, message, rating, project_type, token_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [testimonialData.client_name, testimonialData.client_email, testimonialData.message, testimonialData.rating, testimonialData.project_type, testimonialData.token_id]
+    );
+    
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async addTestimonialPhoto(testimonialId, photoData) {
+    const db = await getDb();
+    const result = await db.run(
+      'INSERT INTO testimonial_photos (testimonial_id, filename, original_name, file_path, thumbnail_path, file_size, mime_type, width, height, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [testimonialId, photoData.filename, photoData.original_name, photoData.file_path, photoData.thumbnail_path, photoData.file_size, photoData.mime_type, photoData.width, photoData.height, photoData.display_order || 0]
+    );
+    
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async getAllTestimonials(visibleOnly = false) {
+    const db = await getDb();
+    let query = `
+      SELECT t.*, 
+             GROUP_CONCAT(
+               json_object(
+                 'id', tp.id,
+                 'filename', tp.filename,
+                 'file_path', tp.file_path,
+                 'thumbnail_path', tp.thumbnail_path
+               )
+             ) as photos_json
+      FROM testimonials t
+      LEFT JOIN testimonial_photos tp ON t.id = tp.testimonial_id
+    `;
+    
+    if (visibleOnly) {
+      query += ' WHERE t.is_visible = 1';
+    }
+    
+    query += ' GROUP BY t.id ORDER BY t.created_at DESC';
+    
+    const rows = await db.all(query);
+    await db.close();
+    
+    // Parse photos JSON
+    return rows.map(row => ({
+      ...row,
+      photos: row.photos_json ? 
+        row.photos_json.split(',').map(photoJson => JSON.parse(photoJson)).filter(p => p.id) : 
+        []
+    }));
+  },
+
+  async getTestimonialById(id) {
+    const db = await getDb();
+    const testimonial = await db.get('SELECT * FROM testimonials WHERE id = ?', [id]);
+    
+    if (testimonial) {
+      const photos = await db.all('SELECT * FROM testimonial_photos WHERE testimonial_id = ? ORDER BY display_order', [id]);
+      testimonial.photos = photos;
+    }
+    
+    await db.close();
+    return testimonial;
+  },
+
+  async updateTestimonialVisibility(id, isVisible) {
+    const db = await getDb();
+    await db.run(
+      'UPDATE testimonials SET is_visible = ? WHERE id = ?',
+      [isVisible, id]
+    );
+    await db.close();
+  },
+
+  async deleteTestimonial(id) {
+    const db = await getDb();
+    // Photos will be deleted automatically due to CASCADE
+    await db.run('DELETE FROM testimonials WHERE id = ?', [id]);
+    await db.close();
+  }
+};
+
+// Extend analyticsDb with testimonial tracking
+const originalAnalyticsDb = analyticsDb;
+Object.assign(analyticsDb, {
+  async recordTestimonialEvent(eventData) {
+    const db = await getDb();
+    
+    try {
+      const result = await db.run(
+        `INSERT INTO site_analytics (
+          page_path, visitor_ip, visitor_id, referrer, user_agent, created_at
+        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          eventData.event_type, // Using page_path to store event type like 'testimonial_link_sent', 'testimonial_submitted'
+          eventData.ip_address,
+          eventData.session_id,
+          eventData.metadata, // Using referrer field to store JSON metadata
+          eventData.user_agent,
+        ]
+      );
+      
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getTestimonialStats(dateRange = 30) {
+    const db = await getDb();
+    
+    try {
+      // Get testimonial submission stats
+      const submissionStats = await db.all(`
+        SELECT 
+          COUNT(*) as total_submissions,
+          AVG(rating) as avg_rating,
+          COUNT(CASE WHEN photos.testimonial_id IS NOT NULL THEN 1 END) as submissions_with_photos
+        FROM testimonials t
+        LEFT JOIN (
+          SELECT DISTINCT testimonial_id 
+          FROM testimonial_photos
+        ) photos ON t.id = photos.testimonial_id
+        WHERE t.created_at >= date('now', '-${dateRange} days')
+      `);
+
+      // Get testimonial activity by day
+      const dailyActivity = await db.all(`
+        SELECT 
+          date(created_at) as date,
+          COUNT(*) as submissions,
+          AVG(rating) as avg_rating
+        FROM testimonials 
+        WHERE created_at >= date('now', '-${dateRange} days')
+        GROUP BY date(created_at)
+        ORDER BY date DESC
+      `);
+
+      // Get rating distribution
+      const ratingDistribution = await db.all(`
+        SELECT 
+          rating,
+          COUNT(*) as count
+        FROM testimonials 
+        WHERE created_at >= date('now', '-${dateRange} days')
+        GROUP BY rating
+        ORDER BY rating DESC
+      `);
+
+      // Get project type breakdown
+      const projectTypes = await db.all(`
+        SELECT 
+          project_type,
+          COUNT(*) as count,
+          AVG(rating) as avg_rating
+        FROM testimonials 
+        WHERE created_at >= date('now', '-${dateRange} days')
+        AND project_type IS NOT NULL
+        GROUP BY project_type
+        ORDER BY count DESC
+      `);
+
+      // Get testimonial link activity
+      const linkActivity = await db.all(`
+        SELECT 
+          COUNT(*) as links_sent,
+          COUNT(CASE WHEN used_at IS NOT NULL THEN 1 END) as links_used,
+          ROUND(
+            (COUNT(CASE WHEN used_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(*)), 2
+          ) as conversion_rate
+        FROM testimonial_tokens 
+        WHERE created_at >= date('now', '-${dateRange} days')
+      `);
+
+      await db.close();
+      
+      return {
+        submissions: submissionStats[0] || { total_submissions: 0, avg_rating: 0, submissions_with_photos: 0 },
+        daily_activity: dailyActivity,
+        rating_distribution: ratingDistribution,
+        project_types: projectTypes,
+        link_activity: linkActivity[0] || { links_sent: 0, links_used: 0, conversion_rate: 0 }
+      };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  }
+});
+
 module.exports = { 
   getDb,
   photoDb, 
   employeeDb, 
   designDb, 
   userDb,
-  analyticsDb
+  analyticsDb,
+  testimonialDb
 };
