@@ -1397,6 +1397,155 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Dynamic sitemap generation
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const baseUrl = 'https://gudinocustom.com';
+    const currentDate = new Date().toISOString();
+    
+    // Get all photos to extract categories and recent updates
+    const photos = await photoDb.getAllPhotos();
+    const categories = [...new Set(photos.map(photo => photo.category))];
+    const latestPhotoDate = photos.length > 0 ? 
+      new Date(Math.max(...photos.map(photo => new Date(photo.uploaded_at)))).toISOString() : 
+      currentDate;
+
+    // Get testimonials for last modified date
+    const testimonials = await testimonialDb.getAllTestimonials(true);
+    const latestTestimonialDate = testimonials.length > 0 ?
+      new Date(Math.max(...testimonials.map(t => new Date(t.created_at)))).toISOString() :
+      currentDate;
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main Pages -->
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/portfolio</loc>
+    <lastmod>${latestPhotoDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/design</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/about</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Portfolio Category Pages -->
+${categories.map(category => {
+  const categoryPhotos = photos.filter(p => p.category === category);
+  const latestCategoryUpdate = categoryPhotos.length > 0 ?
+    new Date(Math.max(...categoryPhotos.map(p => new Date(p.uploaded_at)))).toISOString() :
+    currentDate;
+  
+  return `  <url>
+    <loc>${baseUrl}/portfolio?category=${encodeURIComponent(category)}</loc>
+    <lastmod>${latestCategoryUpdate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+}).join('\n')}
+
+  <!-- Services Pages (inferred from categories) -->
+  <url>
+    <loc>${baseUrl}/services/kitchen-cabinets</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/services/bathroom-vanities</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/services/custom-woodworking</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/services/cabinet-design</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Testimonials Page -->
+  <url>
+    <loc>${baseUrl}/testimonials</loc>
+    <lastmod>${latestTestimonialDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- FAQ and Info Pages -->
+  <url>
+    <loc>${baseUrl}/faq</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/process</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).json({ error: 'Failed to generate sitemap' });
+  }
+});
+
+// Robots.txt for SEO
+app.get('/robots.txt', (req, res) => {
+  const robotsTxt = `User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://gudinocustom.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin
+Disallow: /api/
+Disallow: /reset-password
+
+# Allow specific API endpoints that should be crawled
+Allow: /api/photos
+Allow: /api/testimonials
+
+# Crawl delay (optional)
+Crawl-delay: 1`;
+
+  res.set('Content-Type', 'text/plain');
+  res.send(robotsTxt);
+});
+
 // List uploads directory (for debugging)
 app.get('/api/debug/uploads', async (req, res) => {
   try {
