@@ -95,7 +95,9 @@ const Analytics = ({ token, API_BASE }) => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-US', {
+      timeZone: 'America/Los_Angeles'
+    });
   };
 
   if (loading && !stats) {

@@ -1784,6 +1784,18 @@ app.get('/api/admin/testimonial-tokens', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Delete testimonial token
+app.delete('/api/admin/testimonial-tokens/:token', authenticateUser, async (req, res) => {
+  try {
+    const { token } = req.params;
+    await testimonialDb.deleteToken(token);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting testimonial token:', error);
+    res.status(500).json({ error: 'Failed to delete testimonial token' });
+  }
+});
+
 // Admin endpoint - Update testimonial visibility
 app.put('/api/admin/testimonials/:id/visibility', authenticateUser, async (req, res) => {
   try {

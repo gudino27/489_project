@@ -9,7 +9,8 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  User
+  User,
+  X
 } from 'lucide-react';
 
 const TestimonialManager = ({ token, API_BASE, userRole }) => {
@@ -120,6 +121,31 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  const deleteTestimonialToken = async (tokenValue) => {
+    if (!window.confirm('Are you sure you want to delete this testimonial link? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/testimonial-tokens/${tokenValue}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setGeneratedTokens(generatedTokens.filter(t => t.token !== tokenValue));
+      } else {
+        alert('Failed to delete testimonial link');
+      }
+    } catch (error) {
+      console.error('Error deleting token:', error);
+      alert('Error deleting testimonial link');
+    }
+  };
+
   const deleteTestimonial = async (testimonialId) => {
     if (!window.confirm('Are you sure you want to delete this testimonial?')) {
       return;
@@ -194,12 +220,16 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Convert UTC timestamp to PST/PDT
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short'
     });
   };
 
@@ -314,22 +344,32 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   <p className="text-xs text-gray-500">Created: {formatDate(tokenData.created_at)}</p>
                 </div>
                 
-                <button
-                  onClick={() => copyTestimonialLink(tokenData.token)}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                >
-                  {copiedToken === tokenData.token ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      Copy Link
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => copyTestimonialLink(tokenData.token)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    {copiedToken === tokenData.token ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy Link
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => deleteTestimonialToken(tokenData.token)}
+                    className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                    title="Delete testimonial link"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

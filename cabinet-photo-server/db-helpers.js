@@ -1049,7 +1049,7 @@ const testimonialDb = {
   async createToken(tokenData) {
     const db = await getDb();
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 day
     
     const result = await db.run(
       'INSERT INTO testimonial_tokens (token, client_name, client_email, project_type, sent_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
@@ -1083,6 +1083,12 @@ const testimonialDb = {
     const tokens = await db.all(query, params);
     await db.close();
     return tokens;
+  },
+
+  async deleteToken(token) {
+    const db = await getDb();
+    await db.run('DELETE FROM testimonial_tokens WHERE token = ?', [token]);
+    await db.close();
   },
 
   async markTokenUsed(token) {
