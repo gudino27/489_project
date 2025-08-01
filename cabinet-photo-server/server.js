@@ -916,18 +916,34 @@ app.get('/api/prices', async (req, res) => {
       colorPricing[key] = parseFloat(item.price_addition);
     });
 
+    // Get wall pricing
+    let wallPricing = { addWall: 1500, removeWall: 2000 };
+    try {
+      const walls = await db.all('SELECT * FROM wall_pricing');
+      if (walls.length > 0) {
+        wallPricing = {};
+        walls.forEach(item => {
+          wallPricing[item.modification_type] = parseFloat(item.price);
+        });
+      }
+    } catch (wallError) {
+      console.log('Wall pricing table does not exist yet, using defaults');
+    }
+
     await db.close();
 
     console.log('Loaded prices with materials:', {
       basePrices,
       materialMultipliers,
-      colorPricing
+      colorPricing,
+      wallPricing
     });
 
     res.json({
       basePrices,
       materialMultipliers,
-      colorPricing
+      colorPricing,
+      wallPricing
     });
 
   } catch (error) {
@@ -1118,6 +1134,140 @@ app.get('/api/prices/history', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch price history' });
   }
 });
+
+// Wall pricing endpoints
+app.get('/api/prices/walls', async (req, res) => {
+  try {
+    const db = await getDb();
+    
+    // Try to get wall pricing from database
+    const rows = await db.all('SELECT * FROM wall_pricing ORDER BY modification_type');
+    
+    const walls = {};
+    if (rows.length > 0) {
+      rows.forEach(row => {
+        walls[row.modification_type] = parseFloat(row.price);
+      });
+    } else {
+      // Return default values if no data in database
+      walls.addWall = 1500;
+      walls.removeWall = 2000;
+    }
+    
+    await db.close();
+    
+    console.log('Loaded wall pricing:', walls);
+    res.json(walls);
+  } catch (error) {
+    console.error('Error fetching wall pricing:', error);
+    // Return defaults on error
+    res.json({ addWall: 1500, removeWall: 2000 });
+  }
+});
+
+app.put('/api/prices/walls', async (req, res) => {
+  try {
+    const db = await getDb();
+    const wallPricing = req.body;
+
+    console.log('Updating wall pricing:', wallPricing);
+
+    // Ensure wall_pricing table exists
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS wall_pricing (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        modification_type TEXT UNIQUE NOT NULL,
+        price REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Update each wall price (using REPLACE to handle both INSERT and UPDATE)
+    for (const [modificationType, price] of Object.entries(wallPricing)) {
+      await db.run(`
+        REPLACE INTO wall_pricing (modification_type, price, updated_at) 
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+      `, [modificationType, price]);
+    }
+
+    await db.close();
+
+    console.log('Wall pricing updated successfully');
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error updating wall pricing:', error);
+    res.status(500).json({ error: 'Failed to update wall pricing' });
+  }
+});
+
+// Wall availability endpoints
+app.get('/api/prices/wall-availability', async (req, res) => {
+  try {
+    const db = await getDb();
+    
+    // Try to get wall availability from database
+    const rows = await db.all('SELECT * FROM wall_availability ORDER BY service_type');
+    
+    const availability = {};
+    if (rows.length > 0) {
+      rows.forEach(row => {
+        availability[row.service_type + 'Enabled'] = Boolean(row.is_enabled);
+      });
+    } else {
+      // Default values if table is empty
+      availability.addWallEnabled = true;
+      availability.removeWallEnabled = true;
+    }
+    
+    await db.close();
+    res.json(availability);
+  } catch (error) {
+    console.error('Error fetching wall availability:', error);
+    // Return defaults on error
+    res.json({
+      addWallEnabled: true,
+      removeWallEnabled: true
+    });
+  }
+});
+
+app.put('/api/prices/wall-availability', async (req, res) => {
+  try {
+    const db = await getDb();
+    const wallAvailability = req.body;
+    console.log('Updating wall availability:', wallAvailability);
+    
+    // Ensure wall_availability table exists
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS wall_availability (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service_type TEXT UNIQUE NOT NULL,
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Update each wall availability setting
+    for (const [key, enabled] of Object.entries(wallAvailability)) {
+      const serviceType = key.replace('Enabled', '');
+      await db.run(`
+        REPLACE INTO wall_availability (service_type, is_enabled, updated_at) 
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+      `, [serviceType, enabled ? 1 : 0]);
+    }
+    
+    await db.close();
+    console.log('Wall availability updated successfully');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating wall availability:', error);
+    res.status(500).json({ error: 'Failed to update wall availability' });
+  }
+});
+
 // Get all designs (for admin panel)
 app.get('/api/designs', async (req, res) => {
   try {
@@ -1984,6 +2134,88 @@ app.delete('/api/admin/testimonials/:id', authenticateUser, async (req, res) => 
   } catch (error) {
     console.error('Error deleting testimonial:', error);
     res.status(500).json({ error: 'Failed to delete testimonial' });
+  }
+});
+
+// Admin endpoint - Get testimonial analytics
+app.get('/api/admin/testimonial-analytics', authenticateUser, async (req, res) => {
+  try {
+    const dateRange = parseInt(req.query.days) || 30;
+    const db = await getDb();
+
+    // Get testimonial submission stats
+    const submissions = await db.get(`
+      SELECT 
+        COUNT(*) as total_submissions,
+        AVG(rating) as avg_rating,
+        COUNT(CASE WHEN photos.testimonial_id IS NOT NULL THEN 1 END) as submissions_with_photos
+      FROM testimonials t
+      LEFT JOIN (
+        SELECT DISTINCT testimonial_id 
+        FROM testimonial_photos
+      ) photos ON t.id = photos.testimonial_id
+      WHERE t.created_at >= datetime('now', '-${dateRange} days')
+    `);
+
+    // Get testimonial activity by day
+    const dailyActivity = await db.all(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as submissions
+      FROM testimonials 
+      WHERE created_at >= datetime('now', '-${dateRange} days')
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+      LIMIT 30
+    `);
+
+    // Get rating distribution
+    const ratingDistribution = await db.all(`
+      SELECT 
+        rating,
+        COUNT(*) as count
+      FROM testimonials 
+      WHERE created_at >= datetime('now', '-${dateRange} days')
+      GROUP BY rating
+      ORDER BY rating DESC
+    `);
+
+    // Get project types
+    const projectTypes = await db.all(`
+      SELECT 
+        project_type,
+        COUNT(*) as count,
+        AVG(rating) as avg_rating
+      FROM testimonials 
+      WHERE created_at >= datetime('now', '-${dateRange} days')
+      GROUP BY project_type
+      ORDER BY count DESC
+    `);
+
+    // Get testimonial link activity
+    const linkActivity = await db.all(`
+      SELECT 
+        COUNT(*) as total_links_sent,
+        COUNT(CASE WHEN used_at IS NOT NULL THEN 1 END) as links_used,
+        ROUND(
+          (COUNT(CASE WHEN used_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(*)), 1
+        ) as conversion_rate
+      FROM testimonial_tokens 
+      WHERE created_at >= datetime('now', '-${dateRange} days')
+    `);
+
+    await db.close();
+
+    res.json({
+      submissions: submissions || { total_submissions: 0, avg_rating: 0, submissions_with_photos: 0 },
+      daily_activity: dailyActivity,
+      rating_distribution: ratingDistribution,
+      project_types: projectTypes,
+      link_activity: linkActivity[0] || { total_links_sent: 0, links_used: 0, conversion_rate: 0 }
+    });
+  } catch (error) {
+    console.error('Error fetching testimonial analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch testimonial analytics' });
   }
 });
 

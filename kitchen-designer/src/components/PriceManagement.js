@@ -13,15 +13,64 @@ import {
 const PriceManagement = ({ token, API_BASE }) => {
   // State for all pricing data
   const [basePrices, setBasePrices] = useState({
+    // Kitchen Cabinets
     'base': 250,
     'sink-base': 320,
     'wall': 180,
     'tall': 450,
     'corner': 380,
+    'drawer-base': 280,
+    'double-drawer-base': 350,
+    'glass-wall': 220,
+    'open-shelf': 160,
+    'island-base': 580,
+    'peninsula-base': 420,
+    'pantry': 520,
+    'corner-wall': 210,
+    'lazy-susan': 450,
+    'blind-corner': 320,
+    'appliance-garage': 280,
+    'wine-rack': 350,
+    'spice-rack': 180,
+    'tray-divider': 200,
+    'pull-out-drawer': 250,
+    'soft-close-drawer': 300,
+    'under-cabinet-lighting': 150,
+    
+    // Bathroom Cabinets
     'vanity': 280,
     'vanity-sink': 350,
+    'double-vanity': 650,
+    'floating-vanity': 420,
+    'corner-vanity': 380,
+    'vanity-tower': 320,
     'medicine': 120,
-    'linen': 350
+    'medicine-mirror': 180,
+    'linen': 350,
+    'linen-tower': 420,
+    'wall-hung-vanity': 380,
+    'vessel-sink-vanity': 400,
+    'undermount-sink-vanity': 380,
+    'powder-room-vanity': 250,
+    'master-bath-vanity': 750,
+    'kids-bathroom-vanity': 220,
+    
+    // Kitchen Appliances
+    'refrigerator': 0,        // Pricing handled separately for appliances
+    'stove': 0,
+    'dishwasher': 0,
+    'microwave': 0,
+    'wine-cooler': 0,
+    'ice-maker': 0,
+    'range-hood': 0,
+    'double-oven': 0,
+    'cooktop': 0,
+    'garbage-disposal': 0,
+    
+    // Bathroom Fixtures
+    'toilet': 0,
+    'bathtub': 0,
+    'shower': 0
   });
 
   const [materialMultipliers, setMaterialMultipliers] = useState({
@@ -35,6 +84,16 @@ const PriceManagement = ({ token, API_BASE }) => {
     2: 100,
     3: 200,
     'custom': 500
+  });
+
+  const [wallPricing, setWallPricing] = useState({
+    addWall: 1500,
+    removeWall: 2000
+  });
+
+  const [wallAvailability, setWallAvailability] = useState({
+    addWallEnabled: true,
+    removeWallEnabled: true
   });
 
   // UI state
@@ -57,10 +116,12 @@ const PriceManagement = ({ token, API_BASE }) => {
         'Authorization': `Bearer ${token}`
       };
 
-      const [cabinetRes, materialRes, colorRes] = await Promise.all([
+      const [cabinetRes, materialRes, colorRes, wallRes, wallAvailRes] = await Promise.all([
         fetch(`${API_BASE}/api/prices/cabinets`, { headers }),
         fetch(`${API_BASE}/api/prices/materials`, { headers }),
-        fetch(`${API_BASE}/api/prices/colors`, { headers })
+        fetch(`${API_BASE}/api/prices/colors`, { headers }),
+        fetch(`${API_BASE}/api/prices/walls`, { headers }),
+        fetch(`${API_BASE}/api/prices/wall-availability`, { headers })
       ]);
 
       if (cabinetRes.ok) {
@@ -81,6 +142,20 @@ const PriceManagement = ({ token, API_BASE }) => {
         const colorData = await colorRes.json();
         if (colorData && Object.keys(colorData).length > 0) {
           setColorPricing(colorData);
+        }
+      }
+
+      if (wallRes.ok) {
+        const wallData = await wallRes.json();
+        if (wallData && Object.keys(wallData).length > 0) {
+          setWallPricing(wallData);
+        }
+      }
+
+      if (wallAvailRes.ok) {
+        const wallAvailData = await wallAvailRes.json();
+        if (wallAvailData) {
+          setWallAvailability(wallAvailData);
         }
       }
     } catch (error) {
@@ -115,6 +190,16 @@ const PriceManagement = ({ token, API_BASE }) => {
           method: 'PUT',
           headers,
           body: JSON.stringify(colorPricing)
+        }),
+        fetch(`${API_BASE}/api/prices/walls`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(wallPricing)
+        }),
+        fetch(`${API_BASE}/api/prices/wall-availability`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(wallAvailability)
         })
       ]);
 
@@ -188,7 +273,7 @@ const PriceManagement = ({ token, API_BASE }) => {
           Price Management
         </h2>
         <p className="text-gray-600 mt-1">
-          Manage cabinet base prices, material multipliers, and color pricing
+          Manage cabinet base prices, material multipliers, color pricing, and wall modification costs
         </p>
       </div>
 
@@ -413,6 +498,151 @@ const PriceManagement = ({ token, API_BASE }) => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Wall Pricing */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <div className="w-5 h-5 bg-gray-500 rounded-sm border-2 border-gray-300" />
+          Wall Modification Pricing
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Set pricing for custom wall configurations. These costs apply when customers add or remove walls for open floor plans.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-center gap-3">
+            <label className="flex-1 text-sm font-medium">
+              Add Wall Opening:
+            </label>
+            <div className="flex items-center">
+              <span className="text-gray-500 mr-1">$</span>
+              <input
+                type="number"
+                value={wallPricing.addWall}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  if (newValue < 0) {
+                    alert('Wall pricing cannot be negative. Please enter a positive value.');
+                    return;
+                  }
+                  setWallPricing({ ...wallPricing, addWall: newValue || 0 });
+                  setHasUnsavedChanges(true);
+                }}
+                className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
+                min="0"
+                step="50"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex-1 text-sm font-medium">
+              Remove Wall:
+            </label>
+            <div className="flex items-center">
+              <span className="text-gray-500 mr-1">$</span>
+              <input
+                type="number"
+                value={wallPricing.removeWall}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  if (newValue < 0) {
+                    alert('Wall pricing cannot be negative. Please enter a positive value.');
+                    return;
+                  }
+                  setWallPricing({ ...wallPricing, removeWall: newValue || 0 });
+                  setHasUnsavedChanges(true);
+                }}
+                className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
+                min="0"
+                step="50"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-800 mb-2">Wall Modification Examples:</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• <strong>Add Wall Opening:</strong> Creating a pass-through between kitchen and other room's</li>
+            <li>• <strong>Remove Wall:</strong> Full wall removal for open concept design</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Wall Service Availability Controls */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border-l-4 border-blue-500">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-700">
+          <div className="w-5 h-5 bg-blue-500 rounded" />
+          Wall Service Availability (Admin Only)
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Control which wall modification services are available to customers.
+        </p>
+        
+        <div className="space-y-4">
+          {/* Add Wall Service */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-medium text-blue-800">Wall Addition Service</div>
+                <div className="text-xs text-blue-600">Allow customers to add walls and openings</div>
+              </div>
+              <button
+                onClick={() => {
+                  const newStatus = !wallAvailability.addWallEnabled;
+                  setWallAvailability({ ...wallAvailability, addWallEnabled: newStatus });
+                  setHasUnsavedChanges(true);
+                }}
+                className={`text-sm px-4 py-2 rounded font-medium transition ${
+                  wallAvailability.addWallEnabled
+                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                {wallAvailability.addWallEnabled ? '✅ Currently Enabled' : '🚫 Currently Disabled'}
+              </button>
+            </div>
+            
+            {!wallAvailability.addWallEnabled && (
+              <div className="text-xs text-red-700 p-2 bg-red-100 rounded">
+                ⚠️ Wall addition service is disabled. Customers cannot add new walls or openings.
+              </div>
+            )}
+          </div>
+
+          {/* Remove Wall Service */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-medium text-blue-800">Wall Removal Service</div>
+                <div className="text-xs text-blue-600">Allow customers to remove walls for open floor plans</div>
+              </div>
+              <button
+                onClick={() => {
+                  const newStatus = !wallAvailability.removeWallEnabled;
+                  setWallAvailability({ ...wallAvailability, removeWallEnabled: newStatus });
+                  setHasUnsavedChanges(true);
+                }}
+                className={`text-sm px-4 py-2 rounded font-medium transition ${
+                  wallAvailability.removeWallEnabled
+                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                {wallAvailability.removeWallEnabled ? '✅ Currently Enabled' : '🚫 Currently Disabled'}
+              </button>
+            </div>
+            
+            {!wallAvailability.removeWallEnabled && (
+              <div className="text-xs text-red-700 p-2 bg-red-100 rounded">
+                ⚠️ Wall removal service is disabled. Customers cannot remove existing walls.
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="text-xs text-gray-500 mt-4">
+          These settings affect all customers immediately. Use when maintenance or high demand requires limiting services.
         </div>
       </div>
 

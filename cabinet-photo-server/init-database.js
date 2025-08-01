@@ -205,11 +205,32 @@ async function addPriceTables(db) {
     )
   `);
 
+  // Wall availability table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS wall_availability (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      service_type TEXT NOT NULL UNIQUE,
+      is_enabled BOOLEAN DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by TEXT
+    )
+  `);
+
   // Insert default data
   const defaultCabinetPrices = [
     ['base', 250.00], ['sink-base', 320.00], ['wall', 180.00],
-    ['tall', 450.00], ['corner', 380.00], ['vanity', 280.00],
-    ['vanity-sink', 350.00], ['medicine', 120.00], ['linen', 350.00]
+    ['tall', 450.00], ['corner', 380.00], ['drawer-base', 280.00],
+    ['double-drawer-base', 350.00], ['glass-wall', 220.00], ['open-shelf', 160.00],
+    ['island-base', 580.00], ['peninsula-base', 420.00], ['pantry', 520.00],
+    ['corner-wall', 210.00], ['lazy-susan', 450.00], ['blind-corner', 320.00],
+    ['appliance-garage', 280.00], ['wine-rack', 350.00], ['spice-rack', 180.00],
+    ['tray-divider', 200.00], ['pull-out-drawer', 250.00], ['soft-close-drawer', 300.00],
+    ['under-cabinet-lighting', 150.00], ['vanity', 280.00], ['vanity-sink', 350.00],
+    ['double-vanity', 650.00], ['floating-vanity', 420.00], ['corner-vanity', 380.00],
+    ['vanity-tower', 320.00], ['medicine', 120.00], ['medicine-mirror', 180.00],
+    ['linen', 350.00], ['linen-tower', 420.00], ['wall-hung-vanity', 380.00],
+    ['vessel-sink-vanity', 400.00], ['undermount-sink-vanity', 380.00], ['powder-room-vanity', 250.00],
+    ['master-bath-vanity', 750.00], ['kids-bathroom-vanity', 220.00]
   ];
 
   for (const [type, price] of defaultCabinetPrices) {
@@ -232,6 +253,14 @@ async function addPriceTables(db) {
     await db.run(
       'INSERT OR IGNORE INTO color_pricing (color_count, price_addition) VALUES (?, ?)',
       [count, price]
+    );
+  }
+
+  const defaultWallAvailability = [['addWall', 1], ['removeWall', 1]];
+  for (const [service, enabled] of defaultWallAvailability) {
+    await db.run(
+      'INSERT OR IGNORE INTO wall_availability (service_type, is_enabled) VALUES (?, ?)',
+      [service, enabled]
     );
   }
 

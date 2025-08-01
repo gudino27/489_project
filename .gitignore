@@ -27,3 +27,4 @@ logs/*
 .env
 cabinet-photo-server/node_modules/.bin/nodemon
 cabinet-photo-server/database/cabinet_photos.db
+.claude/settings.local.json

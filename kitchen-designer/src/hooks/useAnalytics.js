@@ -2,6 +2,31 @@ import { useEffect, useRef, useState } from 'react';
 
 const API_BASE = "https://api.gudinocustom.com";
 
+// Microsoft Clarity integration
+const initializeClarity = () => {
+  if (typeof window !== 'undefined' && window.clarity) {
+    return window.clarity;
+  }
+  return null;
+};
+
+// Get page category for Clarity tracking
+const getPageCategory = (pagePath) => {
+  if (!pagePath) return 'unknown';
+  
+  if (pagePath === '/' || pagePath === '/home') return 'homepage';
+  if (pagePath.includes('/portfolio')) return 'portfolio';
+  if (pagePath.includes('/design')) return 'design_tool';
+  if (pagePath.includes('/about')) return 'about';
+  if (pagePath.includes('/contact')) return 'contact';
+  if (pagePath.includes('/admin')) return 'admin';
+  if (pagePath.includes('/services')) return 'services';
+  if (pagePath.includes('/areas')) return 'location_page';
+  if (pagePath.includes('/testimonial')) return 'testimonial';
+  
+  return 'other';
+};
+
 // Generate a unique session ID
 const generateSessionId = () => {
   return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
@@ -56,6 +81,7 @@ export const useAnalytics = (pagePath) => {
         const sessionId = getSessionId();
         const userId = getUserInfo();
         
+        // Track with custom analytics
         const pageData = {
           page_path: pagePath,
           user_agent: navigator.userAgent,
@@ -77,6 +103,14 @@ export const useAnalytics = (pagePath) => {
         if (response.ok) {
           const result = await response.json();
           setViewId(result.viewId);
+        }
+
+        // Track with Microsoft Clarity
+        const clarity = initializeClarity();
+        if (clarity) {
+          clarity('set', 'page_category', getPageCategory(pagePath));
+          clarity('set', 'user_type', userId ? 'authenticated' : 'anonymous');
+          clarity('set', 'session_id', sessionId);
         }
       } catch (error) {
         console.error('Analytics tracking error:', error);
@@ -158,6 +192,7 @@ export const useEventTracking = () => {
       const sessionId = getSessionId();
       const userId = getUserInfo();
       
+      // Track with custom analytics
       await fetch(`${API_BASE}/api/analytics/event`, {
         method: 'POST',
         headers: {
@@ -172,10 +207,53 @@ export const useEventTracking = () => {
           page_path: window.location.pathname
         })
       });
+
+      // Track with Microsoft Clarity
+      const clarity = initializeClarity();
+      if (clarity) {
+        clarity('event', eventName, eventData);
+        
+        // Set custom tags based on events
+        if (eventName === 'contact_form_submit') {
+          clarity('set', 'lead_generated', 'true');
+        }
+        if (eventName === 'portfolio_photo_click') {
+          clarity('set', 'engaged_with_portfolio', 'true');
+        }
+        if (eventName === 'design_tool_used') {
+          clarity('set', 'used_design_tool', 'true');
+        }
+      }
     } catch (error) {
       console.error('Event tracking error:', error);
     }
   };
 
   return { trackEvent };
+};
+
+// Microsoft Clarity specific tracking functions
+export const useClarityTracking = () => {
+  const identifyUser = (userId, userData = {}) => {
+    const clarity = initializeClarity();
+    if (clarity) {
+      clarity('identify', userId, userData);
+    }
+  };
+
+  const setCustomTag = (key, value) => {
+    const clarity = initializeClarity();
+    if (clarity) {
+      clarity('set', key, value);
+    }
+  };
+
+  const upgradeSession = () => {
+    const clarity = initializeClarity();
+    if (clarity) {
+      clarity('upgrade');
+    }
+  };
+
+  return { identifyUser, setCustomTag, upgradeSession };
 };
