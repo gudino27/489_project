@@ -878,15 +878,61 @@ app.delete('/api/employees/:id', async (req, res) => {
   }
 });
 
-// Get the database connection helper
-async function getDb() {
-  const sqlite3 = require('sqlite3').verbose();
-  const { open } = require('sqlite');
+// Database connection pool and helper
+let dbInstance = null;
+const dbOperationQueue = [];
+let isProcessingQueue = false;
 
-  return open({
-    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
-    driver: sqlite3.Database
+async function getDb() {
+  if (!dbInstance) {
+    const sqlite3 = require('sqlite3').verbose();
+    const { open } = require('sqlite');
+
+    dbInstance = await open({
+      filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
+      driver: sqlite3.Database
+    });
+    
+    // Enable WAL mode for better concurrent access
+    await dbInstance.exec('PRAGMA journal_mode = WAL;');
+    await dbInstance.exec('PRAGMA synchronous = NORMAL;');
+    await dbInstance.exec('PRAGMA cache_size = 1000;');
+    await dbInstance.exec('PRAGMA temp_store = memory;');
+  }
+  
+  return dbInstance;
+}
+
+// Queue database operations to prevent SQLITE_BUSY errors
+async function queueDbOperation(operation) {
+  return new Promise((resolve, reject) => {
+    dbOperationQueue.push({ operation, resolve, reject });
+    processQueue();
   });
+}
+
+async function processQueue() {
+  if (isProcessingQueue || dbOperationQueue.length === 0) {
+    return;
+  }
+  
+  isProcessingQueue = true;
+  
+  while (dbOperationQueue.length > 0) {
+    const { operation, resolve, reject } = dbOperationQueue.shift();
+    
+    try {
+      const result = await operation();
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+    
+    // Small delay to prevent overwhelming the database
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  
+  isProcessingQueue = false;
 }
 
 // Get all the pricing data
@@ -954,22 +1000,32 @@ app.get('/api/prices', async (req, res) => {
 // Update the cabinet prices
 app.put('/api/prices/cabinets', async (req, res) => {
   try {
-    const db = await getDb();
     const prices = req.body;
-
     console.log('Updating cabinet prices:', prices);
 
-    // Update each cabinet price
-    for (const [cabinetType, price] of Object.entries(prices)) {
-      await db.run(
-        `UPDATE cabinet_prices 
-         SET base_price = ?, updated_at = CURRENT_TIMESTAMP 
-         WHERE cabinet_type = ?`,
-        [price, cabinetType]
-      );
-    }
-
-    await db.close();
+    await queueDbOperation(async () => {
+      const db = await getDb();
+      
+      // Use a transaction for consistency
+      await db.run('BEGIN TRANSACTION');
+      
+      try {
+        // Update each cabinet price
+        for (const [cabinetType, price] of Object.entries(prices)) {
+          await db.run(
+            `UPDATE cabinet_prices 
+             SET base_price = ?, updated_at = CURRENT_TIMESTAMP 
+             WHERE cabinet_type = ?`,
+            [price, cabinetType]
+          );
+        }
+        
+        await db.run('COMMIT');
+      } catch (error) {
+        await db.run('ROLLBACK');
+        throw error;
+      }
+    });
 
     res.json({ success: true, message: 'Cabinet prices updated successfully' });
 
@@ -1023,37 +1079,38 @@ app.put('/api/prices/materials', async (req, res) => {
     const materials = req.body;
     console.log('Saving materials:', materials);
 
-    const db = await getDb();
+    await queueDbOperation(async () => {
+      const db = await getDb();
 
-    // Start a transaction
-    await db.run('BEGIN TRANSACTION');
+      // Start a transaction
+      await db.run('BEGIN TRANSACTION');
 
-    try {
-      // Delete all existing materials
-      await db.run('DELETE FROM material_pricing');
+      try {
+        // Delete all existing materials
+        await db.run('DELETE FROM material_pricing');
 
-      // Insert all materials (including new ones)
-      const stmt = await db.prepare(
-        'INSERT INTO material_pricing (material_type, multiplier) VALUES (?, ?)'
-      );
+        // Insert all materials (including new ones)
+        const stmt = await db.prepare(
+          'INSERT INTO material_pricing (material_type, multiplier) VALUES (?, ?)'
+        );
 
-      for (const [material, multiplier] of Object.entries(materials)) {
-        await stmt.run(material, multiplier);
-        console.log(`Inserted material: ${material} with multiplier: ${multiplier}`);
+        for (const [material, multiplier] of Object.entries(materials)) {
+          await stmt.run(material, multiplier);
+          console.log(`Inserted material: ${material} with multiplier: ${multiplier}`);
+        }
+
+        await stmt.finalize();
+        await db.run('COMMIT');
+
+        console.log('Materials saved successfully');
+
+      } catch (error) {
+        await db.run('ROLLBACK');
+        throw error;
       }
+    });
 
-      await stmt.finalize();
-      await db.run('COMMIT');
-
-      console.log('Materials saved successfully');
-      res.json({ success: true, message: 'Materials saved successfully' });
-
-    } catch (error) {
-      await db.run('ROLLBACK');
-      throw error;
-    } finally {
-      await db.close();
-    }
+    res.json({ success: true, message: 'Materials saved successfully' });
 
   } catch (error) {
     console.error('Error saving materials:', error);
@@ -1064,22 +1121,32 @@ app.put('/api/prices/materials', async (req, res) => {
 // Update the color pricing
 app.put('/api/prices/colors', async (req, res) => {
   try {
-    const db = await getDb();
     const colors = req.body;
-
     console.log('Updating color pricing:', colors);
 
-    // Update each color price
-    for (const [colorCount, price] of Object.entries(colors)) {
-      await db.run(
-        `UPDATE color_pricing 
-         SET price_addition = ?, updated_at = CURRENT_TIMESTAMP 
-         WHERE color_count = ?`,
-        [price, colorCount]
-      );
-    }
-
-    await db.close();
+    await queueDbOperation(async () => {
+      const db = await getDb();
+      
+      // Use a transaction for consistency
+      await db.run('BEGIN TRANSACTION');
+      
+      try {
+        // Update each color price
+        for (const [colorCount, price] of Object.entries(colors)) {
+          await db.run(
+            `UPDATE color_pricing 
+             SET price_addition = ?, updated_at = CURRENT_TIMESTAMP 
+             WHERE color_count = ?`,
+            [price, colorCount]
+          );
+        }
+        
+        await db.run('COMMIT');
+      } catch (error) {
+        await db.run('ROLLBACK');
+        throw error;
+      }
+    });
 
     res.json({ success: true, message: 'Color pricing updated successfully' });
 
@@ -1167,31 +1234,41 @@ app.get('/api/prices/walls', async (req, res) => {
 
 app.put('/api/prices/walls', async (req, res) => {
   try {
-    const db = await getDb();
     const wallPricing = req.body;
-
     console.log('Updating wall pricing:', wallPricing);
 
-    // Ensure wall_pricing table exists
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS wall_pricing (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        modification_type TEXT UNIQUE NOT NULL,
-        price REAL NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Update each wall price (using REPLACE to handle both INSERT and UPDATE)
-    for (const [modificationType, price] of Object.entries(wallPricing)) {
+    await queueDbOperation(async () => {
+      const db = await getDb();
+      
+      // Ensure wall_pricing table exists
       await db.run(`
-        REPLACE INTO wall_pricing (modification_type, price, updated_at) 
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-      `, [modificationType, price]);
-    }
+        CREATE TABLE IF NOT EXISTS wall_pricing (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          modification_type TEXT UNIQUE NOT NULL,
+          price REAL NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-    await db.close();
+      // Use a transaction for better performance and consistency
+      await db.run('BEGIN TRANSACTION');
+      
+      try {
+        // Update each wall price (using REPLACE to handle both INSERT and UPDATE)
+        for (const [modificationType, price] of Object.entries(wallPricing)) {
+          await db.run(`
+            REPLACE INTO wall_pricing (modification_type, price, updated_at) 
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+          `, [modificationType, price]);
+        }
+        
+        await db.run('COMMIT');
+      } catch (error) {
+        await db.run('ROLLBACK');
+        throw error;
+      }
+    });
 
     console.log('Wall pricing updated successfully');
     res.json({ success: true });

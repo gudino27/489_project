@@ -395,7 +395,7 @@ const AdminPanel = () => {
              Price Management Tab
              loaded in from a different component
              */}
-            <PriceManagement token={token} API_BASE={API_BASE} />
+            <PriceManagement token={token} API_BASE={API_BASE} userRole={user?.role} />
           </div>
         )}
 

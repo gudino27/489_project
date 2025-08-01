@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';               // PDF generation library
 import MainNavBar from './Navigation';
+import WallView from './WallView';
+import WallManagement from './WallManagement';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const KitchenDesigner = () => {
@@ -198,11 +200,8 @@ const KitchenDesigner = () => {
     'dishwasher': 0,
     'microwave': 0,
     'wine-cooler': 0,
-    'ice-maker': 0,
     'range-hood': 0,
     'double-oven': 0,
-    'cooktop': 0,
-    'garbage-disposal': 0,
     
     // Bathroom Fixtures
     'toilet': 0,
@@ -229,6 +228,12 @@ const KitchenDesigner = () => {
     removeWall: 2000  // Cost to remove/modify a wall
   });
 
+  // Wall service availability (controlled by admin)
+  const [wallAvailability, setWallAvailability] = useState({
+    addWallEnabled: true,
+    removeWallEnabled: true
+  });
+
   const [pricesLoading, setPricesLoading] = useState(true);
 
   // -----------------------------
@@ -247,9 +252,13 @@ const KitchenDesigner = () => {
 
   const loadPrices = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/prices`);
-      if (response.ok) {
-        const data = await response.json();
+      const [pricesResponse, wallAvailResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/prices`),
+        fetch(`${API_BASE}/api/prices/wall-availability`)
+      ]);
+      
+      if (pricesResponse.ok) {
+        const data = await pricesResponse.json();
         setBasePrices(data.basePrices);
         setMaterialMultipliers(data.materialMultipliers);
         setColorPricing(data.colorPricing);
@@ -260,8 +269,16 @@ const KitchenDesigner = () => {
       } else {
         console.error('Failed to load prices, using defaults');
       }
+
+      if (wallAvailResponse.ok) {
+        const wallAvailData = await wallAvailResponse.json();
+        setWallAvailability(wallAvailData);
+        console.log('Loaded wall availability settings:', wallAvailData);
+      } else {
+        console.error('Failed to load wall availability, using defaults');
+      }
     } catch (error) {
-      console.error('Error loading prices:', error);
+      console.error('Error loading prices/settings:', error);
       // Keep default prices if API fails
     } finally {
       setPricesLoading(false);
@@ -595,16 +612,6 @@ const KitchenDesigner = () => {
       zIndex: 1,
       room: 'kitchen'
     },
-    'ice-maker': {
-      name: 'Ice Maker',
-      defaultWidth: 15,         // Compact appliance
-      defaultDepth: 24,
-      fixedHeight: 34,
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
     'range-hood': {
       name: 'Range Hood',
       defaultWidth: 36,         // Wider than stove
@@ -625,28 +632,6 @@ const KitchenDesigner = () => {
       category: 'appliance',
       zIndex: 1,
       room: 'kitchen'
-    },
-    'cooktop': {
-      name: 'Cooktop',
-      defaultWidth: 30,
-      defaultDepth: 21,         // Just the cooking surface
-      fixedHeight: 3,           // Very thin, sits in counter
-      color: '#808080',         // Darker for cooktop
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen',
-      isCooktop: true           // Special rendering flag
-    },
-    'garbage-disposal': {
-      name: 'Garbage Disposal',
-      defaultWidth: 12,         // Small under-sink unit
-      defaultDepth: 12,
-      fixedHeight: 15,
-      color: '#999999',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen',
-      isUnderSink: true         // Special positioning flag
     },
 
     // ========== BATHROOM FIXTURES ==========
@@ -694,9 +679,18 @@ const KitchenDesigner = () => {
 
     if (savedKitchen) {
       const state = JSON.parse(savedKitchen);
+      // Clean up invalid elements that might exist from previous versions
+      const validElements = state.elements ? state.elements.filter(element => {
+        const isValid = elementTypes[element.type];
+        if (!isValid) {
+          console.warn('Removing invalid element type from saved data:', element.type);
+        }
+        return isValid;
+      }) : [];
       // Migrate old data format - ensure wall data exists
       const migratedState = {
         ...state,
+        elements: validElements,
         customWalls: state.customWalls || [],
         allAvailableWalls: state.allAvailableWalls || [1, 2, 3, 4],
         originalWalls: state.originalWalls || [1, 2, 3, 4],
@@ -707,9 +701,18 @@ const KitchenDesigner = () => {
 
     if (savedBathroom) {
       const state = JSON.parse(savedBathroom);
+      // Clean up invalid elements that might exist from previous versions
+      const validElements = state.elements ? state.elements.filter(element => {
+        const isValid = elementTypes[element.type];
+        if (!isValid) {
+          console.warn('Removing invalid element type from saved data:', element.type);
+        }
+        return isValid;
+      }) : [];
       // Migrate old data format - ensure wall data exists
       const migratedState = {
         ...state,
+        elements: validElements,
         customWalls: state.customWalls || [],
         allAvailableWalls: state.allAvailableWalls || [1, 2, 3, 4],
         originalWalls: state.originalWalls || [1, 2, 3, 4],
@@ -1555,6 +1558,10 @@ const KitchenDesigner = () => {
   // Add new element to the room
   const addElement = (type) => {
     const elementSpec = elementTypes[type];
+    if (!elementSpec) {
+      console.warn('Cannot add element: Missing elementSpec for type:', type);
+      return;
+    }
     // Place new element in center of room
     const roomCenter = {
       x: (parseFloat(currentRoomData.dimensions.width) * 12 * scale) / 2,
@@ -1795,6 +1802,10 @@ const KitchenDesigner = () => {
     if (!element) return;
 
     const elementSpec = elementTypes[element.type];
+    if (!elementSpec) {
+      console.warn('Missing elementSpec for type:', element.type);
+      return;
+    }
     let updates = {};
 
     if (property === 'width') {
@@ -2473,222 +2484,6 @@ const KitchenDesigner = () => {
     }
   };
 
-  // -----------------------------
-  // Wall View Rendering Function
-  // Create elevation view showing cabinets mounted on specific wall
-  // -----------------------------
-  const renderWallView = (wallNum = null) => {
-    const wall = wallNum || selectedWall;
-    const wallElements = getElementsOnWall(wall).sort((a, b) => {
-      // Sort elements left-to-right or top-to-bottom based on wall orientation
-      if (wall === 1 || wall === 3) {
-        return a.x - b.x; // Horizontal walls: sort by x position
-      } else {
-        return a.y - b.y; // Vertical walls: sort by y position
-      }
-    });
-
-    // Calculate wall dimensions and scale
-    const wallWidth = wall === 1 || wall === 3
-      ? parseFloat(currentRoomData.dimensions.width) * 12
-      : parseFloat(currentRoomData.dimensions.height) * 12;
-    const wallHeight = parseFloat(currentRoomData.dimensions.wallHeight);
-    const viewScale = Math.min(800 / wallWidth, 400 / wallHeight);
-
-    return (
-      <svg
-        width={wallWidth * viewScale + 100}
-        height={wallHeight * viewScale + 60}
-        ref={wallNum ? null : wallViewRef}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchMove={handleMouseMove}
-        onTouchEnd={handleMouseUp}
-        style={{ 
-          cursor: isDraggingWallView ? 'ns-resize' : 'default',
-          touchAction: isTouch ? 'manipulation' : 'auto'
-        }}
-      >
-        {/* Wall background */}
-        <rect x="50" y="30" width={wallWidth * viewScale} height={wallHeight * viewScale} fill="#f5f5f5" stroke="#333" strokeWidth="2" />
-
-        {/* Wall title */}
-        <text x={50 + (wallWidth * viewScale) / 2} y="20" textAnchor="middle" fontSize="12" fontWeight="bold">
-          Wall {wall} - {(wallWidth / 12).toFixed(1)}'
-        </text>
-
-        {/* Height reference line */}
-        <line x1="40" y1="30" x2="40" y2={30 + wallHeight * viewScale} stroke="#333" strokeWidth="1" />
-        <text x="35" y={30 + (wallHeight * viewScale) / 2} textAnchor="middle" fontSize="10" transform={`rotate(-90, 35, ${30 + (wallHeight * viewScale) / 2})`}>
-          {wallHeight}"
-        </text>
-
-        {/* Render each element on this wall */}
-        {wallElements.map((element, index) => {
-          const elementSpec = elementTypes[element.type];
-          const x = wall === 1 || wall === 3 ? element.x / scale : element.y / scale;
-          const width = element.width;
-          const height = element.actualHeight || elementSpec.fixedHeight;
-
-          // Calculate Y position based on mount height or floor placement
-          const yPos = element.mountHeight
-            ? wallHeight - height - element.mountHeight
-            : wallHeight - height;
-
-          const isWallCabinet = element.type === 'wall' || element.type === 'medicine';
-          const isSelected = element.id === selectedElement;
-
-          return (
-            <g key={element.id}>
-              {/* Main element rectangle */}
-              <rect
-                x={50 + x * viewScale}
-                y={30 + yPos * viewScale}
-                width={width * viewScale}
-                height={height * viewScale}
-                fill={element.category === 'appliance' ? element.color : '#fff'}
-                stroke={isSelected ? '#3b82f6' : '#333'}
-                strokeWidth={isSelected ? '2' : '1'}
-                style={{ cursor: isWallCabinet ? 'ns-resize' : 'default' }}
-                onMouseDown={(e) => isWallCabinet ? handleWallViewMouseDown(e, element.id) : null}
-                onTouchStart={(e) => isWallCabinet ? handleWallViewMouseDown(e, element.id) : null}
-              />
-
-              {/* Special rendering for sink cabinets */}
-              {(element.type === 'sink-base' || element.type === 'vanity-sink') && (
-                <>
-                  <rect
-                    x={50 + x * viewScale + width * viewScale * 0.1}
-                    y={30 + yPos * viewScale + 3}
-                    width={width * viewScale * 0.8}
-                    height="10"
-                    fill="#4682B4"
-                    stroke="#333"
-                    strokeWidth="0.5"
-                  />
-                  <circle
-                    cx={50 + x * viewScale + width * viewScale * 0.5}
-                    cy={30 + yPos * viewScale + 8}
-                    r="2"
-                    fill="#333"
-                  />
-                </>
-              )}
-
-              {/* Cabinet door details */}
-              {(element.type === 'base' || element.type === 'wall' || element.type === 'tall' ||
-                element.type === 'vanity' || element.type === 'medicine' || element.type === 'linen') && (
-                  <>
-                    <line
-                      x1={50 + x * viewScale + (width * viewScale) / 2}
-                      y1={30 + yPos * viewScale}
-                      x2={50 + x * viewScale + (width * viewScale) / 2}
-                      y2={30 + (yPos + height) * viewScale}
-                      stroke="#333"
-                      strokeWidth="1"
-                    />
-                    <circle cx={50 + x * viewScale + (width * viewScale) * 0.4} cy={30 + (yPos + height / 2) * viewScale} r="2" fill="#333" />
-                    <circle cx={50 + x * viewScale + (width * viewScale) * 0.6} cy={30 + (yPos + height / 2) * viewScale} r="2" fill="#333" />
-                  </>
-                )}
-
-              {/* Appliance-specific rendering */}
-              {element.type === 'stove' && (
-                <>
-                  <rect x={50 + x * viewScale + 5} y={30 + yPos * viewScale + 5} width={width * viewScale - 10} height="20" fill="#333" />
-                  <circle cx={50 + x * viewScale + width * viewScale * 0.3} cy={30 + yPos * viewScale + 15} r="5" fill="#666" />
-                  <circle cx={50 + x * viewScale + width * viewScale * 0.7} cy={30 + yPos * viewScale + 15} r="5" fill="#666" />
-                  <text x={50 + x * viewScale + (width * viewScale) / 2} y={30 + (yPos + height) * viewScale - 10} textAnchor="middle" fontSize="8" fill="#333" fontWeight="bold">
-                    RANGE
-                  </text>
-                </>
-              )}
-
-              {element.type === 'refrigerator' && (
-                <>
-                  <line x1={50 + x * viewScale} y1={30 + (yPos + height * 0.6) * viewScale} x2={50 + (x + width) * viewScale} y2={30 + (yPos + height * 0.6) * viewScale} stroke="#666" strokeWidth="2" />
-                  <rect x={50 + x * viewScale + 5} y={30 + yPos * viewScale + 5} width="15" height="8" fill="#666" rx="1" />
-                  <text x={50 + x * viewScale + (width * viewScale) / 2} y={30 + (yPos + height / 2) * viewScale} textAnchor="middle" fontSize="10" fill="#333" fontWeight="bold">
-                    FRIDGE
-                  </text>
-                </>
-              )}
-
-              {element.type === 'dishwasher' && (
-                <>
-                  <rect x={50 + x * viewScale + 4} y={30 + yPos * viewScale + 4} width={width * viewScale - 8} height={height * viewScale - 8} fill="none" stroke="#666" strokeWidth="1" />
-                  <text x={50 + x * viewScale + (width * viewScale) / 2} y={30 + (yPos + height / 2) * viewScale} textAnchor="middle" fontSize="8" fill="#333" fontWeight="bold">
-                    DW
-                  </text>
-                </>
-              )}
-
-              {/* Dimension labels */}
-              {/* Display width measurement below each element for reference */}
-              <text x={50 + x * viewScale + (width * viewScale) / 2} y={30 + (yPos + height) * viewScale + 15} textAnchor="middle" fontSize="8" fill="#666">
-                {width}"
-              </text>
-
-              {/* Height labels for tall elements */}
-              {/* Show height measurements for wall-mounted and tall cabinets on the right side */}
-              {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen') && (
-                <text x={50 + (x + width) * viewScale + 5} y={30 + (yPos + height / 2) * viewScale} textAnchor="start" fontSize="8" fill="#666">
-                  {height}"
-                </text>
-              )}
-
-              {/* Mount height indicators for wall cabinets */}
-              {/* Visual indicators showing distance from floor to cabinet bottom for wall-mounted units */}
-              {element.mountHeight > 0 && (
-                <>
-                  {/* Dashed vertical line from floor to cabinet bottom */}
-                  <line
-                    x1={50 + x * viewScale - 10}
-                    y1={30 + wallHeight * viewScale}
-                    x2={50 + x * viewScale - 10}
-                    y2={30 + (wallHeight - element.mountHeight) * viewScale}
-                    stroke="#999"
-                    strokeWidth="0.5"
-                    strokeDasharray="2,2"
-                  />
-                  {/* Mount height measurement label */}
-                  <text
-                    x={50 + x * viewScale - 15}
-                    y={30 + (wallHeight - element.mountHeight / 2) * viewScale}
-                    textAnchor="end"
-                    fontSize="7"
-                    fill="#999"
-                  >
-                    {element.mountHeight.toFixed(1)}"
-                  </text>
-                </>
-              )}
-
-              {/* Element number badge */}
-              {/* Circular badge showing element number for reference in element list */}
-              <circle cx={50 + x * viewScale + (width * viewScale) / 2} cy={30 + yPos * viewScale - 10} r="8" fill="white" stroke="#333" strokeWidth="1" />
-              <text x={50 + x * viewScale + (width * viewScale) / 2} y={30 + yPos * viewScale - 7} textAnchor="middle" fontSize="8" fontWeight="bold">
-                {currentRoomData.elements.indexOf(element) + 1}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Floor line */}
-        <line x1="50" y1={30 + wallHeight * viewScale} x2={50 + wallWidth * viewScale} y2={30 + wallHeight * viewScale} stroke="#333" strokeWidth="2" />
-
-        {/* Standard counter height reference for kitchen */}
-        {/* Dashed reference line showing standard 34.5" counter height in kitchen designs */}
-        {activeRoom === 'kitchen' && (
-          <>
-            <line x1="50" y1={30 + (wallHeight - 34.5) * viewScale} x2={50 + wallWidth * viewScale} y2={30 + (wallHeight - 34.5) * viewScale} stroke="#999" strokeWidth="0.5" strokeDasharray="2,2" />
-            <text x="45" y={30 + (wallHeight - 34.5) * viewScale} textAnchor="end" fontSize="8" fill="#666">34.5"</text>
-          </>
-        )}
-      </svg>
-    );
-  };
 
   // -----------------------------
   // MAIN RENDER LOGIC
@@ -3092,414 +2887,31 @@ const KitchenDesigner = () => {
             </div>
 
             {/* Wall Management Section */}
-            <div className="mb-6 border-t pt-4">
-              <div className="mb-3">
-                <button 
-                  onClick={() => toggleSection('wallManagement')}
-                  className="flex items-center gap-2 text-sm font-semibold hover:text-blue-600 mb-2"
-                >
-                  <span className={`transform transition-transform ${collapsedSections.wallManagement ? 'rotate-0' : 'rotate-90'}`}>
-                    ▶
-                  </span>
-                  Wall Management
-                </button>
-                
-                {/* Wall Management Buttons */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={toggleWallDrawingMode}
-                    className={`text-sm px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors ${
-                      isDrawingWall 
-                        ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg' 
-                        : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
-                    }`}
-                    title={isDrawingWall ? "Exit wall drawing mode" : "Draw custom wall"}
-                  >
-                    {isDrawingWall ? '✏️ Exit Drawing Mode' : '✏️ Draw Wall'}
-                  </button>
-                  
-                  
-                </div>
-              </div>
-
-              {!collapsedSections.wallManagement && (
-                <>
-                  {isDrawingWall && (
-                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="text-sm font-medium text-orange-800 mb-2">✏️ Wall Drawing Mode Active</div>
-                  <div className="text-xs text-orange-700">
-                    {wallDrawStart ? 
-                      <><strong>Step 2:</strong> Click to place the end point of your wall. Red dashed line shows preview.</> :
-                      <><strong>Step 1:</strong> Click on the floor plan to place the start point of your wall.</>
-                    }
-                    <br /> Custom walls are charged at <strong>${wallPricing.addWall}</strong> each.
-                  </div>
-                  <button
-                    onClick={() => {
-                      setIsDrawingWall(false);
-                      setWallDrawStart(null);
-                      setWallDrawPreview(null);
-                    }}
-                    className="mt-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                  >
-                    Cancel Drawing
-                  </button>
-                </div>
-              )}
-              
-              {/* Wall Status Grid */}
-              <div className="space-y-2 mb-4">
-                {allAvailableWalls.filter(wallNum => {
-                  // Show original walls (1-4) always
-                  if (wallNum <= 4) return true;
-                  // For custom walls, only show if they exist in customWalls array AND are either present or removed but were originally added
-                  const customWall = getCustomWallByNumber(wallNum);
-                  if (customWall) return true;
-                  // Don't show custom wall numbers that no longer have corresponding wall objects
-                  return false;
-                }).map(wallNum => {
-                  const isPresent = (currentRoomData.walls || [1, 2, 3, 4]).includes(wallNum);
-                  const isRemoved = (currentRoomData.removedWalls || []).includes(wallNum);
-                  const customWall = getCustomWallByNumber(wallNum);
-                  const isCustom = !!customWall;
-                  const existedPrior = customWall?.existedPrior || false;
-                  
-                  return (
-                    <div key={wallNum} className="p-2 bg-gray-50 rounded border">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">
-                          {getWallName(wallNum)}
-                          {isCustom && <span className="text-purple-600"> (Custom)</span>}
-                        </span>
-                        <span className={`text-xs px-1 rounded ${isPresent ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {isPresent ? 'Present' : 'Removed'}
-                        </span>
-                      </div>
-                      
-                      <div className="flex gap-1">
-                        {!isPresent && (
-                          <div className="flex gap-1 w-full">
-                            <button
-                              onClick={() => addWall(wallNum)}
-                              className="flex-1 text-xs py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600"
-                              title={`Add ${getWallName(wallNum)} (+$${wallPricing.addWall})`}
-                            >
-                              Add
-                            </button>
-                            {/* For custom walls that are removed, also show delete option */}
-                            {isCustom && (
-                              <button
-                                onClick={() => {
-                                  if (window.confirm(`Permanently delete ${getWallName(wallNum)}? This cannot be undone.`)) {
-                                    const updatedCustomWalls = customWalls.filter(w => w.wallNumber !== wallNum);
-                                    const updatedCurrentWalls = currentRoomData.walls.filter(w => w !== wallNum);
-                                    const updatedAvailableWalls = allAvailableWalls.filter(w => w !== wallNum);
-                                    const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
-                                    const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
-                                    
-                                    console.log('Deleting removed custom wall from status grid:', wallNum);
-                                    
-                                    setCurrentRoomData({
-                                      ...currentRoomData,
-                                      customWalls: updatedCustomWalls,
-                                      walls: updatedCurrentWalls,
-                                      allAvailableWalls: updatedAvailableWalls,
-                                      originalWalls: updatedOriginalWalls,
-                                      removedWalls: updatedRemovedWalls
-                                    });
-                                  }
-                                }}
-                                className="text-xs py-1 px-2 rounded bg-red-600 text-white hover:bg-red-700"
-                                title={`Permanently delete ${getWallName(wallNum)}`}
-                              >
-                                🗑️
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {isPresent && (
-                          <>
-                            {/* For custom walls, show Delete button instead of Remove */}
-                            {isCustom ? (
-                              <button
-                                onClick={() => {
-                                  if (window.confirm(`Permanently delete ${getWallName(wallNum)}? This cannot be undone.`)) {
-                                    const updatedCustomWalls = customWalls.filter(w => w.wallNumber !== wallNum);
-                                    const updatedCurrentWalls = currentRoomData.walls.filter(w => w !== wallNum);
-                                    const updatedAvailableWalls = allAvailableWalls.filter(w => w !== wallNum);
-                                    const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
-                                    const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
-                                    
-                                    console.log('Deleting custom wall from status grid:', wallNum);
-                                    
-                                    setCurrentRoomData({
-                                      ...currentRoomData,
-                                      customWalls: updatedCustomWalls,
-                                      walls: updatedCurrentWalls,
-                                      allAvailableWalls: updatedAvailableWalls,
-                                      originalWalls: updatedOriginalWalls,
-                                      removedWalls: updatedRemovedWalls
-                                    });
-                                  }
-                                }}
-                                className="flex-1 text-xs py-1 px-2 rounded bg-red-600 text-white hover:bg-red-700"
-                                title={`Permanently delete ${getWallName(wallNum)}`}
-                              >
-                                Delete
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => removeWall(wallNum)}
-                                disabled={wallRemovalDisabled}
-                                className={`flex-1 text-xs py-1 px-2 rounded ${
-                                  wallRemovalDisabled 
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                                    : 'bg-red-500 text-white hover:bg-red-600'
-                                }`}
-                                title={wallRemovalDisabled ? "Wall removal temporarily disabled" : `Remove ${getWallName(wallNum)} (+$${wallPricing.removeWall})`}
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      
-                      {/* Custom wall options */}
-                      {isCustom && isPresent && (
-                        <div className="mt-2 space-y-1">
-                          <button
-                            onClick={() => {
-                              if (existedPrior) {
-                                // Remove from existed prior
-                                const updatedCustomWalls = customWalls.map(wall => 
-                                  wall.wallNumber === wallNum 
-                                    ? { ...wall, existedPrior: false }
-                                    : wall
-                                );
-                                const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
-                                setCurrentRoomData({
-                                  ...currentRoomData,
-                                  customWalls: updatedCustomWalls,
-                                  originalWalls: updatedOriginalWalls
-                                });
-                              } else {
-                                markWallAsExistedPrior(wallNum);
-                              }
-                            }}
-                            className={`text-xs py-1 px-2 rounded w-full ${
-                              existedPrior 
-                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
-                                : 'bg-yellow-500 text-white hover:bg-yellow-600'
-                            }`}
-                            title={existedPrior ? "Click to unmark as existed prior" : "Mark this wall as existed before modifications"}
-                          >
-                            {existedPrior ? '✓ Existed Prior (click to unmark)' : 'Mark as Existed Prior'}
-                          </button>
-                          
-                          <div className="space-y-1">
-                            <div className="text-xs text-gray-600">Rotation: {getCurrentWallAngle(wallNum).toFixed(1)}°</div>
-                            <div className="flex gap-1">
-                              <input
-                                type="number"
-                                min="-180"
-                                max="180"
-                                step="1"
-                                placeholder="Angle"
-                                className="flex-1 text-xs p-1 border rounded"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const angle = parseFloat(e.target.value);
-                                    if (!isNaN(angle)) {
-                                      rotateCustomWall(wallNum, angle);
-                                      e.target.value = '';
-                                    }
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={(e) => {
-                                  const input = e.target.parentElement.querySelector('input');
-                                  const angle = parseFloat(input.value);
-                                  if (!isNaN(angle)) {
-                                    rotateCustomWall(wallNum, angle);
-                                    input.value = '';
-                                  }
-                                }}
-                                className="text-xs py-1 px-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-                                title="Apply rotation"
-                              >
-                                Set
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Door Management */}
-                      {(isPresent || !isCustom) && (
-                        <div className="mt-1 border-t pt-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-blue-600">
-                              Doors ({getDoorsOnWall(wallNum).length})
-                            </span>
-                            <select
-                              onChange={(e) => {
-                                const doorType = getDoorTypes().find(t => t.value === e.target.value);
-                                if (doorType) {
-                                  addDoor(wallNum, 50, doorType.width, doorType.value);
-                                }
-                                e.target.value = ''; // Reset select
-                              }}
-                              className="text-xs px-1 py-0 border rounded"
-                              defaultValue=""
-                            >
-                              <option value="" disabled>+ Add</option>
-                              {getDoorTypes().map(doorType => (
-                                <option key={doorType.value} value={doorType.value}>
-                                  {doorType.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          {/* Show existing doors on this wall */}
-                          {getDoorsOnWall(wallNum).map(door => {
-                            const doorType = getDoorTypes().find(t => t.value === door.type);
-                            return (
-                              <div key={door.id} className="bg-blue-50 border rounded mt-1 text-xs">
-                                {/* Header with name and remove button */}
-                                <div className="flex items-center justify-between p-1 border-b">
-                                  <span className="font-medium text-blue-800 truncate text-xs">
-                                    {(doorType?.label || door.type).replace(' Door', '')} ({door.width}")
-                                  </span>
-                                  <button
-                                    onClick={() => removeDoor(door.id)}
-                                    className="text-red-600 hover:text-red-800 text-sm leading-none"
-                                    title="Remove door"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                                
-                                {/* Compact controls in 2 rows */}
-                                <div className="p-1 space-y-1">
-                                  {/* Position slider */}
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-gray-600 text-xs w-8">Pos:</span>
-                                    <input
-                                      type="range"
-                                      min="10"
-                                      max="90"
-                                      value={door.position}
-                                      onChange={(e) => updateDoor(door.id, { position: parseInt(e.target.value) })}
-                                      className="flex-1 h-1 bg-gray-200 rounded appearance-none cursor-pointer"
-                                    />
-                                    <span className="text-gray-600 text-xs w-8">{door.position}%</span>
-                                  </div>
-                                  
-                                  {/* Width and Type in one row */}
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      type="number"
-                                      min="18"
-                                      max="96"
-                                      step="2"
-                                      value={door.width}
-                                      onChange={(e) => {
-                                        const newWidth = parseInt(e.target.value) || door.width;
-                                        // Calculate max width based on wall length
-                                        let wallLengthInches;
-                                        if (wallNum <= 4) {
-                                          const isHorizontal = wallNum === 1 || wallNum === 3;
-                                          wallLengthInches = isHorizontal 
-                                            ? parseFloat(currentRoomData.dimensions.width) * 12 
-                                            : parseFloat(currentRoomData.dimensions.height) * 12;
-                                        } else {
-                                          const customWall = getCustomWallByNumber(wallNum);
-                                          if (customWall) {
-                                            const wallLengthPixels = Math.sqrt(Math.pow(customWall.x2 - customWall.x1, 2) + Math.pow(customWall.y2 - customWall.y1, 2));
-                                            wallLengthInches = wallLengthPixels / scale;
-                                          } else {
-                                            wallLengthInches = 96;
-                                          }
-                                        }
-                                        
-                                        // Limit door width to 80% of wall length
-                                        const maxDoorWidth = Math.floor(wallLengthInches * 0.8);
-                                        const finalWidth = Math.min(newWidth, maxDoorWidth);
-                                        
-                                        if (newWidth > maxDoorWidth) {
-                                          alert(`Door too wide! Max width for this wall: ${maxDoorWidth}"`);
-                                        }
-                                        
-                                        updateDoor(door.id, { width: finalWidth });
-                                      }}
-                                      className="w-12 px-1 py-0 border rounded text-center text-xs"
-                                    />
-                                    <span className="text-gray-600 text-xs">in</span>
-                                    <select
-                                      value={door.type}
-                                      onChange={(e) => updateDoor(door.id, { type: e.target.value })}
-                                      className="flex-1 px-1 py-0 border rounded text-xs"
-                                    >
-                                      {getDoorTypes().map(doorType => (
-                                        <option key={doorType.value} value={doorType.value}>
-                                          {doorType.label.replace(' Door', '')}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          
-                          {getDoorsOnWall(wallNum).length === 0 && (
-                            <div className="text-xs text-gray-500">No doors</div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Show pricing impact */}
-                      {isRemoved && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          Cost: +${wallPricing.removeWall}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Wall modification summary */}
-              {(((currentRoomData.removedWalls || []).length > 0) || customWalls.length > 0) && (
-                <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2">
-                  <div className="font-medium text-yellow-800">Wall Modifications:</div>
-                  <div className="text-yellow-700">
-                    {/* Only show chargeable removed walls */}
-                    {(() => {
-                      const removedWalls = currentRoomData.removedWalls || [];
-                      const chargeableRemoved = removedWalls.filter(wall => originalWalls.includes(wall));
-                      const customAdded = (currentRoomData.walls || []).filter(wall => !originalWalls.includes(wall));
-                      
-                      return (
-                        <>
-                          {chargeableRemoved.length > 0 && (
-                            <div>{chargeableRemoved.length} original wall(s) removed: +${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}</div>
-                          )}
-                          {customAdded.length > 0 && (
-                            <div>{customAdded.length} custom wall(s) added: +${(customAdded.length * wallPricing.addWall).toFixed(2)}</div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-                </>
-              )}
-            </div>
+            <WallManagement 
+              wallAvailability={wallAvailability}
+              collapsedSections={collapsedSections}
+              toggleSection={toggleSection}
+              isDrawingWall={isDrawingWall}
+              toggleWallDrawingMode={toggleWallDrawingMode}
+              allAvailableWalls={allAvailableWalls}
+              currentRoomData={currentRoomData}
+              getWallName={getWallName}
+              wallPricing={wallPricing}
+              addWall={addWall}
+              removeWall={removeWall}
+              customWalls={customWalls}
+              originalWalls={originalWalls}
+              setCurrentRoomData={setCurrentRoomData}
+              wallRemovalDisabled={wallRemovalDisabled}
+              getCustomWallByNumber={getCustomWallByNumber}
+              markWallAsExistedPrior={markWallAsExistedPrior}
+              getCurrentWallAngle={getCurrentWallAngle}
+              rotateCustomWall={rotateCustomWall}
+              wallDrawStart={wallDrawStart}
+              setIsDrawingWall={setIsDrawingWall}
+              setWallDrawStart={setWallDrawStart}
+              setWallDrawPreview={setWallDrawPreview}
+            />
 
             {viewMode === 'wall' && (
               <div className="mb-6">
@@ -3511,8 +2923,13 @@ const KitchenDesigner = () => {
                   const element = currentRoomData.elements.find(el => el.id === selectedElement);
                   const elementSpec = elementTypes[element?.type];
 
+                  // Debug logging for missing element types
+                  if (element && !elementSpec) {
+                    console.warn('Missing elementSpec for type:', element.type, 'Element:', element);
+                  }
+
                   // Only show controls if an element is selected
-                  if (!element) return null;
+                  if (!element || !elementSpec) return null;
 
                   return (
                     <div className="space-y-4">
@@ -3673,8 +3090,13 @@ const KitchenDesigner = () => {
                   const element = currentRoomData.elements.find(el => el.id === selectedElement);
                   const elementSpec = elementTypes[element?.type];
 
+                  // Debug logging for missing element types
+                  if (element && !elementSpec) {
+                    console.warn('Missing elementSpec for type:', element.type, 'Element:', element);
+                  }
+
                   // Return null if no element selected
-                  if (!element) return null;
+                  if (!element || !elementSpec) return null;
 
                   return (
                     <div className="space-y-4">
@@ -3726,9 +3148,10 @@ const KitchenDesigner = () => {
                       )}
 
                       {/* Depth - for specific cabinet types */}
-                      {/* Show depth controls for base cabinets, tall cabinets, and vanities */}
+                      {/* Show depth controls for base cabinets, tall cabinets, vanities, and islands */}
                       {(element.type === 'base' || element.type === 'tall' || element.type === 'sink-base' ||
-                        element.type === 'vanity' || element.type === 'linen' || element.type === 'vanity-sink') && (
+                        element.type === 'vanity' || element.type === 'linen' || element.type === 'vanity-sink' ||
+                        element.type === 'island-base') && (
                           <div>
                             <label className="block text-sm text-gray-600 mb-1">Depth (inches)</label>
                             <input
@@ -4494,6 +3917,12 @@ const KitchenDesigner = () => {
                           const isSelected = element.id === selectedElement;
                           const elementSpec = elementTypes[element.type];
 
+                          // Skip rendering if elementSpec is missing
+                          if (!elementSpec) {
+                            console.warn('Skipping rendering for invalid element type:', element.type);
+                            return null;
+                          }
+
                           {/* Special Rendering for Corner Cabinets */ }
                           {/* Corner cabinets have unique L-shaped rendering */ }
                           if (element.type === 'corner') {
@@ -4899,7 +4328,20 @@ const KitchenDesigner = () => {
                 /* Alternative view showing cabinet placement on selected wall */
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Wall {selectedWall} Elevation View</h3>
-                  {renderWallView()}
+                  <WallView 
+                    currentRoomData={currentRoomData}
+                    selectedWall={selectedWall}
+                    selectedElement={selectedElement}
+                    elementTypes={elementTypes}
+                    scale={scale}
+                    wallViewRef={wallViewRef}
+                    isDraggingWallView={isDraggingWallView}
+                    isTouch={isTouch}
+                    getElementsOnWall={getElementsOnWall}
+                    handleMouseMove={handleMouseMove}
+                    handleMouseUp={handleMouseUp}
+                    handleWallViewMouseDown={handleWallViewMouseDown}
+                  />
                 </div>
               )}
 
@@ -4914,7 +4356,7 @@ const KitchenDesigner = () => {
                         {/* Element number */}
                         <span className="font-bold">#{index + 1}:</span>
                         {/* Element name */}
-                        <span>{elementTypes[element.type].name}</span>
+                        <span>{elementTypes[element.type]?.name || element.type}</span>
                         {/* Element dimensions */}
                         <span className="text-gray-500">
                           {element.width}" × {element.depth}"d

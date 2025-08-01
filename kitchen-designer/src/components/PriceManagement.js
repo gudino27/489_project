@@ -7,10 +7,14 @@ import {
   Plus,
   Edit2,
   Trash2,
-  X
+  X,
+  Home,
+  Bath
 } from 'lucide-react';
 
-const PriceManagement = ({ token, API_BASE }) => {
+const PriceManagement = ({ token, API_BASE, userRole }) => {
+  // Tab state for kitchen/bathroom pricing
+  const [activeTab, setActiveTab] = useState('kitchen');
   // State for all pricing data
   const [basePrices, setBasePrices] = useState({
     // Kitchen Cabinets
@@ -254,6 +258,32 @@ const PriceManagement = ({ token, API_BASE }) => {
     }
   };
 
+  // Helper functions to categorize cabinets
+  const getKitchenCabinets = () => {
+    const kitchenTypes = [
+      'base', 'sink-base', 'wall', 'tall', 'corner', 'drawer-base', 'double-drawer-base',
+      'glass-wall', 'open-shelf', 'island-base', 'peninsula-base', 'pantry', 'corner-wall',
+      'lazy-susan', 'blind-corner', 'appliance-garage', 'wine-rack', 'spice-rack',
+      'tray-divider', 'pull-out-drawer', 'soft-close-drawer', 'under-cabinet-lighting',
+      'refrigerator', 'stove', 'dishwasher', 'microwave', 'wine-cooler',
+      'range-hood', 'double-oven'
+    ];
+    
+    return Object.entries(basePrices).filter(([type]) => kitchenTypes.includes(type));
+  };
+
+  const getBathroomCabinets = () => {
+    const bathroomTypes = [
+      'vanity', 'vanity-sink', 'double-vanity', 'floating-vanity', 'corner-vanity',
+      'vanity-tower', 'medicine', 'medicine-mirror', 'linen', 'linen-tower',
+      'wall-hung-vanity', 'vessel-sink-vanity', 'undermount-sink-vanity',
+      'powder-room-vanity', 'master-bath-vanity', 'kids-bathroom-vanity',
+      'toilet', 'bathtub', 'shower'
+    ];
+    
+    return Object.entries(basePrices).filter(([type]) => bathroomTypes.includes(type));
+  };
+
   if (loadingPrices) {
     return (
       <div className="p-6">
@@ -289,51 +319,131 @@ const PriceManagement = ({ token, API_BASE }) => {
         </div>
       )}
 
-      {/* Cabinet Base Prices */}
+      {/* Cabinet & Appliance/Fixture Prices with Tabs */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <DollarSign className="text-blue-600" size={20} />
-          Cabinet Base Prices
+          Cabinet & Fixture Pricing
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(basePrices).map(([type, price]) => (
-            <div key={type} className="flex items-center gap-3">
-              <label className="flex-1 text-sm font-medium capitalize">
-                {type.replace('-', ' ')}:
-              </label>
-              <div className="flex items-center">
-                <span className="text-gray-500 mr-1">$</span>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => {
-                    const newValue = parseFloat(e.target.value);
-
-                    // Check if the value is negative
-                    if (newValue < 0) {
-                      alert('Price cannot be negative. Please enter a positive value.');
-                      return; // Don't update the state
-                    }
-
-                    setBasePrices({ ...basePrices, [type]: newValue || 0 });
-                    setHasUnsavedChanges(true);
-                  }}
-                  onBlur={(e) => {
-                    // Additional validation on blur (when user leaves the field)
-                    const value = parseFloat(e.target.value);
-                    if (value < 0) {
-                      alert('Price cannot be negative. Resetting to 0.');
-                      setBasePrices({ ...basePrices, [type]: 0 });
-                    }
-                  }}
-                  className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
-                  min="0"
-                  step="10"
-                />
-              </div>
-            </div>
-          ))}
+        
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('kitchen')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              activeTab === 'kitchen'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Home size={18} />
+            Kitchen
+          </button>
+          <button
+            onClick={() => setActiveTab('bathroom')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              activeTab === 'bathroom'
+                ? 'bg-white text-purple-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Bath size={18} />
+            Bathroom
+          </button>
         </div>
+
+        {/* Tab Content */}
+        {activeTab === 'kitchen' && (
+          <div>
+            <h4 className="text-md font-medium mb-4 text-blue-700 flex items-center gap-2">
+              <Home className="text-blue-600" size={16} />
+              Kitchen Cabinets & Appliances
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {getKitchenCabinets().map(([type, price]) => (
+                <div key={type} className="flex items-center gap-3">
+                  <label className="flex-1 text-sm font-medium capitalize">
+                    {type.replace('-', ' ')}:
+                  </label>
+                  <div className="flex items-center">
+                    <span className="text-gray-500 mr-1">$</span>
+                    <input
+                      type="number"
+                      value={price}
+                      onChange={(e) => {
+                        const newValue = parseFloat(e.target.value);
+
+                        if (newValue < 0) {
+                          alert('Price cannot be negative. Please enter a positive value.');
+                          return;
+                        }
+
+                        setBasePrices({ ...basePrices, [type]: newValue || 0 });
+                        setHasUnsavedChanges(true);
+                      }}
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (value < 0) {
+                          alert('Price cannot be negative. Resetting to 0.');
+                          setBasePrices({ ...basePrices, [type]: 0 });
+                        }
+                      }}
+                      className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
+                      min="0"
+                      step="10"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'bathroom' && (
+          <div>
+            <h4 className="text-md font-medium mb-4 text-purple-700 flex items-center gap-2">
+              <Bath className="text-purple-600" size={16} />
+              Bathroom Cabinets & Fixtures
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {getBathroomCabinets().map(([type, price]) => (
+                <div key={type} className="flex items-center gap-3">
+                  <label className="flex-1 text-sm font-medium capitalize">
+                    {type.replace('-', ' ')}:
+                  </label>
+                  <div className="flex items-center">
+                    <span className="text-gray-500 mr-1">$</span>
+                    <input
+                      type="number"
+                      value={price}
+                      onChange={(e) => {
+                        const newValue = parseFloat(e.target.value);
+
+                        if (newValue < 0) {
+                          alert('Price cannot be negative. Please enter a positive value.');
+                          return;
+                        }
+
+                        setBasePrices({ ...basePrices, [type]: newValue || 0 });
+                        setHasUnsavedChanges(true);
+                      }}
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (value < 0) {
+                          alert('Price cannot be negative. Resetting to 0.');
+                          setBasePrices({ ...basePrices, [type]: 0 });
+                        }
+                      }}
+                      className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
+                      min="0"
+                      step="10"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Material Multipliers */}
@@ -569,7 +679,8 @@ const PriceManagement = ({ token, API_BASE }) => {
         </div>
       </div>
 
-      {/* Wall Service Availability Controls */}
+      {/* Wall Service Availability Controls - Super Admin Only */}
+      {userRole === 'super_admin' && (
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border-l-4 border-blue-500">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-700">
           <div className="w-5 h-5 bg-blue-500 rounded" />
@@ -645,6 +756,7 @@ const PriceManagement = ({ token, API_BASE }) => {
           These settings affect all customers immediately. Use when maintenance or high demand requires limiting services.
         </div>
       </div>
+      )}
 
       {/* Save Button */}
       <div className="flex justify-end">
