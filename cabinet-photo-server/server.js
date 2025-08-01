@@ -427,7 +427,7 @@ app.get('/api/storage-info', async (req, res) => {
       GROUP BY category
     `);
 
-    await db.close();
+    //await db.close();
 
     const categoryBreakdown = {};
     categoryStats.forEach(stat => {
@@ -603,7 +603,7 @@ app.delete('/api/users/:id', authenticateUser, requireRole('super_admin'), async
     // delete the user
     const db = await getDb();
     const result = await db.run('DELETE FROM users WHERE id = ?', userId);
-    await db.close();
+    //await db.close();
 
     if (result.changes > 0) {
       res.json({ message: 'User deleted successfully' });
@@ -976,7 +976,7 @@ app.get('/api/prices', async (req, res) => {
       console.log('Wall pricing table does not exist yet, using defaults');
     }
 
-    await db.close();
+    //await db.close();
 
     console.log('Loaded prices with materials:', {
       basePrices,
@@ -1045,7 +1045,7 @@ app.get('/api/prices/cabinets', async (req, res) => {
       cabinets[row.cabinet_type] = parseFloat(row.base_price);
     });
     
-    await db.close();
+    //await db.close();
     
     console.log('Loaded cabinet prices:', cabinets);
     res.json(cabinets);
@@ -1065,7 +1065,7 @@ app.get('/api/prices/materials', async (req, res) => {
       materialObject[m.material_type] = parseFloat(m.multiplier);
     });
 
-    await db.close();
+    //await db.close();
     console.log('Loaded materials:', materialObject);
     res.json(materialObject);
   } catch (error) {
@@ -1166,7 +1166,7 @@ app.get('/api/prices/colors', async (req, res) => {
       colors[key] = parseFloat(row.price_addition);
     });
     
-    await db.close();
+    //await db.close();
     
     console.log('Loaded color pricing:', colors);
     res.json(colors);
@@ -1192,7 +1192,7 @@ app.get('/api/prices/history', async (req, res) => {
       LIMIT 50
     `);
 
-    await db.close();
+    //await db.close();
 
     res.json(history);
 
@@ -1221,7 +1221,7 @@ app.get('/api/prices/walls', async (req, res) => {
       walls.removeWall = 2000;
     }
     
-    await db.close();
+    //await db.close();
     
     console.log('Loaded wall pricing:', walls);
     res.json(walls);
@@ -1298,7 +1298,7 @@ app.get('/api/prices/wall-availability', async (req, res) => {
       availability.removeWallEnabled = true;
     }
     
-    await db.close();
+    //await db.close();
     res.json(availability);
   } catch (error) {
     console.error('Error fetching wall availability:', error);
@@ -1336,7 +1336,7 @@ app.put('/api/prices/wall-availability', async (req, res) => {
       `, [serviceType, enabled ? 1 : 0]);
     }
     
-    await db.close();
+    //await db.close();
     console.log('Wall availability updated successfully');
     res.json({ success: true });
   } catch (error) {
@@ -1504,7 +1504,7 @@ app.delete('/api/designs/:id', async (req, res) => {
 
     const db = await getDb();
     const result = await db.run('DELETE FROM designs WHERE id = ?', designId);
-    await db.close();
+    //await db.close();
 
     if (result.changes > 0) {
       console.log(`Design #${designId} deleted`);
@@ -1608,7 +1608,7 @@ app.get('/api/designs/:id/debug', async (req, res) => {
       res.status(404).json({ error: 'Design not found' });
     }
 
-    await db.close();
+    //await db.close();
   } catch (error) {
     console.error('Debug error:', error);
     res.status(500).json({ error: error.message });
@@ -2281,7 +2281,7 @@ app.get('/api/admin/testimonial-analytics', authenticateUser, async (req, res) =
       WHERE created_at >= datetime('now', '-${dateRange} days')
     `);
 
-    await db.close();
+    //await db.close();
 
     res.json({
       submissions: submissions || { total_submissions: 0, avg_rating: 0, submissions_with_photos: 0 },
