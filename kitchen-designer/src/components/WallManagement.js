@@ -6,6 +6,10 @@ const WallManagement = ({
   toggleSection,
   isDrawingWall,
   toggleWallDrawingMode,
+  isDoorMode,
+  toggleDoorMode,
+  doorModeType,
+  setDoorModeType,
   allAvailableWalls,
   currentRoomData,
   getWallName,
@@ -23,7 +27,12 @@ const WallManagement = ({
   wallDrawStart,
   setIsDrawingWall,
   setWallDrawStart,
-  setWallDrawPreview
+  setWallDrawPreview,
+  addDoor,
+  removeDoor,
+  updateDoor,
+  getDoorsOnWall,
+  getDoorTypes
 }) => {
   if (!wallAvailability.addWallEnabled && !wallAvailability.removeWallEnabled) {
     return null;
@@ -212,6 +221,146 @@ const WallManagement = ({
                     )}
                   </div>
                   
+                  {/* Door Controls for Present Walls */}
+                  {isPresent && (
+                    <div className="mt-2 space-y-2">
+                      {/* Existing doors on this wall */}
+                      {getDoorsOnWall(wallNum).map(door => (
+                        <div key={door.id} className="p-2 bg-blue-50 rounded border border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-blue-800">
+                              {door.type.charAt(0).toUpperCase() + door.type.slice(1)} Door ({door.width}")
+                            </span>
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Remove this door?')) {
+                                  removeDoor(door.id);
+                                }
+                              }}
+                              className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                              title="Remove door"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          
+                          {/* Position slider */}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-blue-700 w-12">Pos:</span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={door.position}
+                                onChange={(e) => updateDoor(door.id, { position: parseFloat(e.target.value) })}
+                                className="flex-1 h-1 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                                style={{
+                                  background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${door.position}%, #E5E7EB ${door.position}%, #E5E7EB 100%)`
+                                }}
+                              />
+                              <span className="text-xs text-blue-700 w-8">{Math.round(door.position)}%</span>
+                            </div>
+                            
+                            {/* Width input */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-blue-700 w-12">Width:</span>
+                              <input
+                                type="number"
+                                min="18"
+                                max="48"
+                                value={door.width}
+                                onChange={(e) => {
+                                  const newWidth = parseFloat(e.target.value);
+                                  if (newWidth >= 18 && newWidth <= 48) {
+                                    updateDoor(door.id, { width: newWidth });
+                                  }
+                                }}
+                                className="flex-1 px-2 py-1 text-xs border border-blue-300 rounded focus:border-blue-500 focus:outline-none"
+                                placeholder="Width"
+                              />
+                              <span className="text-xs text-blue-700">inches</span>
+                            </div>
+                            
+                            {/* Door type dropdown */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-blue-700 w-12">Type:</span>
+                              <select
+                                value={door.type}
+                                onChange={(e) => updateDoor(door.id, { type: e.target.value })}
+                                className="flex-1 px-2 py-1 text-xs border border-blue-300 rounded focus:border-blue-500 focus:outline-none"
+                              >
+                                <option value="room">Room Door</option>
+                                <option value="standard">Standard Door</option>
+                                <option value="pantry">Pantry Door</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Add door controls */}
+                      <div className="p-2 bg-green-50 rounded border border-green-200">
+                        <div className="text-xs font-medium text-green-800 mb-2">Add New Door</div>
+                        
+                        <div className="space-y-2">
+                          {/* Door type dropdown */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-green-700 w-12">Type:</span>
+                            <select
+                              id={`door-type-${wallNum}`}
+                              defaultValue="room"
+                              className="flex-1 px-2 py-1 text-xs border border-green-300 rounded focus:border-green-500 focus:outline-none"
+                            >
+                              <option value="room">Room Door</option>
+                              <option value="standard">Standard Door</option>
+                              <option value="pantry">Pantry Door</option>
+                            </select>
+                          </div>
+                          
+                          {/* Door width input */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-green-700 w-12">Width:</span>
+                            <input
+                              type="number"
+                              id={`door-width-${wallNum}`}
+                              min="18"
+                              max="48"
+                              defaultValue="36"
+                              className="flex-1 px-2 py-1 text-xs border border-green-300 rounded focus:border-green-500 focus:outline-none"
+                              placeholder="Width"
+                            />
+                            <span className="text-xs text-green-700">inches</span>
+                          </div>
+                          
+                          {/* Add button */}
+                          <button
+                            onClick={() => {
+                              const typeSelect = document.getElementById(`door-type-${wallNum}`);
+                              const widthInput = document.getElementById(`door-width-${wallNum}`);
+                              const doorType = typeSelect.value;
+                              const width = parseFloat(widthInput.value) || 36;
+                              const position = 50; // Default center position
+                              
+                              if (width >= 18 && width <= 48) {
+                                addDoor(wallNum, position, width, doorType);
+                                // Reset form
+                                typeSelect.value = 'room';
+                                widthInput.value = '36';
+                              } else {
+                                alert('Door width must be between 18 and 48 inches');
+                              }
+                            }}
+                            className="w-full text-xs py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600"
+                            title={`Add door to ${getWallName(wallNum)}`}
+                          >
+                            🚪 Add Door
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Custom wall options */}
                   {isCustom && isPresent && (
                     <div className="mt-2 space-y-1">
@@ -274,6 +423,7 @@ const WallManagement = ({
               );
             })}
           </div>
+
 
           {/* Wall modification cost summary */}
           {(currentRoomData.removedWalls?.length > 0 || 

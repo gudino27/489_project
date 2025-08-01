@@ -840,6 +840,8 @@ const KitchenDesigner = () => {
     if (isDrawingWall) {
       // Exit drawing mode - save any drawn walls
       setSelectedElement(null);
+      setWallDrawStart(null);
+      setWallDrawPreview(null);
     }
   };
 
@@ -1127,11 +1129,15 @@ const KitchenDesigner = () => {
         }
       }
       
-      // Add door opening visualization
+      // Add door opening visualization with drag handles
       const doorColor = door.type === 'pantry' ? '#8B4513' : door.type === 'room' ? '#4CAF50' : '#2196F3';
+      const doorCenterX = isHorizontal ? x + (door.position / 100) * width : x + width / 2;
+      const doorCenterY = isHorizontal ? y + height / 2 : y + (door.position / 100) * height;
+      
       if (isHorizontal) {
         wallElements.push(
           <g key={`door-${door.id}`}>
+            {/* Door opening */}
             <rect
               x={x + (doorStart / 100) * width}
               y={y - 2}
@@ -1143,7 +1149,7 @@ const KitchenDesigner = () => {
               strokeDasharray="3,3"
             />
             <text
-              x={x + (door.position / 100) * width}
+              x={doorCenterX}
               y={y + height / 2 + 3}
               textAnchor="middle"
               fontSize="8"
@@ -1152,11 +1158,33 @@ const KitchenDesigner = () => {
             >
               DOOR
             </text>
+            {/* Drag handle */}
+            <circle
+              cx={doorCenterX}
+              cy={doorCenterY}
+              r="6"
+              fill={doorColor}
+              stroke="white"
+              strokeWidth="2"
+              style={{ cursor: 'grab' }}
+            />
+            <text
+              x={doorCenterX}
+              y={doorCenterY + 2}
+              textAnchor="middle"
+              fontSize="8"
+              fill="white"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none' }}
+            >
+              ⋮⋮
+            </text>
           </g>
         );
       } else {
         wallElements.push(
           <g key={`door-${door.id}`}>
+            {/* Door opening */}
             <rect
               x={x - 2}
               y={y + (doorStart / 100) * height}
@@ -1177,6 +1205,28 @@ const KitchenDesigner = () => {
               transform={`rotate(90, ${x + width / 2}, ${y + (door.position / 100) * height})`}
             >
               DOOR
+            </text>
+            {/* Drag handle */}
+            <circle
+              cx={doorCenterX}
+              cy={doorCenterY}
+              r="6"
+              fill={doorColor}
+              stroke="white"
+              strokeWidth="2"
+              style={{ cursor: 'grab' }}
+            />
+            <text
+              x={doorCenterX}
+              y={doorCenterY + 2}
+              textAnchor="middle"
+              fontSize="8"
+              fill="white"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none' }}
+              transform={`rotate(90, ${doorCenterX}, ${doorCenterY})`}
+            >
+              ⋮⋮
             </text>
           </g>
         );
@@ -1562,17 +1612,45 @@ const KitchenDesigner = () => {
       console.warn('Cannot add element: Missing elementSpec for type:', type);
       return;
     }
-    // Place new element in center of room
-    const roomCenter = {
-      x: (parseFloat(currentRoomData.dimensions.width) * 12 * scale) / 2,
-      y: (parseFloat(currentRoomData.dimensions.height) * 12 * scale) / 2
+    
+    // Calculate element dimensions in pixels
+    const elementWidth = elementSpec.defaultWidth * scale;
+    const elementDepth = elementSpec.defaultDepth * scale;
+    
+    // Try to place new element in center of room first
+    let roomCenter = {
+      x: (parseFloat(currentRoomData.dimensions.width) * 12 * scale) / 2 - elementWidth / 2,
+      y: (parseFloat(currentRoomData.dimensions.height) * 12 * scale) / 2 - elementDepth / 2
     };
+
+    // Check if center position conflicts with door clearance
+    if (checkDoorClearanceCollision(roomCenter.x, roomCenter.y, elementWidth, elementDepth)) {
+      // Find alternative position away from door clearances
+      const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
+      const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
+      let foundPosition = false;
+      
+      // Try different positions in a grid pattern
+      for (let offsetY = 0; offsetY < roomHeight - elementDepth && !foundPosition; offsetY += 50) {
+        for (let offsetX = 0; offsetX < roomWidth - elementWidth && !foundPosition; offsetX += 50) {
+          if (!checkDoorClearanceCollision(offsetX, offsetY, elementWidth, elementDepth)) {
+            roomCenter = { x: offsetX, y: offsetY };
+            foundPosition = true;
+          }
+        }
+      }
+      
+      // If no position found, warn user and use center anyway
+      if (!foundPosition) {
+        alert('Warning: Element placed in door clearance area. Please move it to ensure proper door access.');
+      }
+    }
 
     const newElement = {
       id: Date.now(),                                                        // Unique ID based on timestamp
       type: type,
-      x: roomCenter.x - (elementSpec.defaultWidth * scale) / 2,            // Center horizontally
-      y: roomCenter.y - (elementSpec.defaultDepth * scale) / 2,            // Center vertically
+      x: roomCenter.x,                                                      // Calculated position
+      y: roomCenter.y,                                                      // Calculated position
       width: elementSpec.defaultWidth,
       depth: elementSpec.defaultDepth,
       actualHeight: elementSpec.fixedHeight || elementSpec.defaultHeight,   // Use fixed height if available
@@ -1737,6 +1815,12 @@ const KitchenDesigner = () => {
         // Check for wall collision before allowing the move
         if (checkWallCollision(position.x, position.y, elementWidth, elementDepth)) {
           // Don't allow the move if it would cause a collision
+          return;
+        }
+
+        // Check for door clearance collision before allowing the move
+        if (checkDoorClearanceCollision(position.x, position.y, elementWidth, elementDepth)) {
+          // Don't allow the move if it would block door clearance
           return;
         }
 
@@ -1937,6 +2021,172 @@ const KitchenDesigner = () => {
     });
   };
 
+  // Calculate extended door clearance zones for ADA compliance - zones extend beyond room boundaries
+  const getDoorClearanceZones = () => {
+    // Configurable clearance offsets - adjust these values to test different clearance positioning
+    const CLEARANCE_DEPTH_MULTIPLIER = 1.5;  // How deep the clearance extends (1.5x door width)
+    const CLEARANCE_WIDTH_MULTIPLIER = 1.0;  // How wide the clearance is (1.0x = same as door width)
+    const POSITION_OFFSET_X = -33;              // Manual X offset adjustment
+    const POSITION_OFFSET_Y = 0;              // Manual Y offset adjustment
+    
+    const clearanceZones = [];
+    const doors = currentRoomData.doors || [];
+    const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
+    const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
+
+    doors.forEach(door => {
+      const doorWidthPixels = door.width * scale;
+      // Use configurable multipliers for clearance dimensions
+      const clearanceDepth = doorWidthPixels * CLEARANCE_DEPTH_MULTIPLIER;
+      const clearanceWidth = doorWidthPixels * CLEARANCE_WIDTH_MULTIPLIER;
+      
+      let clearanceZone = null;
+
+      if (door.wallNumber <= 4) {
+        // Standard walls (1-4) - match exact wall rendering coordinates
+        // Define wall parameters exactly as they are in renderWallWithDoors calls
+        let wallParams;
+        switch (door.wallNumber) {
+          case 1: // Top wall
+            wallParams = { x: 20, y: 20, width: roomWidth + 20, height: 10, isHorizontal: true };
+            break;
+          case 2: // Right wall  
+            wallParams = { x: 30 + roomWidth, y: 20, width: 10, height: roomHeight + 20, isHorizontal: false };
+            break;
+          case 3: // Bottom wall
+            wallParams = { x: 20, y: 30 + roomHeight, width: roomWidth + 20, height: 10, isHorizontal: true };
+            break;
+          case 4: // Left wall
+            wallParams = { x: 20, y: 20, width: 10, height: roomHeight + 20, isHorizontal: false };
+            break;
+        }
+
+        // Calculate door center using EXACT same logic as renderWallWithDoors
+        const doorCenterX = wallParams.isHorizontal ? wallParams.x + (door.position / 100) * wallParams.width : wallParams.x + wallParams.width / 2;
+        const doorCenterY = wallParams.isHorizontal ? wallParams.y + wallParams.height / 2 : wallParams.y + (door.position / 100) * wallParams.height;
+
+        // Create clearance zone centered exactly on the door with configurable offsets
+        if (wallParams.isHorizontal) {
+          // Horizontal walls (top/bottom) - clearance extends vertically into room
+          clearanceZone = {
+            x: doorCenterX - clearanceWidth / 2 + POSITION_OFFSET_X,
+            y: door.wallNumber === 1 ? wallParams.y + wallParams.height + POSITION_OFFSET_Y : wallParams.y - clearanceDepth + POSITION_OFFSET_Y,
+            width: clearanceWidth,
+            height: clearanceDepth,
+            doorId: door.id
+          };
+        } else {
+          // Vertical walls (left/right) - clearance extends horizontally into room
+          clearanceZone = {
+            x: door.wallNumber === 4 ? wallParams.x + wallParams.width + POSITION_OFFSET_X : wallParams.x - clearanceDepth + POSITION_OFFSET_X,
+            y: doorCenterY - clearanceWidth / 2 + POSITION_OFFSET_Y,
+            width: clearanceDepth,
+            height: clearanceWidth,
+            doorId: door.id
+          };
+        }
+      } else {
+        // Custom walls (wallNumber > 4)
+        const customWall = getCustomWallByNumber(door.wallNumber);
+        if (customWall) {
+          // Calculate wall properties
+          const wallLength = Math.sqrt(Math.pow(customWall.x2 - customWall.x1, 2) + Math.pow(customWall.y2 - customWall.y1, 2));
+          const wallAngle = Math.atan2(customWall.y2 - customWall.y1, customWall.x2 - customWall.x1);
+          
+          // Calculate door position along the wall
+          const doorPosAlongWall = (door.position / 100) * wallLength;
+          const doorCenterX = 30 + customWall.x1 + Math.cos(wallAngle) * doorPosAlongWall;
+          const doorCenterY = 30 + customWall.y1 + Math.sin(wallAngle) * doorPosAlongWall;
+          
+          // Calculate perpendicular direction (into room) - rotate wall direction by 90 degrees
+          const perpAngle = wallAngle + Math.PI / 2;
+          const clearanceCenterX = doorCenterX + Math.cos(perpAngle) * (clearanceDepth / 2);
+          const clearanceCenterY = doorCenterY + Math.sin(perpAngle) * (clearanceDepth / 2);
+          
+          // For custom walls, create clearance zone with configurable dimensions
+          clearanceZone = {
+            x: clearanceCenterX - clearanceWidth / 2 + POSITION_OFFSET_X,
+            y: clearanceCenterY - clearanceDepth / 2 + POSITION_OFFSET_Y,
+            width: clearanceWidth,
+            height: clearanceDepth,
+            doorId: door.id,
+            // Store rotation info for more accurate collision detection
+            rotation: wallAngle * 180 / Math.PI + 90, // Perpendicular to wall
+            centerX: clearanceCenterX + POSITION_OFFSET_X,
+            centerY: clearanceCenterY + POSITION_OFFSET_Y
+          };
+        }
+      }
+
+      if (clearanceZone) {
+        clearanceZones.push(clearanceZone);
+        // Debug logging for door clearance zones
+         }
+    });
+
+    return clearanceZones;
+  };
+
+  // Check if an element position conflicts with door clearance zones
+  const checkDoorClearanceCollision = (elementX, elementY, elementWidth, elementHeight) => {
+    const clearanceZones = getDoorClearanceZones();
+    
+    return clearanceZones.some(zone => {
+      if (zone.rotation !== undefined) {
+        // Rotated clearance zone (custom wall) - use more complex collision detection
+        return checkRotatedRectCollision(
+          elementX, elementY, elementWidth, elementHeight, 0, // Element (assumed axis-aligned)
+          zone.centerX, zone.centerY, zone.width, zone.height, zone.rotation // Clearance zone
+        );
+      } else {
+        // Axis-aligned clearance zone (standard wall) - simple AABB collision
+        const collision = !(elementX + elementWidth < zone.x || 
+                 elementX > zone.x + zone.width ||
+                 elementY + elementHeight < zone.y ||
+                 elementY > zone.y + zone.height);
+        
+        
+        return collision;
+      }
+    });
+  };
+
+  // Check collision between an axis-aligned rectangle and a rotated rectangle
+  const checkRotatedRectCollision = (ax, ay, aWidth, aHeight, aRotation, bx, by, bWidth, bHeight, bRotation) => {
+    // For simplicity, we'll use a conservative approach:
+    // Calculate the bounding box of the rotated clearance zone and check against that
+    const angleRad = (bRotation || 0) * Math.PI / 180;
+    
+    // Calculate corners of rotated rectangle
+    const halfWidth = bWidth / 2;
+    const halfHeight = bHeight / 2;
+    
+    const corners = [
+      { x: -halfWidth, y: -halfHeight },
+      { x: halfWidth, y: -halfHeight },
+      { x: halfWidth, y: halfHeight },
+      { x: -halfWidth, y: halfHeight }
+    ];
+    
+    // Rotate corners and find bounding box
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    corners.forEach(corner => {
+      const rotatedX = corner.x * Math.cos(angleRad) - corner.y * Math.sin(angleRad) + bx;
+      const rotatedY = corner.x * Math.sin(angleRad) + corner.y * Math.cos(angleRad) + by;
+      
+      minX = Math.min(minX, rotatedX);
+      maxX = Math.max(maxX, rotatedX);
+      minY = Math.min(minY, rotatedY);
+      maxY = Math.max(maxY, rotatedY);
+    });
+    
+    // Check collision with expanded bounding box
+    return !(ax + aWidth < minX || 
+             ax > maxX ||
+             ay + aHeight < minY ||
+             ay > maxY);
+  };
+
   // -----------------------------
   // Special Rendering Functions
   // Custom rendering for special cabinet types and visual effects
@@ -1980,11 +2230,41 @@ const KitchenDesigner = () => {
           <>
             <line x1={x + size * 0.6} y1={y} x2={x + size * 0.6} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
             <line x1={x} y1={y + size * 0.6} x2={x + size * 0.6} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
+            {/* Door swing arcs for left hinge */}
+            <path
+              d={`M ${x} ${y + size * 0.6} L ${x} ${y + size * 0.45} A ${size * 0.15} ${size * 0.15} 0 0 1 ${x + size * 0.15} ${y + size * 0.6} Z`}
+              fill="none"
+              stroke="#666"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+            />
+            <path
+              d={`M ${x + size * 0.6} ${y} L ${x + size * 0.45} ${y} A ${size * 0.15} ${size * 0.15} 0 0 1 ${x + size * 0.6} ${y + size * 0.15} Z`}
+              fill="none"
+              stroke="#666"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+            />
           </>
         ) : (
           <>
             <line x1={x + size * 0.4} y1={y} x2={x + size * 0.4} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
             <line x1={x + size * 0.4} y1={y + size * 0.6} x2={x + size} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
+            {/* Door swing arcs for right hinge */}
+            <path
+              d={`M ${x + size * 0.4} ${y} L ${x + size * 0.25} ${y} A ${size * 0.15} ${size * 0.15} 0 0 0 ${x + size * 0.4} ${y + size * 0.15} Z`}
+              fill="none"
+              stroke="#666"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+            />
+            <path
+              d={`M ${x + size * 0.4} ${y + size * 0.6} L ${x + size * 0.4} ${y + size * 0.45} A ${size * 0.15} ${size * 0.15} 0 0 0 ${x + size * 0.55} ${y + size * 0.6} Z`}
+              fill="none"
+              stroke="#666"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+            />
           </>
         )}
       </g>
@@ -2911,6 +3191,11 @@ const KitchenDesigner = () => {
               setIsDrawingWall={setIsDrawingWall}
               setWallDrawStart={setWallDrawStart}
               setWallDrawPreview={setWallDrawPreview}
+              addDoor={addDoor}
+              removeDoor={removeDoor}
+              updateDoor={updateDoor}
+              getDoorsOnWall={getDoorsOnWall}
+              getDoorTypes={getDoorTypes}
             />
 
             {viewMode === 'wall' && (
@@ -3925,7 +4210,7 @@ const KitchenDesigner = () => {
 
                           {/* Special Rendering for Corner Cabinets */ }
                           {/* Corner cabinets have unique L-shaped rendering */ }
-                          if (element.type === 'corner') {
+                          if (element.type === 'corner' || element.type === 'corner-wall') {
                             return (
                               <g key={element.id}>
                                 {renderCornerCabinet(element)}
@@ -4001,7 +4286,13 @@ const KitchenDesigner = () => {
 
                               {/* Door Indication for Cabinets */}
                               {/* Arc showing door swing direction for standard cabinets */}
-                              {element.category === 'cabinet' && element.type !== 'sink-base' && element.type !== 'vanity-sink' && renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
+                              {element.category === 'cabinet' && 
+                               element.type !== 'sink-base' && 
+                               element.type !== 'vanity-sink' && 
+                               element.type !== 'open-shelf' && 
+                               element.type !== 'corner' && 
+                               element.type !== 'corner-wall' && 
+                               renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
 
                               {/* Special Sink Cabinet Graphics */}
                               {/* Detailed sink representation for sink-base and vanity-sink cabinets */}
@@ -4091,6 +4382,68 @@ const KitchenDesigner = () => {
                                   {/* Label */}
                                   <text x={(element.width * scale) / 2} y={(element.depth * scale) - 8} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
                                     FRIDGE
+                                  </text>
+                                </>
+                              )}
+
+                              {/* Wine Cooler Graphics */}
+                              {/* Detailed wine cooler with wine bottles */}
+                              {element.type === 'wine-cooler' && (
+                                <>
+                                  {/* Wine cooler frame */}
+                                  <rect
+                                    x={2}
+                                    y={2}
+                                    width={(element.width * scale) - 4}
+                                    height={(element.depth * scale) - 4}
+                                    fill="none"
+                                    stroke="#666"
+                                    strokeWidth="2"
+                                  />
+                                  {/* Glass door frame */}
+                                  <rect
+                                    x={4}
+                                    y={4}
+                                    width={(element.width * scale) - 8}
+                                    height={(element.depth * scale) - 8}
+                                    fill="rgba(135, 206, 235, 0.1)"
+                                    stroke="#999"
+                                    strokeWidth="1"
+                                  />
+                                  {/* Wine bottle racks - horizontal lines */}
+                                  {[0.2, 0.4, 0.6, 0.8].map((yPos, index) => (
+                                    <line
+                                      key={index}
+                                      x1={6}
+                                      y1={(element.depth * scale) * yPos}
+                                      x2={(element.width * scale) - 6}
+                                      y2={(element.depth * scale) * yPos}
+                                      stroke="#8B4513"
+                                      strokeWidth="1"
+                                    />
+                                  ))}
+                                  {/* Wine bottles - small circles representing bottle tops */}
+                                  {[
+                                    {x: 0.2, y: 0.25}, {x: 0.4, y: 0.25}, {x: 0.6, y: 0.25}, {x: 0.8, y: 0.25},
+                                    {x: 0.3, y: 0.45}, {x: 0.5, y: 0.45}, {x: 0.7, y: 0.45},
+                                    {x: 0.2, y: 0.65}, {x: 0.4, y: 0.65}, {x: 0.6, y: 0.65}, {x: 0.8, y: 0.65},
+                                    {x: 0.3, y: 0.85}, {x: 0.5, y: 0.85}, {x: 0.7, y: 0.85}
+                                  ].map((bottle, index) => (
+                                    <circle
+                                      key={index}
+                                      cx={(element.width * scale) * bottle.x}
+                                      cy={(element.depth * scale) * bottle.y}
+                                      r="2"
+                                      fill="#722F37"
+                                      stroke="#5D1A1D"
+                                      strokeWidth="0.5"
+                                    />
+                                  ))}
+                                  {/* Door handle */}
+                                  <rect x={(element.width * scale) - 8} y={(element.depth * scale) * 0.4} width="4" height="8" fill="#666" rx="2" />
+                                  {/* Label */}
+                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) - 6} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
+                                    WINE
                                   </text>
                                 </>
                               )}
