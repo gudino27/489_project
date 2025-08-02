@@ -187,10 +187,12 @@ async function addPriceTables(db) {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS material_pricing (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      material_type TEXT NOT NULL UNIQUE,
+      material_name_en TEXT NOT NULL,
+      material_name_es TEXT NOT NULL,
       multiplier DECIMAL(3, 2) NOT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_by TEXT
+      updated_by TEXT,
+      UNIQUE(material_name_en, material_name_es)
     )
   `);
 
@@ -240,11 +242,15 @@ async function addPriceTables(db) {
     );
   }
 
-  const defaultMaterials = [['laminate', 1.0], ['wood', 1.5], ['plywood', 1.3]];
-  for (const [material, multiplier] of defaultMaterials) {
+  const defaultMaterials = [
+    ['Laminate', 'Laminado', 1.0], 
+    ['Wood', 'Madera', 1.5], 
+    ['Plywood', 'Madera Contrachapada', 1.3]
+  ];
+  for (const [materialEn, materialEs, multiplier] of defaultMaterials) {
     await db.run(
-      'INSERT OR IGNORE INTO material_pricing (material_type, multiplier) VALUES (?, ?)',
-      [material, multiplier]
+      'INSERT OR IGNORE INTO material_pricing (material_name_en, material_name_es, multiplier) VALUES (?, ?, ?)',
+      [materialEn, materialEs, multiplier]
     );
   }
 

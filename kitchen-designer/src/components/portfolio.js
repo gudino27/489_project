@@ -1,11 +1,16 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import './css/portfolio.css';
 import Navigation from './Navigation';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 const API_BASE = "https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
   useAnalytics('/portfolio');
+  
+  // Language context
+  const { t } = useLanguage();
   
   const [allPhotos, setAllPhotos] = useState([]);
   const [photos, setPhotos] = useState([]);
@@ -24,6 +29,12 @@ const Portfolio = () => {
     ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom', 'showcase'], 
     []
   );
+
+  // Function to get translated category name
+  const getCategoryName = useCallback((category) => {
+    const key = `portfolio.${category === 'livingroom' ? 'livingRoom' : category === 'laundryroom' ? 'laundryRoom' : category}`;
+    return t(key);
+  }, [t]);
 
   const radius = 350;
   const PHOTOS_PER_PAGE = 6;
@@ -264,8 +275,14 @@ const Portfolio = () => {
   return (
     <>
       <Navigation />
+      
+      {/* Language Selector */}
+      
       <div className="category-container">
-        <h2 className="text-white mb-4">Select a Category</h2>
+      <div>
+        <LanguageSelector />
+      </div>
+        <h2 className="text-white mb-4">{t('portfolio.selectCategory')}</h2>
         <div className="category-buttons">
           {categories.map(cat => (
             <button
@@ -273,7 +290,7 @@ const Portfolio = () => {
               className={`category-button ${cat === currentCategory ? 'active' : ''}`}
               onClick={() => selectCategory(cat)}
             >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {getCategoryName(cat)}
             </button>
           ))}
         </div>

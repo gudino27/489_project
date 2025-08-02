@@ -16,6 +16,8 @@ import {
   BarChart3,
   MessageSquare
 } from 'lucide-react';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 // -------------------------------------------------
 // Importing components for different functionalities
 // These components will handle specific admin tasks
@@ -44,6 +46,10 @@ import './css/admin.css';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
+  
+  // Language context
+  const { t } = useLanguage();
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -340,6 +346,7 @@ const AdminPanel = () => {
         <div className="px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Admin Panel</h1>
           <div className="flex items-center gap-4">
+            <LanguageSelector />
             <div className="flex items-center gap-2">
               <span className="text-medium text-gray-800">Welcome:</span>
               <span className="font-medium">{ user?.username}</span>

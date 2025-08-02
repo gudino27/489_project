@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Navigation from './Navigation';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 import './css/home.css';
 import { useAnalytics } from '../hooks/useAnalytics'; 
 
@@ -8,17 +10,20 @@ const Home = () => {
   // Analytics tracking
   useAnalytics('/');
   
+  // Language context
+  const { t } = useLanguage();
+  
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
 
   const workTypes = [
-    { title: "Kitchen Remodeling", description: "Expert kitchen remodeling with custom cabinets, countertops, and complete kitchen transformations by skilled carpenters" },
-    { title: "Bathroom Renovations", description: "Professional bathroom remodeling with custom vanities, storage solutions, and spa-like bathroom designs" },
-    { title: "Custom Carpentry", description: "Master carpenters creating bespoke woodwork, built-ins, and custom furniture for your home" },
-    { title: "Cabinet Installation", description: "Custom cabinet design and professional installation for kitchens, bathrooms, and storage solutions" },
-    { title: "Home Remodeling", description: "Complete home renovations including kitchens, bathrooms, and custom carpentry work" },
-    { title: "Commercial Projects", description: "Commercial carpentry services including office furniture, retail displays, and custom woodwork" }
+    { title: t('home.workTypes.kitchen'), description: t('home.workTypes.kitchenDesc') },
+    { title: t('home.workTypes.bathroom'), description: t('home.workTypes.bathroomDesc') },
+    { title: t('home.workTypes.carpentry'), description: t('home.workTypes.carpentryDesc') },
+    { title: t('home.workTypes.cabinets'), description: t('home.workTypes.cabinetsDesc') },
+    { title: t('home.workTypes.remodeling'), description: t('home.workTypes.remodelingDesc') },
+    { title: t('home.workTypes.commercial'), description: t('home.workTypes.commercialDesc') }
   ];
 
   const toggleWorkTypes = () => {
@@ -65,14 +70,20 @@ const Home = () => {
         
         <div className="hero-content">
           <div className="hero-text">
-            <h1 className="company-name">GUDINO</h1>
-            <h2 className="company-tagline">Custom WoodWorking</h2>
-            <p className="hero-description">Expert carpenters specializing in kitchen remodeling, bathroom renovations, and custom cabinet installation throughout Washington</p>
+            <h1 className="company-name">{t('home.companyName')}</h1>
+            <h2 className="company-tagline">{t('home.tagline')}</h2>
+            <p className="hero-description">{t('home.heroDescription')}</p>
           </div>
         </div>
         
         <div className="curved-bottom"></div>
-        <div className="scroll-indicator" onClick={() => {
+        
+        {/* Language selector positioned directly above scroll indicator */}
+        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-50">
+          <LanguageSelector />
+        </div>
+        
+        <div className="scroll-indicator" style={{ bottom: '10px' }} onClick={() => {
           const targetPosition = window.innerHeight;
           const startPosition = window.pageYOffset;
           const distance = targetPosition - startPosition;
@@ -108,8 +119,7 @@ const Home = () => {
         <section className="content-section">
           <div className="section-content" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)`}}>
             <div className="quote">
-              Washington's premier carpenters and cabinet makers serving homeowners and businesses for decades.
-              Trusted for kitchen remodeling, bathroom renovations, and custom carpentry throughout the Pacific Northwest.
+              {t('home.quote1')}
             </div>
           </div>
         </section>
@@ -123,8 +133,7 @@ const Home = () => {
         <section className="content-section">
           <div className="section-content">
             <div className="quote">
-              "Behind every great space is a team that cares about the details.
-              We at Gudino Custom Woodworking strive to foster a team who believes just that."
+              {t('home.quote2')}
             </div>
           </div>
         </section>
@@ -132,16 +141,13 @@ const Home = () => {
         <section className="feature-section">
           <div className="feature-content">
             <div className="feature-header">
-              <h2>Unlimited Scope</h2>
+              <h2>{t('home.unlimitedScope')}</h2>
             </div>
             <div className="feature-description">
-              Our master carpenters and cabinet makers offer comprehensive remodeling services
-              including kitchen renovations, bathroom remodels, and custom cabinet installation.
-              From concept to completion, our skilled craftsmen handle every aspect of your project
-              with precision and attention to detail that Washington homeowners trust.
+              {t('home.scopeDescription')}
             </div>
             <div className="feature-button">
-              <Link to="/contact" className="cta-button">Contact Us</Link>
+              <Link to="/contact" className="cta-button">{t('home.contactUs')}</Link>
             </div>
           </div>
         </section>
@@ -155,12 +161,10 @@ const Home = () => {
         <section className="feature-section">
           <div className="feature-content">
             <div className="feature-header">
-              <h2>Our Creations</h2>
+              <h2>{t('home.ourCreations')}</h2>
             </div>
             <div className="feature-description">
-              Gudino Custom Woodworking has completed hundreds of projects over the years, 
-              building a rich and diverse portfolio of work. From modern kitchen remodels to full-home renovations, 
-              our team has delivered exceptional results across residential and commercial spaces.
+              {t('home.creationsDescription')}
             </div>
             
             <div className="work-types-dropdown">
@@ -169,7 +173,7 @@ const Home = () => {
                 onClick={toggleWorkTypes}
                 aria-expanded={isWorkTypesOpen}
               >
-                <span>See What We Do</span>
+                <span>{t('home.seeWhatWeDo')}</span>
                 <svg 
                   className={`dropdown-arrow ${isWorkTypesOpen ? 'open' : ''}`}
                   width="20" 
@@ -194,7 +198,7 @@ const Home = () => {
             </div>
 
             <div className="feature-button">
-              <Link to="/portfolio" className="cta-button">View our Portfolio</Link>
+              <Link to="/portfolio" className="cta-button">{t('home.viewPortfolio')}</Link>
             </div>
           </div>
         </section>
@@ -208,14 +212,13 @@ const Home = () => {
         <section className="feature-section">
           <div className="feature-content">
             <div className="feature-header">
-              <h2>Make it Yourself</h2>
+              <h2>{t('home.makeItYourself')}</h2>
             </div>
             <div className="feature-description">
-              Have something else in mind? Bring your vision to life with our easy-to-use design tool. 
-              Customize layouts, experiment with finishes, and plan your dream space—your way.
+              {t('home.designDescription')}
             </div>
             <div className="feature-button">
-              <Link to="/design" className="cta-button">Use our Designer</Link>
+              <Link to="/design" className="cta-button">{t('home.useDesigner')}</Link>
             </div>
           </div>
         </section>
@@ -223,14 +226,13 @@ const Home = () => {
         <section className="final-section">
           <div className="final-content">
             <div className="feature-header">
-              <h2>Would you Like to Know More?</h2>
+              <h2>{t('home.knowMore')}</h2>
             </div>
             <div className="feature-description">
-              We're more than just the spaces we build. Click below to learn about our roots, 
-              hear from real customers, and get to know the team behind Gudino Custom Woodworking.
+              {t('home.knowMoreDescription')}
             </div>
             <div className="feature-button">
-              <Link to="/about" className="cta-button">About Us</Link>
+              <Link to="/about" className="cta-button">{t('home.aboutUs')}</Link>
             </div>
           </div>
         </section>

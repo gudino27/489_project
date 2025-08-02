@@ -951,7 +951,8 @@ app.get('/api/prices', async (req, res) => {
     const materials = await db.all('SELECT * FROM material_pricing');
     const materialMultipliers = {};
     materials.forEach(item => {
-      materialMultipliers[item.material_type] = parseFloat(item.multiplier);
+      // Use English name as key for backwards compatibility with existing calculation logic
+      materialMultipliers[item.material_name_en.toLowerCase()] = parseFloat(item.multiplier);
     });
 
     // Get color pricing
@@ -1057,17 +1058,21 @@ app.get('/api/prices/cabinets', async (req, res) => {
 app.get('/api/prices/materials', async (req, res) => {
   try {
     const db = await getDb();
-    const materials = await db.all('SELECT * FROM material_pricing ORDER BY material_type');
+    const materials = await db.all('SELECT * FROM material_pricing ORDER BY material_name_en');
 
-    // Convert to object format for frontend
-    const materialObject = {};
-    materials.forEach(m => {
-      materialObject[m.material_type] = parseFloat(m.multiplier);
-    });
+    // Return bilingual format for frontend
+    const materialArray = materials.map(m => ({
+      id: m.id,
+      nameEn: m.material_name_en,
+      nameEs: m.material_name_es,
+      multiplier: parseFloat(m.multiplier),
+      updated_at: m.updated_at,
+      updated_by: m.updated_by
+    }));
 
     //await db.close();
-    console.log('Loaded materials:', materialObject);
-    res.json(materialObject);
+    console.log('Loaded materials:', materialArray);
+    res.json(materialArray);
   } catch (error) {
     console.error('Error fetching materials:', error);
     res.status(500).json({ error: 'Failed to fetch materials' });
@@ -1091,12 +1096,12 @@ app.put('/api/prices/materials', async (req, res) => {
 
         // Insert all materials (including new ones)
         const stmt = await db.prepare(
-          'INSERT INTO material_pricing (material_type, multiplier) VALUES (?, ?)'
+          'INSERT INTO material_pricing (material_name_en, material_name_es, multiplier) VALUES (?, ?, ?)'
         );
 
-        for (const [material, multiplier] of Object.entries(materials)) {
-          await stmt.run(material, multiplier);
-          console.log(`Inserted material: ${material} with multiplier: ${multiplier}`);
+        for (const material of materials) {
+          await stmt.run(material.nameEn, material.nameEs, material.multiplier);
+          console.log(`Inserted material: ${material.nameEn}/${material.nameEs} with multiplier: ${material.multiplier}`);
         }
 
         await stmt.finalize();
@@ -1183,7 +1188,7 @@ app.get('/api/prices/history', async (req, res) => {
       SELECT 'cabinet' as type, cabinet_type as item, base_price as value, updated_at 
       FROM cabinet_prices 
       UNION ALL
-      SELECT 'material' as type, material_type as item, multiplier as value, updated_at 
+      SELECT 'material' as type, (material_name_en || ' / ' || material_name_es) as item, multiplier as value, updated_at 
       FROM material_pricing
       UNION ALL
       SELECT 'color' as type, color_count as item, price_addition as value, updated_at 

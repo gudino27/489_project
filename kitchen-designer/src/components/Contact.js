@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 import './css/contact.css';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const Contact = () => {
   // Analytics tracking
   useAnalytics('/contact');
+  
+  // Language context
+  const { t } = useLanguage();
   
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -47,15 +52,18 @@ const Contact = () => {
       <Navigation />
       
       <div className="contact-container">
+        {/* Language Selector */}
         <div className="contact-hero">
           <div className="hero-content">
-            <h1 className="hero-title">Get In Touch</h1>
+            <h1 className="hero-title">{t('contact.heroTitle')}</h1>
             <p className="hero-subtitle">
-              Ready to transform your space? We're here to help bring your vision to life.
+              {t('contact.heroSubtitle')}
             </p>
           </div>
         </div>
-
+        <div className="absolute top-15 right-4 z-50">
+          <LanguageSelector />
+        </div>
         <div className="contact-content">
           <div className="contact-grid">
             
@@ -74,17 +82,17 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div className="card-content">
-                  <h3>Call Us</h3>
+                  <h3>{t('contact.callUs')}</h3>
                   <div className="phone-options">
                     <div className="phone-option" onClick={handleEnglishPhoneClick}>
                       <span className="language-label">English</span>
                       <p className="contact-detail">{contactInfo.phone.english}</p>
-                      <span className="card-action">Click to call</span>
+                      <span className="card-action">{t('contact.clickToCall')}</span>
                     </div>
                     <div className="phone-option" onClick={handleSpanishPhoneClick}>
                       <span className="language-label">Español</span>
                       <p className="contact-detail">{contactInfo.phone.spanish}</p>
-                      <span className="card-action">Click to call</span>
+                      <span className="card-action">{t('contact.clickToCall')}</span>
                     </div>
                   </div>
                 </div>
@@ -103,9 +111,9 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div className="card-content">
-                  <h3>Email Us</h3>
+                  <h3>{t('contact.emailUs')}</h3>
                   <p className="contact-detail">{contactInfo.email}</p>
-                  <span className="card-action">Click to email</span>
+                  <span className="card-action">{t('contact.clickToEmail')}</span>
                 </div>
               </div>
 
@@ -121,9 +129,9 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div className="card-content">
-                  <h3>Visit Us</h3>
+                  <h3>{t('contact.visitUs')}</h3>
                   <p className="contact-detail">{contactInfo.address}</p>
-                  <span className="card-action">Get directions</span>
+                  <span className="card-action">{t('contact.getDirections')}</span>
                 </div>
               </div>
 
@@ -140,7 +148,7 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div className="card-content">
-                  <h3>Business Hours</h3>
+                  <h3>{t('contact.businessHours')}</h3>
                   <div className="hours-list">
                     <p>{contactInfo.hours.weekdays}</p>
                     <p>{contactInfo.hours.saturday}</p>
@@ -154,15 +162,15 @@ const Contact = () => {
             {/* Map Section */}
             <div className="map-section">
               <div className="map-header">
-                <h2>Find Our Headquarters</h2>
-                <p>Located in Sunnyside, Washington</p>
+                <h2>{t('contact.mapTitle')}</h2>
+                <p>{t('contact.mapSubtitle')}</p>
               </div>
               
               <div className="map-container">
                 {!isMapLoaded ? (
                   <div className="map-loading">
                     <div className="loading-spinner"></div>
-                    <p>Loading map...</p>
+                    <p>{t('contact.loadingMap')}</p>
                   </div>
                 ) : (
                   <div className="interactive-map">

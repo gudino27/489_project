@@ -1426,6 +1426,198 @@ const WallView = ({
               </>
             )}
 
+            {/* Wine Cooler Graphics */}
+            {element.type === 'wine-cooler' && (
+              <>
+                {/* Wine cooler frame with stainless steel appearance */}
+                <rect 
+                  x={50 + x * calculatedViewScale + 2} 
+                  y={30 + yPos * calculatedViewScale + 2} 
+                  width={width * calculatedViewScale - 4} 
+                  height={height * calculatedViewScale - 4} 
+                  fill="#d0d0d0" 
+                  stroke="#999" 
+                  strokeWidth="2" 
+                  rx="3" 
+                />
+                {/* Glass door with slight tint */}
+                <rect 
+                  x={50 + x * calculatedViewScale + 6} 
+                  y={30 + yPos * calculatedViewScale + 6} 
+                  width={width * calculatedViewScale - 12} 
+                  height={height * calculatedViewScale - 12} 
+                  fill="rgba(135, 206, 235, 0.15)" 
+                  stroke="#666" 
+                  strokeWidth="1" 
+                  rx="2" 
+                />
+                {/* Wine racks - horizontal shelves */}
+                {[0.25, 0.45, 0.65, 0.85].map((shelfPos, idx) => (
+                  <line 
+                    key={idx}
+                    x1={50 + x * calculatedViewScale + 8} 
+                    y1={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)} 
+                    x2={50 + (x + width) * calculatedViewScale - 8} 
+                    y2={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)} 
+                    stroke="#8B4513" 
+                    strokeWidth="2" 
+                  />
+                ))}
+                {/* Wine bottles - represented as small rectangles */}
+                {[
+                  {shelf: 0.25, bottles: 3}, {shelf: 0.45, bottles: 3}, 
+                  {shelf: 0.65, bottles: 3}, {shelf: 0.85, bottles: 2}
+                ].map((rack, rackIdx) => 
+                  Array.from({length: rack.bottles}, (_, bottleIdx) => (
+                    <rect 
+                      key={`${rackIdx}-${bottleIdx}`}
+                      x={50 + x * calculatedViewScale + 10 + (bottleIdx * (width * calculatedViewScale - 20) / rack.bottles)} 
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * rack.shelf) - 8} 
+                      width="3" 
+                      height="16" 
+                      fill="#722F37" 
+                      stroke="#5D1A1D" 
+                      strokeWidth="0.5" 
+                      rx="1"
+                    />
+                  ))
+                )}
+                {/* Door handle */}
+                <rect 
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 8} 
+                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.4)} 
+                  width="4" 
+                  height="12" 
+                  fill="#666" 
+                  rx="2" 
+                />
+                {/* Control panel */}
+                <rect 
+                  x={50 + x * calculatedViewScale + 8} 
+                  y={30 + yPos * calculatedViewScale + 8} 
+                  width="16" 
+                  height="8" 
+                  fill="#333" 
+                  rx="1" 
+                />
+                {/* LED indicators */}
+                <circle cx={50 + x * calculatedViewScale + 12} cy={30 + yPos * calculatedViewScale + 12} r="1" fill="#00ff00" />
+                <circle cx={50 + x * calculatedViewScale + 16} cy={30 + yPos * calculatedViewScale + 12} r="1" fill="#ff0000" />
+                <text 
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} 
+                  y={30 + (yPos + height) * calculatedViewScale - 4} 
+                  textAnchor="middle" 
+                  fontSize="6" 
+                  fill="#666" 
+                  fontWeight="bold"
+                >
+                  WINE COOLER
+                </text>
+              </>
+            )}
+
+            {/* Range Hood Graphics */}
+            {element.type === 'range-hood' && (
+              <>
+                {/* Range hood main body with realistic proportions */}
+                <defs>
+                  <linearGradient id={`hoodGradient-${element.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#e5e5e5" />
+                    <stop offset="50%" stopColor="#c0c0c0" />
+                    <stop offset="100%" stopColor="#a0a0a0" />
+                  </linearGradient>
+                </defs>
+                {/* Main hood chassis */}
+                <rect 
+                  x={50 + x * calculatedViewScale + 1} 
+                  y={30 + yPos * calculatedViewScale + 1} 
+                  width={width * calculatedViewScale - 2} 
+                  height={height * calculatedViewScale - 2} 
+                  fill={`url(#hoodGradient-${element.id})`} 
+                  stroke="#999" 
+                  strokeWidth="2" 
+                  rx="2" 
+                />
+                {/* Hood canopy (angled front) */}
+                <polygon 
+                  points={`
+                    ${50 + x * calculatedViewScale + 4},${30 + yPos * calculatedViewScale + 4} 
+                    ${50 + (x + width) * calculatedViewScale - 4},${30 + yPos * calculatedViewScale + 4} 
+                    ${50 + (x + width) * calculatedViewScale - 8},${30 + (yPos + height) * calculatedViewScale - 4} 
+                    ${50 + x * calculatedViewScale + 8},${30 + (yPos + height) * calculatedViewScale - 4}
+                  `} 
+                  fill="rgba(255, 255, 255, 0.3)" 
+                  stroke="#bbb" 
+                  strokeWidth="1" 
+                />
+                {/* Ventilation grilles */}
+                {[0.25, 0.5, 0.75].map((pos, idx) => (
+                  <g key={idx}>
+                    <line 
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
+                      y1={30 + yPos * calculatedViewScale + 6} 
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
+                      y2={30 + yPos * calculatedViewScale + 6} 
+                      stroke="#666" 
+                      strokeWidth="1" 
+                    />
+                    <line 
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
+                      y1={30 + yPos * calculatedViewScale + 8} 
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
+                      y2={30 + yPos * calculatedViewScale + 8} 
+                      stroke="#666" 
+                      strokeWidth="1" 
+                    />
+                    <line 
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
+                      y1={30 + yPos * calculatedViewScale + 10} 
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
+                      y2={30 + yPos * calculatedViewScale + 10} 
+                      stroke="#666" 
+                      strokeWidth="1" 
+                    />
+                  </g>
+                ))}
+                {/* Control panel */}
+                <rect 
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 20} 
+                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6)} 
+                  width="16" 
+                  height="6" 
+                  fill="#333" 
+                  rx="1" 
+                />
+                {/* Control buttons */}
+                <circle cx={50 + x * calculatedViewScale + (width * calculatedViewScale) - 16} cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6) + 3} r="1.5" fill="#666" />
+                <circle cx={50 + x * calculatedViewScale + (width * calculatedViewScale) - 12} cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6) + 3} r="1.5" fill="#666" />
+                <circle cx={50 + x * calculatedViewScale + (width * calculatedViewScale) - 8} cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6) + 3} r="1.5" fill="#666" />
+                {/* LED lights under hood */}
+                {[0.3, 0.7].map((lightPos, idx) => (
+                  <circle 
+                    key={idx}
+                    cx={50 + x * calculatedViewScale + (width * calculatedViewScale * lightPos)} 
+                    cy={30 + (yPos + height) * calculatedViewScale - 6} 
+                    r="2" 
+                    fill="#ffffcc" 
+                    stroke="#ffcc00" 
+                    strokeWidth="0.5" 
+                  />
+                ))}
+                {/* Range hood label */}
+                <text 
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} 
+                  y={30 + (yPos + height / 2) * calculatedViewScale} 
+                  textAnchor="middle" 
+                  fontSize="6" 
+                  fill="#333" 
+                  fontWeight="bold"
+                >
+                  RANGE HOOD
+                </text>
+              </>
+            )}
+
             {/* Dimension labels */}
             <text x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} y={30 + (yPos + height) * calculatedViewScale + 15} textAnchor="middle" fontSize="8" fill="#666">
               {width}"

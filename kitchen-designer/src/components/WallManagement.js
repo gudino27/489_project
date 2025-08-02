@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const WallManagement = ({
   wallAvailability,
@@ -34,6 +35,8 @@ const WallManagement = ({
   getDoorsOnWall,
   getDoorTypes
 }) => {
+  const { t } = useLanguage();
+  
   if (!wallAvailability.addWallEnabled && !wallAvailability.removeWallEnabled) {
     return null;
   }
@@ -48,7 +51,7 @@ const WallManagement = ({
           <span className={`transform transition-transform ${collapsedSections.wallManagement ? 'rotate-0' : 'rotate-90'}`}>
             ▶
           </span>
-          Wall Management
+{t('walls.title')}
         </button>
         
         {/* Wall Management Buttons */}

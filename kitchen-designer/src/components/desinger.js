@@ -14,11 +14,16 @@ import jsPDF from 'jspdf';               // PDF generation library
 import MainNavBar from './Navigation';
 import WallView from './WallView';
 import WallManagement from './WallManagement';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const KitchenDesigner = () => {
   // Analytics tracking
   useAnalytics('/designer');
+  
+  // Language context
+  const { t } = useLanguage();
   // -----------------------------
   // Device Detection and Compatibility
   // Check screen size and device capabilities
@@ -2826,7 +2831,7 @@ const KitchenDesigner = () => {
                   {/* Room width input */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Room Width (feet)
+{t('designer.roomWidth')}
                     </label>
                     <input
                       type="number"
@@ -2845,7 +2850,7 @@ const KitchenDesigner = () => {
                   {/* Room depth input */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Room Depth (feet)
+{t('designer.roomDepth')}
                     </label>
                     <input
                       type="number"
@@ -2867,7 +2872,7 @@ const KitchenDesigner = () => {
                 {/* Single input for ceiling/wall height measurement */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Wall Height (inches)
+{t('designer.wallHeight')}
                   </label>
                   <input
                     type="number"
@@ -2974,10 +2979,14 @@ const KitchenDesigner = () => {
             {/* Collapsed Sidebar Indicators */}
             {sidebarCollapsed && (
               <div className="flex flex-col items-center mt-12 space-y-4">
+                {/* Language selector for collapsed sidebar */}
+                <div className="w-full px-2">
+                  <LanguageSelector className="w-full" />
+                </div>
                 <button
                   onClick={() => setShowPricing(!showPricing)}
                   className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                  title="Show/Hide Pricing"
+                  title={t('pricing.title')}
                 >
                   <Calculator size={20} />
                 </button>
@@ -3000,7 +3009,13 @@ const KitchenDesigner = () => {
 
             {/* Sidebar Content - Hidden when collapsed */}
             <div className={`${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'} transition-opacity duration-300 ease-in-out`}>
-              <h2 className="text-2xl font-bold mb-6">Cabinet Designer</h2>
+              {/* Header with title and language selector */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">
+                  {activeRoom === 'kitchen' ? t('designer.title') : t('designer.bathroomTitle')}
+                </h2>
+                <LanguageSelector />
+              </div>
 
             {/* Room Switcher */}
             {/* Toggle between kitchen and bathroom designs without losing progress */}
@@ -3013,7 +3028,7 @@ const KitchenDesigner = () => {
                     }`}
                 >
                   <Home size={16} />
-                  Kitchen
+{t('designer.kitchen', 'Kitchen')}
                 </button>
                 {/* Bathroom switcher button */}
                 <button
@@ -3022,12 +3037,12 @@ const KitchenDesigner = () => {
                     }`}
                 >
                   <Bath size={16} />
-                  Bathroom
+{t('designer.bathroom', 'Bathroom')}
                 </button>
               </div>
               {/* Current room dimensions display */}
               <p className="text-xs text-gray-600 mt-2 text-center">
-                {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}: {currentRoomData.dimensions.width}' × {currentRoomData.dimensions.height}'
+{activeRoom === 'kitchen' ? t('designer.kitchen') : t('designer.bathroom')}: {currentRoomData.dimensions.width}' × {currentRoomData.dimensions.height}'
               </p>
             </div>
 
@@ -3040,7 +3055,7 @@ const KitchenDesigner = () => {
                 className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center gap-2"
               >
                 <Calculator size={16} />
-                {showPricing ? 'Hide Pricing' : 'Show Pricing'}
+{showPricing ? t('designer.hidePricing') : t('designer.showPricing')}
               </button>
               {/* Open quote request form */}
               <button
@@ -3048,28 +3063,28 @@ const KitchenDesigner = () => {
                 className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
               >
                 <Send size={16} />
-                Send Quote
+{t('designer.sendQuote')}
               </button>
             </div>
 
             {/* View Toggle */}
             {/* Switch between floor plan and wall elevation views */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold mb-2">View Mode</label>
+              <label className="block text-sm font-semibold mb-2">{t('designer.viewMode')}</label>
               <div className="flex gap-2">
                 {/* Floor plan view button */}
                 <button
                   onClick={() => setViewMode('floor')}
                   className={`flex-1 p-2 rounded ${viewMode === 'floor' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
                 >
-                  Floor Plan
+{t('designer.floorPlan')}
                 </button>
                 {/* Wall elevation view button */}
                 <button
                   onClick={() => setViewMode('wall')}
                   className={`flex-1 p-2 rounded ${viewMode === 'wall' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
                 >
-                  Wall View
+{t('designer.wallView')}
                 </button>
               </div>
             </div>
@@ -3297,7 +3312,7 @@ const KitchenDesigner = () => {
                 <span className={`transform transition-transform ${collapsedSections.cabinetOptions ? 'rotate-0' : 'rotate-90'}`}>
                   ▶
                 </span>
-                {activeRoom === 'kitchen' ? 'Kitchen Cabinets' : 'Bathroom Cabinets'}
+{activeRoom === 'kitchen' ? t('cabinets.kitchen') : t('cabinets.bathroom')}
               </button>
               {!collapsedSections.cabinetOptions && (
               <div className="space-y-2">
@@ -3332,7 +3347,7 @@ const KitchenDesigner = () => {
                 <span className={`transform transition-transform ${collapsedSections.appliances ? 'rotate-0' : 'rotate-90'}`}>
                   ▶
                 </span>
-                {activeRoom === 'kitchen' ? 'Appliances' : 'Fixtures'}
+{activeRoom === 'kitchen' ? t('cabinets.appliances') : t('cabinets.fixtures')}
               </button>
               {!collapsedSections.appliances && (
               <div className="space-y-2">

@@ -1,0 +1,352 @@
+const translations = {
+  en: {
+    // Navigation and UI
+    'language.select': 'Select Language',
+    'language.english': 'English',
+    'language.spanish': 'Spanish',
+    
+    // Kitchen Designer
+    'designer.title': 'Kitchen Designer',
+    'designer.bathroomTitle': 'Bathroom Designer',
+    'designer.kitchen': 'Kitchen',
+    'designer.bathroom': 'Bathroom',
+    'designer.roomDimensions': 'Room Dimensions',
+    'designer.width': 'Width',
+    'designer.height': 'Height',
+    'designer.feet': 'feet',
+    'designer.showPricing': 'Show Pricing',
+    'designer.hidePricing': 'Hide Pricing',
+    'designer.sendQuote': 'Send Quote',
+    'designer.viewMode': 'View Mode',
+    'designer.floorPlan': 'Floor Plan',
+    'designer.wallView': 'Wall View',
+    'designer.roomWidth': 'Room Width (feet)',
+    'designer.roomDepth': 'Room Depth (feet)',
+    'designer.wallHeight': 'Wall Height (inches)',
+    
+    // Cabinets
+    'cabinets.title': 'Cabinets',
+    'cabinets.kitchen': 'Kitchen Cabinets',
+    'cabinets.bathroom': 'Bathroom Cabinets',
+    'cabinets.appliances': 'Appliances',
+    'cabinets.fixtures': 'Fixtures',
+    'cabinets.base': 'Base Cabinet',
+    'cabinets.wall': 'Wall Cabinet',
+    'cabinets.tall': 'Tall Cabinet',
+    'cabinets.corner': 'Corner Cabinet',
+    'cabinets.island': 'Island Cabinet',
+    'cabinets.pantry': 'Pantry Cabinet',
+    
+    // Materials
+    'materials.title': 'Materials',
+    'materials.addMaterial': 'Add Material',
+    'materials.addNew': 'Add New Material (Bilingual)',
+    'materials.englishName': 'English Name',
+    'materials.spanishName': 'Spanish Name (Nombre en Español)',
+    'materials.multiplier': 'Price Multiplier',
+    'materials.laminate': 'Laminate',
+    'materials.wood': 'Wood',
+    'materials.plywood': 'Plywood',
+    
+    // Colors
+    'colors.title': 'Colors',
+    'colors.count': 'Color Count',
+    'colors.custom': 'Custom Colors',
+    
+    // Doors
+    'doors.title': 'Doors',
+    'doors.room': 'Room Door',
+    'doors.standard': 'Standard Door',
+    'doors.pantry': 'Pantry Door',
+    'doors.position': 'Position',
+    'doors.width': 'Width',
+    'doors.type': 'Type',
+    'doors.add': 'Add Door',
+    'doors.remove': 'Remove',
+    'doors.inches': 'inches',
+    
+    // Walls
+    'walls.title': 'Wall Management',
+    'walls.add': 'Add',
+    'walls.remove': 'Remove',
+    'walls.delete': 'Delete',
+    'walls.present': 'Present',
+    'walls.removed': 'Removed',
+    'walls.custom': 'Custom',
+    'walls.top': 'Top Wall',
+    'walls.right': 'Right Wall',
+    'walls.bottom': 'Bottom Wall',
+    'walls.left': 'Left Wall',
+    
+    // Pricing
+    'pricing.title': 'Total Cost',
+    'pricing.cabinets': 'Cabinets',
+    'pricing.materials': 'Materials',
+    'pricing.colors': 'Color Upgrades',
+    'pricing.walls': 'Wall Modifications',
+    'pricing.total': 'Total',
+    
+    // Actions
+    'actions.save': 'Save',
+    'actions.load': 'Load',
+    'actions.export': 'Export',
+    'actions.print': 'Print',
+    'actions.cancel': 'Cancel',
+    'actions.confirm': 'Confirm',
+    'actions.edit': 'Edit',
+    
+    // Messages
+    'messages.saved': 'Design saved successfully!',
+    'messages.loaded': 'Design loaded successfully!',
+    'messages.error': 'An error occurred',
+    'messages.confirm.delete': 'Are you sure you want to delete this?',
+    
+    // Home Page
+    'home.companyName': 'GUDINO',
+    'home.tagline': 'Custom WoodWorking',
+    'home.heroDescription': 'Expert carpenters specializing in kitchen remodeling, bathroom renovations, and custom cabinet installation throughout Washington',
+    'home.quote1': 'Washington\'s premier carpenters and cabinet makers serving homeowners and businesses for decades. Trusted for kitchen remodeling, bathroom renovations, and custom carpentry throughout the Pacific Northwest.',
+    'home.quote2': '"Behind every great space is a team that cares about the details. We at Gudino Custom Woodworking strive to foster a team who believes just that."',
+    'home.unlimitedScope': 'Unlimited Scope',
+    'home.scopeDescription': 'Our master carpenters and cabinet makers offer comprehensive remodeling services including kitchen renovations, bathroom remodels, and custom cabinet installation. From concept to completion, our skilled craftsmen handle every aspect of your project with precision and attention to detail that Washington homeowners trust.',
+    'home.contactUs': 'Contact Us',
+    'home.workTypes.kitchen': 'Kitchen Remodeling',
+    'home.workTypes.kitchenDesc': 'Expert kitchen remodeling with custom cabinets, countertops, and complete kitchen transformations by skilled carpenters',
+    'home.workTypes.bathroom': 'Bathroom Renovations',
+    'home.workTypes.bathroomDesc': 'Professional bathroom remodeling with custom vanities, storage solutions, and spa-like bathroom designs',
+    'home.workTypes.carpentry': 'Custom Carpentry',
+    'home.workTypes.carpentryDesc': 'Master carpenters creating bespoke woodwork, built-ins, and custom furniture for your home',
+    'home.workTypes.cabinets': 'Cabinet Installation',
+    'home.workTypes.cabinetsDesc': 'Custom cabinet design and professional installation for kitchens, bathrooms, and storage solutions',
+    'home.workTypes.remodeling': 'Home Remodeling',
+    'home.workTypes.remodelingDesc': 'Complete home renovations including kitchens, bathrooms, and custom carpentry work',
+    'home.workTypes.commercial': 'Commercial Projects',
+    'home.workTypes.commercialDesc': 'Commercial carpentry services including office furniture, retail displays, and custom woodwork',
+    
+    // Feature sections
+    'home.ourCreations': 'Our Creations',
+    'home.creationsDescription': 'Gudino Custom Woodworking has completed hundreds of projects over the years, building a rich and diverse portfolio of work. From modern kitchen remodels to full-home renovations, our team has delivered exceptional results across residential and commercial spaces.',
+    'home.seeWhatWeDo': 'See What We Do',
+    'home.viewPortfolio': 'View our Portfolio',
+    'home.makeItYourself': 'Make it Yourself',
+    'home.designDescription': 'Have something else in mind? Bring your vision to life with our easy-to-use design tool. Customize layouts, experiment with finishes, and plan your dream space—your way.',
+    'home.useDesigner': 'Use our Designer',
+    'home.knowMore': 'Would you Like to Know More?',
+    'home.knowMoreDescription': 'We\'re more than just the spaces we build. Click below to learn about our roots, hear from real customers, and get to know the team behind Gudino Custom Woodworking.',
+    'home.aboutUs': 'About Us',
+
+    //portfolio page
+    'portfolio.selectCategory': 'select Category',
+    'portfolio.kitchen': 'kitchen',
+    'portfolio.bathroom': 'bathroom',
+    'portfolio.livingRoom': 'living room',
+    'portfolio.laundryRoom': 'laundry room',
+    'portfolio.bedroom': 'bedroom',
+    'portfolio.showcase':'showcase',
+    
+    // About page
+    'about.heroTitle': 'Expert Carpenters & Cabinet Makers',
+    'about.heroSubtitle': 'Washington\'s trusted team for kitchen remodeling, bathroom renovations, and custom carpentry services',
+    'about.companyTitle': 'Master Craftsmen Since Day One',
+    'about.companyDescription': 'Gudino Custom Woodworking has been serving Washington homeowners and businesses with expert carpentry services, custom cabinet installation, kitchen remodeling, and bathroom renovations. Our skilled carpenters bring decades of experience in transforming spaces with precision craftsmanship and attention to detail.',
+    'about.teamTitle': 'Meet Our Team',
+    'about.teamSubtitle': 'Meet the Team who make Your Vision happen',
+    'about.loadingTeam': 'Loading team members...',
+    'about.noTeamMembers': 'No team members found.',
+    'about.joined': 'Joined',
+    'about.testimonialsTitle': 'What Our Customers Say',
+    'about.testimonialsSubtitle': 'Real experiences from homeowners who trusted us with their projects',
+    'about.loadingTestimonials': 'Loading testimonials...',
+    'about.noTestimonials': 'No testimonials yet. Be the first to share your experience!',
+    'about.projectPhoto': 'Project photo',
+    
+    // Contact page
+    'contact.heroTitle': 'Get In Touch',
+    'contact.heroSubtitle': 'Ready to transform your space? We\'re here to help bring your vision to life.',
+    'contact.callUs': 'Call Us',
+    'contact.clickToCall': 'Click to call',
+    'contact.emailUs': 'Email Us',
+    'contact.clickToEmail': 'Click to email',
+    'contact.visitUs': 'Visit Us',
+    'contact.getDirections': 'Get directions',
+    'contact.businessHours': 'Business Hours',
+    'contact.mapTitle': 'Find Our Headquarters',
+    'contact.mapSubtitle': 'Located in Sunnyside, Washington',
+    'contact.loadingMap': 'Loading map...'
+  },
+  
+  es: {
+    // Navigation and UI
+    'language.select': 'Seleccionar Idioma',
+    'language.english': 'Inglés',
+    'language.spanish': 'Español',
+    
+    // Kitchen Designer
+    'designer.title': 'Diseñador de Cocinas',
+    'designer.bathroomTitle': 'Diseñador de Baños',
+    'designer.kitchen': 'Cocina',
+    'designer.bathroom': 'Baño',
+    'designer.roomDimensions': 'Dimensiones del Cuarto',
+    'designer.width': 'Ancho',
+    'designer.height': 'Alto',
+    'designer.feet': 'pies',
+    'designer.showPricing': 'Mostrar Precios',
+    'designer.hidePricing': 'Ocultar Precios',
+    'designer.sendQuote': 'Enviar Presupuesto',
+    'designer.viewMode': 'Modo de Vista',
+    'designer.floorPlan': 'Plano de Planta',
+    'designer.wallView': 'Vista de Pared',
+    'designer.roomWidth': 'Ancho del Cuarto (pies)',
+    'designer.roomDepth': 'Profundidad del Cuarto (pies)',
+    'designer.wallHeight': 'Altura de Pared (pulgadas)',
+    
+    // Cabinets
+    'cabinets.title': 'Gabinetes',
+    'cabinets.base': 'Gabinete Base',
+    'cabinets.wall': 'Gabinete de Pared',
+    'cabinets.tall': 'Gabinete Alto',
+    'cabinets.corner': 'Gabinete de Esquina',
+    'cabinets.island': 'Gabinete de Isla',
+    'cabinets.pantry': 'Gabinete de Despensa',
+    
+    // Materials
+    'materials.title': 'Materiales',
+    'materials.addMaterial': 'Agregar Material',
+    'materials.addNew': 'Agregar Nuevo Material (Bilingüe)',
+    'materials.englishName': 'Nombre en Inglés',
+    'materials.spanishName': 'Nombre en Español',
+    'materials.multiplier': 'Multiplicador de Precio',
+    'materials.laminate': 'Laminado',
+    'materials.wood': 'Madera',
+    'materials.plywood': 'Madera Contrachapada',
+    
+    // Colors
+    'colors.title': 'Colores',
+    'colors.count': 'Cantidad de Colores',
+    'colors.custom': 'Colores Personalizados',
+    
+    // Doors
+    'doors.title': 'Puertas',
+    'doors.room': 'Puerta de Habitación',
+    'doors.standard': 'Puerta Estándar',
+    'doors.pantry': 'Puerta de Despensa',
+    'doors.position': 'Posición',
+    'doors.width': 'Ancho',
+    'doors.type': 'Tipo',
+    'doors.add': 'Agregar Puerta',
+    'doors.remove': 'Salir',
+    'doors.inches': 'pulgadas',
+    
+    // Walls
+    'walls.title': 'Gestión de Paredes',
+    'walls.add': 'Agregar',
+    'walls.remove': 'Salir',
+    'walls.delete': 'Eliminar',
+    'walls.present': 'Presente',
+    'walls.removed': 'Quitada',
+    'walls.custom': 'Personalizada',
+    'walls.top': 'Pared Superior',
+    'walls.right': 'Pared Derecha',
+    'walls.bottom': 'Pared Inferior',
+    'walls.left': 'Pared Izquierda',
+    
+    // Pricing
+    'pricing.title': 'Costo Total',
+    'pricing.cabinets': 'Gabinetes',
+    'pricing.materials': 'Materiales',
+    'pricing.colors': 'Mejoras de Color',
+    'pricing.walls': 'Modificaciones de Paredes',
+    'pricing.total': 'Total',
+    
+    // Actions
+    'actions.save': 'Guardar',
+    'actions.load': 'Cargar',
+    'actions.export': 'Exportar',
+    'actions.print': 'Imprimir',
+    'actions.cancel': 'Cancelar',
+    'actions.confirm': 'Confirmar',
+    'actions.edit': 'Editar',
+    
+    // Messages
+    'messages.saved': 'Diseño guardado!',
+    'messages.loaded': 'Diseño cargado!',
+    'messages.error': 'Ocurrió un error',
+    'messages.confirm.delete': '¿Estás seguro de que quieres eliminar esto?',
+    
+    // Home Page
+    'home.companyName': 'GUDINO',
+    'home.tagline': 'Custom WoodWorking',
+    'home.heroDescription': 'Carpinteros expertos especializados en remodelación de cocinas, renovaciones de baños e instalación de gabinetes personalizados en todo Washington',
+    'home.quote1': 'Los principales carpinteros y fabricantes de gabinetes de Washington sirviendo a propietarios y empresas durante décadas. Confiados para remodelación de cocinas, renovaciones de baños y carpintería personalizada en todo el Pacífico Noroeste.',
+    'home.quote2': '"Detrás de cada gran espacio hay un equipo que se preocupa por los detalles. Nosotros en Gudino Custom Woodworking nos esforzamos por un equipo que cree exactamente eso."',
+    'home.unlimitedScope': 'Ilimitado visión',
+    'home.scopeDescription': 'Nuestros carpinteros expertos ofrecen servicios integrales de remodelación incluyendo renovaciones de cocinas, remodelaciones de baños,y instalación de gabinetes personalizados. Desde el concepto hasta la finalización, nuestros carpinteros expertos manejan cada aspecto de su proyecto con precisión y atención al detalle en la que confían los propietarios de Washington.',
+    'home.contactUs': 'Contáctanos',
+    'home.workTypes.kitchen': 'Remodelación de Cocinas',
+    'home.workTypes.kitchenDesc': 'Remodelación experta de cocinas con gabinetes personalizados, encimeras y transformaciones completas de cocinas por carpinteros expertos',
+    'home.workTypes.bathroom': 'Renovaciones de Baños',
+    'home.workTypes.bathroomDesc': 'Remodelación profesional de baños con tocadores personalizados, soluciones de almacenamiento y diseños de baños tipo spa',
+    'home.workTypes.carpentry': 'Carpintería Personalizada',
+    'home.workTypes.carpentryDesc': 'Carpinteros maestros creando carpintería a medida, incorporados y muebles personalizados para su hogar',
+    'home.workTypes.cabinets': 'Instalación de Gabinetes',
+    'home.workTypes.cabinetsDesc': 'Diseño de gabinetes personalizados y instalación profesional para cocinas, baños y soluciones de almacenamiento',
+    'home.workTypes.remodeling': 'Remodelación de Hogar',
+    'home.workTypes.remodelingDesc': 'Renovaciones completas del hogar incluyendo cocinas, baños y trabajo de carpintería personalizada',
+    'home.workTypes.commercial': 'Proyectos Comerciales',
+    'home.workTypes.commercialDesc': 'Servicios de carpintería comercial incluyendo muebles de oficina, exhibidores de tiendas y carpintería personalizada',
+    
+    // Feature sections
+    'home.ourCreations': 'Nuestras Creaciones',
+    'home.creationsDescription': 'Gudino Custom Woodworking ha completado cientos de proyectos a lo largo de los años, construyendo un portafolio rico y diverso de trabajo. Desde remodelaciones modernas de cocinas hasta renovaciones completas del hogar, nuestro equipo ha entregado resultados excepcionales en espacios residenciales y comerciales.',
+    'home.seeWhatWeDo': 'Ver Lo Que Hacemos',
+    'home.viewPortfolio': 'Ver Nuestro Portafolio',
+    'home.makeItYourself': 'Hazlo Tú Mismo',
+    'home.designDescription': 'Tienes algo más en mente? Dale vida a tu visión con nuestra herramienta de diseño fácil de usar. Personaliza diseños, experimenta con acabados y planifica el espacio de tus sueños—a tu manera.',
+    'home.useDesigner': 'Usar Nuestro Diseñador',
+    'home.knowMore': 'Te Gustaría Saber Más?',
+    'home.knowMoreDescription': 'Somos más que solo los espacios que construimos. Haz clic abajo para aprender sobre nuestras raíces, escuchar de clientes reales y conocer al equipo detrás de Gudino Custom Woodworking.',
+    'home.aboutUs': 'Acerca de Nosotros',
+    
+    //portfolio page
+    'portfolio.selectCategory': 'Seleccionar Categoría',
+    'portfolio.kitchen': 'Cocina',
+    'portfolio.bathroom': 'Baño',
+    'portfolio.livingRoom': 'Sala',
+    'portfolio.laundryRoom': 'Lavandería',
+    'portfolio.bedroom': 'Dormitorio',
+    'portfolio.showcase':'Vitrina',
+    
+    // About page
+    'about.heroTitle': 'Carpinteros Expertos y Fabricantes de Gabinetes',
+    'about.heroSubtitle': 'El equipo de confianza de Washington para remodelación de cocinas, renovaciones de baños y servicios de carpintería personalizada',
+    'about.companyTitle': 'Artesanos Maestros Desde el Primer Día',
+    'about.companyDescription': 'Gudino Custom Woodworking ha estado sirviendo a propietarios de viviendas y empresas de Washington con servicios expertos de carpintería, instalación de gabinetes personalizados, remodelación de cocinas y renovaciones de baños. Nuestros carpinteros expertos aportan décadas de experiencia en la transformación de espacios con artesanía de precisión y atención al detalle.',
+    'about.teamTitle': 'Conoce a Nuestro Equipo',
+    'about.teamSubtitle': 'Conoce al Equipo que hace que tu Visión se haga realidad',
+    'about.loadingTeam': 'Cargando miembros del equipo...',
+    'about.noTeamMembers': 'No se encontraron miembros del equipo.',
+    'about.joined': 'Se unió',
+    'about.testimonialsTitle': 'Lo Que Dicen Nuestros Clientes',
+    'about.testimonialsSubtitle': 'Experiencias reales de propietarios que confiaron en nosotros con sus proyectos',
+    'about.loadingTestimonials': 'Cargando testimonios...',
+    'about.noTestimonials': '¡Aún no hay testimonios. ¡Sé el primero en compartir tu experiencia!',
+    'about.projectPhoto': 'Foto del proyecto',
+    
+    // Contact page
+    'contact.heroTitle': 'Ponte en Contacto',
+    'contact.heroSubtitle': '¿Listo para transformar tu espacio? Estamos aquí para ayudarte a dar vida a tu visión.',
+    'contact.callUs': 'Llámanos',
+    'contact.clickToCall': 'Haz clic para llamar',
+    'contact.emailUs': 'Envíanos un correo electrónico',
+    'contact.clickToEmail': 'Haz clic para enviar un correo electrónico',
+    'contact.visitUs': 'Visítanos',
+    'contact.getDirections': 'Obtener direcciones',
+    'contact.businessHours': 'Horario de Atención',
+    'contact.mapTitle': 'Encuentra Nuestra Sede',
+    'contact.mapSubtitle': 'Ubicados en Sunnyside, Washington',
+    'contact.loadingMap': 'Cargando mapa...'
+  }
+
+};
+
+export default translations;

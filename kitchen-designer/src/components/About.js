@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from './Navigation';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../contexts/LanguageContext';
 import './css/about.css';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const About = () => {
     // Analytics tracking
     useAnalytics('/about');
+    
+    // Language context
+    const { t } = useLanguage();
     
     const [teamMembers, setTeamMembers] = useState([]);
     const [testimonials, setTestimonials] = useState([]);
@@ -95,26 +100,30 @@ const About = () => {
         <>
             <Navigation />
             <div className="container">
+                {/* Language Selector */}
+                <div className='absolute top-15 right-4 z-50'>
+                    <LanguageSelector />
+                </div>
                 {/* Hero Section */}
                 <div className="hero-section">
-                    <h1>Expert Carpenters & Cabinet Makers</h1>
-                    <p>Washington's trusted team for kitchen remodeling, bathroom renovations, and custom carpentry services</p>
+                    <h1>{t('about.heroTitle')}</h1>
+                    <p>{t('about.heroSubtitle')}</p>
                 </div>
                 {/* Company Info */}
                 <div className="company-info">
-                    <h3>Master Craftsmen Since Day One</h3>
-                    <p>Gudino Custom Woodworking has been serving Washington homeowners and businesses with expert carpentry services, custom cabinet installation, kitchen remodeling, and bathroom renovations. Our skilled carpenters bring decades of experience in transforming spaces with precision craftsmanship and attention to detail.</p>
+                    <h3>{t('about.companyTitle')}</h3>
+                    <p>{t('about.companyDescription')}</p>
                 </div>
                 {/* Team Section */}
                 <div className="section-title">
-                    <h2>Meet Our Team</h2>
-                    <p>Meet the Team who make Your Vision happen</p>
+                    <h2>{t('about.teamTitle')}</h2>
+                    <p>{t('about.teamSubtitle')}</p>
                 </div>
                 <div id="teamGrid" className="team-grid">
                     {loading && (
                         <div className="loading">
                             <div className="loading-spinner"></div>
-                            <p>Loading team members...</p>
+                            <p>{t('about.loadingTeam')}</p>
                         </div>
                     )}
                     {error && (
@@ -122,7 +131,7 @@ const About = () => {
                     )}
                     {!loading && !error && teamMembers.length === 0 && (
                         <p className="loading" style={{ color: 'white', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                            No team members found.
+                            {t('about.noTeamMembers')}
                         </p>
                     )}
                     {!loading && !error && teamMembers.map((employee, index) => (
@@ -166,7 +175,7 @@ const About = () => {
                                 {employee.joined_date && (
                                     <div className="joined-date">
                                         {icons.calendar}
-                                        <span>Joined {formatDate(employee.joined_date)}</span>
+                                        <span>{t('about.joined')} {formatDate(employee.joined_date)}</span>
                                     </div>
                                 )}
                             </div>
@@ -176,14 +185,14 @@ const About = () => {
 
                 {/* Testimonials Section */}
                 <div className="section-title">
-                    <h2>What Our Customers Say</h2>
-                    <p>Real experiences from homeowners who trusted us with their projects</p>
+                    <h2>{t('about.testimonialsTitle')}</h2>
+                    <p>{t('about.testimonialsSubtitle')}</p>
                 </div>
 
                 {testimonialsLoading ? (
                     <div className="loading">
                         <div className="loading-spinner"></div>
-                        <p>Loading testimonials...</p>
+                        <p>{t('about.loadingTestimonials')}</p>
                     </div>
                 ) : testimonials.length > 0 ? (
                     <div className="testimonials-grid">
@@ -201,7 +210,7 @@ const About = () => {
                                                 <div key={photoIndex} className="testimonial-photo">
                                                     <img 
                                                         src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`} 
-                                                        alt={`Project photo ${photoIndex + 1}`}
+                                                        alt={`${t('about.projectPhoto')} ${photoIndex + 1}`}
                                                         onClick={() => {
                                                             // Open full size image in modal or new tab
                                                             window.open(`${API_BASE}${photo.file_path}`, '_blank');
@@ -227,7 +236,7 @@ const About = () => {
                     </div>
                 ) : (
                     <div className="no-testimonials">
-                        <p>No testimonials yet. Be the first to share your experience!</p>
+                        <p>{t('about.noTestimonials')}</p>
                     </div>
                 )}
             </div>
