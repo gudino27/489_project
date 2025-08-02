@@ -373,6 +373,64 @@ async function addUserTables(db) {
     }
   }
 
+  // Migrate material_pricing table to bilingual structure
+  try {
+    // Check if old structure exists
+    const tableInfo = await db.all("PRAGMA table_info(material_pricing)");
+    const hasOldStructure = tableInfo.some(col => col.name === 'material_type');
+    const hasNewStructure = tableInfo.some(col => col.name === 'material_name_en');
+    
+    if (hasOldStructure && !hasNewStructure) {
+      console.log('🔄 Migrating material_pricing table to bilingual structure...');
+      
+      // Get existing data
+      const existingMaterials = await db.all('SELECT * FROM material_pricing');
+      
+      // Create new table with bilingual structure
+      await db.exec(`
+        CREATE TABLE material_pricing_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          material_name_en TEXT NOT NULL,
+          material_name_es TEXT NOT NULL,
+          multiplier DECIMAL(3, 2) NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_by TEXT,
+          UNIQUE(material_name_en, material_name_es)
+        )
+      `);
+      
+      // Migrate data with appropriate translations
+      const materialTranslations = {
+        'laminate': { en: 'Laminate', es: 'Laminado' },
+        'wood': { en: 'Wood', es: 'Madera' },
+        'plywood': { en: 'Plywood', es: 'Madera Contrachapada' }
+      };
+      
+      for (const material of existingMaterials) {
+        const translation = materialTranslations[material.material_type.toLowerCase()] || {
+          en: material.material_type.charAt(0).toUpperCase() + material.material_type.slice(1),
+          es: material.material_type.charAt(0).toUpperCase() + material.material_type.slice(1)
+        };
+        
+        await db.run(
+          'INSERT INTO material_pricing_new (material_name_en, material_name_es, multiplier, updated_at, updated_by) VALUES (?, ?, ?, ?, ?)',
+          [translation.en, translation.es, material.multiplier, material.updated_at, material.updated_by]
+        );
+      }
+      
+      // Replace old table
+      await db.exec('DROP TABLE material_pricing');
+      await db.exec('ALTER TABLE material_pricing_new RENAME TO material_pricing');
+      
+      console.log('✓ Successfully migrated material_pricing table to bilingual structure');
+    } else if (hasNewStructure) {
+      console.log('✓ Material_pricing table already has bilingual structure');
+    }
+  } catch (error) {
+    console.error('Error migrating material_pricing table:', error);
+    // Don't throw here to allow initialization to continue
+  }
+
   // Create default admin user
   const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', ['superadmin']);
 
