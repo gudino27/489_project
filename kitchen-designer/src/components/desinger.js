@@ -265,12 +265,25 @@ const KitchenDesigner = () => {
       if (pricesResponse.ok) {
         const data = await pricesResponse.json();
         setBasePrices(data.basePrices);
-        setMaterialMultipliers(data.materialMultipliers);
+        
+        // Convert new bilingual array format to old object format for backward compatibility
+        const materialObject = {};
+        if (Array.isArray(data.materialMultipliers)) {
+          data.materialMultipliers.forEach(material => {
+            materialObject[material.nameEn.toLowerCase()] = material.multiplier;
+          });
+        } else {
+          // Fallback to old format if still object
+          Object.assign(materialObject, data.materialMultipliers);
+        }
+        setMaterialMultipliers(materialObject);
+        
         setColorPricing(data.colorPricing);
         if (data.wallPricing) {
           setWallPricing(data.wallPricing);
         }
         console.log('Loaded prices from database:', data);
+        console.log('Converted material multipliers for designer:', materialObject);
       } else {
         console.error('Failed to load prices, using defaults');
       }

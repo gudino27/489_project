@@ -110,6 +110,14 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
+  const [debugMode, setDebugMode] = useState(true); // Enable debugging
+
+  // Debug logging function
+  const debugLog = (action, data) => {
+    if (debugMode) {
+      console.log(`🔍 [PriceManagement Debug] ${action}:`, data);
+    }
+  };
   const [loadingPrices, setLoadingPrices] = useState(true);
 
   // Load prices on component mount
@@ -141,21 +149,32 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
 
       if (materialRes.ok) {
         const materialData = await materialRes.json();
+        debugLog('Raw material data from API', materialData);
+        
         if (materialData) {
           // Handle both old object format and new array format
           if (Array.isArray(materialData)) {
+            debugLog('Material data is array format', materialData);
             setMaterialMultipliers(materialData);
           } else if (typeof materialData === 'object' && Object.keys(materialData).length > 0) {
+            debugLog('Material data is old object format, converting...', materialData);
             // Convert old format to new format
             const converted = Object.entries(materialData).map(([key, multiplier], index) => ({
               id: index + 1,
               nameEn: key.charAt(0).toUpperCase() + key.slice(1),
-              nameEs: key === 'laminate' ? 'Laminado' : key === 'wood' ? 'Madera' : key === 'plywood' ? 'Madera Contrachapada' : key,
+              nameEs: key === 'laminate' ? 'Laminado' : key === 'wood' ? 'Madera' : key === 'plywood' ? 'Madera Contrachapada' : key === 'maple' ? 'Arce' : key,
               multiplier: parseFloat(multiplier)
             }));
+            debugLog('Converted material data to new format', converted);
             setMaterialMultipliers(converted);
+          } else {
+            debugLog('Material data is in unexpected format', { materialData, type: typeof materialData });
           }
+        } else {
+          debugLog('No material data received from API');
         }
+      } else {
+        debugLog('Material API request failed', { status: materialRes.status, statusText: materialRes.statusText });
       }
 
       if (colorRes.ok) {
@@ -239,7 +258,14 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
 
   // Material management functions
   const handleAddMaterial = () => {
+    debugLog('handleAddMaterial called', { newMaterial, materialMultipliers });
+    
     if (!newMaterial.nameEn || !newMaterial.nameEs || newMaterial.multiplier <= 0) {
+      debugLog('handleAddMaterial validation failed', { 
+        nameEn: newMaterial.nameEn, 
+        nameEs: newMaterial.nameEs, 
+        multiplier: newMaterial.multiplier 
+      });
       alert('Please enter both English and Spanish names, plus a valid multiplier');
       return;
     }
@@ -250,17 +276,39 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
       multiplier: parseFloat(newMaterial.multiplier)
     };
     
+    debugLog('handleAddMaterial creating new material', newMaterialObj);
+    
     setMaterialMultipliers([...materialMultipliers, newMaterialObj]);
     setNewMaterial({ nameEn: '', nameEs: '', multiplier: 1.0 });
     setShowMaterialForm(false);
     setHasUnsavedChanges(true);
+    
+    debugLog('handleAddMaterial completed', { 
+      newMaterialMultipliers: [...materialMultipliers, newMaterialObj] 
+    });
   };
 
   const handleUpdateMaterial = () => {
-    if (!editingMaterial.nameEn || !editingMaterial.nameEs || editingMaterial.multiplier <= 0) {
+    debugLog('handleUpdateMaterial called', { 
+      editingMaterial, 
+      materialMultipliers,
+      editingMaterialExists: !!editingMaterial 
+    });
+    
+    if (!editingMaterial || !editingMaterial.nameEn || !editingMaterial.nameEs || editingMaterial.multiplier <= 0) {
+      debugLog('handleUpdateMaterial validation failed', { 
+        editingMaterial,
+        hasEditingMaterial: !!editingMaterial,
+        nameEn: editingMaterial?.nameEn, 
+        nameEs: editingMaterial?.nameEs, 
+        multiplier: editingMaterial?.multiplier 
+      });
       alert('Please enter valid values');
       return;
     }
+    
+    debugLog('handleUpdateMaterial validation passed, updating material', editingMaterial);
+    
     const updated = materialMultipliers.map(material => 
       material.id === editingMaterial.id 
         ? {
@@ -271,9 +319,14 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
           }
         : material
     );
+    
+    debugLog('handleUpdateMaterial updated array', updated);
+    
     setMaterialMultipliers(updated);
     setEditingMaterial(null);
     setHasUnsavedChanges(true);
+    
+    debugLog('handleUpdateMaterial completed');
   };
 
   const handleDeleteMaterial = (materialId, materialName) => {
@@ -479,13 +532,29 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
             <Settings className="text-green-600" size={20} />
             Material Multipliers
           </h3>
-          <button
-            onClick={() => setShowMaterialForm(true)}
-            className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1"
-          >
-            <Plus size={16} />
+          <div className="flex items-center gap-3">
+            {/* Debug Toggle */}
+            <div className="flex items-center gap-2 text-sm">
+              <label className="text-gray-600">Debug:</label>
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className={`px-2 py-1 rounded text-xs ${
+                  debugMode 
+                    ? 'bg-red-100 text-red-700 border border-red-300' 
+                    : 'bg-gray-100 text-gray-600 border border-gray-300'
+                }`}
+              >
+                {debugMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowMaterialForm(true)}
+              className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 flex items-center gap-1"
+            >
+              <Plus size={16} />
 {t('materials.addMaterial')}
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Material Form */}
@@ -500,7 +569,13 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                   type="text"
                   placeholder="e.g., Maple Wood"
                   value={newMaterial.nameEn}
-                  onChange={(e) => setNewMaterial({ ...newMaterial, nameEn: e.target.value })}
+                  onChange={(e) => {
+                    debugLog('New material nameEn changed', { 
+                      oldValue: newMaterial.nameEn, 
+                      newValue: e.target.value 
+                    });
+                    setNewMaterial({ ...newMaterial, nameEn: e.target.value });
+                  }}
                   className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -512,7 +587,13 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                   type="text"
                   placeholder="e.g., Madera de Arce"
                   value={newMaterial.nameEs}
-                  onChange={(e) => setNewMaterial({ ...newMaterial, nameEs: e.target.value })}
+                  onChange={(e) => {
+                    debugLog('New material nameEs changed', { 
+                      oldValue: newMaterial.nameEs, 
+                      newValue: e.target.value 
+                    });
+                    setNewMaterial({ ...newMaterial, nameEs: e.target.value });
+                  }}
                   className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -527,6 +608,11 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                     value={newMaterial.multiplier}
                     onChange={(e) => {
                       const newValue = parseFloat(e.target.value);
+                      debugLog('New material multiplier changed', { 
+                        oldValue: newMaterial.multiplier, 
+                        newValue: e.target.value,
+                        parsedValue: newValue 
+                      });
                       if (newValue < 0) {
                         alert('Multiplier cannot be negative. Please enter a positive value.');
                         return;
@@ -571,29 +657,50 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                     <input
                       type="text"
                       placeholder="English name"
-                      value={editingMaterial.nameEn}
-                      onChange={(e) => setEditingMaterial({ ...editingMaterial, nameEn: e.target.value })}
+                      value={editingMaterial?.nameEn || ''}
+                      onChange={(e) => {
+                        debugLog('nameEn input changed', { 
+                          oldValue: editingMaterial?.nameEn, 
+                          newValue: e.target.value,
+                          editingMaterial 
+                        });
+                        editingMaterial && setEditingMaterial({ ...editingMaterial, nameEn: e.target.value });
+                      }}
                       className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
                     />
                     <input
                       type="text"
                       placeholder="Spanish name"
-                      value={editingMaterial.nameEs}
-                      onChange={(e) => setEditingMaterial({ ...editingMaterial, nameEs: e.target.value })}
+                      value={editingMaterial?.nameEs || ''}
+                      onChange={(e) => {
+                        debugLog('nameEs input changed', { 
+                          oldValue: editingMaterial?.nameEs, 
+                          newValue: e.target.value,
+                          editingMaterial 
+                        });
+                        editingMaterial && setEditingMaterial({ ...editingMaterial, nameEs: e.target.value });
+                      }}
                       className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                   <input
                     type="number"
                     placeholder="Multiplier"
-                    value={editingMaterial.multiplier}
+                    value={editingMaterial?.multiplier || ''}
                     onChange={(e) => {
                       const newValue = parseFloat(e.target.value);
                       if (newValue < 0) {
                         alert('Multiplier cannot be negative. Please enter a positive value.');
                         return;
                       }
-                      setEditingMaterial({ ...editingMaterial, multiplier: e.target.value });
+                      {
+                        debugLog('multiplier input changed', { 
+                          oldValue: editingMaterial?.multiplier, 
+                          newValue: e.target.value,
+                          editingMaterial 
+                        });
+                        editingMaterial && setEditingMaterial({ ...editingMaterial, multiplier: e.target.value });
+                      }
                     }}
                     className="w-24 p-2 border rounded focus:border-blue-500 focus:outline-none"
                     min="0.1"
@@ -620,12 +727,16 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                   </div>
                   <span className="text-gray-600">×{material.multiplier}</span>
                   <button
-                    onClick={() => setEditingMaterial({
-                      id: material.id,
-                      nameEn: material.nameEn,
-                      nameEs: material.nameEs,
-                      multiplier: material.multiplier
-                    })}
+                    onClick={() => {
+                      const editData = {
+                        id: material.id,
+                        nameEn: material.nameEn,
+                        nameEs: material.nameEs,
+                        multiplier: material.multiplier
+                      };
+                      debugLog('Edit button clicked', { material, editData });
+                      setEditingMaterial(editData);
+                    }}
                     className="p-2 text-blue-600 hover:bg-blue-100 rounded"
                   >
                     <Edit2 size={16} />

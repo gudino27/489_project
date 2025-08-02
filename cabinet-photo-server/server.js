@@ -947,13 +947,14 @@ app.get('/api/prices', async (req, res) => {
       basePrices[item.cabinet_type] = parseFloat(item.base_price);
     });
 
-    // Get material multipliers
+    // Get material multipliers - return new bilingual array format
     const materials = await db.all('SELECT * FROM material_pricing');
-    const materialMultipliers = {};
-    materials.forEach(item => {
-      // Use English name as key for backwards compatibility with existing calculation logic
-      materialMultipliers[item.material_name_en.toLowerCase()] = parseFloat(item.multiplier);
-    });
+    const materialMultipliers = materials.map(item => ({
+      id: item.id,
+      nameEn: item.material_name_en,
+      nameEs: item.material_name_es,
+      multiplier: parseFloat(item.multiplier)
+    }));
 
     // Get color pricing
     const colors = await db.all('SELECT * FROM color_pricing');
