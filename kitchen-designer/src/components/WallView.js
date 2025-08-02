@@ -87,13 +87,21 @@ const WallView = ({
           <g key={element.id}>
             {/* Main element rectangle with enhanced styling */}
             <defs>
-              <linearGradient id={`cabinetGradient-${element.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={element.category === 'appliance' ? element.color : '#f9fafb'} />
-                <stop offset="100%" stopColor={element.category === 'appliance' ? element.color : '#e5e7eb'} />
+              <linearGradient id={`cabinetGradient-${element.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={element.category === 'appliance' ? element.color : '#fafafa'} />
+                <stop offset="30%" stopColor={element.category === 'appliance' ? element.color : '#f5f5f5'} />
+                <stop offset="70%" stopColor={element.category === 'appliance' ? element.color : '#e8e8e8'} />
+                <stop offset="100%" stopColor={element.category === 'appliance' ? element.color : '#d5d5d5'} />
               </linearGradient>
-              <filter id={`cabinetShadow-${element.id}`} x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="2" dy="2" stdDeviation="2" floodColor="#00000020"/>
+              <filter id={`cabinetShadow-${element.id}`} x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="3" dy="3" stdDeviation="3" floodColor="#00000030"/>
+                <feDropShadow dx="1" dy="1" stdDeviation="1" floodColor="#00000015"/>
               </filter>
+              <linearGradient id={`doorGradient-${element.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="50%" stopColor="#f8f8f8" />
+                <stop offset="100%" stopColor="#e0e0e0" />
+              </linearGradient>
             </defs>
             <rect
               x={50 + x * calculatedViewScale}
@@ -168,67 +176,133 @@ const WallView = ({
                         y={30 + yPos * calculatedViewScale + 8}
                         width={(width * calculatedViewScale - 20) / 2}
                         height={height * calculatedViewScale - 16}
-                        fill="none"
-                        stroke="#94a3b8"
-                        strokeWidth="1"
-                        rx="1"
+                        fill={`url(#doorGradient-${element.id})`}
+                        stroke="#888888"
+                        strokeWidth="1.5"
+                        rx="2"
                       />
                       <rect
                         x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2 + 4}
                         y={30 + yPos * calculatedViewScale + 8}
                         width={(width * calculatedViewScale - 20) / 2}
                         height={height * calculatedViewScale - 16}
+                        fill={`url(#doorGradient-${element.id})`}
+                        stroke="#888888"
+                        strokeWidth="1.5"
+                        rx="2"
+                      />
+                      {/* Inner door panels for depth */}
+                      <rect
+                        x={50 + x * calculatedViewScale + 12}
+                        y={30 + yPos * calculatedViewScale + 12}
+                        width={(width * calculatedViewScale - 28) / 2}
+                        height={height * calculatedViewScale - 24}
                         fill="none"
-                        stroke="#94a3b8"
+                        stroke="#b0b0b0"
+                        strokeWidth="1"
+                        rx="1"
+                      />
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2 + 8}
+                        y={30 + yPos * calculatedViewScale + 12}
+                        width={(width * calculatedViewScale - 28) / 2}
+                        height={height * calculatedViewScale - 24}
+                        fill="none"
+                        stroke="#b0b0b0"
                         strokeWidth="1"
                         rx="1"
                       />
                     </>
                   ) : (
                     // Single door panel
-                    <rect
-                      x={50 + x * calculatedViewScale + 8}
-                      y={30 + yPos * calculatedViewScale + 8}
-                      width={width * calculatedViewScale - 16}
-                      height={height * calculatedViewScale - 16}
-                      fill="none"
-                      stroke="#94a3b8"
-                      strokeWidth="1"
-                      rx="1"
-                    />
+                    <>
+                      <rect
+                        x={50 + x * calculatedViewScale + 8}
+                        y={30 + yPos * calculatedViewScale + 8}
+                        width={width * calculatedViewScale - 16}
+                        height={height * calculatedViewScale - 16}
+                        fill={`url(#doorGradient-${element.id})`}
+                        stroke="#888888"
+                        strokeWidth="1.5"
+                        rx="2"
+                      />
+                      {/* Inner door panel for depth */}
+                      <rect
+                        x={50 + x * calculatedViewScale + 12}
+                        y={30 + yPos * calculatedViewScale + 12}
+                        width={width * calculatedViewScale - 24}
+                        height={height * calculatedViewScale - 24}
+                        fill="none"
+                        stroke="#b0b0b0"
+                        strokeWidth="1"
+                        rx="1"
+                      />
+                    </>
                   )}
                   
-                  {/* Enhanced cabinet handles */}
+                  {/* Enhanced cabinet handles with metallic appearance */}
                   {width >= 24 ? (
                     // Double door handles
                     <>
+                      <rect 
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 2} 
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
+                        width="4" 
+                        height="12" 
+                        fill="#4a5568" 
+                        stroke="#2d3748"
+                        strokeWidth="0.5"
+                        rx="2"
+                      />
                       <rect 
                         x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1.5} 
                         y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
                         width="3" 
                         height="10" 
-                        fill="#374151" 
+                        fill="#718096" 
                         rx="1.5"
+                      />
+                      <rect 
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 2} 
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
+                        width="4" 
+                        height="12" 
+                        fill="#4a5568" 
+                        stroke="#2d3748"
+                        strokeWidth="0.5"
+                        rx="2"
                       />
                       <rect 
                         x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1.5} 
                         y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
                         width="3" 
                         height="10" 
-                        fill="#374151" 
+                        fill="#718096" 
                         rx="1.5"
                       />
                     </>
                   ) : (
                     // Single door handle
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5} 
-                      y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                      width="3" 
-                      height="10" 
-                      fill="#374151" 
-                      rx="1.5"
-                    />
+                    <>
+                      <rect 
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2} 
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
+                        width="4" 
+                        height="12" 
+                        fill="#4a5568" 
+                        stroke="#2d3748"
+                        strokeWidth="0.5"
+                        rx="2"
+                      />
+                      <rect 
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5} 
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
+                        width="3" 
+                        height="10" 
+                        fill="#718096" 
+                        rx="1.5"
+                      />
+                    </>
                   )}
                 </>
             )}
@@ -1210,36 +1284,44 @@ const WallView = ({
             {/* Toilet details */}
             {element.type === 'toilet' && (
               <>
-                {/* Toilet bowl */}
-                <ellipse
-                  cx={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.5}
-                  cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.4}
-                  rx={(width * calculatedViewScale) * 0.3}
-                  ry={(height * calculatedViewScale) * 0.25}
-                  fill="#f8fafc"
-                  stroke="#64748b"
-                  strokeWidth="1"
-                />
-                {/* Toilet tank */}
+                {/* Toilet tank - positioned at back/top */}
                 <rect
                   x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.2}
-                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.7}
+                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.1}
                   width={(width * calculatedViewScale) * 0.6}
-                  height={(height * calculatedViewScale) * 0.25}
+                  height={(height * calculatedViewScale) * 0.35}
                   fill="#f1f5f9"
                   stroke="#64748b"
                   strokeWidth="1"
                   rx="2"
                 />
+                {/* Toilet bowl - positioned at front/bottom */}
+                <ellipse
+                  cx={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.5}
+                  cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.65}
+                  rx={(width * calculatedViewScale) * 0.4}
+                  ry={(height * calculatedViewScale) * 0.32}
+                  fill="#f8fafc"
+                  stroke="#64748b"
+                  strokeWidth="1"
+                />
                 {/* Toilet seat */}
                 <ellipse
                   cx={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.5}
-                  cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.4}
-                  rx={(width * calculatedViewScale) * 0.25}
-                  ry={(height * calculatedViewScale) * 0.2}
+                  cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.65}
+                  rx={(width * calculatedViewScale) * 0.35}
+                  ry={(height * calculatedViewScale) * 0.28}
                   fill="none"
                   stroke="#475569"
                   strokeWidth="1"
+                />
+                {/* Toilet bowl opening */}
+                <ellipse
+                  cx={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.5}
+                  cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.65}
+                  rx={(width * calculatedViewScale) * 0.15}
+                  ry={(height * calculatedViewScale) * 0.12}
+                  fill="#e0e0e0"
                 />
                 <text x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} y={30 + (yPos + height * 0.9) * calculatedViewScale} textAnchor="middle" fontSize="6" fill="#64748b" fontWeight="bold">
                   TOILET

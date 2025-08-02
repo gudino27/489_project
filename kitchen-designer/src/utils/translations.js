@@ -172,7 +172,66 @@ const translations = {
     'contact.businessHours': 'Business Hours',
     'contact.mapTitle': 'Find Our Headquarters',
     'contact.mapSubtitle': 'Located in Sunnyside, Washington',
-    'contact.loadingMap': 'Loading map...'
+    'contact.loadingMap': 'Loading map...',
+
+    // Admin Panel
+    'admin.title': 'Admin Panel',
+    'admin.welcome': 'Welcome:',
+    'admin.logout': 'Logout',
+    'admin.username': 'Username',
+    'admin.password': 'Password',
+    'admin.login': 'Login',
+    'admin.forgotPassword': 'Forgot password?',
+    'admin.emailAddress': 'Email Address',
+    'admin.sendResetLink': 'Send Reset Link',
+    'admin.backToLogin': 'Back to Login',
+    'admin.enterEmail': 'Enter your email to receive a password reset link',
+    'admin.contactAdmin': 'Contact your super admin for access',
+    'admin.enterUsername': 'Enter username',
+    'admin.enterPassword': 'Enter password',
+    'admin.enterEmailAddress': 'Enter your email address',
+
+    // Admin Tabs
+    'admin.tabs.prices': 'Prices',
+    'admin.tabs.photos': 'Photos',
+    'admin.tabs.employees': 'Employees',
+    'admin.tabs.designs': 'Designs',
+    'admin.tabs.testimonials': 'Testimonials',
+    'admin.tabs.users': 'Users',
+    'admin.tabs.analytics': 'Analytics',
+
+    // Photo Manager
+    'photoManager.title': 'Portfolio Photo Manager',
+    'photoManager.reorderPhotos': 'Reorder Photos',
+    'photoManager.doneReordering': 'Done Reordering',
+    'photoManager.saveOrder': 'Save Order',
+    'photoManager.reorderingMode': 'Reordering Mode:',
+    'photoManager.dragDropInstructions': 'Drag and drop photos to change their order. Click "Save Order" when done.',
+    'photoManager.uploadTo': 'Upload Photos to',
+    'photoManager.selectPhotos': 'Select Photos',
+    'photoManager.uploading': 'Uploading...',
+    'photoManager.multiplePhotos': 'You can select multiple photos at once. They will be added to the',
+    'photoManager.category': 'category.',
+    'photoManager.noPhotos': 'No photos in this category yet.',
+    'photoManager.getStarted': 'Upload some photos to get started!',
+    'photoManager.categoryOverview': 'Category Overview',
+    'photoManager.howItWorks': 'How it works:',
+    'photoManager.instruction1': 'Photos are automatically displayed in the portfolio carousel',
+    'photoManager.instruction2': 'The order shown here (1, 2, 3...) is the order they\'ll appear in the slideshow',
+    'photoManager.instruction3': 'You can move photos between categories using the dropdown',
+    'photoManager.instruction4': 'Upload multiple photos at once by selecting them in the file dialog',
+    'photoManager.instruction5': 'Changes are saved automatically and will appear on website immediately',
+    'photoManager.deleteConfirm': 'Are you sure you want to delete this photo?',
+    'photoManager.authRequired': 'Authentication required',
+    'photoManager.loginToManage': 'Please log in to manage photos',
+
+    // Categories
+    'categories.kitchen': 'Kitchen',
+    'categories.bathroom': 'Bathroom',
+    'categories.livingRoom': 'Living Room',
+    'categories.bedroom': 'Bedroom',
+    'categories.laundryRoom': 'Laundry Room',
+    'categories.showcase': 'General Showcase'
   },
   
   es: {
@@ -344,7 +403,66 @@ const translations = {
     'contact.businessHours': 'Horario de Atención',
     'contact.mapTitle': 'Encuentra Nuestra Sede',
     'contact.mapSubtitle': 'Ubicados en Sunnyside, Washington',
-    'contact.loadingMap': 'Cargando mapa...'
+    'contact.loadingMap': 'Cargando mapa...',
+
+    // Admin Panel
+    'admin.title': 'Panel de Administrador',
+    'admin.welcome': 'Bienvenido:',
+    'admin.logout': 'Cerrar Sesión',
+    'admin.username': 'Nombre de Usuario',
+    'admin.password': 'Contraseña',
+    'admin.login': 'Iniciar Sesión',
+    'admin.forgotPassword': '¿Olvidaste tu contraseña?',
+    'admin.emailAddress': 'Dirección de Correo Electrónico',
+    'admin.sendResetLink': 'Enviar Enlace de Restablecimiento',
+    'admin.backToLogin': 'Volver al Inicio de Sesión',
+    'admin.enterEmail': 'Ingresa tu correo electrónico para recibir un enlace de restablecimiento de contraseña',
+    'admin.contactAdmin': 'Contacta a tu superadministrador para obtener acceso',
+    'admin.enterUsername': 'Ingresa nombre de usuario',
+    'admin.enterPassword': 'Ingresa contraseña',
+    'admin.enterEmailAddress': 'Ingresa tu dirección de correo electrónico',
+
+    // Admin Tabs
+    'admin.tabs.prices': 'Precios',
+    'admin.tabs.photos': 'Fotos',
+    'admin.tabs.employees': 'Empleados',
+    'admin.tabs.designs': 'Diseños',
+    'admin.tabs.testimonials': 'Testimonios',
+    'admin.tabs.users': 'Usuarios',
+    'admin.tabs.analytics': 'Analíticas',
+
+    // Photo Manager
+    'photoManager.title': 'Gestor de Fotos del Portafolio',
+    'photoManager.reorderPhotos': 'Reordenar Fotos',
+    'photoManager.doneReordering': 'Terminar Reordenamiento',
+    'photoManager.saveOrder': 'Guardar Orden',
+    'photoManager.reorderingMode': 'Modo de Reordenamiento:',
+    'photoManager.dragDropInstructions': 'Arrastra y suelta las fotos para cambiar su orden. Haz clic en "Guardar Orden" cuando termines.',
+    'photoManager.uploadTo': 'Subir Fotos a',
+    'photoManager.selectPhotos': 'Seleccionar Fotos',
+    'photoManager.uploading': 'Subiendo...',
+    'photoManager.multiplePhotos': 'Puedes seleccionar múltiples fotos a la vez. Se agregarán a la categoría',
+    'photoManager.category': '.',
+    'photoManager.noPhotos': 'Aún no hay fotos en esta categoría.',
+    'photoManager.getStarted': '¡Sube algunas fotos para comenzar!',
+    'photoManager.categoryOverview': 'Resumen de Categorías',
+    'photoManager.howItWorks': 'Cómo funciona:',
+    'photoManager.instruction1': 'Las fotos se muestran automáticamente en el carrusel del portafolio',
+    'photoManager.instruction2': 'El orden mostrado aquí (1, 2, 3...) es el orden en que aparecerán en la presentación',
+    'photoManager.instruction3': 'Puedes mover fotos entre categorías usando el menú desplegable',
+    'photoManager.instruction4': 'Sube múltiples fotos a la vez seleccionándolas en el diálogo de archivo',
+    'photoManager.instruction5': 'Los cambios se guardan automáticamente y aparecerán en el sitio web inmediatamente',
+    'photoManager.deleteConfirm': '¿Estás seguro de que quieres eliminar esta foto?',
+    'photoManager.authRequired': 'Se requiere autenticación',
+    'photoManager.loginToManage': 'Por favor inicia sesión para gestionar fotos',
+
+    // Categories
+    'categories.kitchen': 'Cocina',
+    'categories.bathroom': 'Baño',
+    'categories.livingRoom': 'Sala',
+    'categories.bedroom': 'Dormitorio',
+    'categories.laundryRoom': 'Lavandería',
+    'categories.showcase': 'Vitrina General'
   }
 
 };

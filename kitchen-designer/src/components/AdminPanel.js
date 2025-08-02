@@ -236,23 +236,23 @@ const AdminPanel = () => {
             {!showForgotPassword ? (
               <form onSubmit={handleLogin}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Username</label>
+                  <label className="block text-sm font-medium mb-2">{t('admin.username')}</label>
                   <input
                     type="text"
                     value={loginCredentials.username}
                     onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Enter username"
+                    placeholder={t('admin.enterUsername')}
                     required />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <label className="block text-sm font-medium mb-2">{t('admin.password')}</label>
                   <input
                     type="password"
                     value={loginCredentials.password}
                     onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Enter password"
+                    placeholder={t('admin.enterPassword')}
                     required />
                 </div>
                 <div className="mb-6 text-right">
@@ -261,7 +261,7 @@ const AdminPanel = () => {
                     onClick={() => setShowForgotPassword(true)}
                     className="text-sm text-blue-600 hover:text-blue-800 underline"
                   >
-                    Forgot password?
+                    {t('admin.forgotPassword')}
                   </button>
                 </div>
                 {loginError && (
@@ -273,19 +273,19 @@ const AdminPanel = () => {
                   type="submit"
                   className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
                 >
-                  Login
+                  {t('admin.login')}
                 </button>
               </form>
             ) : (
               <form onSubmit={handleForgotPassword}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Email Address</label>
+                  <label className="block text-sm font-medium mb-2">{t('admin.emailAddress')}</label>
                   <input
                     type="email"
                     value={forgotPasswordEmail}
                     onChange={(e) => setForgotPasswordEmail(e.target.value)}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Enter your email address"
+                    placeholder={t('admin.enterEmailAddress')}
                     required />
                 </div>
                 {loginError && (
@@ -303,7 +303,7 @@ const AdminPanel = () => {
                     type="submit"
                     className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
                   >
-                    Send Reset Link
+                    {t('admin.sendResetLink')}
                   </button>
                   <button
                     type="button"
@@ -315,7 +315,7 @@ const AdminPanel = () => {
                     }}
                     className="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition"
                   >
-                    Back to Login
+                    {t('admin.backToLogin')}
                   </button>
                 </div>
               </form>
@@ -323,8 +323,8 @@ const AdminPanel = () => {
 
             <p className="text-xs text-gray-500 text-center mt-4">
               {showForgotPassword 
-                ? 'Enter your email to receive a password reset link'
-                : 'Contact your super admin for access'
+                ? t('admin.enterEmail')
+                : t('admin.contactAdmin')
               }
             </p>
           </div>
@@ -343,23 +343,25 @@ const AdminPanel = () => {
       <MainNavBar />
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
-          <div className="flex items-center gap-4">
-            <LanguageSelector />
-            <div className="flex items-center gap-2">
-              <span className="text-medium text-gray-800">Welcome:</span>
-              <span className="font-medium">{ user?.username}</span>
+        <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
+          <h1 className="text-xl md:text-2xl font-bold">{t('admin.title')}</h1>
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
+            <div className="order-2 md:order-1">
+              <LanguageSelector />
+            </div>
+            <div className="flex items-center gap-2 order-1 md:order-2">
+              <span className="text-sm md:text-medium text-gray-800">{t('admin.welcome')}</span>
+              <span className="font-medium text-sm md:text-base">{ user?.username}</span>
               {user?.role === 'super_admin' && (
                 <Shield className="text-purple-600" size={16} />
               )}
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-gray-900 transition"
-              title="Logout"
+              className="p-2 text-gray-600 hover:text-gray-900 transition order-3"
+              title={t('admin.logout')}
             >
-              <LogOut size={20} />
+              <LogOut size={18} />
             </button>
           </div>
         </div>
@@ -367,26 +369,26 @@ const AdminPanel = () => {
 
       {/* Secondary Navigation Tabs with Glass Effect */}
       <div className="admin-nav-glass">
-        <div className="px-6 py-2">
-          <nav className="flex flex-wrap gap-2">
+        <div className="px-4 md:px-6 py-2">
+          <nav className="flex flex-wrap gap-1 md:gap-2 justify-center md:justify-start">
             {getAvailableTabs().map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`admin-tab-glass font-medium text-sm transition ${activeTab === tab
+                className={`admin-tab-glass font-medium text-xs md:text-sm transition ${activeTab === tab
                   ? 'active text-blue-700'
                   : 'text-gray-600 hover:text-gray-800'
                   }`}
               >
-                <div className="flex items-center gap-2 tab-content">
-                  {tab === 'prices' && <DollarSign size={18} />}
-                  {tab === 'photos' && <Image size={18} />}
-                  {tab === 'employees' && <IdCardLanyard size={18} />}
-                  {tab === 'designs' && <FileText size={18} />}
-                  {tab === 'testimonials' && <MessageSquare size={18} />}
-                  {tab === 'users' && <Users size={18} />}
-                  {tab === 'analytics' && <BarChart3 size={18} />}
-                  <span className="capitalize">{tab}</span>
+                <div className="flex items-center gap-1 md:gap-2 tab-content">
+                  {tab === 'prices' && <DollarSign size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'photos' && <Image size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'employees' && <IdCardLanyard size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'designs' && <FileText size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'testimonials' && <MessageSquare size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'users' && <Users size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'analytics' && <BarChart3 size={16} className="md:w-[18px] md:h-[18px]" />}
+                  <span className="hidden sm:inline">{t(`admin.tabs.${tab}`)}</span>
                 </div>
               </button>
             ))}

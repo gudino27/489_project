@@ -61,7 +61,7 @@ const Contact = () => {
             </p>
           </div>
         </div>
-        <div className="absolute top-15 right-4 z-50">
+        <div className="fixed top-20 right-4 z-50 md:absolute md:top-15 md:right-4">
           <LanguageSelector />
         </div>
         <div className="contact-content">

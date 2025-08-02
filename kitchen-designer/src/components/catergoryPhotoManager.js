@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Edit2, Save, Image, GripVertical, X } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
+  const { t } = useLanguage();
   const [photos, setPhotos] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('kitchen');
   const [uploading, setUploading] = useState(false);
@@ -13,12 +15,12 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
 
   // Extended categories for portfolio
   const categories = [
-    { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
-    { id: 'bathroom', name: 'Bathroom', icon: '🚿' },
-    { id: 'livingroom', name: 'Living Room', icon: '🛋️' },
-    { id: 'bedroom', name: 'Bedroom', icon: '🛏️' },
-    { id: 'laundryroom', name: 'Laundry Room', icon: '🧺' },
-    { id: 'showcase', name: 'General Showcase', icon: '✨' }
+    { id: 'kitchen', name: t('categories.kitchen'), icon: '🍳' },
+    { id: 'bathroom', name: t('categories.bathroom'), icon: '🚿' },
+    { id: 'livingroom', name: t('categories.livingRoom'), icon: '🛋️' },
+    { id: 'bedroom', name: t('categories.bedroom'), icon: '🛏️' },
+    { id: 'laundryroom', name: t('categories.laundryRoom'), icon: '🧺' },
+    { id: 'showcase', name: t('categories.showcase'), icon: '✨' }
   ];
 
   // Use API_BASE from props or fallback
@@ -229,7 +231,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
   };
 
   const deletePhoto = async (photoId) => {
-    if (!window.confirm('Are you sure you want to delete this photo?')) return;
+    if (!window.confirm(t('photoManager.deleteConfirm'))) return;
 
     if (!token) {
       alert('Authentication required');
@@ -292,8 +294,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     return (
       <div className="p-6 bg-white rounded-lg shadow-lg">
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-3">Authentication required</div>
-          <p className="text-sm text-gray-400">Please log in to manage photos</p>
+          <div className="text-gray-500 mb-3">{t('photoManager.authRequired')}</div>
+          <p className="text-sm text-gray-400">{t('photoManager.loginToManage')}</p>
         </div>
       </div>
     );
@@ -313,7 +315,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Portfolio Photo Manager</h2>
+        <h2 className="text-2xl font-bold">{t('photoManager.title')}</h2>
         <div className="flex gap-2">
           <button
             onClick={() => {
@@ -334,7 +336,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
               }`}
           >
             <GripVertical size={16} />
-            {isReordering ? 'Done Reordering' : 'Reorder Photos'}
+            {isReordering ? t('photoManager.doneReordering') : t('photoManager.reorderPhotos')}
           </button>
           {hasOrderChanges && (
             <button
@@ -342,7 +344,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Save size={16} />
-              Save Order
+              {t('photoManager.saveOrder')}
             </button>
           )}
         </div>
@@ -372,8 +374,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       {isReordering && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Reordering Mode:</strong> Drag and drop photos to change their order.
-            Click "Save Order" when done.
+            <strong>{t('photoManager.reorderingMode')}</strong> {t('photoManager.dragDropInstructions')}
           </p>
         </div>
       )}
@@ -382,12 +383,12 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       {!isReordering && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-lg font-semibold mb-3">
-            Upload Photos to {categories.find(c => c.id === selectedCategory)?.name}
+            {t('photoManager.uploadTo')} {categories.find(c => c.id === selectedCategory)?.name}
           </h3>
           <label className="inline-block">
             <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors ">
               <Upload size={20} />
-              {uploading ? 'Uploading...' : 'Select Photos'}
+              {uploading ? t('photoManager.uploading') : t('photoManager.selectPhotos')}
             </div>
             <input
               type="file"
@@ -399,7 +400,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
             />
           </label>
           <p className="text-sm text-gray-600 mt-2">
-            You can select multiple photos at once. They will be added to the {categories.find(c => c.id === selectedCategory)?.name} category.
+            {t('photoManager.multiplePhotos')} {categories.find(c => c.id === selectedCategory)?.name} {t('photoManager.category')}
           </p>
         </div>
       )}
@@ -413,8 +414,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         {currentPhotos.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Image size={48} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500">No photos in this category yet.</p>
-            <p className="text-sm text-gray-400 mt-1">Upload some photos to get started!</p>
+            <p className="text-gray-500">{t('photoManager.noPhotos')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('photoManager.getStarted')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -524,7 +525,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
 
       {/* Category Overview */}
       <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-lg font-semibold mb-3">Category Overview</h3>
+        <h3 className="text-lg font-semibold mb-3">{t('photoManager.categoryOverview')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {categories.map(category => (
             <div key={category.id} className="bg-white p-3 rounded border">
@@ -543,13 +544,13 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
 
       {/* Instructions */}
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h4 className="font-semibold text-blue-900 mb-2">How it works:</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">{t('photoManager.howItWorks')}</h4>
         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Photos are automatically displayed in the portfolio carousel</li>
-          <li>The order shown here (1, 2, 3...) is the order they'll appear in the slideshow</li>
-          <li>You can move photos between categories using the dropdown</li>
-          <li>Upload multiple photos at once by selecting them in the file dialog</li>
-          <li>Changes are saved automatically and will appear on website immediately</li>
+          <li>{t('photoManager.instruction1')}</li>
+          <li>{t('photoManager.instruction2')}</li>
+          <li>{t('photoManager.instruction3')}</li>
+          <li>{t('photoManager.instruction4')}</li>
+          <li>{t('photoManager.instruction5')}</li>
         </ul>
       </div>
     </div>
