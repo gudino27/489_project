@@ -12,10 +12,14 @@ import {
   Bath
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePricing } from '../contexts/PricingContext';
 
 const PriceManagement = ({ token, API_BASE, userRole }) => {
   // Language context
   const { t } = useLanguage();
+  
+  // Shared pricing context
+  const { refreshPricing, setMaterialMultipliers: setSharedMaterialMultipliers } = usePricing();
   
   // Tab state for kitchen/bathroom pricing
   const [activeTab, setActiveTab] = useState('kitchen');
@@ -118,6 +122,18 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
       console.log(`🔍 [PriceManagement Debug] ${action}:`, data);
     }
   };
+
+  // Helper function to update shared context with converted material format
+  const updateSharedMaterials = (materialsArray) => {
+    const materialObject = {};
+    materialsArray.forEach(material => {
+      materialObject[material.nameEn.toLowerCase()] = material.multiplier;
+    });
+    setSharedMaterialMultipliers(materialObject);
+    debugLog('Updated shared context with converted materials', materialObject);
+  };
+
+  // Materials will be saved to database when "Save Changes" is clicked
   const [loadingPrices, setLoadingPrices] = useState(true);
 
   // Load prices on component mount
@@ -245,6 +261,15 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
       if (responses.every(res => res.ok)) {
         setSaveStatus('saved');
         setHasUnsavedChanges(false);
+        
+        // Remove "Unsaved" status from all materials after successful save
+        setMaterialMultipliers(prev => prev.map(material => ({
+          ...material,
+          isTemporary: false
+        })));
+        
+        debugLog('Save completed - removed temporary flags from all materials');
+        
         setTimeout(() => setSaveStatus(''), 2000);
       } else {
         throw new Error('Failed to save some prices');
@@ -270,22 +295,34 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
       return;
     }
     
+    // Generate a temporary ID for new materials (will be replaced by database ID on save)
+    const tempId = Date.now() + Math.random(); // Unique temporary ID
+    
     const newMaterialObj = {
+      id: tempId,
       nameEn: newMaterial.nameEn,
       nameEs: newMaterial.nameEs,
-      multiplier: parseFloat(newMaterial.multiplier)
+      multiplier: parseFloat(newMaterial.multiplier),
+      isTemporary: true // Flag to indicate this hasn't been saved to database yet
     };
     
     debugLog('handleAddMaterial creating new material', newMaterialObj);
     
-    setMaterialMultipliers([...materialMultipliers, newMaterialObj]);
+    const updatedMaterials = [...materialMultipliers, newMaterialObj];
+    setMaterialMultipliers(updatedMaterials);
     setNewMaterial({ nameEn: '', nameEs: '', multiplier: 1.0 });
     setShowMaterialForm(false);
     setHasUnsavedChanges(true);
     
+    // Update shared context and notify other components
+    updateSharedMaterials(updatedMaterials);
+    refreshPricing();
+    
     debugLog('handleAddMaterial completed', { 
-      newMaterialMultipliers: [...materialMultipliers, newMaterialObj] 
+      newMaterialMultipliers: updatedMaterials 
     });
+
+    // Material will be saved when "Save Changes" is clicked
   };
 
   const handleUpdateMaterial = () => {
@@ -326,6 +363,10 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     setEditingMaterial(null);
     setHasUnsavedChanges(true);
     
+    // Update shared context and notify other components
+    updateSharedMaterials(updated);
+    refreshPricing();
+    
     debugLog('handleUpdateMaterial completed');
   };
 
@@ -334,6 +375,10 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
       const updated = materialMultipliers.filter(material => material.id !== materialId);
       setMaterialMultipliers(updated);
       setHasUnsavedChanges(true);
+      
+      // Update shared context and notify other components
+      updateSharedMaterials(updated);
+      refreshPricing();
     }
   };
 
@@ -653,6 +698,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
             <div key={material.id || `${material.nameEn}-${material.nameEs}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
               {editingMaterial?.id === material.id ? (
                 <>
+                  {debugLog('Rendering edit form for material', { editingMaterial, material })}
                   <div className="flex-1 space-y-2">
                     <input
                       type="text"
@@ -722,7 +768,14 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
               ) : (
                 <>
                   <div className="flex-1">
-                    <div className="font-medium">{material.nameEn}</div>
+                    <div className="font-medium">
+                      {material.nameEn}
+                      {material.isTemporary && (
+                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+                          Unsaved
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-600">{material.nameEs}</div>
                   </div>
                   <span className="text-gray-600">×{material.multiplier}</span>
@@ -732,10 +785,17 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
                         id: material.id,
                         nameEn: material.nameEn,
                         nameEs: material.nameEs,
-                        multiplier: material.multiplier
+                        multiplier: material.multiplier,
+                        isTemporary: material.isTemporary
                       };
-                      debugLog('Edit button clicked', { material, editData });
+                      debugLog('Edit button clicked', { 
+                        material, 
+                        editData,
+                        materialKeys: Object.keys(material),
+                        materialValues: Object.values(material)
+                      });
                       setEditingMaterial(editData);
+                      debugLog('editingMaterial state after setting', editData);
                     }}
                     className="p-2 text-blue-600 hover:bg-blue-100 rounded"
                   >

@@ -16,6 +16,7 @@ import WallView from './WallView';
 import WallManagement from './WallManagement';
 import LanguageSelector from './LanguageSelector';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePricing } from '../contexts/PricingContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const KitchenDesigner = () => {
@@ -24,6 +25,15 @@ const KitchenDesigner = () => {
   
   // Language context
   const { t } = useLanguage();
+  
+  // Shared pricing context
+  const { 
+    materialMultipliers: sharedMaterialMultipliers, 
+    setMaterialMultipliers: setSharedMaterialMultipliers,
+    basePrices: sharedBasePrices,
+    setBasePrices: setSharedBasePrices,
+    pricingVersion 
+  } = usePricing();
   // -----------------------------
   // Device Detection and Compatibility
   // Check screen size and device capabilities
@@ -214,7 +224,8 @@ const KitchenDesigner = () => {
     'shower': 0
   });
 
-  const [materialMultipliers, setMaterialMultipliers] = useState({
+  // Use shared material multipliers state
+  const [materialMultipliers, setMaterialMultipliers] = useState(sharedMaterialMultipliers || {
     'laminate': 1.0,    // Standard pricing (no multiplier)
     'wood': 1.5,        // 50% upcharge for solid wood
     'plywood': 1.3      // 30% upcharge for plywood
@@ -255,6 +266,24 @@ const KitchenDesigner = () => {
     loadPrices();
   }, []);
 
+  // Sync with shared pricing context when pricing version changes
+  useEffect(() => {
+    if (sharedMaterialMultipliers && Object.keys(sharedMaterialMultipliers).length > 0) {
+      // Convert new bilingual array format to old object format if needed
+      let materialObject = {};
+      if (Array.isArray(sharedMaterialMultipliers)) {
+        sharedMaterialMultipliers.forEach(material => {
+          materialObject[material.nameEn.toLowerCase()] = material.multiplier;
+        });
+      } else {
+        materialObject = sharedMaterialMultipliers;
+      }
+      
+      setMaterialMultipliers(materialObject);
+      console.log('Updated Kitchen Designer with shared material multipliers:', materialObject);
+    }
+  }, [pricingVersion, sharedMaterialMultipliers]);
+
   const loadPrices = async () => {
     try {
       const [pricesResponse, wallAvailResponse] = await Promise.all([
@@ -277,6 +306,7 @@ const KitchenDesigner = () => {
           Object.assign(materialObject, data.materialMultipliers);
         }
         setMaterialMultipliers(materialObject);
+        setSharedMaterialMultipliers(materialObject); // Update shared context
         
         setColorPricing(data.colorPricing);
         if (data.wallPricing) {

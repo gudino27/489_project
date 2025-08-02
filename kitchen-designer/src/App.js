@@ -9,6 +9,7 @@ import AdminPanel from './components/AdminPanel';
 import PasswordReset from './components/PasswordReset';
 import TestimonialForm from './components/TestimonialForm';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -17,7 +18,8 @@ import { LanguageProvider } from './contexts/LanguageContext';
 function App() {
   return (
     <LanguageProvider>
-      <Router>
+      <PricingProvider>
+        <Router>
         <Routes>
                   
           {/* React components */}
@@ -30,7 +32,8 @@ function App() {
           <Route path="/reset-password" element={<PasswordReset />} />
           <Route path="/testimonial/:token" element={<TestimonialForm />} />
         </Routes>
-      </Router>
+        </Router>
+      </PricingProvider>
     </LanguageProvider>
   );
 }
