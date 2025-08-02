@@ -1621,13 +1621,55 @@ app.get('/api/designs/:id/debug', async (req, res) => {
   }
 });
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uploadsDir: path.join(__dirname, 'uploads'),
-    databasePath: path.join(__dirname, 'database', 'cabinet_photos.db')
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const health = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      uptime: Math.floor(process.uptime()),
+      memory: process.memoryUsage(),
+      checks: {}
+    };
+
+    // Database connectivity check
+    try {
+      const testQuery = await photoDb.get('SELECT 1 as test');
+      health.checks.database = { status: 'OK', message: 'Database connection successful' };
+    } catch (error) {
+      health.checks.database = { status: 'ERROR', message: `Database error: ${error.message}` };
+      health.status = 'DEGRADED';
+    }
+
+    // File system checks
+    try {
+      const uploadsDir = path.join(__dirname, 'uploads');
+      await fs.access(uploadsDir);
+      health.checks.uploads = { status: 'OK', message: 'Uploads directory accessible' };
+    } catch (error) {
+      health.checks.uploads = { status: 'ERROR', message: `Uploads directory error: ${error.message}` };
+      health.status = 'DEGRADED';
+    }
+
+    // Dependencies check
+    health.checks.dependencies = { 
+      status: 'OK', 
+      express: require('express/package.json').version,
+      sharp: require('sharp/package.json').version 
+    };
+
+    // Set appropriate HTTP status code
+    const statusCode = health.status === 'OK' ? 200 : health.status === 'DEGRADED' ? 200 : 503;
+    
+    res.status(statusCode).json(health);
+  } catch (error) {
+    res.status(503).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
 });
 
 // Dynamic sitemap generation
