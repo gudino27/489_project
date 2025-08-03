@@ -292,38 +292,38 @@
     .testimonial-container {
         padding: 20px 15px;
     }
-    
+
     .testimonial-form-card,
     .success-card,
     .error-card {
         padding: 25px;
     }
-    
+
     .testimonial-form-card h2,
     .success-card h2,
     .error-card h2 {
         font-size: 1.5rem;
     }
-    
+
     .form-group input,
     .form-group select,
     .form-group textarea {
         padding: 10px 12px;
     }
-    
+
     .btn-primary {
         padding: 12px 25px;
     }
-    
+
     .file-upload-label {
         padding: 30px 15px;
     }
-    
+
     .upload-icon {
         width: 36px;
         height: 36px;
     }
-    
+
     .photo-previews {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;
@@ -335,7 +335,7 @@
         flex-wrap: wrap;
         gap: 10px;
     }
-    
+
     .rating-text {
         width: 100%;
         margin-left: 0;

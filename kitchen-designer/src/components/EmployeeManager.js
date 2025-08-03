@@ -1,5 +1,5 @@
-import React,{ useState, useEffect } from 'react';
-import { User, Trash2, Edit2, Save,Plus, GripVertical, Mail, Phone, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Trash2, Edit2, Save, Plus, GripVertical, Mail, Phone, Calendar } from 'lucide-react';
 
 const EmployeeManager = () => {
   const [employees, setEmployees] = useState([]);
@@ -23,7 +23,7 @@ const EmployeeManager = () => {
     photo: null
   });
 
-  useEffect(() => {loadEmployees();}, []);
+  useEffect(() => { loadEmployees(); }, []);
 
   const loadEmployees = async () => {
     try {
@@ -59,7 +59,7 @@ const EmployeeManager = () => {
       formData.append('email', newEmployee.email);
       formData.append('phone', newEmployee.phone);
       formData.append('joined_date', newEmployee.joined_date);
-      
+
       if (newEmployee.photo) {
         formData.append('photo', newEmployee.photo);
       }
@@ -116,7 +116,7 @@ const EmployeeManager = () => {
 
       if (response.ok) {
         const result = await response.json();
-        setEmployees(employees.map(emp => 
+        setEmployees(employees.map(emp =>
           emp.id === id ? result.employee : emp
         ));
         setEditingId(null);
@@ -169,10 +169,10 @@ const EmployeeManager = () => {
 
     const newEmployees = [...employees];
     const draggedEmployee = newEmployees[draggedItem];
-    
+
     newEmployees.splice(draggedItem, 1);
     newEmployees.splice(dropIndex, 0, draggedEmployee);
-    
+
     setEmployees(newEmployees);
     setDraggedItem(null);
   };
@@ -203,9 +203,8 @@ const EmployeeManager = () => {
     <div className="p-6 bg-white rounded-lg shadow-lg">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all transform ${
-          notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-        }`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all transform ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}>
           {notification.message}
         </div>
       )}
@@ -265,7 +264,7 @@ const EmployeeManager = () => {
                   type="text"
                   required
                   value={newEmployee.name}
-                  onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="John Doe"
                 />
@@ -276,7 +275,7 @@ const EmployeeManager = () => {
                   type="text"
                   required
                   value={newEmployee.position}
-                  onChange={(e) => setNewEmployee({...newEmployee, position: e.target.value})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, position: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="Senior Designer"
                 />
@@ -286,7 +285,7 @@ const EmployeeManager = () => {
                 <input
                   type="email"
                   value={newEmployee.email}
-                  onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="john@company.com"
                 />
@@ -296,7 +295,7 @@ const EmployeeManager = () => {
                 <input
                   type="tel"
                   value={newEmployee.phone}
-                  onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="(555) 123-4567"
                 />
@@ -306,7 +305,7 @@ const EmployeeManager = () => {
                 <input
                   type="date"
                   value={newEmployee.joined_date}
-                  onChange={(e) => setNewEmployee({...newEmployee, joined_date: e.target.value})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, joined_date: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
@@ -315,7 +314,7 @@ const EmployeeManager = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setNewEmployee({...newEmployee, photo: e.target.files[0]})}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, photo: e.target.files[0] })}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
@@ -324,7 +323,7 @@ const EmployeeManager = () => {
               <label className="block text-sm font-medium mb-1">Bio</label>
               <textarea
                 value={newEmployee.bio}
-                onChange={(e) => setNewEmployee({...newEmployee, bio: e.target.value})}
+                onChange={(e) => setNewEmployee({ ...newEmployee, bio: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg"
                 rows="3"
                 placeholder="Brief description about the employee..."
@@ -371,9 +370,8 @@ const EmployeeManager = () => {
           employees.map((employee, index) => (
             <div
               key={employee.id}
-              className={`p-4 border rounded-lg relative ${
-                isReordering ? 'cursor-move' : ''
-              } ${draggedItem === index ? 'opacity-50' : ''}`}
+              className={`p-4 border rounded-lg relative ${isReordering ? 'cursor-move' : ''
+                } ${draggedItem === index ? 'opacity-50' : ''}`}
               draggable={isReordering}
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={handleDragOver}
@@ -404,8 +402,8 @@ const EmployeeManager = () => {
                         <input
                           type="text"
                           value={employee.name}
-                          onChange={(e) => setEmployees(employees.map(emp => 
-                            emp.id === employee.id ? {...emp, name: e.target.value} : emp
+                          onChange={(e) => setEmployees(employees.map(emp =>
+                            emp.id === employee.id ? { ...emp, name: e.target.value } : emp
                           ))}
                           className="px-3 py-2 border rounded"
                           placeholder="Name"
@@ -413,8 +411,8 @@ const EmployeeManager = () => {
                         <input
                           type="text"
                           value={employee.position}
-                          onChange={(e) => setEmployees(employees.map(emp => 
-                            emp.id === employee.id ? {...emp, position: e.target.value} : emp
+                          onChange={(e) => setEmployees(employees.map(emp =>
+                            emp.id === employee.id ? { ...emp, position: e.target.value } : emp
                           ))}
                           className="px-3 py-2 border rounded"
                           placeholder="Position"
@@ -422,8 +420,8 @@ const EmployeeManager = () => {
                         <input
                           type="email"
                           value={employee.email || ''}
-                          onChange={(e) => setEmployees(employees.map(emp => 
-                            emp.id === employee.id ? {...emp, email: e.target.value} : emp
+                          onChange={(e) => setEmployees(employees.map(emp =>
+                            emp.id === employee.id ? { ...emp, email: e.target.value } : emp
                           ))}
                           className="px-3 py-2 border rounded"
                           placeholder="Email"
@@ -431,8 +429,8 @@ const EmployeeManager = () => {
                         <input
                           type="tel"
                           value={employee.phone || ''}
-                          onChange={(e) => setEmployees(employees.map(emp => 
-                            emp.id === employee.id ? {...emp, phone: e.target.value} : emp
+                          onChange={(e) => setEmployees(employees.map(emp =>
+                            emp.id === employee.id ? { ...emp, phone: e.target.value } : emp
                           ))}
                           className="px-3 py-2 border rounded"
                           placeholder="Phone"
@@ -440,8 +438,8 @@ const EmployeeManager = () => {
                       </div>
                       <textarea
                         value={employee.bio || ''}
-                        onChange={(e) => setEmployees(employees.map(emp => 
-                          emp.id === employee.id ? {...emp, bio: e.target.value} : emp
+                        onChange={(e) => setEmployees(employees.map(emp =>
+                          emp.id === employee.id ? { ...emp, bio: e.target.value } : emp
                         ))}
                         className="w-full px-3 py-2 border rounded"
                         rows="2"
@@ -454,8 +452,8 @@ const EmployeeManager = () => {
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              setEmployees(employees.map(emp => 
-                                emp.id === employee.id ? {...emp, newPhoto: file} : emp
+                              setEmployees(employees.map(emp =>
+                                emp.id === employee.id ? { ...emp, newPhoto: file } : emp
                               ));
                             }
                           }}

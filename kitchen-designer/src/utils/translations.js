@@ -4,7 +4,7 @@ const translations = {
     'language.select': 'Select Language',
     'language.english': 'English',
     'language.spanish': 'Spanish',
-    
+
     // Kitchen Designer
     'designer.title': 'Kitchen Designer',
     'designer.bathroomTitle': 'Bathroom Designer',
@@ -23,7 +23,7 @@ const translations = {
     'designer.roomWidth': 'Room Width (feet)',
     'designer.roomDepth': 'Room Depth (feet)',
     'designer.wallHeight': 'Wall Height (inches)',
-    
+
     // Cabinets
     'cabinets.title': 'Cabinets',
     'cabinets.kitchen': 'Kitchen Cabinets',
@@ -36,7 +36,7 @@ const translations = {
     'cabinets.corner': 'Corner Cabinet',
     'cabinets.island': 'Island Cabinet',
     'cabinets.pantry': 'Pantry Cabinet',
-    
+
     // Materials
     'materials.title': 'Materials',
     'materials.addMaterial': 'Add Material',
@@ -47,12 +47,12 @@ const translations = {
     'materials.laminate': 'Laminate',
     'materials.wood': 'Wood',
     'materials.plywood': 'Plywood',
-    
+
     // Colors
     'colors.title': 'Colors',
     'colors.count': 'Color Count',
     'colors.custom': 'Custom Colors',
-    
+
     // Doors
     'doors.title': 'Doors',
     'doors.room': 'Room Door',
@@ -64,7 +64,7 @@ const translations = {
     'doors.add': 'Add Door',
     'doors.remove': 'Remove',
     'doors.inches': 'inches',
-    
+
     // Walls
     'walls.title': 'Wall Management',
     'walls.add': 'Add',
@@ -77,7 +77,7 @@ const translations = {
     'walls.right': 'Right Wall',
     'walls.bottom': 'Bottom Wall',
     'walls.left': 'Left Wall',
-    
+
     // Pricing
     'pricing.title': 'Total Cost',
     'pricing.cabinets': 'Cabinets',
@@ -85,7 +85,7 @@ const translations = {
     'pricing.colors': 'Color Upgrades',
     'pricing.walls': 'Wall Modifications',
     'pricing.total': 'Total',
-    
+
     // Actions
     'actions.save': 'Save',
     'actions.load': 'Load',
@@ -94,13 +94,13 @@ const translations = {
     'actions.cancel': 'Cancel',
     'actions.confirm': 'Confirm',
     'actions.edit': 'Edit',
-    
+
     // Messages
     'messages.saved': 'Design saved successfully!',
     'messages.loaded': 'Design loaded successfully!',
     'messages.error': 'An error occurred',
     'messages.confirm.delete': 'Are you sure you want to delete this?',
-    
+
     // Home Page
     'home.companyName': 'GUDINO',
     'home.tagline': 'Custom WoodWorking',
@@ -143,8 +143,8 @@ const translations = {
     'portfolio.livingRoom': 'living room',
     'portfolio.laundryRoom': 'laundry room',
     'portfolio.bedroom': 'bedroom',
-    'portfolio.showcase':'showcase',
-    
+    'portfolio.showcase': 'showcase',
+
     // About page
     'about.heroTitle': 'Expert Carpenters & Cabinet Makers',
     'about.heroSubtitle': 'Washington\'s trusted team for kitchen remodeling, bathroom renovations, and custom carpentry services',
@@ -160,7 +160,7 @@ const translations = {
     'about.loadingTestimonials': 'Loading testimonials...',
     'about.noTestimonials': 'No testimonials yet. Be the first to share your experience!',
     'about.projectPhoto': 'Project photo',
-    
+
     // Contact page
     'contact.heroTitle': 'Get In Touch',
     'contact.heroSubtitle': 'Ready to transform your space? We\'re here to help bring your vision to life.',
@@ -234,13 +234,13 @@ const translations = {
     'categories.laundryRoom': 'Laundry Room',
     'categories.showcase': 'General Showcase'
   },
-  
+
   es: {
     // Navigation and UI
     'language.select': 'Seleccionar Idioma',
     'language.english': 'Inglés',
     'language.spanish': 'Español',
-    
+
     // Kitchen Designer
     'designer.title': 'Diseñador de Cocinas',
     'designer.bathroomTitle': 'Diseñador de Baños',
@@ -259,7 +259,7 @@ const translations = {
     'designer.roomWidth': 'Ancho del Cuarto (pies)',
     'designer.roomDepth': 'Profundidad del Cuarto (pies)',
     'designer.wallHeight': 'Altura de Pared (pulgadas)',
-    
+
     // Cabinets
     'cabinets.title': 'Gabinetes',
     'cabinets.base': 'Gabinete Base',
@@ -268,7 +268,7 @@ const translations = {
     'cabinets.corner': 'Gabinete de Esquina',
     'cabinets.island': 'Gabinete de Isla',
     'cabinets.pantry': 'Gabinete de Despensa',
-    
+
     // Materials
     'materials.title': 'Materiales',
     'materials.addMaterial': 'Agregar Material',
@@ -279,12 +279,12 @@ const translations = {
     'materials.laminate': 'Laminado',
     'materials.wood': 'Madera',
     'materials.plywood': 'Madera Contrachapada',
-    
+
     // Colors
     'colors.title': 'Colores',
     'colors.count': 'Cantidad de Colores',
     'colors.custom': 'Colores Personalizados',
-    
+
     // Doors
     'doors.title': 'Puertas',
     'doors.room': 'Puerta de Habitación',
@@ -296,7 +296,7 @@ const translations = {
     'doors.add': 'Agregar Puerta',
     'doors.remove': 'Salir',
     'doors.inches': 'pulgadas',
-    
+
     // Walls
     'walls.title': 'Gestión de Paredes',
     'walls.add': 'Agregar',
@@ -309,7 +309,7 @@ const translations = {
     'walls.right': 'Pared Derecha',
     'walls.bottom': 'Pared Inferior',
     'walls.left': 'Pared Izquierda',
-    
+
     // Pricing
     'pricing.title': 'Costo Total',
     'pricing.cabinets': 'Gabinetes',
@@ -317,7 +317,7 @@ const translations = {
     'pricing.colors': 'Mejoras de Color',
     'pricing.walls': 'Modificaciones de Paredes',
     'pricing.total': 'Total',
-    
+
     // Actions
     'actions.save': 'Guardar',
     'actions.load': 'Cargar',
@@ -326,13 +326,13 @@ const translations = {
     'actions.cancel': 'Cancelar',
     'actions.confirm': 'Confirmar',
     'actions.edit': 'Editar',
-    
+
     // Messages
     'messages.saved': 'Diseño guardado!',
     'messages.loaded': 'Diseño cargado!',
     'messages.error': 'Ocurrió un error',
     'messages.confirm.delete': '¿Estás seguro de que quieres eliminar esto?',
-    
+
     // Home Page
     'home.companyName': 'GUDINO',
     'home.tagline': 'Custom WoodWorking',
@@ -368,7 +368,7 @@ const translations = {
     'home.knowMore': 'Te Gustaría Saber Más?',
     'home.knowMoreDescription': 'Somos más que solo los espacios que construimos. Haz clic abajo para aprender sobre nuestras raíces, escuchar de clientes reales y conocer al equipo detrás de Gudino Custom Woodworking.',
     'home.aboutUs': 'Acerca de Nosotros',
-    
+
     //portfolio page
     'portfolio.selectCategory': 'Seleccionar Categoría',
     'portfolio.kitchen': 'Cocina',
@@ -376,8 +376,8 @@ const translations = {
     'portfolio.livingRoom': 'Sala',
     'portfolio.laundryRoom': 'Lavandería',
     'portfolio.bedroom': 'Dormitorio',
-    'portfolio.showcase':'Vitrina',
-    
+    'portfolio.showcase': 'Vitrina',
+
     // About page
     'about.heroTitle': 'Carpinteros Expertos y Fabricantes de Gabinetes',
     'about.heroSubtitle': 'El equipo de confianza de Washington para remodelación de cocinas, renovaciones de baños y servicios de carpintería personalizada',
@@ -393,7 +393,7 @@ const translations = {
     'about.loadingTestimonials': 'Cargando testimonios...',
     'about.noTestimonials': '¡Aún no hay testimonios. ¡Sé el primero en compartir tu experiencia!',
     'about.projectPhoto': 'Foto del proyecto',
-    
+
     // Contact page
     'contact.heroTitle': 'Ponte en Contacto',
     'contact.heroSubtitle': '¿Listo para transformar tu espacio? Estamos aquí para ayudarte a dar vida a tu visión.',

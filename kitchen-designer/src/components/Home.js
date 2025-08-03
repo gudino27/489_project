@@ -4,15 +4,15 @@ import Navigation from './Navigation';
 import LanguageSelector from './LanguageSelector';
 import { useLanguage } from '../contexts/LanguageContext';
 import './css/home.css';
-import { useAnalytics } from '../hooks/useAnalytics'; 
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Home = () => {
   // Analytics tracking
   useAnalytics('/');
-  
+
   // Language context
   const { t } = useLanguage();
-  
+
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
@@ -35,17 +35,17 @@ const Home = () => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     const handleScroll = () => {
       if (!isMobile) {
         setScrollY(window.scrollY);
       }
     };
-    
+
     checkIfMobile();
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', checkIfMobile);
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', checkIfMobile);
@@ -68,7 +68,7 @@ const Home = () => {
             Your browser does not support the video tag.
           </video>
         </div>
-        
+
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="company-name">{t('home.companyName')}</h1>
@@ -76,38 +76,38 @@ const Home = () => {
             <p className="hero-description">{t('home.heroDescription')}</p>
           </div>
         </div>
-        
+
         <div className="curved-bottom"></div>
-        
+
         {/* Language selector positioned directly above scroll indicator */}
         <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-50">
           <LanguageSelector />
         </div>
-        
+
         <div className="scroll-indicator" style={{ bottom: '10px' }} onClick={() => {
           const targetPosition = window.innerHeight;
           const startPosition = window.pageYOffset;
           const distance = targetPosition - startPosition;
           const duration = 1500; // 1.5 seconds
           let start = null;
-          
+
           const step = (timestamp) => {
             if (!start) start = timestamp;
             const progress = timestamp - start;
             const progressPercentage = Math.min(progress / duration, 1);
-            
+
             // Easing function for smooth acceleration and deceleration
             const easeInOutCubic = progressPercentage < 0.5
               ? 4 * progressPercentage * progressPercentage * progressPercentage
               : 1 - Math.pow(-2 * progressPercentage + 2, 3) / 2;
-            
+
             window.scrollTo(0, startPosition + distance * easeInOutCubic);
-            
+
             if (progress < duration) {
               requestAnimationFrame(step);
             }
           };
-          
+
           requestAnimationFrame(step);
         }}>
           <div className="scroll-arrow"></div>
@@ -118,7 +118,7 @@ const Home = () => {
 
         {/* Content Sections with Parallax Effects */}
         <section className="content-section">
-          <div className="section-content" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)`}}>
+          <div className="section-content" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)` }}>
             <div className="quote">
               {t('home.quote1')}
             </div>
@@ -126,7 +126,7 @@ const Home = () => {
         </section>
 
         <section className="image-section parallax-section">
-          <div className="parallax-image" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.02}px)`}}>
+          <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.02}px)` }}>
             <img src="/home-page-images/whitekitchen.jpg" alt="White Kitchen" />
           </div>
         </section>
@@ -154,7 +154,7 @@ const Home = () => {
         </section>
 
         <section className="image-section parallax-section">
-          <div className="parallax-image" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)`}}>
+          <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)` }}>
             <img src="/home-page-images/diningroom.jpg" alt="Dining Room" />
           </div>
         </section>
@@ -167,25 +167,25 @@ const Home = () => {
             <div className="feature-description">
               {t('home.creationsDescription')}
             </div>
-            
+
             <div className="work-types-dropdown">
-              <button 
+              <button
                 className="dropdown-toggle"
                 onClick={toggleWorkTypes}
                 aria-expanded={isWorkTypesOpen}
               >
                 <span>{t('home.seeWhatWeDo')}</span>
-                <svg 
+                <svg
                   className={`dropdown-arrow ${isWorkTypesOpen ? 'open' : ''}`}
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
                   fill="currentColor"
                 >
-                  <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                  <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
                 </svg>
               </button>
-              
+
               <div className={`dropdown-content ${isWorkTypesOpen ? 'open' : ''}`}>
                 <div className="work-types-grid">
                   {workTypes.map((workType, index) => (
@@ -205,7 +205,7 @@ const Home = () => {
         </section>
 
         <section className="image-section parallax-section">
-          <div className="parallax-image" style={{transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)`}}>
+          <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)` }}>
             <img src="/home-page-images/blueprint.jpg" alt="Blueprint" />
           </div>
         </section>

@@ -20,18 +20,18 @@ function App() {
     <LanguageProvider>
       <PricingProvider>
         <Router>
-        <Routes>
-                  
-          {/* React components */}
-          <Route path="/" element={<Home />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/design" element={<KitchenDesigner />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/reset-password" element={<PasswordReset />} />
-          <Route path="/testimonial/:token" element={<TestimonialForm />} />
-        </Routes>
+          <Routes>
+
+            {/* React components */}
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/design" element={<KitchenDesigner />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/reset-password" element={<PasswordReset />} />
+            <Route path="/testimonial/:token" element={<TestimonialForm />} />
+          </Routes>
         </Router>
       </PricingProvider>
     </LanguageProvider>

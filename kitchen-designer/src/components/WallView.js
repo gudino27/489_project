@@ -1,8 +1,8 @@
 import React from 'react';
-const WallView = ({ 
-  wallNum, 
-  currentRoomData, 
-  selectedWall, 
+const WallView = ({
+  wallNum,
+  currentRoomData,
+  selectedWall,
   selectedElement,
   elementTypes,
   scale,
@@ -42,7 +42,7 @@ const WallView = ({
       onMouseLeave={handleMouseUp}
       onTouchMove={handleMouseMove}
       onTouchEnd={handleMouseUp}
-      style={{ 
+      style={{
         cursor: isDraggingWallView ? 'ns-resize' : 'default',
         touchAction: isTouch ? 'manipulation' : 'auto'
       }}
@@ -64,13 +64,13 @@ const WallView = ({
       {/* Render each element on this wall */}
       {wallElements.map((element, index) => {
         const elementSpec = elementTypes[element.type];
-        
+
         // Skip rendering if elementSpec is missing
         if (!elementSpec) {
           console.warn('Skipping wall element rendering for invalid type:', element.type);
           return null;
         }
-        
+
         const x = wall === 1 || wall === 3 ? element.x / scale : element.y / scale;
         const width = element.width;
         const height = element.actualHeight || elementSpec.fixedHeight;
@@ -94,8 +94,8 @@ const WallView = ({
                 <stop offset="100%" stopColor={element.category === 'appliance' ? element.color : '#d5d5d5'} />
               </linearGradient>
               <filter id={`cabinetShadow-${element.id}`} x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="3" dy="3" stdDeviation="3" floodColor="#00000030"/>
-                <feDropShadow dx="1" dy="1" stdDeviation="1" floodColor="#00000015"/>
+                <feDropShadow dx="3" dy="3" stdDeviation="3" floodColor="#00000030" />
+                <feDropShadow dx="1" dy="1" stdDeviation="1" floodColor="#00000015" />
               </filter>
               <linearGradient id={`doorGradient-${element.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#ffffff" />
@@ -154,7 +154,7 @@ const WallView = ({
                     strokeWidth="2"
                     rx="2"
                   />
-                  
+
                   {/* Door separation lines (for double door cabinets) */}
                   {width >= 24 && (
                     <line
@@ -166,7 +166,7 @@ const WallView = ({
                       strokeWidth="1.5"
                     />
                   )}
-                  
+
                   {/* Enhanced door panels with stronger definition */}
                   {width >= 24 ? (
                     // Double door panels
@@ -239,73 +239,73 @@ const WallView = ({
                       />
                     </>
                   )}
-                  
+
                   {/* Enhanced cabinet handles with metallic appearance */}
                   {width >= 24 ? (
                     // Double door handles
                     <>
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 2} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
-                        width="4" 
-                        height="12" 
-                        fill="#4a5568" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 2}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6}
+                        width="4"
+                        height="12"
+                        fill="#4a5568"
                         stroke="#2d3748"
                         strokeWidth="0.5"
                         rx="2"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1.5} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                        width="3" 
-                        height="10" 
-                        fill="#718096" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1.5}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                        width="3"
+                        height="10"
+                        fill="#718096"
                         rx="1.5"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 2} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
-                        width="4" 
-                        height="12" 
-                        fill="#4a5568" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 2}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6}
+                        width="4"
+                        height="12"
+                        fill="#4a5568"
                         stroke="#2d3748"
                         strokeWidth="0.5"
                         rx="2"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1.5} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                        width="3" 
-                        height="10" 
-                        fill="#718096" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1.5}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                        width="3"
+                        height="10"
+                        fill="#718096"
                         rx="1.5"
                       />
                     </>
                   ) : (
                     // Single door handle
                     <>
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 6} 
-                        width="4" 
-                        height="12" 
-                        fill="#4a5568" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 6}
+                        width="4"
+                        height="12"
+                        fill="#4a5568"
                         stroke="#2d3748"
                         strokeWidth="0.5"
                         rx="2"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                        width="3" 
-                        height="10" 
-                        fill="#718096" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                        width="3"
+                        height="10"
+                        fill="#718096"
                         rx="1.5"
                       />
                     </>
                   )}
                 </>
-            )}
+              )}
 
             {/* Enhanced drawer cabinet details */}
             {(element.type === 'drawer-base' || element.type === 'double-drawer-base') && (
@@ -321,7 +321,7 @@ const WallView = ({
                   strokeWidth="2"
                   rx="2"
                 />
-                
+
                 {element.type === 'double-drawer-base' ? (
                   // Double drawer design with enhanced visibility
                   <>
@@ -369,20 +369,20 @@ const WallView = ({
                       rx="1"
                     />
                     {/* Enhanced drawer pulls */}
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2} 
-                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.25 - 3} 
-                      width="4" 
-                      height="6" 
-                      fill="#374151" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2}
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.25 - 3}
+                      width="4"
+                      height="6"
+                      fill="#374151"
                       rx="2"
                     />
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2} 
-                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.75 - 3} 
-                      width="4" 
-                      height="6" 
-                      fill="#374151" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2}
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.75 - 3}
+                      width="4"
+                      height="6"
+                      fill="#374151"
                       rx="2"
                     />
                   </>
@@ -414,12 +414,12 @@ const WallView = ({
                           rx="1"
                         />
                         {/* Drawer pull */}
-                        <rect 
-                          x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5} 
-                          y={30 + yPos * calculatedViewScale + 6 + (drawerIndex * (height * calculatedViewScale - 12) / 4) + ((height * calculatedViewScale - 12) / 8) - 1.5} 
-                          width="3" 
-                          height="3" 
-                          fill="#374151" 
+                        <rect
+                          x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1.5}
+                          y={30 + yPos * calculatedViewScale + 6 + (drawerIndex * (height * calculatedViewScale - 12) / 4) + ((height * calculatedViewScale - 12) / 8) - 1.5}
+                          width="3"
+                          height="3"
+                          fill="#374151"
                           rx="1.5"
                         />
                       </g>
@@ -622,12 +622,12 @@ const WallView = ({
                   rx="1"
                 />
                 {/* Enhanced door handle */}
-                <rect 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2} 
-                  y={30 + (yPos + height / 2) * calculatedViewScale - 8} 
-                  width="4" 
-                  height="16" 
-                  fill="#374151" 
+                <rect
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 2}
+                  y={30 + (yPos + height / 2) * calculatedViewScale - 8}
+                  width="4"
+                  height="16"
+                  fill="#374151"
                   rx="2"
                 />
               </>
@@ -669,12 +669,12 @@ const WallView = ({
                       strokeWidth="1"
                       rx="1"
                     />
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 2} 
-                      y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                      width="4" 
-                      height="10" 
-                      fill="#374151" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 2}
+                      y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                      width="4"
+                      height="10"
+                      fill="#374151"
                       rx="2"
                     />
                   </>
@@ -722,20 +722,20 @@ const WallView = ({
                       rx="1"
                     />
                     {/* Enhanced door handles */}
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1.5} 
-                      y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                      width="3" 
-                      height="10" 
-                      fill="#374151" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1.5}
+                      y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                      width="3"
+                      height="10"
+                      fill="#374151"
                       rx="1.5"
                     />
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1.5} 
-                      y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                      width="3" 
-                      height="10" 
-                      fill="#374151" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1.5}
+                      y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                      width="3"
+                      height="10"
+                      fill="#374151"
                       rx="1.5"
                     />
                   </>
@@ -757,7 +757,7 @@ const WallView = ({
                   strokeWidth="2"
                   rx="2"
                 />
-                
+
                 {/* Angled corner cabinet front - creates the distinctive corner cabinet look */}
                 <path
                   d={`M ${50 + x * calculatedViewScale + 6} ${30 + yPos * calculatedViewScale + 6}
@@ -771,7 +771,7 @@ const WallView = ({
                   strokeWidth="1.5"
                   rx="1"
                 />
-                
+
                 {/* Angled door panel to match the cabinet shape */}
                 <path
                   d={`M ${50 + x * calculatedViewScale + 10} ${30 + yPos * calculatedViewScale + 10}
@@ -784,17 +784,17 @@ const WallView = ({
                   stroke="#94a3b8"
                   strokeWidth="1"
                 />
-                
+
                 {/* Corner cabinet door handle positioned on the angled section */}
-                <rect 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 2} 
-                  y={30 + (yPos + height / 2) * calculatedViewScale - 5} 
-                  width="4" 
-                  height="10" 
-                  fill="#374151" 
+                <rect
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 2}
+                  y={30 + (yPos + height / 2) * calculatedViewScale - 5}
+                  width="4"
+                  height="10"
+                  fill="#374151"
                   rx="2"
                 />
-                
+
                 {/* Additional detail lines to show the corner cabinet construction */}
                 <line
                   x1={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.7}
@@ -818,9 +818,9 @@ const WallView = ({
             {/* ========== BATHROOM CABINET DETAILS ========== */}
 
             {/* Vanity cabinet details */}
-            {(element.type === 'vanity' || element.type === 'double-vanity' || element.type === 'floating-vanity' || 
-              element.type === 'corner-vanity' || element.type === 'wall-hung-vanity' || element.type === 'vessel-sink-vanity' || 
-              element.type === 'undermount-sink-vanity' || element.type === 'powder-room-vanity' || 
+            {(element.type === 'vanity' || element.type === 'double-vanity' || element.type === 'floating-vanity' ||
+              element.type === 'corner-vanity' || element.type === 'wall-hung-vanity' || element.type === 'vessel-sink-vanity' ||
+              element.type === 'undermount-sink-vanity' || element.type === 'powder-room-vanity' ||
               element.type === 'master-bath-vanity' || element.type === 'kids-bathroom-vanity') && (
                 <>
                   {/* Vanity cabinet frame */}
@@ -834,7 +834,7 @@ const WallView = ({
                     strokeWidth="2"
                     rx="2"
                   />
-                  
+
                   {/* Vanity door panels */}
                   {element.type === 'double-vanity' ? (
                     // Double vanity with two separate doors
@@ -869,20 +869,20 @@ const WallView = ({
                         strokeWidth="1.5"
                       />
                       {/* Double door handles */}
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 4} 
-                        width="3" 
-                        height="10" 
-                        fill="#374151" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 4}
+                        width="3"
+                        height="10"
+                        fill="#374151"
                         rx="1.5"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 4} 
-                        width="3" 
-                        height="10" 
-                        fill="#374151" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 4}
+                        width="3"
+                        height="10"
+                        fill="#374151"
                         rx="1.5"
                       />
                     </>
@@ -919,20 +919,20 @@ const WallView = ({
                         strokeWidth="0.5"
                       />
                       {/* Double door handles */}
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 4} 
-                        width="3" 
-                        height="10" 
-                        fill="#374151" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.25 - 1}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 4}
+                        width="3"
+                        height="10"
+                        fill="#374151"
                         rx="1.5"
                       />
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 4} 
-                        width="3" 
-                        height="10" 
-                        fill="#374151" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.75 - 1}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 4}
+                        width="3"
+                        height="10"
+                        fill="#374151"
                         rx="1.5"
                       />
                     </>
@@ -950,17 +950,17 @@ const WallView = ({
                         rx="1"
                       />
                       {/* Single door handle */}
-                      <rect 
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1} 
-                        y={30 + (yPos + height / 2) * calculatedViewScale - 4} 
-                        width="3" 
-                        height="10" 
-                        fill="#374151" 
+                      <rect
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1}
+                        y={30 + (yPos + height / 2) * calculatedViewScale - 4}
+                        width="3"
+                        height="10"
+                        fill="#374151"
                         rx="1.5"
                       />
                     </>
                   )}
-                  
+
                   {/* Floating vanity visual effect */}
                   {element.type === 'floating-vanity' && (
                     <rect
@@ -975,11 +975,11 @@ const WallView = ({
                     />
                   )}
                 </>
-            )}
+              )}
 
             {/* Vanity with sink details */}
-            {(element.type === 'vanity-sink' || element.type === 'double-vanity' || element.type === 'floating-vanity' || 
-              element.type === 'corner-vanity' || element.type === 'wall-hung-vanity' || element.type === 'vessel-sink-vanity' || 
+            {(element.type === 'vanity-sink' || element.type === 'double-vanity' || element.type === 'floating-vanity' ||
+              element.type === 'corner-vanity' || element.type === 'wall-hung-vanity' || element.type === 'vessel-sink-vanity' ||
               element.type === 'undermount-sink-vanity') && (
                 <>
                   {element.type === 'vessel-sink-vanity' ? (
@@ -1071,7 +1071,7 @@ const WallView = ({
                     />
                   )}
                 </>
-            )}
+              )}
 
             {/* Vanity tower details */}
             {element.type === 'vanity-tower' && (
@@ -1099,12 +1099,12 @@ const WallView = ({
                       strokeWidth="0.5"
                     />
                     {/* Small door handle for each compartment */}
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1} 
-                      y={30 + yPos * calculatedViewScale + 4 + (shelfIndex * (height * calculatedViewScale - 8) / 5) - (height * calculatedViewScale - 8) / 10} 
-                      width="1" 
-                      height={(height * calculatedViewScale - 8) / 10} 
-                      fill="#6b7280" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1}
+                      y={30 + yPos * calculatedViewScale + 4 + (shelfIndex * (height * calculatedViewScale - 8) / 5) - (height * calculatedViewScale - 8) / 10}
+                      width="1"
+                      height={(height * calculatedViewScale - 8) / 10}
+                      fill="#6b7280"
                       rx="0.5"
                     />
                   </g>
@@ -1126,7 +1126,7 @@ const WallView = ({
                   strokeWidth="2"
                   rx="2"
                 />
-                
+
                 {element.type === 'medicine-mirror' ? (
                   // Mirror cabinet with reflection effect
                   <>
@@ -1177,14 +1177,14 @@ const WallView = ({
                     ))}
                   </>
                 )}
-                
+
                 {/* Door handle */}
-                <rect 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 1} 
-                  y={30 + (yPos + height / 2) * calculatedViewScale - 3} 
-                  width="2" 
-                  height="6" 
-                  fill="#6b7280" 
+                <rect
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.85 - 1}
+                  y={30 + (yPos + height / 2) * calculatedViewScale - 3}
+                  width="2"
+                  height="6"
+                  fill="#6b7280"
                   rx="1"
                 />
               </>
@@ -1223,13 +1223,13 @@ const WallView = ({
                     ))}
                     {/* Handles for each panel */}
                     {[0, 1, 2].map(panelIndex => (
-                      <rect 
+                      <rect
                         key={panelIndex}
-                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1} 
-                        y={30 + yPos * calculatedViewScale + 6 + (panelIndex * (height * calculatedViewScale - 12) / 3) + ((height * calculatedViewScale - 12) / 6) - 2} 
-                        width="2" 
-                        height="4" 
-                        fill="#6b7280" 
+                        x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1}
+                        y={30 + yPos * calculatedViewScale + 6 + (panelIndex * (height * calculatedViewScale - 12) / 3) + ((height * calculatedViewScale - 12) / 6) - 2}
+                        width="2"
+                        height="4"
+                        fill="#6b7280"
                         rx="1"
                       />
                     ))}
@@ -1258,20 +1258,20 @@ const WallView = ({
                       rx="1"
                     />
                     {/* Door handles */}
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1} 
-                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.25 - 2} 
-                      width="2" 
-                      height="4" 
-                      fill="#6b7280" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1}
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.25 - 2}
+                      width="2"
+                      height="4"
+                      fill="#6b7280"
                       rx="1"
                     />
-                    <rect 
-                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1} 
-                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.75 - 2} 
-                      width="2" 
-                      height="4" 
-                      fill="#6b7280" 
+                    <rect
+                      x={50 + x * calculatedViewScale + (width * calculatedViewScale) * 0.8 - 1}
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale) * 0.75 - 2}
+                      width="2"
+                      height="4"
+                      fill="#6b7280"
                       rx="1"
                     />
                   </>
@@ -1512,85 +1512,85 @@ const WallView = ({
             {element.type === 'wine-cooler' && (
               <>
                 {/* Wine cooler frame with stainless steel appearance */}
-                <rect 
-                  x={50 + x * calculatedViewScale + 2} 
-                  y={30 + yPos * calculatedViewScale + 2} 
-                  width={width * calculatedViewScale - 4} 
-                  height={height * calculatedViewScale - 4} 
-                  fill="#d0d0d0" 
-                  stroke="#999" 
-                  strokeWidth="2" 
-                  rx="3" 
+                <rect
+                  x={50 + x * calculatedViewScale + 2}
+                  y={30 + yPos * calculatedViewScale + 2}
+                  width={width * calculatedViewScale - 4}
+                  height={height * calculatedViewScale - 4}
+                  fill="#d0d0d0"
+                  stroke="#999"
+                  strokeWidth="2"
+                  rx="3"
                 />
                 {/* Glass door with slight tint */}
-                <rect 
-                  x={50 + x * calculatedViewScale + 6} 
-                  y={30 + yPos * calculatedViewScale + 6} 
-                  width={width * calculatedViewScale - 12} 
-                  height={height * calculatedViewScale - 12} 
-                  fill="rgba(135, 206, 235, 0.15)" 
-                  stroke="#666" 
-                  strokeWidth="1" 
-                  rx="2" 
+                <rect
+                  x={50 + x * calculatedViewScale + 6}
+                  y={30 + yPos * calculatedViewScale + 6}
+                  width={width * calculatedViewScale - 12}
+                  height={height * calculatedViewScale - 12}
+                  fill="rgba(135, 206, 235, 0.15)"
+                  stroke="#666"
+                  strokeWidth="1"
+                  rx="2"
                 />
                 {/* Wine racks - horizontal shelves */}
                 {[0.25, 0.45, 0.65, 0.85].map((shelfPos, idx) => (
-                  <line 
+                  <line
                     key={idx}
-                    x1={50 + x * calculatedViewScale + 8} 
-                    y1={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)} 
-                    x2={50 + (x + width) * calculatedViewScale - 8} 
-                    y2={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)} 
-                    stroke="#8B4513" 
-                    strokeWidth="2" 
+                    x1={50 + x * calculatedViewScale + 8}
+                    y1={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)}
+                    x2={50 + (x + width) * calculatedViewScale - 8}
+                    y2={30 + yPos * calculatedViewScale + (height * calculatedViewScale * shelfPos)}
+                    stroke="#8B4513"
+                    strokeWidth="2"
                   />
                 ))}
                 {/* Wine bottles - represented as small rectangles */}
                 {[
-                  {shelf: 0.25, bottles: 3}, {shelf: 0.45, bottles: 3}, 
-                  {shelf: 0.65, bottles: 3}, {shelf: 0.85, bottles: 2}
-                ].map((rack, rackIdx) => 
-                  Array.from({length: rack.bottles}, (_, bottleIdx) => (
-                    <rect 
+                  { shelf: 0.25, bottles: 3 }, { shelf: 0.45, bottles: 3 },
+                  { shelf: 0.65, bottles: 3 }, { shelf: 0.85, bottles: 2 }
+                ].map((rack, rackIdx) =>
+                  Array.from({ length: rack.bottles }, (_, bottleIdx) => (
+                    <rect
                       key={`${rackIdx}-${bottleIdx}`}
-                      x={50 + x * calculatedViewScale + 10 + (bottleIdx * (width * calculatedViewScale - 20) / rack.bottles)} 
-                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * rack.shelf) - 8} 
-                      width="3" 
-                      height="16" 
-                      fill="#722F37" 
-                      stroke="#5D1A1D" 
-                      strokeWidth="0.5" 
+                      x={50 + x * calculatedViewScale + 10 + (bottleIdx * (width * calculatedViewScale - 20) / rack.bottles)}
+                      y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * rack.shelf) - 8}
+                      width="3"
+                      height="16"
+                      fill="#722F37"
+                      stroke="#5D1A1D"
+                      strokeWidth="0.5"
                       rx="1"
                     />
                   ))
                 )}
                 {/* Door handle */}
-                <rect 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 8} 
-                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.4)} 
-                  width="4" 
-                  height="12" 
-                  fill="#666" 
-                  rx="2" 
+                <rect
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 8}
+                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.4)}
+                  width="4"
+                  height="12"
+                  fill="#666"
+                  rx="2"
                 />
                 {/* Control panel */}
-                <rect 
-                  x={50 + x * calculatedViewScale + 8} 
-                  y={30 + yPos * calculatedViewScale + 8} 
-                  width="16" 
-                  height="8" 
-                  fill="#333" 
-                  rx="1" 
+                <rect
+                  x={50 + x * calculatedViewScale + 8}
+                  y={30 + yPos * calculatedViewScale + 8}
+                  width="16"
+                  height="8"
+                  fill="#333"
+                  rx="1"
                 />
                 {/* LED indicators */}
                 <circle cx={50 + x * calculatedViewScale + 12} cy={30 + yPos * calculatedViewScale + 12} r="1" fill="#00ff00" />
                 <circle cx={50 + x * calculatedViewScale + 16} cy={30 + yPos * calculatedViewScale + 12} r="1" fill="#ff0000" />
-                <text 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} 
-                  y={30 + (yPos + height) * calculatedViewScale - 4} 
-                  textAnchor="middle" 
-                  fontSize="6" 
-                  fill="#666" 
+                <text
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2}
+                  y={30 + (yPos + height) * calculatedViewScale - 4}
+                  textAnchor="middle"
+                  fontSize="6"
+                  fill="#666"
                   fontWeight="bold"
                 >
                   WINE COOLER
@@ -1610,65 +1610,65 @@ const WallView = ({
                   </linearGradient>
                 </defs>
                 {/* Main hood chassis */}
-                <rect 
-                  x={50 + x * calculatedViewScale + 1} 
-                  y={30 + yPos * calculatedViewScale + 1} 
-                  width={width * calculatedViewScale - 2} 
-                  height={height * calculatedViewScale - 2} 
-                  fill={`url(#hoodGradient-${element.id})`} 
-                  stroke="#999" 
-                  strokeWidth="2" 
-                  rx="2" 
+                <rect
+                  x={50 + x * calculatedViewScale + 1}
+                  y={30 + yPos * calculatedViewScale + 1}
+                  width={width * calculatedViewScale - 2}
+                  height={height * calculatedViewScale - 2}
+                  fill={`url(#hoodGradient-${element.id})`}
+                  stroke="#999"
+                  strokeWidth="2"
+                  rx="2"
                 />
                 {/* Hood canopy (angled front) */}
-                <polygon 
+                <polygon
                   points={`
                     ${50 + x * calculatedViewScale + 4},${30 + yPos * calculatedViewScale + 4} 
                     ${50 + (x + width) * calculatedViewScale - 4},${30 + yPos * calculatedViewScale + 4} 
                     ${50 + (x + width) * calculatedViewScale - 8},${30 + (yPos + height) * calculatedViewScale - 4} 
                     ${50 + x * calculatedViewScale + 8},${30 + (yPos + height) * calculatedViewScale - 4}
-                  `} 
-                  fill="rgba(255, 255, 255, 0.3)" 
-                  stroke="#bbb" 
-                  strokeWidth="1" 
+                  `}
+                  fill="rgba(255, 255, 255, 0.3)"
+                  stroke="#bbb"
+                  strokeWidth="1"
                 />
                 {/* Ventilation grilles */}
                 {[0.25, 0.5, 0.75].map((pos, idx) => (
                   <g key={idx}>
-                    <line 
-                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
-                      y1={30 + yPos * calculatedViewScale + 6} 
-                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
-                      y2={30 + yPos * calculatedViewScale + 6} 
-                      stroke="#666" 
-                      strokeWidth="1" 
+                    <line
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8}
+                      y1={30 + yPos * calculatedViewScale + 6}
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8}
+                      y2={30 + yPos * calculatedViewScale + 6}
+                      stroke="#666"
+                      strokeWidth="1"
                     />
-                    <line 
-                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
-                      y1={30 + yPos * calculatedViewScale + 8} 
-                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
-                      y2={30 + yPos * calculatedViewScale + 8} 
-                      stroke="#666" 
-                      strokeWidth="1" 
+                    <line
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8}
+                      y1={30 + yPos * calculatedViewScale + 8}
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8}
+                      y2={30 + yPos * calculatedViewScale + 8}
+                      stroke="#666"
+                      strokeWidth="1"
                     />
-                    <line 
-                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8} 
-                      y1={30 + yPos * calculatedViewScale + 10} 
-                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8} 
-                      y2={30 + yPos * calculatedViewScale + 10} 
-                      stroke="#666" 
-                      strokeWidth="1" 
+                    <line
+                      x1={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) - 8}
+                      y1={30 + yPos * calculatedViewScale + 10}
+                      x2={50 + x * calculatedViewScale + (width * calculatedViewScale * pos) + 8}
+                      y2={30 + yPos * calculatedViewScale + 10}
+                      stroke="#666"
+                      strokeWidth="1"
                     />
                   </g>
                 ))}
                 {/* Control panel */}
-                <rect 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 20} 
-                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6)} 
-                  width="16" 
-                  height="6" 
-                  fill="#333" 
-                  rx="1" 
+                <rect
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) - 20}
+                  y={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6)}
+                  width="16"
+                  height="6"
+                  fill="#333"
+                  rx="1"
                 />
                 {/* Control buttons */}
                 <circle cx={50 + x * calculatedViewScale + (width * calculatedViewScale) - 16} cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6) + 3} r="1.5" fill="#666" />
@@ -1676,23 +1676,23 @@ const WallView = ({
                 <circle cx={50 + x * calculatedViewScale + (width * calculatedViewScale) - 8} cy={30 + yPos * calculatedViewScale + (height * calculatedViewScale * 0.6) + 3} r="1.5" fill="#666" />
                 {/* LED lights under hood */}
                 {[0.3, 0.7].map((lightPos, idx) => (
-                  <circle 
+                  <circle
                     key={idx}
-                    cx={50 + x * calculatedViewScale + (width * calculatedViewScale * lightPos)} 
-                    cy={30 + (yPos + height) * calculatedViewScale - 6} 
-                    r="2" 
-                    fill="#ffffcc" 
-                    stroke="#ffcc00" 
-                    strokeWidth="0.5" 
+                    cx={50 + x * calculatedViewScale + (width * calculatedViewScale * lightPos)}
+                    cy={30 + (yPos + height) * calculatedViewScale - 6}
+                    r="2"
+                    fill="#ffffcc"
+                    stroke="#ffcc00"
+                    strokeWidth="0.5"
                   />
                 ))}
                 {/* Range hood label */}
-                <text 
-                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2} 
-                  y={30 + (yPos + height / 2) * calculatedViewScale} 
-                  textAnchor="middle" 
-                  fontSize="6" 
-                  fill="#333" 
+                <text
+                  x={50 + x * calculatedViewScale + (width * calculatedViewScale) / 2}
+                  y={30 + (yPos + height / 2) * calculatedViewScale}
+                  textAnchor="middle"
+                  fontSize="6"
+                  fill="#333"
                   fontWeight="bold"
                 >
                   RANGE HOOD
@@ -1706,12 +1706,12 @@ const WallView = ({
             </text>
 
             {/* Height labels for tall elements */}
-            {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen' || 
+            {(element.type === 'wall' || element.type === 'tall' || element.type === 'medicine' || element.type === 'linen' ||
               element.type === 'medicine-mirror' || element.type === 'linen-tower' || element.type === 'vanity-tower') && (
-              <text x={50 + (x + width) * calculatedViewScale + 5} y={30 + (yPos + height / 2) * calculatedViewScale} textAnchor="start" fontSize="8" fill="#666">
-                {height}"
-              </text>
-            )}
+                <text x={50 + (x + width) * calculatedViewScale + 5} y={30 + (yPos + height / 2) * calculatedViewScale} textAnchor="start" fontSize="8" fill="#666">
+                  {height}"
+                </text>
+              )}
 
             {/* Mount height indicators for wall cabinets */}
             {element.mountHeight > 0 && (

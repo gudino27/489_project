@@ -112,12 +112,12 @@
     margin: 6px 2px;
     border-radius: 8px;
   }
-  
+
   .admin-nav-glass {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
-  
+
   .admin-content-glass {
     margin: 15px;
     padding: 20px;
@@ -131,7 +131,7 @@
     margin: 4px 1px;
     font-size: 0.9rem;
   }
-  
+
   .admin-content-glass {
     margin: 10px;
     padding: 15px;
@@ -151,9 +151,12 @@
 }
 
 @keyframes pulse-glass {
-  0%, 100% {
+
+  0%,
+  100% {
     background: rgba(255, 255, 255, 0.1);
   }
+
   50% {
     background: rgba(255, 255, 255, 0.2);
   }

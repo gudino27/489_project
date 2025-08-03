@@ -1,4 +1,4 @@
-import React,{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DollarSign,
   Save,
@@ -18,10 +18,10 @@ import { SectionSaveButton, createSectionHelpers } from './pricing/PricingUtils'
 const PriceManagement = ({ token, API_BASE, userRole }) => {
   // Language context
   const { t } = useLanguage();
-  
+
   // Shared pricing context
   const { refreshPricing, setMaterialMultipliers: setSharedMaterialMultipliers } = usePricing();
-  
+
   // State for all pricing data
   const [basePrices, setBasePrices] = useState({
     // Kitchen Cabinets
@@ -47,7 +47,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     'pull-out-drawer': 250,
     'soft-close-drawer': 300,
     'under-cabinet-lighting': 150,
-    
+
     // Bathroom Cabinets
     'vanity': 280,
     'vanity-sink': 350,
@@ -65,7 +65,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     'powder-room-vanity': 250,
     'master-bath-vanity': 750,
     'kids-bathroom-vanity': 220,
-    
+
     // Kitchen Appliances
     'refrigerator': 0,        // Pricing handled separately for appliances
     'stove': 0,
@@ -77,7 +77,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     'double-oven': 0,
     'cooktop': 0,
     'garbage-disposal': 0,
-    
+
     // Bathroom Fixtures
     'toilet': 0,
     'bathtub': 0,
@@ -103,7 +103,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     removeWallEnabled: true
   });
 
-  
+
   // Section-specific unsaved changes tracking
   const [sectionChanges, setSectionChanges] = useState({
     cabinets: false,
@@ -112,14 +112,14 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     walls: false,
     wallAvailability: false
   });
-  
+
   // Global state for save functionality
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
 
   // Create section helper functions using the utility
   const { markSectionChanged, markSectionSaved, clearAllSectionChanges } = createSectionHelpers(
-    setSectionChanges, 
+    setSectionChanges,
     setHasUnsavedChanges
   );
 
@@ -164,7 +164,7 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
 
       if (materialRes.ok) {
         const materialData = await materialRes.json();
-        
+
         if (materialData) {
           // Handle both old object format and new array format
           if (Array.isArray(materialData)) {
@@ -249,16 +249,16 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
 
       if (responses.every(res => res.ok)) {
         setSaveStatus('saved');
-        
+
         // Clear all section changes
         clearAllSectionChanges();
-        
+
         // Remove "Unsaved" status from all materials after successful save
         setMaterialMultipliers(prev => prev.map(material => ({
           ...material,
           isTemporary: false
         })));
-        
+
         setTimeout(() => setSaveStatus(''), 2000);
       } else {
         throw new Error('Failed to save some prices');

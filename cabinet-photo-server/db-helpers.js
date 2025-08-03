@@ -6,14 +6,14 @@ const crypto = require('crypto');
 // Database connection helper
 async function getDb() {
   const db = await open({
-    filename: path.join(__dirname,'database' ,'cabinet_photos.db'),
+    filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
     driver: sqlite3.Database
   });
   return db;
 }
-var fullpath= path.join(__dirname,'database' ,'cabinet_photos.db');
+var fullpath = path.join(__dirname, 'database', 'cabinet_photos.db');
 console.log(fullpath);
-fullpath =path.join(__dirname, '..', 'database', 'cabinet_photos.db');
+fullpath = path.join(__dirname, '..', 'database', 'cabinet_photos.db');
 console.log(fullpath);
 // Photo database operations
 const photoDb = {
@@ -59,7 +59,7 @@ const photoDb = {
         thumbnail_path, file_size, mime_type, width, height
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [title, filename, original_name, category, file_path,
-       thumbnail_path, file_size, mime_type, width, height]
+        thumbnail_path, file_size, mime_type, width, height]
     );
 
     await db.close();
@@ -68,10 +68,10 @@ const photoDb = {
 
   async updatePhoto(id, updates) {
     const db = await getDb();
-    
+
     const fields = [];
     const values = [];
-    
+
     // Only update provided fields
     if (updates.title !== undefined) {
       fields.push('title = ?');
@@ -89,19 +89,19 @@ const photoDb = {
       fields.push('display_order = ?');
       values.push(updates.display_order);
     }
-    
+
     if (fields.length === 0) {
       await db.close();
       return false;
     }
-    
+
     values.push(id);
-    
+
     await db.run(
       `UPDATE photos SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       values
     );
-    
+
     await db.close();
     return true;
   },
@@ -117,25 +117,25 @@ const photoDb = {
 
   async updatePhotoOrders(orderUpdates) {
     const db = await getDb();
-    
+
     for (const update of orderUpdates) {
       await db.run(
         'UPDATE photos SET display_order = ? WHERE id = ?',
         [update.display_order, update.id]
       );
     }
-    
+
     await db.close();
   },
 
   async deletePhoto(id) {
     const db = await getDb();
     const photo = await db.get('SELECT * FROM photos WHERE id = ?', [id]);
-    
+
     if (photo) {
       await db.run('DELETE FROM photos WHERE id = ?', [id]);
     }
-    
+
     await db.close();
     return photo;
   },
@@ -154,14 +154,14 @@ const photoDb = {
 
   async getPhotoStats() {
     const db = await getDb();
-    
+
     try {
       const stats = {};
-      
+
       // Total photos
       const totalResult = await db.get('SELECT COUNT(*) as count FROM photos');
       stats.total = totalResult.count;
-      
+
       // Photos by category
       const categoryResults = await db.all(
         'SELECT category, COUNT(*) as count FROM photos GROUP BY category'
@@ -170,11 +170,11 @@ const photoDb = {
       categoryResults.forEach(row => {
         stats.byCategory[row.category] = row.count;
       });
-      
+
       // Featured photos
       const featuredResult = await db.get('SELECT COUNT(*) as count FROM photos WHERE featured = 1');
       stats.featured = featuredResult.count;
-      
+
       await db.close();
       return stats;
     } catch (error) {
@@ -189,7 +189,7 @@ const employeeDb = {
   // Insert new employee
   async insertEmployee(employeeData) {
     const db = await getDb();
-    
+
     try {
       const {
         name,
@@ -202,7 +202,7 @@ const employeeDb = {
         joined_date,
         display_order
       } = employeeData;
-      
+
       const result = await db.run(
         `INSERT INTO employees (
           name, position, bio, email, phone, 
@@ -220,7 +220,7 @@ const employeeDb = {
           display_order || 999
         ]
       );
-      
+
       await db.close();
       return result.lastID;
     } catch (error) {
@@ -232,13 +232,13 @@ const employeeDb = {
   // Get single employee
   async getEmployee(id) {
     const db = await getDb();
-    
+
     try {
       const employee = await db.get(
         'SELECT * FROM employees WHERE id = ?',
         [id]
       );
-      
+
       await db.close();
       return employee;
     } catch (error) {
@@ -276,7 +276,7 @@ const employeeDb = {
         photo_path, photo_filename, joined_date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, position, bio, email, phone,
-       photo_path, photo_filename, joined_date]
+        photo_path, photo_filename, joined_date]
     );
 
     await db.close();
@@ -285,17 +285,17 @@ const employeeDb = {
 
   async updateEmployee(id, updates) {
     const db = await getDb();
-    
+
     const fields = [];
     const values = [];
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value !== undefined) {
         fields.push(`${key} = ?`);
         values.push(value);
       }
     });
-    
+
     if (fields.length > 0) {
       values.push(id);
       await db.run(
@@ -303,7 +303,7 @@ const employeeDb = {
         values
       );
     }
-    
+
     await db.close();
   },
 
@@ -316,10 +316,10 @@ const employeeDb = {
   // Delete employee
   async deleteEmployee(id, hardDelete = false) {
     const db = await getDb();
-    
+
     try {
       let result;
-      
+
       if (hardDelete) {
         result = await db.run('DELETE FROM employees WHERE id = ?', [id]);
       } else {
@@ -328,7 +328,7 @@ const employeeDb = {
           [id]
         );
       }
-      
+
       await db.close();
       return result.changes > 0;
     } catch (error) {
@@ -348,14 +348,14 @@ const employeeDb = {
 
   async updateEmployeeOrders(orderUpdates) {
     const db = await getDb();
-    
+
     for (const update of orderUpdates) {
       await db.run(
         'UPDATE employees SET display_order = ? WHERE id = ?',
         [update.display_order, update.id]
       );
     }
-    
+
     await db.close();
   },
 
@@ -377,7 +377,7 @@ const employeeDb = {
 const designDb = {
   async saveDesign(designData) {
     const db = await getDb();
-    
+
     try {
       const {
         client_name,
@@ -402,16 +402,16 @@ const designDb = {
           total_price, comments, pdf_data, floor_plan_image, wall_view_images
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          client_name, 
-          client_email, 
-          client_phone, 
+          client_name,
+          client_email,
+          client_phone,
           contact_preference,
           kitchen_data ? JSON.stringify(kitchen_data) : null,
           bathroom_data ? JSON.stringify(bathroom_data) : null,
-          include_kitchen ? 1 : 0, 
+          include_kitchen ? 1 : 0,
           include_bathroom ? 1 : 0,
-          total_price, 
-          comments, 
+          total_price,
+          comments,
           pdf_data,
           floor_plan_image,
           wall_view_images ? JSON.stringify(wall_view_images) : null
@@ -428,23 +428,23 @@ const designDb = {
 
   async getDesign(id) {
     const db = await getDb();
-    
+
     try {
       const design = await db.get('SELECT * FROM designs WHERE id = ?', [id]);
-      
+
       if (design) {
         // Parse JSON fields
         if (design.kitchen_data) design.kitchen_data = JSON.parse(design.kitchen_data);
         if (design.bathroom_data) design.bathroom_data = JSON.parse(design.bathroom_data);
         if (design.wall_view_images) design.wall_view_images = JSON.parse(design.wall_view_images);
-        
+
         // Mark as viewed
         await db.run(
           'UPDATE designs SET viewed_at = CURRENT_TIMESTAMP WHERE id = ? AND viewed_at IS NULL',
           [id]
         );
       }
-      
+
       await db.close();
       return design;
     } catch (error) {
@@ -455,17 +455,17 @@ const designDb = {
 
   async getAllDesigns(statusFilter = null) {
     const db = await getDb();
-    
+
     let query = 'SELECT id, client_name, client_email, client_phone, contact_preference, total_price, status, created_at, viewed_at, viewed_by, admin_note FROM designs';
     let params = [];
-    
+
     if (statusFilter) {
       query += ' WHERE status = ?';
       params.push(statusFilter);
     }
-    
+
     query += ' ORDER BY created_at DESC';
-    
+
     const designs = await db.all(query, params);
     await db.close();
     return designs;
@@ -493,24 +493,24 @@ const designDb = {
   // Get design statistics
   async getDesignStats() {
     const db = await getDb();
-    
+
     try {
       // Get basic counts
       const totalDesigns = await db.get('SELECT COUNT(*) as count FROM designs');
-      
+
       // Get status breakdown
       const statusCounts = await db.all(`
         SELECT status, COUNT(*) as count 
         FROM designs 
         GROUP BY status
       `);
-      
+
       // Get total revenue(not implemented)
       const revenue = await db.get('SELECT SUM(total_price) as total FROM designs');
-      
+
       // Get average order value(not implemented )
       const avgOrder = await db.get('SELECT AVG(total_price) as average FROM designs');
-      
+
       const recentDesigns = await db.get(`
         SELECT COUNT(*) as count 
         FROM designs 
@@ -526,7 +526,7 @@ const designDb = {
         GROUP BY strftime('%Y-%m', created_at)
         ORDER BY month DESC
       `);
-      
+
       // Get room type breakdown
       const roomStats = await db.all(`
         SELECT 
@@ -543,13 +543,13 @@ const designDb = {
       `);
 
       await db.close();
-      
+
       // Format status counts as object
       const statusBreakdown = {};
       statusCounts.forEach(item => {
         statusBreakdown[item.status || 'pending'] = item.count;
       });
-      
+
       return {
         totalDesigns: totalDesigns.count || 0,
         totalRevenue: revenue.total || 0,
@@ -559,7 +559,7 @@ const designDb = {
         monthlyStats,
         roomStats
       };
-      
+
     } catch (error) {
       await db.close();
       throw error;
@@ -569,11 +569,11 @@ const designDb = {
   // Get design PDF data
   async getDesignPdf(id) {
     const db = await getDb();
-    
+
     try {
       const result = await db.get('SELECT pdf_data FROM designs WHERE id = ?', [id]);
       await db.close();
-      
+
       return result ? result.pdf_data : null;
     } catch (error) {
       await db.close();
@@ -584,13 +584,13 @@ const designDb = {
   // Update design status
   async updateDesignStatus(id, status, viewedBy) {
     const db = await getDb();
-    
+
     try {
       const result = await db.run(
         'UPDATE designs SET status = ?, viewed_by = ?, viewed_at = datetime("now") WHERE id = ?',
         [status, viewedBy, id]
       );
-      
+
       await db.close();
       return result.changes > 0;
     } catch (error) {
@@ -602,13 +602,13 @@ const designDb = {
   // Update design note
   async updateDesignNote(id, note) {
     const db = await getDb();
-    
+
     try {
       const result = await db.run(
         'UPDATE designs SET admin_note = ? WHERE id = ?',
         [note, id]
       );
-      
+
       await db.close();
       return result.changes > 0;
     } catch (error) {
@@ -624,17 +624,17 @@ const userDb = {
   async createUser(userData) {
     const db = await getDb();
     const { username, email, password, role, full_name, created_by } = userData;
-    
+
     try {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-      
+
       const result = await db.run(
         `INSERT INTO users (username, email, password_hash, role, full_name, created_by)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [username, email, hashedPassword, role, full_name, created_by]
       );
-      
+
       await db.close();
       return result.lastID;
     } catch (error) {
@@ -646,44 +646,44 @@ const userDb = {
   // Authenticate user and return session token
   async authenticateUser(username, password) {
     const db = await getDb();
-    
+
     try {
       const user = await db.get(
         'SELECT * FROM users WHERE username = ? AND is_active = 1',
         [username]
       );
-      
+
       if (!user) {
         await db.close();
         return null;
       }
-      
+
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
         await db.close();
         return null;
       }
-      
+
       // Generate session token
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-      
+
       // Save session
       await db.run(
         `INSERT INTO user_sessions (user_id, token, expires_at)
          VALUES (?, ?, ?)`,
         [user.id, token, expiresAt.toISOString()]
       );
-      
+
       // Update last login
       await db.run(
         'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
         [user.id]
       );
-      
+
       await db.close();
-      
+
       return {
         token,
         user: {
@@ -703,7 +703,7 @@ const userDb = {
   // Validate session token
   async validateSession(token) {
     const db = await getDb();
-    
+
     try {
       const session = await db.get(`
         SELECT s.*, u.id, u.username, u.email, u.role, u.full_name
@@ -711,7 +711,7 @@ const userDb = {
         JOIN users u ON s.user_id = u.id
         WHERE s.token = ? AND s.expires_at > datetime('now') AND u.is_active = 1
       `, [token]);
-      
+
       if (session) {
         // Extend session
         const newExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
@@ -720,9 +720,9 @@ const userDb = {
           [newExpiresAt.toISOString(), token]
         );
       }
-      
+
       await db.close();
-      
+
       return session ? {
         id: session.id,
         username: session.username,
@@ -757,7 +757,7 @@ const userDb = {
 
     // Allowed fields to update
     const allowedFields = ['email', 'role', 'full_name', 'is_active'];
-    
+
     allowedFields.forEach(field => {
       if (updates[field] !== undefined) {
         fields.push(`${field} = ?`);
@@ -771,12 +771,12 @@ const userDb = {
     }
 
     values.push(userId);
-    
+
     const result = await db.run(
       `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       values
     );
-    
+
     await db.close();
     return result.changes > 0;
   },
@@ -784,11 +784,11 @@ const userDb = {
   // Password reset functionality
   async createPasswordResetToken(email) {
     const db = await getDb();
-    
+
     try {
       // Find user by email
       const user = await db.get('SELECT id, username, email FROM users WHERE email = ? AND is_active = 1', [email]);
-      
+
       if (!user) {
         await db.close();
         return null; // Don't reveal if email exists
@@ -821,7 +821,7 @@ const userDb = {
 
   async validatePasswordResetToken(token) {
     const db = await getDb();
-    
+
     try {
       const resetRecord = await db.get(`
         SELECT prt.*, u.username, u.email
@@ -840,7 +840,7 @@ const userDb = {
 
   async resetPassword(token, newPassword) {
     const db = await getDb();
-    
+
     try {
       // Validate token
       const resetRecord = await this.validatePasswordResetToken(token);
@@ -874,7 +874,7 @@ const userDb = {
 
   async cleanupExpiredTokens() {
     const db = await getDb();
-    
+
     try {
       await db.run('DELETE FROM password_reset_tokens WHERE expires_at < datetime("now")');
       await db.close();
@@ -884,14 +884,14 @@ const userDb = {
     }
   },
 
-  
+
 };
 
 // Analytics database operations
 const analyticsDb = {
   async recordPageView(pageData) {
     const db = await getDb();
-    
+
     try {
       const {
         page_path,
@@ -901,14 +901,14 @@ const analyticsDb = {
         session_id,
         user_id
       } = pageData;
-      
+
       const result = await db.run(
         `INSERT INTO page_analytics (
           page_path, user_agent, ip_address, referrer, session_id, user_id, viewed_at
         ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [page_path, user_agent, ip_address, referrer, session_id, user_id]
       );
-      
+
       await db.close();
       return result.lastID;
     } catch (error) {
@@ -919,13 +919,13 @@ const analyticsDb = {
 
   async updateTimeSpent(viewId, timeSpent) {
     const db = await getDb();
-    
+
     try {
       await db.run(
         'UPDATE page_analytics SET time_spent_seconds = ? WHERE id = ?',
         [timeSpent, viewId]
       );
-      
+
       await db.close();
       return true;
     } catch (error) {
@@ -936,7 +936,7 @@ const analyticsDb = {
 
   async getPageViewStats(dateRange = 30) {
     const db = await getDb();
-    
+
     try {
       // Page views by path
       const pageViews = await db.all(`
@@ -995,7 +995,7 @@ const analyticsDb = {
       `);
 
       await db.close();
-      
+
       return {
         pageViews,
         dailyViews,
@@ -1010,7 +1010,7 @@ const analyticsDb = {
 
   async getRealtimeStats() {
     const db = await getDb();
-    
+
     try {
       // Active sessions in last 30 minutes
       const activeSessions = await db.get(`
@@ -1032,7 +1032,7 @@ const analyticsDb = {
       `);
 
       await db.close();
-      
+
       return {
         activeSessions: activeSessions.count,
         recentViews
@@ -1051,12 +1051,12 @@ const testimonialDb = {
     const token = crypto.randomBytes(32).toString('hex');
     // Use SQLite datetime function instead of JavaScript Date
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days, ISO format
-    
+
     const result = await db.run(
       'INSERT INTO testimonial_tokens (token, client_name, client_email, project_type, sent_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
       [token, tokenData.client_name, tokenData.client_email, tokenData.project_type, tokenData.sent_by, expiresAt]
     );
-    
+
     await db.close();
     return { id: result.lastID, token, expires_at: expiresAt };
   },
@@ -1075,12 +1075,12 @@ const testimonialDb = {
     const db = await getDb();
     let query = 'SELECT * FROM testimonial_tokens ORDER BY created_at DESC';
     let params = [];
-    
+
     if (sentBy) {
       query = 'SELECT * FROM testimonial_tokens WHERE sent_by = ? ORDER BY created_at DESC';
       params = [sentBy];
     }
-    
+
     const tokens = await db.all(query, params);
     await db.close();
     return tokens;
@@ -1107,7 +1107,7 @@ const testimonialDb = {
       'INSERT INTO testimonials (client_name, client_email, message, rating, project_type, token_id) VALUES (?, ?, ?, ?, ?, ?)',
       [testimonialData.client_name, testimonialData.client_email, testimonialData.message, testimonialData.rating, testimonialData.project_type, testimonialData.token_id]
     );
-    
+
     await db.close();
     return { id: result.lastID };
   },
@@ -1118,23 +1118,23 @@ const testimonialDb = {
       'INSERT INTO testimonial_photos (testimonial_id, filename, original_name, file_path, thumbnail_path, file_size, mime_type, width, height, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [testimonialId, photoData.filename, photoData.original_name, photoData.file_path, photoData.thumbnail_path, photoData.file_size, photoData.mime_type, photoData.width, photoData.height, photoData.display_order || 0]
     );
-    
+
     await db.close();
     return { id: result.lastID };
   },
 
   async getAllTestimonials(visibleOnly = false) {
     const db = await getDb();
-    
+
     // Get testimonials first
     let testimonialQuery = 'SELECT * FROM testimonials';
     if (visibleOnly) {
       testimonialQuery += ' WHERE is_visible = 1';
     }
     testimonialQuery += ' ORDER BY created_at DESC';
-    
+
     const testimonials = await db.all(testimonialQuery);
-    
+
     // Get photos for each testimonial
     for (let testimonial of testimonials) {
       const photos = await db.all(
@@ -1143,7 +1143,7 @@ const testimonialDb = {
       );
       testimonial.photos = photos;
     }
-    
+
     await db.close();
     return testimonials;
   },
@@ -1151,12 +1151,12 @@ const testimonialDb = {
   async getTestimonialById(id) {
     const db = await getDb();
     const testimonial = await db.get('SELECT * FROM testimonials WHERE id = ?', [id]);
-    
+
     if (testimonial) {
       const photos = await db.all('SELECT * FROM testimonial_photos WHERE testimonial_id = ? ORDER BY display_order', [id]);
       testimonial.photos = photos;
     }
-    
+
     await db.close();
     return testimonial;
   },
@@ -1183,7 +1183,7 @@ const originalAnalyticsDb = analyticsDb;
 Object.assign(analyticsDb, {
   async recordTestimonialEvent(eventData) {
     const db = await getDb();
-    
+
     try {
       const result = await db.run(
         `INSERT INTO site_analytics (
@@ -1197,7 +1197,7 @@ Object.assign(analyticsDb, {
           eventData.user_agent,
         ]
       );
-      
+
       await db.close();
       return result.lastID;
     } catch (error) {
@@ -1208,7 +1208,7 @@ Object.assign(analyticsDb, {
 
   async getTestimonialStats(dateRange = 30) {
     const db = await getDb();
-    
+
     try {
       // Get testimonial submission stats
       const submissionStats = await db.all(`
@@ -1273,7 +1273,7 @@ Object.assign(analyticsDb, {
       `);
 
       await db.close();
-      
+
       return {
         submissions: submissionStats[0] || { total_submissions: 0, avg_rating: 0, submissions_with_photos: 0 },
         daily_activity: dailyActivity,
@@ -1288,11 +1288,11 @@ Object.assign(analyticsDb, {
   }
 });
 
-module.exports = { 
+module.exports = {
   getDb,
-  photoDb, 
-  employeeDb, 
-  designDb, 
+  photoDb,
+  employeeDb,
+  designDb,
   userDb,
   analyticsDb,
   testimonialDb

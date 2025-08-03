@@ -8,10 +8,10 @@ const API_BASE = "https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
   useAnalytics('/portfolio');
-  
+
   // Language context
   const { t } = useLanguage();
-  
+
   const [allPhotos, setAllPhotos] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [currentCategory, setCurrentCategory] = useState('');
@@ -25,8 +25,8 @@ const Portfolio = () => {
   const [allCategoryPhotos, setAllCategoryPhotos] = useState([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [savedPositions, setSavedPositions] = useState({});
-  const categories = useMemo(() => 
-    ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom', 'showcase'], 
+  const categories = useMemo(() =>
+    ['kitchen', 'bathroom', 'livingroom', 'laundryroom', 'bedroom', 'showcase'],
     []
   );
 
@@ -50,13 +50,13 @@ const Portfolio = () => {
       const token = getAuthToken();
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      
+
       const response = await fetch(`${API_BASE}/api/photos`, {
         method: 'GET',
         headers,
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setAllPhotos(data);
@@ -84,7 +84,7 @@ const Portfolio = () => {
       const str = JSON.stringify(photo).toLowerCase();
       return str.includes(category.toLowerCase());
     });
-    
+
     if (filtered.length === 0) {
       filtered = allPhotos.filter(photo =>
         (photo.category && photo.category.toLowerCase() === category.toLowerCase()) ||
@@ -92,7 +92,7 @@ const Portfolio = () => {
         (photo.title && photo.title.toLowerCase().includes(category.toLowerCase()))
       );
     }
-    
+
     if (filtered.length === 0) {
       filtered = allPhotos.slice(0, Math.min(3, allPhotos.length));
     }
@@ -112,8 +112,8 @@ const Portfolio = () => {
     const startIndex = targetPage * PHOTOS_PER_PAGE;
     const endIndex = Math.min(startIndex + PHOTOS_PER_PAGE, filtered.length);
     const pagePhotos = filtered.slice(startIndex, endIndex);
-    
-    
+
+
     setPhotos(pagePhotos);
   }, [allPhotos, savedPositions]);
   const changePage = useCallback((newPage) => {
@@ -284,13 +284,13 @@ const Portfolio = () => {
   return (
     <>
       <Navigation />
-      
+
       {/* Language Selector */}
-      
+
       <div className="category-container">
-      <div>
-        <LanguageSelector />
-      </div>
+        <div>
+          <LanguageSelector />
+        </div>
         <h2 className="text-white mb-4">{t('portfolio.selectCategory')}</h2>
         <div className="category-buttons">
           {categories.map(cat => (
@@ -394,8 +394,8 @@ const Portfolio = () => {
             const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`;
             const fullImg = `${API_BASE}${photo.url}`;
             const caption = photo.title || photo.label || `Cabinet ${i + 1}`;
-            
-            
+
+
             return (
               <div
                 key={`${photo.id || i}-${currentCategory}`}
@@ -426,7 +426,7 @@ const Portfolio = () => {
             );
           })}
         </div>
-        
+
         <div className="dots-3d-container" id="dots3dContainer">
           {photos.map((_, i) => (
             <span

@@ -49,8 +49,8 @@ const LanguageSelector = ({ className = '' }) => {
         }}
       >
         {availableLanguages.map((lang) => (
-          <option 
-            key={lang.code} 
+          <option
+            key={lang.code}
             value={lang.code}
             style={{
               background: '#333',

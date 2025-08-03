@@ -8,10 +8,10 @@ import { useAnalytics } from '../hooks/useAnalytics';
 const About = () => {
     // Analytics tracking
     useAnalytics('/about');
-    
+
     // Language context
     const { t } = useLanguage();
-    
+
     const [teamMembers, setTeamMembers] = useState([]);
     const [testimonials, setTestimonials] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -203,13 +203,13 @@ const About = () => {
                                         {'★'.repeat(testimonial.rating || 5)}
                                     </div>
                                     <p className="testimonial-text">"{testimonial.message}"</p>
-                                    
+
                                     {testimonial.photos && testimonial.photos.length > 0 && (
                                         <div className="testimonial-photos">
                                             {testimonial.photos.map((photo, photoIndex) => (
                                                 <div key={photoIndex} className="testimonial-photo">
-                                                    <img 
-                                                        src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`} 
+                                                    <img
+                                                        src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                                         alt={`${t('about.projectPhoto')} ${photoIndex + 1}`}
                                                         onClick={() => {
                                                             // Open full size image in modal or new tab
@@ -220,7 +220,7 @@ const About = () => {
                                             ))}
                                         </div>
                                     )}
-                                    
+
                                     <div className="testimonial-author">
                                         <strong>{testimonial.client_name}</strong>
                                         {testimonial.project_type && (
