@@ -125,42 +125,33 @@ deploy_zero_downtime() {
         return 1
     fi
     
-    # Copy new config to temporary location first
-    if ! docker cp nginx-tunnel.deploy.conf kitchen-designer-proxy:/tmp/default.conf.new; then
+    # Stop nginx, replace config, then start it
+    log_info "Stopping nginx to update configuration..."
+    docker exec kitchen-designer-proxy nginx -s stop
+    
+    # Copy new config directly
+    if ! docker cp nginx-tunnel.deploy.conf kitchen-designer-proxy:/etc/nginx/conf.d/default.conf; then
         log_error "Failed to copy nginx config"
-        docker-compose -f docker-compose.deploy.yml down
-        rm -f nginx-tunnel.deploy.conf
-        return 1
-    fi
-    
-    # Move the file inside the container to avoid "device busy" error
-    if ! docker exec kitchen-designer-proxy mv /tmp/default.conf.new /etc/nginx/conf.d/default.conf; then
-        log_error "Failed to update nginx config"
-        docker-compose -f docker-compose.deploy.yml down
-        rm -f nginx-tunnel.deploy.conf
-        return 1
-    fi
-    
-    # Test nginx configuration
-    if ! docker exec kitchen-designer-proxy nginx -t; then
-        log_error "Invalid nginx configuration"
-        # Restore backup
+        # Restore backup and restart nginx
         docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
+        docker exec kitchen-designer-proxy nginx
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
         return 1
     fi
     
-    # Reload nginx configuration
-    if ! docker exec kitchen-designer-proxy nginx -s reload; then
-        log_error "Failed to reload nginx configuration"
-        # Restore backup
+    # Start nginx with new config
+    if ! docker exec kitchen-designer-proxy nginx; then
+        log_error "Failed to start nginx with new config"
+        # Restore backup and restart nginx
         docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
-        docker exec kitchen-designer-proxy nginx -s reload
+        docker exec kitchen-designer-proxy nginx
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
         return 1
     fi
+    
+    log_success "Nginx restarted with new configuration"
     
     log_success "Traffic switched to new instances"
     
