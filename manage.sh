@@ -119,7 +119,7 @@ deploy_zero_downtime() {
     log_info "Switching traffic to new instances..."
     
     # Backup current nginx config
-    if ! docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.backup 2>/dev/null; then
+    if ! docker exec kitchen-designer-proxy sh -c "cp /etc/nginx/conf.d/default.conf /tmp/default.conf.backup"; then
         log_error "Failed to backup nginx config"
         docker-compose -f docker-compose.deploy.yml down
         return 1
@@ -145,7 +145,7 @@ deploy_zero_downtime() {
     if ! docker exec kitchen-designer-proxy nginx -t; then
         log_error "Invalid nginx configuration"
         # Restore backup
-        docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf.backup /etc/nginx/conf.d/default.conf
+        docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
         return 1
@@ -155,7 +155,7 @@ deploy_zero_downtime() {
     if ! docker exec kitchen-designer-proxy nginx -s reload; then
         log_error "Failed to reload nginx configuration"
         # Restore backup
-        docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf.backup /etc/nginx/conf.d/default.conf
+        docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
         docker exec kitchen-designer-proxy nginx -s reload
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
