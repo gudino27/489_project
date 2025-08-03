@@ -122,7 +122,8 @@ const translations = {
     'home.workTypes.remodelingDesc': 'Complete home renovations including kitchens, bathrooms, and custom carpentry work',
     'home.workTypes.commercial': 'Commercial Projects',
     'home.workTypes.commercialDesc': 'Commercial carpentry services including office furniture, retail displays, and custom woodwork',
-    
+    'home.workTypes.insurance': 'Insurance Work',
+    'home.workTypes.insuranceDesc': 'Expertly handling insurance claims for home repairs and renovations, ensuring quality work that meets all requirements.',
     // Feature sections
     'home.ourCreations': 'Our Creations',
     'home.creationsDescription': 'Gudino Custom Woodworking has completed hundreds of projects over the years, building a rich and diverse portfolio of work. From modern kitchen remodels to full-home renovations, our team has delivered exceptional results across residential and commercial spaces.',
@@ -353,7 +354,9 @@ const translations = {
     'home.workTypes.remodelingDesc': 'Renovaciones completas del hogar incluyendo cocinas, baños y trabajo de carpintería personalizada',
     'home.workTypes.commercial': 'Proyectos Comerciales',
     'home.workTypes.commercialDesc': 'Servicios de carpintería comercial incluyendo muebles de oficina, exhibidores de tiendas y carpintería personalizada',
-    
+    'home.workTypes.insurance': 'Trabajo de Seguros',
+    'home.workTypes.insuranceDesc': 'experto manejo de reclamaciones de seguros para reparaciones y renovaciones del hogar, asegurando un trabajo de calidad que cumple con todos los requisitos.',
+
     // Feature sections
     'home.ourCreations': 'Nuestras Creaciones',
     'home.creationsDescription': 'Gudino Custom Woodworking ha completado cientos de proyectos a lo largo de los años, construyendo un portafolio rico y diverso de trabajo. Desde remodelaciones modernas de cocinas hasta renovaciones completas del hogar, nuestro equipo ha entregado resultados excepcionales en espacios residenciales y comerciales.',
