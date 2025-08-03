@@ -397,11 +397,6 @@ const DesignerSidebar = ({
                     return null;
                   }
                   
-                  // Debug logging to see the element structure
-                  console.log('Properties panel - element object:', element);
-                  console.log('Properties panel - element.type:', element.type);
-                  console.log('Properties panel - available elementTypes keys:', Object.keys(elementTypes));
-                  
                   const elementSpec = elementTypes[element.type];
 
                   if (!elementSpec) {
