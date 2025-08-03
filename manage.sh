@@ -125,8 +125,16 @@ deploy_zero_downtime() {
         return 1
     fi
     
-    # Copy new config
-    if ! docker cp nginx-tunnel.deploy.conf kitchen-designer-proxy:/etc/nginx/conf.d/default.conf; then
+    # Copy new config to temporary location first
+    if ! docker cp nginx-tunnel.deploy.conf kitchen-designer-proxy:/tmp/default.conf.new; then
+        log_error "Failed to copy nginx config"
+        docker-compose -f docker-compose.deploy.yml down
+        rm -f nginx-tunnel.deploy.conf
+        return 1
+    fi
+    
+    # Move the file inside the container to avoid "device busy" error
+    if ! docker exec kitchen-designer-proxy mv /tmp/default.conf.new /etc/nginx/conf.d/default.conf; then
         log_error "Failed to update nginx config"
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
