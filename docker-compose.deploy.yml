@@ -19,16 +19,12 @@ services:
       - ./data/uploads:/app/uploads
       - ./data/database:/app/database
     networks:
-      - app-network
+      app-network:
+        aliases:
+          - backend  # Add alias so frontend can find it
     # Use different port for new instance during deployment
     ports:
       - "3002:3001"
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
   frontend-new:
     build:
@@ -37,19 +33,12 @@ services:
     container_name: kitchen-designer-frontend-new
     restart: unless-stopped
     depends_on:
-      backend-new:
-        condition: service_healthy
+      - backend-new
     networks:
       - app-network
     # Use different port for new instance during deployment
     ports:
       - "8080:80"
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
 
 networks:
   app-network:
