@@ -298,36 +298,6 @@ case "$1" in
         echo "Initializing system with analytics support..."
         ./scripts/init-with-analytics.sh
         ;;
-    deploy)
-        log_info "Starting zero-downtime deployment..."
-        if deploy_zero_downtime production; then
-            log_success "Deployment completed successfully!"
-        else
-            log_error "Deployment failed!"
-            exit 1
-        fi
-        ;;
-    deploy-staging)
-        log_info "Starting staging deployment..."
-        if deploy_zero_downtime staging; then
-            log_success "Staging deployment completed successfully!"
-        else
-            log_error "Staging deployment failed!"
-            exit 1
-        fi
-        ;;
-    rollback)
-        if [ ! -f .last_deployment_backup ]; then
-            log_error "No deployment backup found for rollback"
-            exit 1
-        fi
-        
-        backup_name=$(cat .last_deployment_backup)
-        log_warning "Rolling back to backup: $backup_name"
-        
-        # Use existing restore functionality
-        $0 restore "$backup_name"
-        ;;
     health-check)
         log_info "Performing comprehensive health check..."
         
@@ -352,12 +322,12 @@ case "$1" in
         fi
         ;;
     *)
-        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore|fresh-start|init-analytics|deploy|deploy-staging|rollback|health-check} [service|backup_name]"
+        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore|fresh-start|init-analytics|health-check} [service|backup_name]"
         echo ""
         echo "=== Standard Commands ==="
         echo "  logs [service]     - Show logs for all services or specific service"
         echo "  restart [service]  - Restart all services or specific service"
-        echo "  rebuild           - Rebuild images (preserves data) - CAUSES DOWNTIME"
+        echo "  rebuild           - Rebuild images (preserves data)"
         echo "  status            - Show container and tunnel status"
         echo "  stop              - Stop all services and tunnel"
         echo "  start             - Start all services and tunnel"
@@ -365,19 +335,13 @@ case "$1" in
         echo "  restore <name>    - Restore from backup"
         echo "  fresh-start       - Complete fresh deployment (removes all data)"
         echo "  init-analytics    - Initialize analytics on existing system"
-        echo ""
-        echo "=== Zero-Downtime Deployment Commands ==="
-        echo "  deploy            - Zero-downtime production deployment"
-        echo "  deploy-staging    - Deploy to staging environment first"
-        echo "  rollback          - Instant rollback to previous deployment"
         echo "  health-check      - Comprehensive health check of all services"
         echo ""
         echo "=== Deployment Workflow ==="
         echo "  1. Test locally"
         echo "  2. Push to GitHub"
         echo "  3. SSH to server: git pull"
-        echo "  4. Run: ./manage.sh deploy"
-        echo "  5. If issues: ./manage.sh rollback"
+        echo "  4. Run: ./manage.sh rebuild"
         exit 1
         ;;
 esac
