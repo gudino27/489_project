@@ -23,7 +23,8 @@ const Home = () => {
     { title: t('home.workTypes.carpentry'), description: t('home.workTypes.carpentryDesc') },
     { title: t('home.workTypes.cabinets'), description: t('home.workTypes.cabinetsDesc') },
     { title: t('home.workTypes.remodeling'), description: t('home.workTypes.remodelingDesc') },
-    { title: t('home.workTypes.commercial'), description: t('home.workTypes.commercialDesc') }
+    { title: t('home.workTypes.commercial'), description: t('home.workTypes.commercialDesc') },
+    { title: t('home.workTypes.insurance'), description: t('home.workTypes.insuranceDesc') }
   ];
 
   const toggleWorkTypes = () => {
