@@ -1,5 +1,5 @@
-import React,{ useState, useEffect } from 'react';
-import {Maximize2, X, Home, Bath } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Maximize2, X, Home, Bath } from 'lucide-react';
 
 const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
     const [viewMode, setViewMode] = useState('floor');
@@ -55,8 +55,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             <button
                                 onClick={() => setActiveRoom('kitchen')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'kitchen'
-                                        ? 'bg-blue-100 text-blue-700 font-medium'
-                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                    ? 'bg-blue-100 text-blue-700 font-medium'
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                     }`}
                             >
                                 <Home className="w-4 h-4" />
@@ -65,8 +65,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             <button
                                 onClick={() => setActiveRoom('bathroom')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'bathroom'
-                                        ? 'bg-purple-100 text-purple-700 font-medium'
-                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                    ? 'bg-purple-100 text-purple-700 font-medium'
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                     }`}
                             >
                                 <Bath className="w-4 h-4" />
@@ -197,8 +197,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             <button
                                 onClick={() => setActiveRoom('kitchen')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'kitchen'
-                                        ? 'bg-blue-100 text-blue-700 font-medium'
-                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                    ? 'bg-blue-100 text-blue-700 font-medium'
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                     }`}
                             >
                                 <Home className="w-4 h-4" />
@@ -207,8 +207,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             <button
                                 onClick={() => setActiveRoom('bathroom')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'bathroom'
-                                        ? 'bg-purple-100 text-purple-700 font-medium'
-                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                    ? 'bg-purple-100 text-purple-700 font-medium'
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                     }`}
                             >
                                 <Bath className="w-4 h-4" />
@@ -321,8 +321,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                         <button
                             onClick={() => setActiveRoom('kitchen')}
                             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'kitchen'
-                                    ? 'bg-blue-100 text-blue-700 font-medium'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                ? 'bg-blue-100 text-blue-700 font-medium'
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                 }`}
                         >
                             <Home className="w-4 h-4" />
@@ -331,8 +331,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                         <button
                             onClick={() => setActiveRoom('bathroom')}
                             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'bathroom'
-                                    ? 'bg-purple-100 text-purple-700 font-medium'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                ? 'bg-purple-100 text-purple-700 font-medium'
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                 }`}
                         >
                             <Bath className="w-4 h-4" />
@@ -633,8 +633,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                 key={wall}
                                 onClick={() => setSelectedWall(wall)}
                                 className={`px-3 py-2 rounded-lg transition-colors ${selectedWall === wall
-                                        ? 'bg-blue-600 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 Wall {wall}

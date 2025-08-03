@@ -143,12 +143,12 @@ const UserManagement = ({ token, API_BASE }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short', 
-    day: 'numeric',
-    timeZone: 'America/Los_Angeles'
-  });
-};
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/Los_Angeles'
+    });
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -310,21 +310,19 @@ const UserManagement = ({ token, API_BASE }) => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user.role === 'super_admin' 
-                      ? 'bg-purple-100 text-purple-800' 
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'super_admin'
+                      ? 'bg-purple-100 text-purple-800'
                       : 'bg-blue-100 text-blue-800'
-                  }`}>
+                    }`}>
                     {user.role === 'super_admin' && <Shield size={12} />}
                     {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    user.is_active 
-                      ? 'bg-green-100 text-green-800' 
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_active
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}>
+                    }`}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>

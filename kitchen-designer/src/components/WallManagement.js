@@ -36,7 +36,7 @@ const WallManagement = ({
   getDoorTypes
 }) => {
   const { t } = useLanguage();
-  
+
   if (!wallAvailability.addWallEnabled && !wallAvailability.removeWallEnabled) {
     return null;
   }
@@ -44,26 +44,25 @@ const WallManagement = ({
   return (
     <div className="mb-6 border-t pt-4">
       <div className="mb-3">
-        <button 
+        <button
           onClick={() => toggleSection('wallManagement')}
           className="flex items-center gap-2 text-sm font-semibold hover:text-blue-600 mb-2"
         >
           <span className={`transform transition-transform ${collapsedSections.wallManagement ? 'rotate-0' : 'rotate-90'}`}>
             ▶
           </span>
-{t('walls.title')}
+          {t('walls.title')}
         </button>
-        
+
         {/* Wall Management Buttons */}
         {wallAvailability.addWallEnabled && (
           <div className="flex justify-center">
             <button
               onClick={toggleWallDrawingMode}
-              className={`text-sm px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors ${
-                isDrawingWall 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg' 
+              className={`text-sm px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors ${isDrawingWall
+                  ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
                   : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
-              }`}
+                }`}
               title={isDrawingWall ? "Exit wall drawing mode" : "Draw custom wall"}
             >
               {isDrawingWall ? '✏️ Exit Drawing Mode' : '✏️ Draw Wall'}
@@ -78,7 +77,7 @@ const WallManagement = ({
             <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <div className="text-sm font-medium text-orange-800 mb-2">✏️ Wall Drawing Mode Active</div>
               <div className="text-xs text-orange-700">
-                {wallDrawStart ? 
+                {wallDrawStart ?
                   <><strong>Step 2:</strong> Click to place the end point of your wall. Red dashed line shows preview.</> :
                   <><strong>Step 1:</strong> Click on the floor plan to place the start point of your wall.</>
                 }
@@ -96,7 +95,7 @@ const WallManagement = ({
               </button>
             </div>
           )}
-          
+
           {/* Wall Status Grid */}
           <div className="space-y-2 mb-4">
             {allAvailableWalls.filter(wallNum => {
@@ -113,7 +112,7 @@ const WallManagement = ({
               const customWall = getCustomWallByNumber(wallNum);
               const isCustom = !!customWall;
               const existedPrior = customWall?.existedPrior || false;
-              
+
               return (
                 <div key={wallNum} className="p-2 bg-gray-50 rounded border">
                   <div className="flex items-center justify-between mb-1">
@@ -125,7 +124,7 @@ const WallManagement = ({
                       {isPresent ? 'Present' : 'Removed'}
                     </span>
                   </div>
-                  
+
                   <div className="flex gap-1">
                     {!isPresent && (
                       <div className="flex gap-1 w-full">
@@ -153,9 +152,9 @@ const WallManagement = ({
                                 const updatedAvailableWalls = allAvailableWalls.filter(w => w !== wallNum);
                                 const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
                                 const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
-                                
+
                                 console.log('Deleting removed custom wall from status grid:', wallNum);
-                                
+
                                 setCurrentRoomData({
                                   ...currentRoomData,
                                   customWalls: updatedCustomWalls,
@@ -186,9 +185,9 @@ const WallManagement = ({
                                 const updatedAvailableWalls = allAvailableWalls.filter(w => w !== wallNum);
                                 const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
                                 const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
-                                
+
                                 console.log('Deleting custom wall from status grid:', wallNum);
-                                
+
                                 setCurrentRoomData({
                                   ...currentRoomData,
                                   customWalls: updatedCustomWalls,
@@ -208,14 +207,13 @@ const WallManagement = ({
                           <button
                             onClick={() => removeWall(wallNum)}
                             disabled={wallRemovalDisabled || !wallAvailability.removeWallEnabled}
-                            className={`flex-1 text-xs py-1 px-2 rounded ${
-                              wallRemovalDisabled || !wallAvailability.removeWallEnabled 
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            className={`flex-1 text-xs py-1 px-2 rounded ${wallRemovalDisabled || !wallAvailability.removeWallEnabled
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-red-500 text-white hover:bg-red-600'
-                            }`}
-                            title={wallRemovalDisabled ? "Wall removal temporarily disabled" : 
-                                   !wallAvailability.removeWallEnabled ? "Wall removal service disabled" :
-                                   `Remove ${getWallName(wallNum)} (+$${wallPricing.removeWall})`}
+                              }`}
+                            title={wallRemovalDisabled ? "Wall removal temporarily disabled" :
+                              !wallAvailability.removeWallEnabled ? "Wall removal service disabled" :
+                                `Remove ${getWallName(wallNum)} (+$${wallPricing.removeWall})`}
                           >
                             Remove
                           </button>
@@ -223,7 +221,7 @@ const WallManagement = ({
                       </>
                     )}
                   </div>
-                  
+
                   {/* Door Controls for Present Walls */}
                   {isPresent && (
                     <div className="mt-2 space-y-2">
@@ -246,7 +244,7 @@ const WallManagement = ({
                               ✕
                             </button>
                           </div>
-                          
+
                           {/* Position slider */}
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -264,7 +262,7 @@ const WallManagement = ({
                               />
                               <span className="text-xs text-blue-700 w-8">{Math.round(door.position)}%</span>
                             </div>
-                            
+
                             {/* Width input */}
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-blue-700 w-12">Width:</span>
@@ -284,7 +282,7 @@ const WallManagement = ({
                               />
                               <span className="text-xs text-blue-700">inches</span>
                             </div>
-                            
+
                             {/* Door type dropdown */}
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-blue-700 w-12">Type:</span>
@@ -301,11 +299,11 @@ const WallManagement = ({
                           </div>
                         </div>
                       ))}
-                      
+
                       {/* Add door controls */}
                       <div className="p-2 bg-green-50 rounded border border-green-200">
                         <div className="text-xs font-medium text-green-800 mb-2">Add New Door</div>
-                        
+
                         <div className="space-y-2">
                           {/* Door type dropdown */}
                           <div className="flex items-center gap-2">
@@ -320,7 +318,7 @@ const WallManagement = ({
                               <option value="pantry">Pantry Door</option>
                             </select>
                           </div>
-                          
+
                           {/* Door width input */}
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-green-700 w-12">Width:</span>
@@ -335,7 +333,7 @@ const WallManagement = ({
                             />
                             <span className="text-xs text-green-700">inches</span>
                           </div>
-                          
+
                           {/* Add button */}
                           <button
                             onClick={() => {
@@ -344,7 +342,7 @@ const WallManagement = ({
                               const doorType = typeSelect.value;
                               const width = parseFloat(widthInput.value) || 36;
                               const position = 50; // Default center position
-                              
+
                               if (width >= 18 && width <= 48) {
                                 addDoor(wallNum, position, width, doorType);
                                 // Reset form
@@ -363,7 +361,7 @@ const WallManagement = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Custom wall options */}
                   {isCustom && isPresent && (
                     <div className="mt-2 space-y-1">
@@ -371,8 +369,8 @@ const WallManagement = ({
                         onClick={() => {
                           if (existedPrior) {
                             // Remove from existed prior
-                            const updatedCustomWalls = customWalls.map(wall => 
-                              wall.wallNumber === wallNum 
+                            const updatedCustomWalls = customWalls.map(wall =>
+                              wall.wallNumber === wallNum
                                 ? { ...wall, existedPrior: false }
                                 : wall
                             );
@@ -386,16 +384,15 @@ const WallManagement = ({
                             markWallAsExistedPrior(wallNum);
                           }
                         }}
-                        className={`text-xs py-1 px-2 rounded w-full ${
-                          existedPrior 
-                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+                        className={`text-xs py-1 px-2 rounded w-full ${existedPrior
+                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                             : 'bg-yellow-500 text-white hover:bg-yellow-600'
-                        }`}
+                          }`}
                         title={existedPrior ? "Click to unmark as existed prior" : "Mark this wall as existed before modifications"}
                       >
                         {existedPrior ? '✓ Existed Prior (click to unmark)' : 'Mark as Existed Prior'}
                       </button>
-                      
+
                       <div className="space-y-1">
                         <div className="text-xs text-gray-600">Rotation: {getCurrentWallAngle(wallNum).toFixed(1)}°</div>
                         <div className="flex gap-1">
@@ -429,30 +426,30 @@ const WallManagement = ({
 
 
           {/* Wall modification cost summary */}
-          {(currentRoomData.removedWalls?.length > 0 || 
+          {(currentRoomData.removedWalls?.length > 0 ||
             (currentRoomData.walls || []).some(wall => !originalWalls.includes(wall))) && (
-            <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2">
-              <div className="font-medium text-yellow-800">Wall Modifications:</div>
-              <div className="text-yellow-700">
-                {(() => {
-                  const removedWalls = currentRoomData.removedWalls || [];
-                  const chargeableRemoved = removedWalls.filter(wall => originalWalls.includes(wall));
-                  const customAdded = (currentRoomData.walls || []).filter(wall => !originalWalls.includes(wall));
-                  
-                  return (
-                    <>
-                      {chargeableRemoved.length > 0 && (
-                        <div>{chargeableRemoved.length} original wall(s) removed: +${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}</div>
-                      )}
-                      {customAdded.length > 0 && (
-                        <div>{customAdded.length} custom wall(s) added: +${(customAdded.length * wallPricing.addWall).toFixed(2)}</div>
-                      )}
-                    </>
-                  );
-                })()}
+              <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2">
+                <div className="font-medium text-yellow-800">Wall Modifications:</div>
+                <div className="text-yellow-700">
+                  {(() => {
+                    const removedWalls = currentRoomData.removedWalls || [];
+                    const chargeableRemoved = removedWalls.filter(wall => originalWalls.includes(wall));
+                    const customAdded = (currentRoomData.walls || []).filter(wall => !originalWalls.includes(wall));
+
+                    return (
+                      <>
+                        {chargeableRemoved.length > 0 && (
+                          <div>{chargeableRemoved.length} original wall(s) removed: +${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}</div>
+                        )}
+                        {customAdded.length > 0 && (
+                          <div>{customAdded.length} custom wall(s) added: +${(customAdded.length * wallPricing.addWall).toFixed(2)}</div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </>
       )}
     </div>

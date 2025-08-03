@@ -18,7 +18,7 @@ export const LanguageProvider = ({ children }) => {
     if (saved && (saved === 'en' || saved === 'es')) {
       return saved;
     }
-    
+
     // Detect browser language
     const browserLang = navigator.language.toLowerCase();
     if (browserLang.startsWith('es')) {

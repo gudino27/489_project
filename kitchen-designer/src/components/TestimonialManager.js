@@ -183,7 +183,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       });
 
       if (response.ok) {
-        setTestimonials(testimonials.map(t => 
+        setTestimonials(testimonials.map(t =>
           t.id === testimonialId ? { ...t, is_visible: !currentStatus } : t
         ));
       }
@@ -194,7 +194,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
 
   const bulkDeleteTestimonials = async () => {
     if (selectedTestimonials.size === 0) return;
-    
+
     if (!window.confirm(`Delete ${selectedTestimonials.size} testimonial(s)?`)) {
       return;
     }
@@ -209,7 +209,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
           }
         })
       );
-      
+
       await Promise.all(deletePromises);
       setTestimonials(testimonials.filter(t => !selectedTestimonials.has(t.id)));
       setSelectedTestimonials(new Set());
@@ -255,7 +255,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
           <Send className="w-5 h-5" />
           Send Testimonial Link
         </h3>
-        
+
         <form onSubmit={sendTestimonialLink} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -270,7 +270,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Client Email
@@ -284,7 +284,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Project Type
@@ -301,7 +301,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
               ))}
             </select>
           </div>
-          
+
           <div className="md:col-span-3">
             <button
               type="submit"
@@ -320,7 +320,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                 </>
               )}
             </button>
-            
+
             {linkSent && (
               <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-green-700">
                 Testimonial link sent successfully!
@@ -334,7 +334,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       {generatedTokens.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h3 className="text-lg font-semibold mb-4">Generated Testimonial Links</h3>
-          
+
           <div className="space-y-3">
             {generatedTokens.map((tokenData) => (
               <div key={tokenData.token} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
@@ -343,7 +343,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   <p className="text-sm text-gray-600">{tokenData.client_email} • {tokenData.project_type}</p>
                   <p className="text-xs text-gray-500">Created: {formatDate(tokenData.created_at)}</p>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => copyTestimonialLink(tokenData.token)}
@@ -361,7 +361,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                       </>
                     )}
                   </button>
-                  
+
                   <button
                     onClick={() => deleteTestimonialToken(tokenData.token)}
                     className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
@@ -434,7 +434,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                       }}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    
+
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold text-gray-900">{testimonial.client_name}</h4>
@@ -442,16 +442,16 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                           {renderStars(testimonial.rating)}
                         </div>
                       </div>
-                      
+
                       <p className="text-gray-700 mb-2">"{testimonial.message}"</p>
-                      
+
                       {testimonial.photos && testimonial.photos.length > 0 && (
                         <div className="testimonial-admin-photos mb-3">
                           <div className="flex gap-2 overflow-x-auto pb-2">
                             {testimonial.photos.map((photo, photoIndex) => (
                               <div key={photoIndex} className="flex-shrink-0">
-                                <img 
-                                  src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`} 
+                                <img
+                                  src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                   alt={`Photo ${photoIndex + 1}`}
                                   className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
                                   onClick={() => window.open(`${API_BASE}${photo.file_path}`, '_blank')}
@@ -461,7 +461,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         {testimonial.project_type && (
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
@@ -475,20 +475,19 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleTestimonialVisibility(testimonial.id, testimonial.is_visible)}
-                      className={`p-2 rounded-md ${
-                        testimonial.is_visible 
-                          ? 'text-green-600 hover:bg-green-50' 
+                      className={`p-2 rounded-md ${testimonial.is_visible
+                          ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                        }`}
                       title={testimonial.is_visible ? 'Visible on website' : 'Hidden from website'}
                     >
                       {testimonial.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    
+
                     {userRole === 'super_admin' && (
                       <button
                         onClick={() => deleteTestimonial(testimonial.id)}

@@ -18,7 +18,7 @@ const Navigation = () => {
 
         updatePadding();
         window.addEventListener('resize', updatePadding);
-        
+
         return () => window.removeEventListener('resize', updatePadding);
     }, []);
 

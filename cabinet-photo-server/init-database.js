@@ -5,9 +5,9 @@ const bcrypt = require('bcryptjs');
 
 async function initializeDatabase() {
   console.log('Starting database initialization...\n');
-  
+
   const dbPath = path.join(__dirname, 'database', 'cabinet_photos.db');
-  
+
   const db = await open({
     filename: dbPath,
     driver: sqlite3.Database
@@ -16,7 +16,7 @@ async function initializeDatabase() {
   try {
     // Enable WAL mode for better concurrency
     await db.exec('PRAGMA journal_mode=WAL');
-    
+
     console.log(' Creating basic tables...');
     await createBasicTables(db);
 
@@ -34,9 +34,9 @@ async function initializeDatabase() {
 
     console.log(' Adding testimonial tables...');
     await addTestimonialTables(db);
-    
+
     console.log('\n Database initialization completed successfully!');
-    
+
   } catch (error) {
     console.error(' Error during database initialization:', error);
     throw error;
@@ -200,13 +200,13 @@ async function addPriceTables(db) {
     const tableInfo = await db.all("PRAGMA table_info(material_pricing)");
     const hasOldStructure = tableInfo.some(col => col.name === 'material_type');
     const hasNewStructure = tableInfo.some(col => col.name === 'material_name_en');
-    
+
     if (hasOldStructure && !hasNewStructure) {
       console.log('🔄 Migrating material_pricing table to bilingual structure...');
-      
+
       // Get existing data
       const existingMaterials = await db.all('SELECT * FROM material_pricing');
-      
+
       // Create new table with bilingual structure
       await db.exec(`
         CREATE TABLE material_pricing_new (
@@ -219,30 +219,30 @@ async function addPriceTables(db) {
           UNIQUE(material_name_en, material_name_es)
         )
       `);
-      
+
       // Migrate data with appropriate translations
       const materialTranslations = {
         'laminate': { en: 'Laminate', es: 'Laminado' },
         'wood': { en: 'Wood', es: 'Madera' },
         'plywood': { en: 'Plywood', es: 'Madera Contrachapada' }
       };
-      
+
       for (const material of existingMaterials) {
         const translation = materialTranslations[material.material_type.toLowerCase()] || {
           en: material.material_type.charAt(0).toUpperCase() + material.material_type.slice(1),
           es: material.material_type.charAt(0).toUpperCase() + material.material_type.slice(1)
         };
-        
+
         await db.run(
           'INSERT INTO material_pricing_new (material_name_en, material_name_es, multiplier, updated_at, updated_by) VALUES (?, ?, ?, ?, ?)',
           [translation.en, translation.es, material.multiplier, material.updated_at, material.updated_by]
         );
       }
-      
+
       // Replace old table
       await db.exec('DROP TABLE material_pricing');
       await db.exec('ALTER TABLE material_pricing_new RENAME TO material_pricing');
-      
+
       console.log('✓ Successfully migrated material_pricing table to bilingual structure');
     } else if (!hasOldStructure && !hasNewStructure) {
       // Fresh install - create with new structure
@@ -314,12 +314,12 @@ async function addPriceTables(db) {
   // Insert default materials (check structure first)
   const tableInfo = await db.all("PRAGMA table_info(material_pricing)");
   const hasNewStructure = tableInfo.some(col => col.name === 'material_name_en');
-  
+
   if (hasNewStructure) {
     // New bilingual structure
     const defaultMaterials = [
-      ['Laminate', 'Laminado', 1.0], 
-      ['Wood', 'Madera', 1.5], 
+      ['Laminate', 'Laminado', 1.0],
+      ['Wood', 'Madera', 1.5],
       ['Plywood', 'Madera Contrachapada', 1.3]
     ];
     for (const [materialEn, materialEs, multiplier] of defaultMaterials) {
@@ -464,12 +464,12 @@ async function addUserTables(db) {
 
   if (!existingAdmin) {
     const defaultPassword = await bcrypt.hash('changeme123', 10);
-    
+
     await db.run(
       'INSERT INTO users (username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
       ['superadmin', 'admin@gudinocustom.com', defaultPassword, 'super_admin', 'Super Administrator']
     );
-    
+
     console.log(' Created default super admin user (username: superadmin, password: changeme123)');
   } else {
     console.log(' Super admin user already exists');

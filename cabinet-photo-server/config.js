@@ -15,7 +15,7 @@ const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
-  
+
   // Security
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-change-this',
@@ -24,13 +24,13 @@ const config = {
   bcrypt: {
     rounds: parseInt(process.env.BCRYPT_ROUNDS) || 10
   },
-  
+
   // Database
   database: {
     path: process.env.DB_PATH || path.join(__dirname, 'database', 'cabinet_photos.db'),
     poolSize: parseInt(process.env.DB_POOL_SIZE) || 5
   },
-  
+
   // Email Configuration
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -43,7 +43,7 @@ const config = {
     from: process.env.EMAIL_FROM || 'Cabinet Designer <noreply@gudinocustom.com>',
     adminEmail: process.env.ADMIN_EMAIL || 'admin@gudinocustom.com'
   },
-  
+
   // File Upload Configuration
   uploads: {
     maxSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
@@ -61,7 +61,7 @@ const config = {
       large: { width: 1200, height: 900 }
     }
   },
-  
+
   // CORS Configuration
   cors: {
     origins: process.env.CORS_ORIGINS?.split(',') || [
@@ -71,20 +71,20 @@ const config = {
     ],
     credentials: process.env.CORS_CREDENTIALS !== 'false'
   },
-  
+
   // Rate Limiting
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX) || 100,
     authMaxRequests: parseInt(process.env.AUTH_RATE_LIMIT_MAX) || 5
   },
-  
+
   // Logging
   logging: {
     level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
     dir: process.env.LOG_DIR || path.join(__dirname, 'logs')
   },
-  
+
   // URLs
   urls: {
     adminUrl: process.env.ADMIN_URL || 'http://localhost:3000',

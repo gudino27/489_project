@@ -17,7 +17,7 @@ class SessionManager {
     if (sessionData) {
       try {
         const session = JSON.parse(sessionData);
-        
+
         // Check if session is still valid
         if (session.expiresAt > Date.now()) {
           this.startInactivityTimer();
@@ -57,7 +57,7 @@ class SessionManager {
   clearSession() {
     Cookies.remove(SESSION_COOKIE);
     this.stopInactivityTimer();
-    
+
     if (this.onLogout) {
       this.onLogout();
     }
@@ -66,14 +66,14 @@ class SessionManager {
   // Update activity timestamp
   updateActivity() {
     this.lastActivity = Date.now();
-    
+
     // Update session expiry
     const sessionData = Cookies.get(SESSION_COOKIE);
     if (sessionData) {
       try {
         const session = JSON.parse(sessionData);
         session.expiresAt = Date.now() + SESSION_DURATION;
-        
+
         Cookies.set(SESSION_COOKIE, JSON.stringify(session), {
           expires: new Date(session.expiresAt),
           sameSite: 'strict',
@@ -88,7 +88,7 @@ class SessionManager {
   // Start inactivity timer
   startInactivityTimer() {
     this.stopInactivityTimer();
-    
+
     this.inactivityTimer = setInterval(() => {
       if (Date.now() - this.lastActivity > INACTIVITY_TIMEOUT) {
         console.log('Session expired due to inactivity');

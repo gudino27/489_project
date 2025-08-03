@@ -1,4 +1,3 @@
-
 /* Contact Page Styles */
 .contact-container {
   min-height: 100vh;
@@ -296,6 +295,7 @@
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -303,8 +303,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive Design */
@@ -313,7 +318,7 @@
     grid-template-columns: 1fr;
     gap: 40px;
   }
-  
+
   .map-section {
     order: -1;
   }
@@ -323,26 +328,26 @@
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.1rem;
   }
-  
+
   .contact-cards {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .contact-form-section,
   .map-section {
     padding: 30px 25px;
   }
-  
+
   .contact-content {
     padding: 40px 15px;
   }
@@ -352,15 +357,15 @@
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .contact-card {
     padding: 25px 20px;
   }
-  
+
   .form-header h2 {
     font-size: 1.8rem;
   }
-  
+
   .map-header h2 {
     font-size: 1.6rem;
   }
@@ -475,15 +480,15 @@
   .phone-options {
     gap: 12px;
   }
-  
+
   .phone-option {
     padding: 12px;
   }
-  
+
   .language-label {
     font-size: 0.8rem;
   }
-  
+
   .phone-option .contact-detail {
     font-size: 1rem;
   }

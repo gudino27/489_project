@@ -2,7 +2,7 @@
 // import statements
 //---------------------------------------
 
-import React,{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -46,10 +46,10 @@ import './css/admin.css';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  
+
   // Language context
   const { t } = useLanguage();
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -322,7 +322,7 @@ const AdminPanel = () => {
             )}
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              {showForgotPassword 
+              {showForgotPassword
                 ? t('admin.enterEmail')
                 : t('admin.contactAdmin')
               }
@@ -351,7 +351,7 @@ const AdminPanel = () => {
             </div>
             <div className="flex items-center gap-2 order-1 md:order-2">
               <span className="text-sm md:text-medium text-gray-800">{t('admin.welcome')}</span>
-              <span className="font-medium text-sm md:text-base">{ user?.username}</span>
+              <span className="font-medium text-sm md:text-base">{user?.username}</span>
               {user?.role === 'super_admin' && (
                 <Shield className="text-purple-600" size={16} />
               )}

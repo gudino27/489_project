@@ -13,7 +13,7 @@ const initializeClarity = () => {
 // Get page category for Clarity tracking
 const getPageCategory = (pagePath) => {
   if (!pagePath) return 'unknown';
-  
+
   if (pagePath === '/' || pagePath === '/home') return 'homepage';
   if (pagePath.includes('/portfolio')) return 'portfolio';
   if (pagePath.includes('/design')) return 'design_tool';
@@ -23,7 +23,7 @@ const getPageCategory = (pagePath) => {
   if (pagePath.includes('/services')) return 'services';
   if (pagePath.includes('/areas')) return 'location_page';
   if (pagePath.includes('/testimonial')) return 'testimonial';
-  
+
   return 'other';
 };
 
@@ -45,10 +45,10 @@ const getSessionId = () => {
 // Get user auth info if available
 const getUserInfo = () => {
   try {
-    const authToken = localStorage.getItem('authToken') || 
-                     localStorage.getItem('token') || 
-                     sessionStorage.getItem('authToken');
-    
+    const authToken = localStorage.getItem('authToken') ||
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('authToken');
+
     if (authToken) {
       // Decode token to get user ID (basic implementation)
       try {
@@ -72,7 +72,7 @@ export const useAnalytics = (pagePath) => {
   // Track page view on mount
   useEffect(() => {
     if (!pagePath || isTracking.current) return;
-    
+
     isTracking.current = true;
     startTime.current = Date.now();
 
@@ -80,7 +80,7 @@ export const useAnalytics = (pagePath) => {
       try {
         const sessionId = getSessionId();
         const userId = getUserInfo();
-        
+
         // Track with custom analytics
         const pageData = {
           page_path: pagePath,
@@ -123,7 +123,7 @@ export const useAnalytics = (pagePath) => {
     return () => {
       if (viewId) {
         const timeSpent = Math.round((Date.now() - startTime.current) / 1000);
-        
+
         // Send time spent data (fire and forget)
         fetch(`${API_BASE}/api/analytics/time`, {
           method: 'POST',
@@ -135,7 +135,7 @@ export const useAnalytics = (pagePath) => {
             viewId,
             timeSpent
           })
-        }).catch(() => {}); // Ignore errors for cleanup
+        }).catch(() => { }); // Ignore errors for cleanup
       }
     };
   }, [pagePath]);
@@ -145,7 +145,7 @@ export const useAnalytics = (pagePath) => {
     const handleBeforeUnload = () => {
       if (viewId) {
         const timeSpent = Math.round((Date.now() - startTime.current) / 1000);
-        
+
         // Use sendBeacon for reliable delivery on page unload
         if (navigator.sendBeacon) {
           const data = JSON.stringify({ viewId, timeSpent });
@@ -158,7 +158,7 @@ export const useAnalytics = (pagePath) => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && viewId) {
         const timeSpent = Math.round((Date.now() - startTime.current) / 1000);
-        
+
         fetch(`${API_BASE}/api/analytics/time`, {
           method: 'POST',
           headers: {
@@ -169,7 +169,7 @@ export const useAnalytics = (pagePath) => {
             viewId,
             timeSpent
           })
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
 
@@ -191,7 +191,7 @@ export const useEventTracking = () => {
     try {
       const sessionId = getSessionId();
       const userId = getUserInfo();
-      
+
       // Track with custom analytics
       await fetch(`${API_BASE}/api/analytics/event`, {
         method: 'POST',
@@ -212,7 +212,7 @@ export const useEventTracking = () => {
       const clarity = initializeClarity();
       if (clarity) {
         clarity('event', eventName, eventData);
-        
+
         // Set custom tags based on events
         if (eventName === 'contact_form_submit') {
           clarity('set', 'lead_generated', 'true');

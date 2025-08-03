@@ -53,7 +53,7 @@ const TestimonialForm = () => {
         const files = Array.from(e.target.files);
         const maxFiles = 5;
         const maxFileSize = 10 * 1024 * 1024; // 10MB
-        
+
         if (selectedFiles.length + files.length > maxFiles) {
             setError(`You can only upload up to ${maxFiles} photos.`);
             return;
@@ -74,7 +74,7 @@ const TestimonialForm = () => {
         if (validFiles.length === 0) return;
 
         setSelectedFiles(prev => [...prev, ...validFiles]);
-        
+
         // Create preview URLs
         validFiles.forEach(file => {
             const reader = new FileReader();
@@ -197,7 +197,7 @@ const TestimonialForm = () => {
                 <div className="testimonial-form-card">
                     <h2>Share Your Experience</h2>
                     <p className="form-description">
-                        We'd love to hear about your experience with Gudino Custom Woodworking. 
+                        We'd love to hear about your experience with Gudino Custom Woodworking.
                         Your testimonial helps other homeowners discover our services.
                     </p>
 
@@ -266,7 +266,7 @@ const TestimonialForm = () => {
                             <p className="form-help-text">
                                 Share photos of your completed cabinets or project. Up to 5 photos, 10MB each.
                             </p>
-                            
+
                             <div className="photo-upload-area">
                                 <input
                                     type="file"
@@ -314,8 +314,8 @@ const TestimonialForm = () => {
                             {loading ? (
                                 <div className="submit-progress">
                                     <div className="loading-spinner"></div>
-                                    {selectedFiles.length > 0 && uploadProgress > 0 ? 
-                                        `Uploading... ${uploadProgress}%` : 
+                                    {selectedFiles.length > 0 && uploadProgress > 0 ?
+                                        `Uploading... ${uploadProgress}%` :
                                         'Submitting...'
                                     }
                                 </div>
