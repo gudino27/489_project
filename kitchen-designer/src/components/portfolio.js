@@ -60,13 +60,16 @@ const Portfolio = () => {
       if (response.ok) {
         const data = await response.json();
         setAllPhotos(data);
+        // Save to localStorage for offline access
+        localStorage.setItem('cabinetPhotos', JSON.stringify(data));
       } else {
         throw new Error('API not available');
       }
     } catch (error) {
       const saved = localStorage.getItem('cabinetPhotos');
       if (saved) {
-        setAllPhotos(JSON.parse(saved));
+        const data = JSON.parse(saved);
+        setAllPhotos(data);
       }
     }
   }, []);
@@ -76,10 +79,12 @@ const Portfolio = () => {
     setCurrentIndex(0);
     setRotationAngle(0);
 
+
     let filtered = allPhotos.filter(photo => {
       const str = JSON.stringify(photo).toLowerCase();
       return str.includes(category.toLowerCase());
     });
+    
     if (filtered.length === 0) {
       filtered = allPhotos.filter(photo =>
         (photo.category && photo.category.toLowerCase() === category.toLowerCase()) ||
@@ -87,9 +92,11 @@ const Portfolio = () => {
         (photo.title && photo.title.toLowerCase().includes(category.toLowerCase()))
       );
     }
+    
     if (filtered.length === 0) {
       filtered = allPhotos.slice(0, Math.min(3, allPhotos.length));
     }
+
     // Store all photos for this category
     setAllCategoryPhotos(filtered);
     // Calculate total pages
@@ -97,7 +104,7 @@ const Portfolio = () => {
     setTotalPages(pages);
     // Determine which page to show
     let targetPage = 0;
-    if (!resetPosition && savedPositions[category] !== undefined) {
+    if (!resetPosition && savedPositions[category] !== undefined && savedPositions[category] >= 0) {
       targetPage = Math.min(savedPositions[category], pages - 1);
     }
     setCurrentPage(targetPage);
@@ -105,6 +112,8 @@ const Portfolio = () => {
     const startIndex = targetPage * PHOTOS_PER_PAGE;
     const endIndex = Math.min(startIndex + PHOTOS_PER_PAGE, filtered.length);
     const pagePhotos = filtered.slice(startIndex, endIndex);
+    
+    
     setPhotos(pagePhotos);
   }, [allPhotos, savedPositions]);
   const changePage = useCallback((newPage) => {
@@ -385,6 +394,8 @@ const Portfolio = () => {
             const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`;
             const fullImg = `${API_BASE}${photo.url}`;
             const caption = photo.title || photo.label || `Cabinet ${i + 1}`;
+            
+            
             return (
               <div
                 key={`${photo.id || i}-${currentCategory}`}
