@@ -137,7 +137,7 @@ const translations = {
     'home.aboutUs': 'About Us',
 
     //portfolio page
-    'portfolio.selectCategory': 'select Category',
+    'portfolio.selectCategory': 'Select Category',
     'portfolio.kitchen': 'kitchen',
     'portfolio.bathroom': 'bathroom',
     'portfolio.livingRoom': 'living room',

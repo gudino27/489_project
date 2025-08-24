@@ -1,17 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Calculator,      // Pricing calculator icon
   Send,            // Send quote icon
   Home,            // Kitchen room icon
-  Bath             // Bathroom room icon
+  Bath,            // Bathroom room icon
 } from 'lucide-react';
 import jsPDF from 'jspdf';               // PDF generation library
-import MainNavBar from './Navigation';
-import WallView from './WallView';
-import DesignerSidebar from './DesignerSidebar';
-import { useLanguage } from '../contexts/LanguageContext';
-import { usePricing } from '../contexts/PricingContext';
-import { useAnalytics } from '../hooks/useAnalytics';
+import MainNavBar from '../ui/Navigation';
+import WallView from '../design/WallView';
+import DraggableCabinet from '../design/DraggableCabinet';
+import DesignerSidebar from '../design/DesignerSidebar';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { usePricing } from '../../contexts/PricingContext';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const KitchenDesigner = () => {
   // Analytics tracking
@@ -50,6 +51,7 @@ const KitchenDesigner = () => {
     window.addEventListener('resize', checkDevice);
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
+
 
   // -----------------------------
   // Business Configuration
@@ -141,6 +143,14 @@ const KitchenDesigner = () => {
     properties: false
   });
   const [rotationStart, setRotationStart] = useState(null);                 // Start point for wall rotation
+
+  // Drag system refs for ultra-fast performance
+  const dragCacheRef = useRef({
+    svgMatrix: null,
+    lastUpdate: 0,
+    lastPosition: null,
+    dragElement: null
+  });
 
   // Toggle collapsible sections
   const toggleSection = (sectionName) => {
@@ -1784,22 +1794,13 @@ const KitchenDesigner = () => {
     }
   };
 
-  // Throttle function to improve performance during dragging
-  const throttle = (func, limit) => {
-    let inThrottle;
-    return function () {
-      const args = arguments;
-      const context = this;
-      if (!inThrottle) {
-        func.apply(context, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    }
-  };
+  // Enhanced easing functions for smooth animations
+  const easeOutQuad = (t) => t * (2 - t);
+  const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
 
-  // Handle touch/mouse movement during dragging
-  const handleMouseMove = throttle((e) => {
+
+  // Handle touch/mouse movement during dragging with RAF optimization
+  const handleMouseMove = (e) => {
     // Handle wall drawing preview - show live preview as mouse moves
     if (isDrawingWall && wallDrawStart && canvasRef.current) {
       const coords = getEventCoordinates(e);
@@ -1820,15 +1821,22 @@ const KitchenDesigner = () => {
     if (isDragging && selectedElement) {
       const element = currentRoomData.elements.find(el => el.id === selectedElement);
       if (element && canvasRef.current) {
+        // Cache SVG transformation matrix for performance (refresh every 32ms = ~30fps)
+        if (!dragCacheRef.current.svgMatrix || Date.now() - dragCacheRef.current.lastUpdate > 32) {
+          dragCacheRef.current.svgMatrix = canvasRef.current.getScreenCTM().inverse();
+          dragCacheRef.current.lastUpdate = Date.now();
+        }
+
         // Get coordinates from touch or mouse event
         const coords = getEventCoordinates(e);
 
-        // Convert coordinates to SVG coordinates
+        // Convert coordinates using cached matrix
         const svgPt = canvasRef.current.createSVGPoint();
         svgPt.x = coords.clientX;
         svgPt.y = coords.clientY;
-        const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
+        const cursorPt = svgPt.matrixTransform(dragCacheRef.current.svgMatrix);
 
+        // Calculate new position directly - no smoothing for immediate response
         const newX = cursorPt.x - dragOffset.x - 30;
         const newY = cursorPt.y - dragOffset.y - 30;
 
@@ -1856,10 +1864,10 @@ const KitchenDesigner = () => {
           const customWallSnap = snapCabinetToCustomWall(boundedX, boundedY, elementWidth, elementDepth, element.id);
           if (customWallSnap.snapped) {
             position = customWallSnap;
-            // Optionally rotate cabinet to align with wall
-            if (customWallSnap.wallAngle !== undefined) {
-              updateElement(element.id, { rotation: Math.round(customWallSnap.wallAngle / 15) * 15 }); // Snap to 15-degree increments
-            }
+            // Auto-rotation disabled to prevent unwanted cabinet spinning during drag
+            // if (customWallSnap.wallAngle !== undefined) {
+            //   updateElement(element.id, { rotation: Math.round(customWallSnap.wallAngle / 15) * 15 }); // Snap to 15-degree increments
+            // }
           }
         }
 
@@ -1875,13 +1883,19 @@ const KitchenDesigner = () => {
           return;
         }
 
-        // Set preview position for visual feedback
-        setDragPreviewPosition({ x: position.x, y: position.y, elementId: element.id });
-
-        // Update element position with improved smoothness
-        requestAnimationFrame(() => {
-          updateElement(element.id, { x: position.x, y: position.y });
-        });
+        // ZERO React re-renders during drag - use direct CSS transform manipulation
+        if (!dragCacheRef.current.dragElement) {
+          dragCacheRef.current.dragElement = document.querySelector(`[data-cabinet-id="${element.id}"]`);
+        }
+        
+        if (dragCacheRef.current.dragElement) {
+          // Use CSS transform for immediate visual feedback (research shows this is optimal)
+          const translateValue = `translate(${position.x}px, ${position.y}px)`;
+          dragCacheRef.current.dragElement.style.transform = translateValue;
+        }
+        
+        // Store final position for React state update on mouse up only
+        dragCacheRef.current.lastPosition = { x: position.x, y: position.y };
       }
     } else if (isDraggingWallView && selectedElement) {
       // Handle wall view cabinet mount height adjustment
@@ -1903,10 +1917,26 @@ const KitchenDesigner = () => {
         updateElement(element.id, { mountHeight: newMount });
       }
     }
-  }, 16); // ~60fps throttling for smooth dragging
+  };
 
-  // Stop dragging (wall completion now handled in onClick)
+  // Cleanup function for drag ending
   const handleMouseUp = () => {
+    // Reset CSS transform and apply final position to React state
+    if (dragCacheRef.current.dragElement && dragCacheRef.current.lastPosition && selectedElement) {
+      // Clear the CSS transform since React will now handle positioning
+      dragCacheRef.current.dragElement.style.transform = '';
+      
+      // Update React state with final position
+      updateElement(selectedElement, dragCacheRef.current.lastPosition);
+    }
+
+    // Clear drag cache
+    dragCacheRef.current = {
+      svgMatrix: null,
+      lastUpdate: 0,
+      lastPosition: null,
+      dragElement: null
+    };
 
     setIsDragging(false);
     setIsDraggingWallView(false);
@@ -3690,460 +3720,103 @@ const KitchenDesigner = () => {
                       {/* Render Design Elements */}
                       {/* Container for all cabinets and appliances, sorted by z-index for proper layering */}
                       <g transform="translate(30, 30)">
-                        {currentRoomData.elements.sort((a, b) => a.zIndex - b.zIndex).map((element, index) => {
-                          const isSelected = element.id === selectedElement;
-                          const elementSpec = elementTypes[element.type];
+                        {currentRoomData.elements.sort((a, b) => a.zIndex - b.zIndex).map((element, index) => (
+                          <DraggableCabinet
+                            key={element.id}
+                            element={element}
+                            scale={scale}
+                            isSelected={element.id === selectedElement}
+                            isDragging={isDragging}
+                            selectedElement={selectedElement}
+                            dragPreviewPosition={dragPreviewPosition}
+                            onMouseDown={handleMouseDown}
+                            elementTypes={elementTypes}
+                            renderCornerCabinet={renderCornerCabinet}
+                            renderDoorGraphic={renderDoorGraphic}
+                            currentRoomData={currentRoomData}
+                          />
+                        ))}
+                      </g>
 
-                          // Skip rendering if elementSpec is missing
-                          if (!elementSpec) {
-                            console.warn('Skipping rendering for invalid element type:', element.type);
-                            return null;
-                          }
-
-                          {/* Special Rendering for Corner Cabinets */ }
-                          {/* Corner cabinets have unique L-shaped rendering */ }
-                          if (element.type === 'corner' || element.type === 'corner-wall') {
+                      {/* Enhanced Drag Preview - Ghost Element */}
+                      {dragPreviewPosition && isDragging && dragPreviewPosition.x !== undefined && dragPreviewPosition.y !== undefined && (
+                        <g transform="translate(30, 30)" opacity="0.5">
+                          {(() => {
+                            const previewElement = currentRoomData.elements.find(el => el.id === dragPreviewPosition.elementId);
+                            if (!previewElement) return null;
+                            
+                            const elementSpec = elementTypes[previewElement.type];
+                            if (!elementSpec) return null;
+                            
+                            // Enhanced visual feedback with snap indicators
+                            const snapIndicatorColor = dragPreviewPosition.snapped ? '#22c55e' : '#3b82f6';
+                            const strokeWidth = dragPreviewPosition.snapped ? '3' : '2';
+                            
                             return (
-                              <g key={element.id}>
-                                {renderCornerCabinet(element)}
-
-                                {/* Corner cabinet number badge */}
-                                <circle
-                                  cx={element.x + (element.width * scale) / 2}
-                                  cy={element.y + (element.depth * scale) / 2}
-                                  r="12"
-                                  fill="white"
-                                  stroke="#333"
-                                  strokeWidth="1"
-                                />
-                                <text
-                                  x={element.x + (element.width * scale) / 2}
-                                  y={element.y + (element.depth * scale) / 2}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fontSize="10"
-                                  fill="#333"
-                                  fontWeight="bold"
-                                >
-                                  {currentRoomData.elements.indexOf(element) + 1}
-                                </text>
-
-                                {/* Selection indicator for corner cabinets */}
-                                {isSelected && (
+                              <g>
+                                {/* Snap target indicator */}
+                                {dragPreviewPosition.snapped && dragPreviewPosition.snapTarget && 
+                                  dragPreviewPosition.snapTarget.x !== undefined && dragPreviewPosition.snapTarget.y !== undefined && (
                                   <rect
-                                    x={element.x - 2}
-                                    y={element.y - 2}
-                                    width={element.width * scale + 4}
-                                    height={element.depth * scale + 4}
+                                    x={dragPreviewPosition.snapTarget.x - 5}
+                                    y={dragPreviewPosition.snapTarget.y - 5}
+                                    width={dragPreviewPosition.snapTarget.width + 10}
+                                    height={dragPreviewPosition.snapTarget.height + 10}
                                     fill="none"
-                                    stroke="#3b82f6"
+                                    stroke="#22c55e"
                                     strokeWidth="2"
-                                    strokeDasharray="4"
+                                    strokeDasharray="8,4"
+                                    opacity="0.7"
                                   />
                                 )}
+                                
+                                {/* Ghost element */}
+                                <rect
+                                  x={dragPreviewPosition.x}
+                                  y={dragPreviewPosition.y}
+                                  width={previewElement.width * scale}
+                                  height={previewElement.depth * scale}
+                                  fill="none"
+                                  stroke={snapIndicatorColor}
+                                  strokeWidth={strokeWidth}
+                                  strokeDasharray="5,5"
+                                  rx="2"
+                                />
+                                
+                                {/* Element type indicator */}
+                                <text
+                                  x={dragPreviewPosition.x + (previewElement.width * scale) / 2}
+                                  y={dragPreviewPosition.y + (previewElement.depth * scale) / 2}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  fontSize="12"
+                                  fill={snapIndicatorColor}
+                                  fontWeight="bold"
+                                  opacity="0.8"
+                                >
+                                  {elementSpec.name}
+                                </text>
+                                
+                                {/* Smooth position indicators */}
+                                <circle
+                                  cx={dragPreviewPosition.x}
+                                  cy={dragPreviewPosition.y}
+                                  r="3"
+                                  fill={snapIndicatorColor}
+                                  opacity="0.6"
+                                />
+                                <circle
+                                  cx={dragPreviewPosition.x + previewElement.width * scale}
+                                  cy={dragPreviewPosition.y + previewElement.depth * scale}
+                                  r="3"
+                                  fill={snapIndicatorColor}
+                                  opacity="0.6"
+                                />
                               </g>
                             );
-                          }
-
-                          {/* Standard Element Rendering */ }
-                          {/* Calculate display dimensions based on rotation */ }
-                          const displayWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-                          const displayDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-
-                          // Visual styling based on element category
-                          const fillColor = element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3';
-                          const strokeColor = isSelected ? '#3b82f6' : '#333';
-
-                          return (
-                            <g key={element.id} transform={`translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`}>
-
-                              {/* Main Element Body */}
-                              {/* Rectangle representing the cabinet or appliance footprint */}
-                              <rect
-                                x={0}
-                                y={0}
-                                width={element.width * scale}
-                                height={element.depth * scale}
-                                fill={fillColor}
-                                stroke={strokeColor}
-                                strokeWidth={isSelected ? '2' : '1'}
-                                style={{
-                                  cursor: isDragging ? 'grabbing' : 'grab',
-                                  opacity: isDragging && element.id === selectedElement ? 0.7 : 1,
-                                  transition: isDragging ? 'none' : 'opacity 0.2s ease'
-                                }}
-                                onMouseDown={(e) => handleMouseDown(e, element.id)}
-                                onTouchStart={(e) => handleMouseDown(e, element.id)}
-                              />
-
-                              {/* Door Indication for Cabinets */}
-                              {/* Arc showing door swing direction for standard cabinets */}
-                              {element.category === 'cabinet' &&
-                                element.type !== 'sink-base' &&
-                                element.type !== 'vanity-sink' &&
-                                element.type !== 'open-shelf' &&
-                                element.type !== 'corner' &&
-                                element.type !== 'corner-wall' &&
-                                renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
-
-                              {/* Special Sink Cabinet Graphics */}
-                              {/* Detailed sink representation for sink-base and vanity-sink cabinets */}
-                              {(element.type === 'sink-base' || element.type === 'vanity-sink') && (
-                                <>
-                                  {/* Outer sink rim */}
-                                  <rect
-                                    x={(element.width * scale) * 0.15}
-                                    y={(element.depth * scale) * 0.15}
-                                    width={(element.width * scale) * 0.7}
-                                    height={(element.depth * scale) * 0.7}
-                                    fill="none"
-                                    stroke="#333"
-                                    strokeWidth="1"
-                                    rx="4"
-                                  />
-                                  {/* Inner sink bowl */}
-                                  <rect
-                                    x={(element.width * scale) * 0.2}
-                                    y={(element.depth * scale) * 0.2}
-                                    width={(element.width * scale) * 0.6}
-                                    height={(element.depth * scale) * 0.6}
-                                    fill="none"
-                                    stroke="#333"
-                                    strokeWidth="0.5"
-                                    rx="2"
-                                  />
-                                  {/* Faucet indicator */}
-                                  <circle
-                                    cx={(element.width * scale) * 0.5}
-                                    cy={(element.depth * scale) * 0.3}
-                                    r="3"
-                                    fill="#333"
-                                  />
-                                </>
-                              )}
-
-                              {/* Stove/Range Graphics */}
-                              {/* Detailed representation of cooktop with burners */}
-                              {element.type === 'stove' && (
-                                <>
-                                  {/* Four burner circles */}
-                                  <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                  <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.25} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                  <circle cx={(element.width * scale) * 0.25} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                  <circle cx={(element.width * scale) * 0.75} cy={(element.depth * scale) * 0.75} r="8" fill="none" stroke="#666" strokeWidth="1" />
-                                  {/* Stove label */}
-                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">ST{element.width}</text>
-                                </>
-                              )}
-
-                              {/* Dishwasher Graphics */}
-                              {/* Simple rectangular border with label */}
-                              {element.type === 'dishwasher' && (
-                                <>
-                                  <rect x="4" y="4" width={(element.width * scale) - 8} height={(element.depth * scale) - 8} fill="none" stroke="#666" strokeWidth="1" />
-                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666">DW{element.width}</text>
-                                </>
-                              )}
-
-                              {/* Refrigerator Graphics */}
-                              {/* Detailed fridge representation with doors and handles */}
-                              {element.type === 'refrigerator' && (
-                                <>
-                                  {/* Main refrigerator body */}
-                                  <rect
-                                    x={2}
-                                    y={2}
-                                    width={(element.width * scale) - 4}
-                                    height={(element.depth * scale) - 4}
-                                    fill="none"
-                                    stroke="#666"
-                                    strokeWidth="2"
-                                  />
-                                  {/* Center door division line */}
-                                  <line
-                                    x1={(element.width * scale) / 2}
-                                    y1={2}
-                                    x2={(element.width * scale) / 2}
-                                    y2={(element.depth * scale) - 2}
-                                    stroke="#666"
-                                    strokeWidth="1"
-                                  />
-                                  {/* Door handles */}
-                                  <rect x={(element.width * scale) * 0.4 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
-                                  <rect x={(element.width * scale) * 0.6 - 2} y="6" width="4" height="10" fill="#666" rx="2" />
-                                  {/* Label */}
-                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) - 8} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
-                                    FRIDGE
-                                  </text>
-                                </>
-                              )}
-
-                              {/* Wine Cooler Graphics */}
-                              {/* Detailed wine cooler with wine bottles */}
-                              {element.type === 'wine-cooler' && (
-                                <>
-                                  {/* Wine cooler frame */}
-                                  <rect
-                                    x={2}
-                                    y={2}
-                                    width={(element.width * scale) - 4}
-                                    height={(element.depth * scale) - 4}
-                                    fill="none"
-                                    stroke="#666"
-                                    strokeWidth="2"
-                                  />
-                                  {/* Glass door frame */}
-                                  <rect
-                                    x={4}
-                                    y={4}
-                                    width={(element.width * scale) - 8}
-                                    height={(element.depth * scale) - 8}
-                                    fill="rgba(135, 206, 235, 0.1)"
-                                    stroke="#999"
-                                    strokeWidth="1"
-                                  />
-                                  {/* Wine bottle racks - horizontal lines */}
-                                  {[0.2, 0.4, 0.6, 0.8].map((yPos, index) => (
-                                    <line
-                                      key={index}
-                                      x1={6}
-                                      y1={(element.depth * scale) * yPos}
-                                      x2={(element.width * scale) - 6}
-                                      y2={(element.depth * scale) * yPos}
-                                      stroke="#8B4513"
-                                      strokeWidth="1"
-                                    />
-                                  ))}
-                                  {/* Wine bottles - small circles representing bottle tops */}
-                                  {[
-                                    { x: 0.2, y: 0.25 }, { x: 0.4, y: 0.25 }, { x: 0.6, y: 0.25 }, { x: 0.8, y: 0.25 },
-                                    { x: 0.3, y: 0.45 }, { x: 0.5, y: 0.45 }, { x: 0.7, y: 0.45 },
-                                    { x: 0.2, y: 0.65 }, { x: 0.4, y: 0.65 }, { x: 0.6, y: 0.65 }, { x: 0.8, y: 0.65 },
-                                    { x: 0.3, y: 0.85 }, { x: 0.5, y: 0.85 }, { x: 0.7, y: 0.85 }
-                                  ].map((bottle, index) => (
-                                    <circle
-                                      key={index}
-                                      cx={(element.width * scale) * bottle.x}
-                                      cy={(element.depth * scale) * bottle.y}
-                                      r="2"
-                                      fill="#722F37"
-                                      stroke="#5D1A1D"
-                                      strokeWidth="0.5"
-                                    />
-                                  ))}
-                                  {/* Door handle */}
-                                  <rect x={(element.width * scale) - 8} y={(element.depth * scale) * 0.4} width="4" height="8" fill="#666" rx="2" />
-                                  {/* Label */}
-                                  <text x={(element.width * scale) / 2} y={(element.depth * scale) - 6} textAnchor="middle" fontSize="6" fill="#666" fontWeight="bold">
-                                    WINE
-                                  </text>
-                                </>
-                              )}
-
-                              {/* Toilet Graphics */}
-                              {/* Detailed toilet representation with tank and bowl */}
-                              {element.type === 'toilet' && (
-                                <>
-                                  {/* Toilet tank */}
-                                  <rect
-                                    x={(element.width * scale) * 0.25}
-                                    y={2}
-                                    width={(element.width * scale) * 0.5}
-                                    height={(element.depth * scale) * 0.35}
-                                    fill="#fff"
-                                    stroke="#666"
-                                    strokeWidth="1"
-                                    rx="2"
-                                  />
-                                  {/* Toilet bowl */}
-                                  <ellipse
-                                    cx={(element.width * scale) / 2}
-                                    cy={(element.depth * scale) * 0.65}
-                                    rx={(element.width * scale) * 0.4}
-                                    ry={(element.depth * scale) * 0.32}
-                                    fill="#fff"
-                                    stroke="#666"
-                                    strokeWidth="1"
-                                  />
-                                  {/* Toilet seat */}
-                                  <ellipse
-                                    cx={(element.width * scale) / 2}
-                                    cy={(element.depth * scale) * 0.65}
-                                    rx={(element.width * scale) * 0.35}
-                                    ry={(element.depth * scale) * 0.28}
-                                    fill="none"
-                                    stroke="#666"
-                                    strokeWidth="1"
-                                  />
-                                  {/* Toilet bowl opening */}
-                                  <ellipse
-                                    cx={(element.width * scale) / 2}
-                                    cy={(element.depth * scale) * 0.65}
-                                    rx={(element.width * scale) * 0.15}
-                                    ry={(element.depth * scale) * 0.12}
-                                    fill="#e0e0e0"
-                                  />
-                                </>
-                              )}
-
-                              {/* Bathtub Graphics */}
-                              {/* Detailed bathtub with rim, interior, faucet, and drain */}
-                              {element.type === 'bathtub' && (
-                                <>
-                                  {/* Outer tub rim */}
-                                  <rect
-                                    x={4}
-                                    y={4}
-                                    width={(element.width * scale) - 8}
-                                    height={(element.depth * scale) - 8}
-                                    fill="#fff"
-                                    stroke="#666"
-                                    strokeWidth="2"
-                                    rx="6"
-                                  />
-                                  {/* Inner tub basin */}
-                                  <rect
-                                    x={8}
-                                    y={8}
-                                    width={(element.width * scale) - 16}
-                                    height={(element.depth * scale) - 16}
-                                    fill="#f0f8ff"
-                                    stroke="#4682B4"
-                                    strokeWidth="1"
-                                    rx="4"
-                                  />
-                                  {/* Faucet */}
-                                  <circle
-                                    cx={(element.width * scale) * 0.15}
-                                    cy={(element.depth * scale) / 2}
-                                    r="4"
-                                    fill="#666"
-                                  />
-                                  {/* Drain */}
-                                  <circle
-                                    cx={(element.width * scale) * 0.85}
-                                    cy={(element.depth * scale) / 2}
-                                    r="3"
-                                    fill="#333"
-                                  />
-                                </>
-                              )}
-
-                              {/* Shower Graphics */}
-                              {/* Shower stall with base, pan, door, and fixtures */}
-                              {element.type === 'shower' && (
-                                <>
-                                  {/* Shower enclosure */}
-                                  <rect
-                                    x={2}
-                                    y={2}
-                                    width={(element.width * scale) - 4}
-                                    height={(element.depth * scale) - 4}
-                                    fill="#fff"
-                                    stroke="#666"
-                                    strokeWidth="2"
-                                  />
-                                  {/* Shower pan */}
-                                  <rect
-                                    x={6}
-                                    y={6}
-                                    width={(element.width * scale) - 12}
-                                    height={(element.depth * scale) - 12}
-                                    fill="#f0f8ff"
-                                    stroke="#4682B4"
-                                    strokeWidth="1"
-                                  />
-                                  {/* Door indication line */}
-                                  <line
-                                    x1={2}
-                                    y1={(element.depth * scale) / 2}
-                                    x2={(element.width * scale) * 0.3}
-                                    y2={(element.depth * scale) / 2}
-                                    stroke="#666"
-                                    strokeWidth="2"
-                                  />
-                                  {/* Shower head */}
-                                  <circle
-                                    cx={(element.width * scale) - 10}
-                                    cy={10}
-                                    r="4"
-                                    fill="#666"
-                                  />
-                                  {/* Drain */}
-                                  <circle
-                                    cx={(element.width * scale) / 2}
-                                    cy={(element.depth * scale) / 2}
-                                    r="3"
-                                    fill="#333"
-                                  />
-                                </>
-                              )}
-
-                              {/* Standard Cabinet Door Graphics */}
-                              {/* Door lines and handles for regular cabinets */}
-                              {(element.type === 'base' || element.type === 'wall' || element.type === 'tall' ||
-                                element.type === 'vanity' || element.type === 'medicine' || element.type === 'linen') && (
-                                  <>
-                                    {/* Center door division line */}
-                                    <line
-                                      x1={(element.width * scale) / 2}
-                                      y1={0}
-                                      x2={(element.width * scale) / 2}
-                                      y2={element.depth * scale}
-                                      stroke="#333"
-                                      strokeWidth="1"
-                                    />
-                                    {/* Door handles */}
-                                    <circle cx={(element.width * scale) * 0.4} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
-                                    <circle cx={(element.width * scale) * 0.6} cy={(element.depth * scale) * 0.5} r="2" fill="#333" />
-                                  </>
-                                )}
-
-                              {/* Element Number Badge */}
-                              {/* Circular badge with element number, rotated to stay upright */}
-                              <g transform={`rotate(${-element.rotation}, ${element.width * scale / 2}, ${element.depth * scale / 2})`}>
-                                <circle
-                                  cx={(element.width * scale) / 2}
-                                  cy={(element.depth * scale) / 2}
-                                  r="12"
-                                  fill="white"
-                                  stroke="#333"
-                                  strokeWidth="1"
-                                />
-                                <text
-                                  x={(element.width * scale) / 2}
-                                  y={(element.depth * scale) / 2}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fontSize="10"
-                                  fill="#333"
-                                  fontWeight="bold"
-                                >
-                                  {currentRoomData.elements.indexOf(element) + 1}
-                                </text>
-                              </g>
-
-                              {/* Dimension Indicators for Selected Element */}
-                              {/* Show width and depth measurements when element is selected */}
-                              {isSelected && (
-                                <g transform={`rotate(${-element.rotation}, ${element.width * scale / 2}, ${element.depth * scale / 2})`}>
-                                  {/* Width dimension line and label */}
-                                  <line x1={0} y1={-5} x2={element.width * scale} y2={-5} stroke="#666" strokeWidth="0.5" />
-                                  <text x={(element.width * scale) / 2} y={-8} textAnchor="middle" fontSize="8" fill="#666">
-                                    {element.width}"
-                                  </text>
-
-                                  {/* Depth dimension line and label */}
-                                  <line x1={element.width * scale + 5} y1={0} x2={element.width * scale + 5} y2={element.depth * scale} stroke="#666" strokeWidth="0.5" />
-                                  <text x={element.width * scale + 15} y={(element.depth * scale) / 2} textAnchor="middle" fontSize="8" fill="#666" transform={`rotate(90, ${element.width * scale + 15}, ${(element.depth * scale) / 2})`}>
-                                    d={element.depth}"
-                                  </text>
-                                </g>
-                              )}
-                            </g>
-                          );
-                        })}
-                      </g>
+                          })()}
+                        </g>
+                      )}
 
                       {/* Wall Number Labels */}
                       {/* Numbered labels on each wall for reference in wall view */}

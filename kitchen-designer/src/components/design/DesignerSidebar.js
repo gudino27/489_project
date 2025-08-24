@@ -9,9 +9,8 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import LanguageSelector from './LanguageSelector';
 import WallManagement from './WallManagement';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const DesignerSidebar = ({
   // UI State
@@ -98,10 +97,6 @@ const DesignerSidebar = ({
       {/* Collapsed Sidebar Indicators */}
       {sidebarCollapsed && (
         <div className="flex flex-col items-center mt-12 space-y-4">
-          {/* Language selector for collapsed sidebar */}
-          <div className="w-full px-2">
-            <LanguageSelector className="w-full" />
-          </div>
           <button
             onClick={() => setShowPricing(!showPricing)}
             className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
@@ -128,12 +123,11 @@ const DesignerSidebar = ({
 
       {/* Sidebar Content - Hidden when collapsed */}
       <div className={`${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'} transition-opacity duration-300 ease-in-out`}>
-        {/* Header with title and language selector */}
+        {/* Header with title */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">
             {activeRoom === 'kitchen' ? t('designer.title') : t('designer.bathroomTitle')}
           </h2>
-          <LanguageSelector />
         </div>
 
         {/* Room Switcher */}

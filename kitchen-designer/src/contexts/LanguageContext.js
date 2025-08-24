@@ -52,8 +52,8 @@ export const LanguageProvider = ({ children }) => {
     changeLanguage,
     t,
     availableLanguages: [
-      { code: 'en', name: 'English', nativeName: 'English' },
-      { code: 'es', name: 'Spanish', nativeName: 'Español' }
+      { code: 'en', name: 'English', nativeName: 'EN' },
+      { code: 'es', name: 'Spanish', nativeName: 'ES' }
     ]
   };
 

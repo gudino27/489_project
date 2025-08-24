@@ -388,6 +388,10 @@ body {
         height: 50px;
     }
 
+    .scroll-indicator {
+        bottom: 15px;
+    }
+
     .content-section {
         padding: 60px 15px;
     }
@@ -758,5 +762,117 @@ body {
 
     .dropdown-content.open {
         max-height: 1200px;
+    }
+}
+
+/* Extra Small Mobile - 320px and smaller */
+@media (max-width: 320px) {
+    .hero-section {
+        height: 100vh;
+        min-height: 600px;
+        padding: 20px 5px;
+    }
+
+    .hero-content {
+        padding: 0 5px;
+    }
+
+    .company-name {
+        font-size: 2rem;
+        letter-spacing: 1px;
+    }
+
+    .company-tagline {
+        font-size: 1.2rem;
+        margin: 5px 0 15px;
+    }
+
+    .hero-description {
+        font-size: 0.8rem;
+        padding: 0 5px;
+        margin-top: 15px;
+    }
+
+    .content-section {
+        padding: 30px 5px;
+    }
+
+    .feature-section,
+    .final-section {
+        padding: 50px 5px;
+    }
+
+    .quote {
+        font-size: 1rem;
+        padding: 0 5px;
+        line-height: 1.4;
+    }
+
+    .feature-header h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .feature-description {
+        font-size: 0.8rem;
+        padding: 0 5px;
+        line-height: 1.6;
+    }
+
+    .cta-button {
+        padding: 8px 20px;
+        font-size: 0.85rem;
+        border-radius: 25px;
+    }
+
+    .work-types-dropdown {
+        margin: 15px 0;
+        padding: 0 5px;
+    }
+
+    .dropdown-toggle {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        border-radius: 6px;
+    }
+
+    .work-types-grid {
+        gap: 10px;
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .work-type-item {
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    .work-type-item h4 {
+        font-size: 0.95rem;
+        margin-bottom: 5px;
+    }
+
+    .work-type-item p {
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+
+    .image-section {
+        height: 30vh;
+        min-height: 200px;
+    }
+
+    .scroll-indicator {
+        bottom: 10px;
+        padding: 10px;
+    }
+
+    .scroll-arrow {
+        width: 15px;
+        height: 15px;
+    }
+
+    .curved-bottom {
+        height: 25px;
     }
 }
