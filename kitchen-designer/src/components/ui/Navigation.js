@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './css/navigation.css';
+import LanguageSelector from './LanguageSelector';
+import '../css/navigation.css';
 
 const Navigation = () => {
     const location = useLocation();
@@ -18,7 +19,7 @@ const Navigation = () => {
 
         updatePadding();
         window.addEventListener('resize', updatePadding);
-        
+
         return () => window.removeEventListener('resize', updatePadding);
     }, []);
 
@@ -62,9 +63,14 @@ const Navigation = () => {
                     <Link className={`nav-link text-white ${isActive('/contact') ? 'active' : ''}`} to="/contact" onClick={handleNavCollapse}>
                         <p>Contact</p>
                     </Link>
+                    
+                    
                     <Link className={`nav-link text-white ${isActive('/admin') ? 'active' : ''}`} to="/admin" onClick={handleNavCollapse}>
                         <p>Login</p>
                     </Link>
+                    <div className="nav-item nav-divider">
+                        <LanguageSelector className="nav-language-selector" />
+                    </div>
                 </div>
             </div>
 

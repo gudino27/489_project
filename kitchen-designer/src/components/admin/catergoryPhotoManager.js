@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Edit2, Save, Image, GripVertical, X } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
   const { t } = useLanguage();
@@ -331,8 +331,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
               }
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isReordering
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
           >
             <GripVertical size={16} />
@@ -357,8 +357,8 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
             key={category.id}
             onClick={() => setSelectedCategory(category.id)}
             className={`px-4 py-2 font-medium transition-all ${selectedCategory === category.id
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-800'
               }`}
           >
             <span className="mr-2">{category.icon}</span>

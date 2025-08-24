@@ -1,13 +1,13 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
-import Home from './components/Home';
-import Portfolio from './components/portfolio';
-import KitchenDesigner from './components/desinger';
-import About from './components/About';
-import Contact from './components/Contact';
-import AdminPanel from './components/AdminPanel';
-import PasswordReset from './components/PasswordReset';
-import TestimonialForm from './components/TestimonialForm';
+import Home from './components/pages/Home';
+import Portfolio from './components/pages/portfolio';
+import KitchenDesigner from './components/pages/desinger';
+import About from './components/pages/About';
+import Contact from './components/pages/Contact';
+import AdminPanel from './components/admin/AdminPanel';
+import PasswordReset from './components/admin/PasswordReset';
+import TestimonialForm from './components/forms/TestimonialForm';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
@@ -20,18 +20,18 @@ function App() {
     <LanguageProvider>
       <PricingProvider>
         <Router>
-        <Routes>
-                  
-          {/* React components */}
-          <Route path="/" element={<Home />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/design" element={<KitchenDesigner />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/reset-password" element={<PasswordReset />} />
-          <Route path="/testimonial/:token" element={<TestimonialForm />} />
-        </Routes>
+          <Routes>
+
+            {/* React components */}
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/design" element={<KitchenDesigner />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/reset-password" element={<PasswordReset />} />
+            <Route path="/testimonial/:token" element={<TestimonialForm />} />
+          </Routes>
         </Router>
       </PricingProvider>
     </LanguageProvider>

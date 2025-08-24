@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import Navigation from './Navigation';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
-import './css/about.css';
-import { useAnalytics } from '../hooks/useAnalytics';
+import Navigation from '../ui/Navigation';
+import { useLanguage } from '../../contexts/LanguageContext';
+import '../css/about.css';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const About = () => {
     // Analytics tracking
     useAnalytics('/about');
-    
+
     // Language context
     const { t } = useLanguage();
-    
+
     const [teamMembers, setTeamMembers] = useState([]);
     const [testimonials, setTestimonials] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,10 +99,6 @@ const About = () => {
         <>
             <Navigation />
             <div className="container">
-                {/* Language Selector */}
-                <div className='fixed top-20 right-4 z-50 md:absolute md:top-15 md:right-4'>
-                    <LanguageSelector />
-                </div>
                 {/* Hero Section */}
                 <div className="hero-section">
                     <h1>{t('about.heroTitle')}</h1>
@@ -203,13 +198,13 @@ const About = () => {
                                         {'★'.repeat(testimonial.rating || 5)}
                                     </div>
                                     <p className="testimonial-text">"{testimonial.message}"</p>
-                                    
+
                                     {testimonial.photos && testimonial.photos.length > 0 && (
                                         <div className="testimonial-photos">
                                             {testimonial.photos.map((photo, photoIndex) => (
                                                 <div key={photoIndex} className="testimonial-photo">
-                                                    <img 
-                                                        src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`} 
+                                                    <img
+                                                        src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                                         alt={`${t('about.projectPhoto')} ${photoIndex + 1}`}
                                                         onClick={() => {
                                                             // Open full size image in modal or new tab
@@ -220,7 +215,7 @@ const About = () => {
                                             ))}
                                         </div>
                                     )}
-                                    
+
                                     <div className="testimonial-author">
                                         <strong>{testimonial.client_name}</strong>
                                         {testimonial.project_type && (

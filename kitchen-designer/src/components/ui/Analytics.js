@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart3, 
-  Users, 
-  Clock, 
-  Eye, 
-  TrendingUp, 
+import {
+  BarChart3,
+  Users,
+  Clock,
+  Eye,
+  TrendingUp,
   Globe,
   Smartphone,
   Monitor,
@@ -26,7 +26,7 @@ const Analytics = ({ token, API_BASE }) => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      
+
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -117,7 +117,7 @@ const Analytics = ({ token, API_BASE }) => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h3 className="text-red-800 font-medium">Error Loading Analytics</h3>
           <p className="text-red-600 mt-1">{error}</p>
-          <button 
+          <button
             onClick={fetchStats}
             className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
@@ -209,7 +209,7 @@ const Analytics = ({ token, API_BASE }) => {
               <p className="text-sm font-medium text-gray-600">Avg. Time on Site</p>
               <p className="text-2xl font-bold text-gray-900">
                 {formatTime(
-                  stats?.pageViews?.reduce((total, page, index, array) => 
+                  stats?.pageViews?.reduce((total, page, index, array) =>
                     total + (page.avg_time_spent || 0), 0
                   ) / (stats?.pageViews?.length || 1)
                 )}
@@ -238,7 +238,7 @@ const Analytics = ({ token, API_BASE }) => {
         <>
           <div className="border-t pt-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Testimonial Analytics</h3>
-            
+
             {/* Testimonial Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -314,10 +314,10 @@ const Analytics = ({ token, API_BASE }) => {
                         </span>
                         <div className="flex-1 mx-3">
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-yellow-400 h-2 rounded-full" 
-                              style={{ 
-                                width: `${(rating.count / testimonialStats.submissions.total_submissions) * 100}%` 
+                            <div
+                              className="bg-yellow-400 h-2 rounded-full"
+                              style={{
+                                width: `${(rating.count / testimonialStats.submissions.total_submissions) * 100}%`
                               }}
                             ></div>
                           </div>
@@ -400,7 +400,7 @@ const Analytics = ({ token, API_BASE }) => {
               {stats?.browsers?.map((browser, index) => {
                 const total = stats.browsers.reduce((sum, b) => sum + b.count, 0);
                 const percentage = ((browser.count / total) * 100).toFixed(1);
-                
+
                 return (
                   <div key={index} className="flex items-center">
                     <div className="flex items-center w-20">
@@ -413,8 +413,8 @@ const Analytics = ({ token, API_BASE }) => {
                     </div>
                     <div className="flex-1 mx-4">
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
@@ -440,7 +440,7 @@ const Analytics = ({ token, API_BASE }) => {
             {stats?.dailyViews?.slice(0, 14).map((day, index) => {
               const maxViews = Math.max(...stats.dailyViews.map(d => d.views));
               const percentage = (day.views / maxViews) * 100;
-              
+
               return (
                 <div key={index} className="flex items-center">
                   <div className="w-24 text-sm text-gray-600">
@@ -448,8 +448,8 @@ const Analytics = ({ token, API_BASE }) => {
                   </div>
                   <div className="flex-1 mx-4">
                     <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div 
-                        className="bg-blue-600 h-4 rounded-full flex items-center justify-end pr-2" 
+                      <div
+                        className="bg-blue-600 h-4 rounded-full flex items-center justify-end pr-2"
                         style={{ width: `${percentage}%` }}
                       >
                         <span className="text-white text-xs font-medium">

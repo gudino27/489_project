@@ -9,7 +9,7 @@ const { photoDb, employeeDb, designDb, userDb, analyticsDb, testimonialDb } = re
 const nodemailer = require('nodemailer');
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gudinocustom.com', 'https://www.gudinocustom.com','https://api.gudinocustom.com'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gudinocustom.com', 'https://www.gudinocustom.com', 'https://api.gudinocustom.com'],
   credentials: true, // Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -217,7 +217,7 @@ app.post('/api/photos', upload.single('photo'), async (req, res) => {
 
     console.log('[DATABASE] Saved with ID:', photoId);
 
-   
+
 
     const photo = await photoDb.getPhoto(photoId);
 
@@ -367,7 +367,7 @@ app.delete('/api/photos/:id', async (req, res) => {
     const success = await photoDb.deletePhoto(photoId);
 
     if (success) {
-      
+
 
       res.json({ success: true, message: 'Photo deleted successfully' });
     } else {
@@ -486,7 +486,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-  
+
     res.json({
       token: result.token,
       user: result.user
@@ -514,10 +514,10 @@ app.get('/api/users', authenticateUser, requireRole('super_admin'), async (req, 
   try {
     const includeInactive = req.query.includeInactive === 'true';
     const users = await userDb.getAllUsers();
-    
+
     // Filter out inactive users unless specifically requested
     const filteredUsers = includeInactive ? users : users.filter(user => user.is_active === 1);
-    
+
     res.json(filteredUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -547,7 +547,7 @@ app.post('/api/users', authenticateUser, requireRole('super_admin'), async (req,
       created_by: req.user.id
     });
 
-    
+
 
     res.status(201).json({
       message: 'User created successfully',
@@ -892,14 +892,14 @@ async function getDb() {
       filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
       driver: sqlite3.Database
     });
-    
+
     // Enable WAL mode for better concurrent access
     await dbInstance.exec('PRAGMA journal_mode = WAL;');
     await dbInstance.exec('PRAGMA synchronous = NORMAL;');
     await dbInstance.exec('PRAGMA cache_size = 1000;');
     await dbInstance.exec('PRAGMA temp_store = memory;');
   }
-  
+
   return dbInstance;
 }
 
@@ -915,23 +915,23 @@ async function processQueue() {
   if (isProcessingQueue || dbOperationQueue.length === 0) {
     return;
   }
-  
+
   isProcessingQueue = true;
-  
+
   while (dbOperationQueue.length > 0) {
     const { operation, resolve, reject } = dbOperationQueue.shift();
-    
+
     try {
       const result = await operation();
       resolve(result);
     } catch (error) {
       reject(error);
     }
-    
+
     // Small delay to prevent overwhelming the database
     await new Promise(resolve => setTimeout(resolve, 10));
   }
-  
+
   isProcessingQueue = false;
 }
 
@@ -1007,10 +1007,10 @@ app.put('/api/prices/cabinets', async (req, res) => {
 
     await queueDbOperation(async () => {
       const db = await getDb();
-      
+
       // Use a transaction for consistency
       await db.run('BEGIN TRANSACTION');
-      
+
       try {
         // Update each cabinet price
         for (const [cabinetType, price] of Object.entries(prices)) {
@@ -1021,7 +1021,7 @@ app.put('/api/prices/cabinets', async (req, res) => {
             [price, cabinetType]
           );
         }
-        
+
         await db.run('COMMIT');
       } catch (error) {
         await db.run('ROLLBACK');
@@ -1041,14 +1041,14 @@ app.get('/api/prices/cabinets', async (req, res) => {
   try {
     const db = await getDb();
     const rows = await db.all('SELECT * FROM cabinet_prices ORDER BY cabinet_type');
-    
+
     const cabinets = {};
     rows.forEach(row => {
       cabinets[row.cabinet_type] = parseFloat(row.base_price);
     });
-    
+
     //await db.close();
-    
+
     console.log('Loaded cabinet prices:', cabinets);
     res.json(cabinets);
   } catch (error) {
@@ -1132,10 +1132,10 @@ app.put('/api/prices/colors', async (req, res) => {
 
     await queueDbOperation(async () => {
       const db = await getDb();
-      
+
       // Use a transaction for consistency
       await db.run('BEGIN TRANSACTION');
-      
+
       try {
         // Update each color price
         for (const [colorCount, price] of Object.entries(colors)) {
@@ -1146,7 +1146,7 @@ app.put('/api/prices/colors', async (req, res) => {
             [price, colorCount]
           );
         }
-        
+
         await db.run('COMMIT');
       } catch (error) {
         await db.run('ROLLBACK');
@@ -1165,15 +1165,15 @@ app.get('/api/prices/colors', async (req, res) => {
   try {
     const db = await getDb();
     const rows = await db.all('SELECT * FROM color_pricing ORDER BY color_count');
-    
+
     const colors = {};
     rows.forEach(row => {
       const key = isNaN(row.color_count) ? row.color_count : parseInt(row.color_count);
       colors[key] = parseFloat(row.price_addition);
     });
-    
+
     //await db.close();
-    
+
     console.log('Loaded color pricing:', colors);
     res.json(colors);
   } catch (error) {
@@ -1212,10 +1212,10 @@ app.get('/api/prices/history', async (req, res) => {
 app.get('/api/prices/walls', async (req, res) => {
   try {
     const db = await getDb();
-    
+
     // Try to get wall pricing from database
     const rows = await db.all('SELECT * FROM wall_pricing ORDER BY modification_type');
-    
+
     const walls = {};
     if (rows.length > 0) {
       rows.forEach(row => {
@@ -1226,9 +1226,9 @@ app.get('/api/prices/walls', async (req, res) => {
       walls.addWall = 1500;
       walls.removeWall = 2000;
     }
-    
+
     //await db.close();
-    
+
     console.log('Loaded wall pricing:', walls);
     res.json(walls);
   } catch (error) {
@@ -1245,7 +1245,7 @@ app.put('/api/prices/walls', async (req, res) => {
 
     await queueDbOperation(async () => {
       const db = await getDb();
-      
+
       // Ensure wall_pricing table exists
       await db.run(`
         CREATE TABLE IF NOT EXISTS wall_pricing (
@@ -1259,7 +1259,7 @@ app.put('/api/prices/walls', async (req, res) => {
 
       // Use a transaction for better performance and consistency
       await db.run('BEGIN TRANSACTION');
-      
+
       try {
         // Update each wall price (using REPLACE to handle both INSERT and UPDATE)
         for (const [modificationType, price] of Object.entries(wallPricing)) {
@@ -1268,7 +1268,7 @@ app.put('/api/prices/walls', async (req, res) => {
             VALUES (?, ?, CURRENT_TIMESTAMP)
           `, [modificationType, price]);
         }
-        
+
         await db.run('COMMIT');
       } catch (error) {
         await db.run('ROLLBACK');
@@ -1289,10 +1289,10 @@ app.put('/api/prices/walls', async (req, res) => {
 app.get('/api/prices/wall-availability', async (req, res) => {
   try {
     const db = await getDb();
-    
+
     // Try to get wall availability from database
     const rows = await db.all('SELECT * FROM wall_availability ORDER BY service_type');
-    
+
     const availability = {};
     if (rows.length > 0) {
       rows.forEach(row => {
@@ -1303,7 +1303,7 @@ app.get('/api/prices/wall-availability', async (req, res) => {
       availability.addWallEnabled = true;
       availability.removeWallEnabled = true;
     }
-    
+
     //await db.close();
     res.json(availability);
   } catch (error) {
@@ -1321,7 +1321,7 @@ app.put('/api/prices/wall-availability', async (req, res) => {
     const db = await getDb();
     const wallAvailability = req.body;
     console.log('Updating wall availability:', wallAvailability);
-    
+
     // Ensure wall_availability table exists
     await db.run(`
       CREATE TABLE IF NOT EXISTS wall_availability (
@@ -1332,7 +1332,7 @@ app.put('/api/prices/wall-availability', async (req, res) => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Update each wall availability setting
     for (const [key, enabled] of Object.entries(wallAvailability)) {
       const serviceType = key.replace('Enabled', '');
@@ -1341,7 +1341,7 @@ app.put('/api/prices/wall-availability', async (req, res) => {
         VALUES (?, ?, CURRENT_TIMESTAMP)
       `, [serviceType, enabled ? 1 : 0]);
     }
-    
+
     //await db.close();
     console.log('Wall availability updated successfully');
     res.json({ success: true });
@@ -1557,7 +1557,7 @@ app.put('/api/designs/:id/status', authenticateUser, async (req, res) => {
     const success = await designDb.updateDesignStatus(designId, status, viewedBy || req.user.username);
 
     if (success) {
-     
+
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Design not found' });
@@ -1653,15 +1653,15 @@ app.get('/api/health', async (req, res) => {
     }
 
     // Dependencies check
-    health.checks.dependencies = { 
-      status: 'OK', 
+    health.checks.dependencies = {
+      status: 'OK',
       express: require('express/package.json').version,
-      sharp: require('sharp/package.json').version 
+      sharp: require('sharp/package.json').version
     };
 
     // Set appropriate HTTP status code
     const statusCode = health.status === 'OK' ? 200 : health.status === 'DEGRADED' ? 200 : 503;
-    
+
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({
@@ -1677,12 +1677,12 @@ app.get('/sitemap.xml', async (req, res) => {
   try {
     const baseUrl = 'https://gudinocustom.com';
     const currentDate = new Date().toISOString();
-    
+
     // Get all photos to extract categories and recent updates
     const photos = await photoDb.getAllPhotos();
     const categories = [...new Set(photos.map(photo => photo.category))];
-    const latestPhotoDate = photos.length > 0 ? 
-      new Date(Math.max(...photos.map(photo => new Date(photo.uploaded_at)))).toISOString() : 
+    const latestPhotoDate = photos.length > 0 ?
+      new Date(Math.max(...photos.map(photo => new Date(photo.uploaded_at)))).toISOString() :
       currentDate;
 
     // Get testimonials for last modified date
@@ -1727,18 +1727,18 @@ app.get('/sitemap.xml', async (req, res) => {
   
   <!-- Portfolio Category Pages -->
 ${categories.map(category => {
-  const categoryPhotos = photos.filter(p => p.category === category);
-  const latestCategoryUpdate = categoryPhotos.length > 0 ?
-    new Date(Math.max(...categoryPhotos.map(p => new Date(p.uploaded_at)))).toISOString() :
-    currentDate;
-  
-  return `  <url>
+      const categoryPhotos = photos.filter(p => p.category === category);
+      const latestCategoryUpdate = categoryPhotos.length > 0 ?
+        new Date(Math.max(...categoryPhotos.map(p => new Date(p.uploaded_at)))).toISOString() :
+        currentDate;
+
+      return `  <url>
     <loc>${baseUrl}/portfolio?category=${encodeURIComponent(category)}</loc>
     <lastmod>${latestCategoryUpdate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
-}).join('\n')}
+    }).join('\n')}
 
   <!-- Services Pages (inferred from categories) -->
   <url>
@@ -1859,7 +1859,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     if (resetData) {
       // Send email with reset link
       const resetUrl = `https://gudinocustom.com/reset-password?token=${resetData.token}`;
-      
+
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -1926,17 +1926,17 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/auth/validate-reset-token/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     const resetRecord = await userDb.validatePasswordResetToken(token);
-    
+
     if (!resetRecord) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
-    res.json({ 
-      valid: true, 
+    res.json({
+      valid: true,
       username: resetRecord.username,
-      expires_at: resetRecord.expires_at 
+      expires_at: resetRecord.expires_at
     });
   } catch (error) {
     console.error('Token validation error:', error);
@@ -1956,11 +1956,11 @@ app.post('/api/analytics/pageview', async (req, res) => {
     } = req.body;
 
     // Get IP address from request
-    const ip_address = req.headers['x-forwarded-for'] || 
-                      req.headers['x-real-ip'] || 
-                      req.connection.remoteAddress || 
-                      req.socket.remoteAddress ||
-                      (req.connection.socket ? req.connection.socket.remoteAddress : null);
+    const ip_address = req.headers['x-forwarded-for'] ||
+      req.headers['x-real-ip'] ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      (req.connection.socket ? req.connection.socket.remoteAddress : null);
 
     const viewId = await analyticsDb.recordPageView({
       page_path,
@@ -2063,17 +2063,17 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
 
     // Validate token (skip validation if token is 'test' for development)
     let tokenData;
-    
+
     if (token === 'test') {
-      tokenData = { 
-        id: 'test', 
+      tokenData = {
+        id: 'test',
         client_email: 'test@example.com',
-        client_name: client_name 
+        client_name: client_name
       };
     } else {
       tokenData = await testimonialDb.validateToken(token);
     }
-    
+
     if (!tokenData) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
@@ -2095,7 +2095,7 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
         const timestamp = Date.now();
         const filename = `testimonial_${testimonial.id}_${timestamp}_${i}.jpg`;
         const thumbnailFilename = `testimonial_${testimonial.id}_${timestamp}_${i}_thumb.jpg`;
-        
+
         const filePath = `/testimonial-photos/${filename}`;
         const thumbnailPath = `/testimonial-photos/${thumbnailFilename}`;
         const fullPath = path.join(__dirname, 'public', 'testimonial-photos', filename);
@@ -2108,7 +2108,7 @@ app.post('/api/testimonials/submit', uploadMemory.array('photos', 5), async (req
         const processedImage = await sharp(file.buffer)
           .jpeg({ quality: 85 })
           .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true });
-        
+
         const metadata = await processedImage.metadata();
         await processedImage.toFile(fullPath);
 
@@ -2158,7 +2158,7 @@ app.post('/api/admin/send-testimonial-link', authenticateUser, async (req, res) 
 
     // Send email
     const testimonialLink = `${req.protocol}://${req.get('host').replace('api.', '')}/testimonial/${tokenData.token}`;
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: client_email,

@@ -119,40 +119,39 @@ deploy_zero_downtime() {
     log_info "Switching traffic to new instances..."
     
     # Backup current nginx config
-    if ! docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.backup 2>/dev/null; then
+    if ! docker exec kitchen-designer-proxy sh -c "cp /etc/nginx/conf.d/default.conf /tmp/default.conf.backup"; then
         log_error "Failed to backup nginx config"
         docker-compose -f docker-compose.deploy.yml down
         return 1
     fi
     
-    # Copy new config
+    # Stop nginx, replace config, then start it
+    log_info "Stopping nginx to update configuration..."
+    docker exec kitchen-designer-proxy nginx -s stop
+    
+    # Copy new config directly
     if ! docker cp nginx-tunnel.deploy.conf kitchen-designer-proxy:/etc/nginx/conf.d/default.conf; then
-        log_error "Failed to update nginx config"
+        log_error "Failed to copy nginx config"
+        # Restore backup and restart nginx
+        docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
+        docker exec kitchen-designer-proxy nginx
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
         return 1
     fi
     
-    # Test nginx configuration
-    if ! docker exec kitchen-designer-proxy nginx -t; then
-        log_error "Invalid nginx configuration"
-        # Restore backup
-        docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf.backup /etc/nginx/conf.d/default.conf
+    # Start nginx with new config
+    if ! docker exec kitchen-designer-proxy nginx; then
+        log_error "Failed to start nginx with new config"
+        # Restore backup and restart nginx
+        docker exec kitchen-designer-proxy cp /tmp/default.conf.backup /etc/nginx/conf.d/default.conf
+        docker exec kitchen-designer-proxy nginx
         docker-compose -f docker-compose.deploy.yml down
         rm -f nginx-tunnel.deploy.conf
         return 1
     fi
     
-    # Reload nginx configuration
-    if ! docker exec kitchen-designer-proxy nginx -s reload; then
-        log_error "Failed to reload nginx configuration"
-        # Restore backup
-        docker exec kitchen-designer-proxy cp /etc/nginx/conf.d/default.conf.backup /etc/nginx/conf.d/default.conf
-        docker exec kitchen-designer-proxy nginx -s reload
-        docker-compose -f docker-compose.deploy.yml down
-        rm -f nginx-tunnel.deploy.conf
-        return 1
-    fi
+    log_success "Nginx restarted with new configuration"
     
     log_success "Traffic switched to new instances"
     
@@ -299,36 +298,6 @@ case "$1" in
         echo "Initializing system with analytics support..."
         ./scripts/init-with-analytics.sh
         ;;
-    deploy)
-        log_info "Starting zero-downtime deployment..."
-        if deploy_zero_downtime production; then
-            log_success "Deployment completed successfully!"
-        else
-            log_error "Deployment failed!"
-            exit 1
-        fi
-        ;;
-    deploy-staging)
-        log_info "Starting staging deployment..."
-        if deploy_zero_downtime staging; then
-            log_success "Staging deployment completed successfully!"
-        else
-            log_error "Staging deployment failed!"
-            exit 1
-        fi
-        ;;
-    rollback)
-        if [ ! -f .last_deployment_backup ]; then
-            log_error "No deployment backup found for rollback"
-            exit 1
-        fi
-        
-        backup_name=$(cat .last_deployment_backup)
-        log_warning "Rolling back to backup: $backup_name"
-        
-        # Use existing restore functionality
-        $0 restore "$backup_name"
-        ;;
     health-check)
         log_info "Performing comprehensive health check..."
         
@@ -353,12 +322,12 @@ case "$1" in
         fi
         ;;
     *)
-        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore|fresh-start|init-analytics|deploy|deploy-staging|rollback|health-check} [service|backup_name]"
+        echo "Usage: $0 {logs|restart|rebuild|status|stop|start|backup|restore|fresh-start|init-analytics|health-check} [service|backup_name]"
         echo ""
         echo "=== Standard Commands ==="
         echo "  logs [service]     - Show logs for all services or specific service"
         echo "  restart [service]  - Restart all services or specific service"
-        echo "  rebuild           - Rebuild images (preserves data) - CAUSES DOWNTIME"
+        echo "  rebuild           - Rebuild images (preserves data)"
         echo "  status            - Show container and tunnel status"
         echo "  stop              - Stop all services and tunnel"
         echo "  start             - Start all services and tunnel"
@@ -366,19 +335,13 @@ case "$1" in
         echo "  restore <name>    - Restore from backup"
         echo "  fresh-start       - Complete fresh deployment (removes all data)"
         echo "  init-analytics    - Initialize analytics on existing system"
-        echo ""
-        echo "=== Zero-Downtime Deployment Commands ==="
-        echo "  deploy            - Zero-downtime production deployment"
-        echo "  deploy-staging    - Deploy to staging environment first"
-        echo "  rollback          - Instant rollback to previous deployment"
         echo "  health-check      - Comprehensive health check of all services"
         echo ""
         echo "=== Deployment Workflow ==="
         echo "  1. Test locally"
         echo "  2. Push to GitHub"
         echo "  3. SSH to server: git pull"
-        echo "  4. Run: ./manage.sh deploy"
-        echo "  5. If issues: ./manage.sh rollback"
+        echo "  4. Run: ./manage.sh rebuild"
         exit 1
         ;;
 esac

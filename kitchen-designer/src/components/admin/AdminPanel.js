@@ -2,7 +2,7 @@
 // import statements
 //---------------------------------------
 
-import React,{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -16,24 +16,23 @@ import {
   BarChart3,
   MessageSquare
 } from 'lucide-react';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
 // Importing components for different functionalities
 // These components will handle specific admin tasks
 //  like price management, photo uploads,
 //  employee management, etc
 // -------------------------------------------------
-import sessionManager from './sessionManager';
+import sessionManager from '../utils/sessionManager';
 import PriceManagement from './PriceManagement';
 import CategoryPhotoManager from './catergoryPhotoManager';
 import EmployeeManager from './EmployeeManager';
-import DesignViewer from './DesignViewer';
+import DesignViewer from '../design/DesignViewer';
 import UserManagement from './UserManagement';
-import Analytics from './Analytics';
+import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
-import MainNavBar from './Navigation';
-import './css/admin.css';
+import MainNavBar from '../ui/Navigation';
+import '../css/admin.css';
 // ----------------------------------------------------
 // Admin Panel Component
 // This component handles the admin panel functionality
@@ -46,10 +45,10 @@ import './css/admin.css';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  
+
   // Language context
   const { t } = useLanguage();
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -322,7 +321,7 @@ const AdminPanel = () => {
             )}
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              {showForgotPassword 
+              {showForgotPassword
                 ? t('admin.enterEmail')
                 : t('admin.contactAdmin')
               }
@@ -346,12 +345,9 @@ const AdminPanel = () => {
         <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
           <h1 className="text-xl md:text-2xl font-bold">{t('admin.title')}</h1>
           <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
-            <div className="order-2 md:order-1">
-              <LanguageSelector />
-            </div>
             <div className="flex items-center gap-2 order-1 md:order-2">
               <span className="text-sm md:text-medium text-gray-800">{t('admin.welcome')}</span>
-              <span className="font-medium text-sm md:text-base">{ user?.username}</span>
+              <span className="font-medium text-sm md:text-base">{user?.username}</span>
               {user?.role === 'super_admin' && (
                 <Shield className="text-purple-600" size={16} />
               )}

@@ -13,7 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
-import sessionManager from './sessionManager';
+import sessionManager from '../utils/sessionManager';
 
 const DesignViewer = () => {
   const [designs, setDesigns] = useState([]);
@@ -25,7 +25,7 @@ const DesignViewer = () => {
     statusBreakdown: { pending: 0, new: 0, viewed: 0 },
     totalRevenue: 0, averageOrderValue: 0, recentDesigns: 0
   });
-  
+
   // New state for enhanced functionality
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [selectedDesigns, setSelectedDesigns] = useState(new Set());
@@ -255,7 +255,7 @@ const DesignViewer = () => {
       sortableDesigns.sort((a, b) => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
-        
+
         // Handle special cases
         if (sortConfig.key === 'total_price') {
           aValue = parseFloat(aValue) || 0;
@@ -267,7 +267,7 @@ const DesignViewer = () => {
           aValue = aValue.toLowerCase();
           bValue = bValue.toLowerCase();
         }
-        
+
         if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -301,7 +301,7 @@ const DesignViewer = () => {
 
   const bulkDeleteDesigns = async () => {
     if (selectedDesigns.size === 0) return;
-    
+
     if (!window.confirm(`Are you sure you want to delete ${selectedDesigns.size} design(s)? This action cannot be undone.`)) {
       return;
     }
@@ -314,16 +314,16 @@ const DesignViewer = () => {
           headers: getAuthHeaders()
         })
       );
-      
+
       await Promise.all(deletePromises);
-      
+
       // Remove deleted designs from local state
       setDesigns(designs.filter(d => !selectedDesigns.has(d.id)));
       setSelectedDesigns(new Set());
-      
+
       // Reload stats
       loadStats();
-      
+
       // Close detail view if it's one of the deleted designs
       if (selectedDesign && selectedDesigns.has(selectedDesign.id)) {
         setSelectedDesign(null);
@@ -347,7 +347,7 @@ const DesignViewer = () => {
 
       if (response.ok) {
         // Update local state
-        setDesigns(designs.map(d => 
+        setDesigns(designs.map(d =>
           d.id === designId ? { ...d, admin_note: note } : d
         ));
         setEditingNote(null);
@@ -366,7 +366,7 @@ const DesignViewer = () => {
     try {
       const headers = getAuthHeaders();
       console.log('Request headers:', headers);
-      
+
       const response = await fetch(`${API_BASE}/api/designs/${designId}/status`, {
         method: 'PUT',
         headers: headers,
@@ -374,11 +374,11 @@ const DesignViewer = () => {
       });
 
       console.log('Response status:', response.status);
-      
+
       if (response.ok) {
         console.log('Status update successful');
         // Update local state
-        setDesigns(designs.map(d => 
+        setDesigns(designs.map(d =>
           d.id === designId ? { ...d, status: newStatus } : d
         ));
         loadStats(); // Refresh stats
@@ -407,7 +407,7 @@ const DesignViewer = () => {
         event.preventDefault();
         bulkDeleteDesigns();
       }
-      
+
       if (event.key === 'Escape') {
         setSelectedDesigns(new Set());
       }
@@ -419,7 +419,7 @@ const DesignViewer = () => {
 
   return (
     <div className="p-6">
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Designs - Always show if data exists */}
@@ -486,7 +486,7 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              New {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ? 
+              New {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ?
                 `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})` : ''}
             </button>
             <button
@@ -496,7 +496,7 @@ const DesignViewer = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Viewed {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ? 
+              Viewed {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ?
                 `(${stats.statusBreakdown.viewed})` : ''}
             </button>
           </nav>
@@ -625,7 +625,7 @@ const DesignViewer = () => {
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
-                <th 
+                <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('status')}
                 >
@@ -636,7 +636,7 @@ const DesignViewer = () => {
                     )}
                   </div>
                 </th>
-                <th 
+                <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('client_name')}
                 >
@@ -650,7 +650,7 @@ const DesignViewer = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact
                 </th>
-                <th 
+                <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('total_price')}
                 >
@@ -664,7 +664,7 @@ const DesignViewer = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Notes
                 </th>
-                <th 
+                <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('created_at')}
                 >
@@ -696,11 +696,10 @@ const DesignViewer = () => {
                       value={design.status}
                       onChange={(e) => changeStatus(design.id, e.target.value)}
                       disabled={statusChanging === design.id}
-                      className={`text-xs rounded px-2 py-1 border-0 font-semibold ${
-                        design.status === 'new' 
-                          ? 'bg-blue-100 text-blue-800' 
+                      className={`text-xs rounded px-2 py-1 border-0 font-semibold ${design.status === 'new'
+                          ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-800'
-                      } ${statusChanging === design.id ? 'opacity-50' : 'cursor-pointer hover:bg-opacity-80'}`}
+                        } ${statusChanging === design.id ? 'opacity-50' : 'cursor-pointer hover:bg-opacity-80'}`}
                     >
                       <option value="new">New</option>
                       <option value="viewed">Viewed</option>
@@ -714,7 +713,7 @@ const DesignViewer = () => {
                       <div className="flex items-center mt-1">
                         <Phone className="w-3 h-3 mr-1" />
                         {design.client_phone ? (
-                          <a 
+                          <a
                             href={`tel:${design.client_phone}`}
                             className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                             title="Click to call"
@@ -727,7 +726,7 @@ const DesignViewer = () => {
                       </div>
                       <div className="flex items-center">
                         <Mail className="w-3 h-3 mr-1" />
-                        <a 
+                        <a
                           href={`mailto:${design.client_email}`}
                           className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                           title="Click to email"
@@ -783,7 +782,7 @@ const DesignViewer = () => {
                         </button>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         onClick={() => {
                           setEditingNote(design.id);
                           setNoteValues({ ...noteValues, [design.id]: design.admin_note || '' });
@@ -828,7 +827,7 @@ const DesignViewer = () => {
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No designs found</h3>
               <p className="text-gray-500 mb-4">
-                {filter === 'all' 
+                {filter === 'all'
                   ? "No design submissions yet. Designs will appear here when clients submit them."
                   : `No ${filter} designs found. Try switching to a different filter.`
                 }
@@ -853,172 +852,172 @@ const DesignViewer = () => {
             <div className="bg-white rounded-lg max-w-4xl w-full my-12">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold">Design Details</h2>
-                <button
-                  onClick={() => setSelectedDesign(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                  <h2 className="text-2xl font-bold">Design Details</h2>
+                  <button
+                    onClick={() => setSelectedDesign(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
 
-              {/* Client Information */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold mb-3">Client Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium">{selectedDesign.client_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Contact Preference</p>
-                    <p className="font-medium flex items-center">
-                      {getContactIcon(selectedDesign.contact_preference)}
-                      <span className="ml-2">{selectedDesign.contact_preference}</span>
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Contact Information</p>
-                    <p className=' font-medium'>email: {selectedDesign.client_email}</p>
-                    <p className=' font-medium'>phone: {formatPhoneNumber(selectedDesign.client_phone)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Submitted</p>
-                    <p className="font-medium">{formatDate(selectedDesign.created_at)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Design Summary */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold mb-3">Design Summary</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Total Estimate</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ${selectedDesign.total_price?.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Rooms Included</p>
-                    <div className="flex gap-2 mt-1">
-                      {selectedDesign.include_kitchen && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          <Home className="w-3 h-3 mr-1" /> Kitchen
-                        </span>
-                      )}
-                      {selectedDesign.include_bathroom && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <Bath className="w-3 h-3 mr-1" /> Bathroom
-                        </span>
-                      )}
+                {/* Client Information */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Client Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-medium">{selectedDesign.client_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Contact Preference</p>
+                      <p className="font-medium flex items-center">
+                        {getContactIcon(selectedDesign.contact_preference)}
+                        <span className="ml-2">{selectedDesign.contact_preference}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Contact Information</p>
+                      <p className=' font-medium'>email: {selectedDesign.client_email}</p>
+                      <p className=' font-medium'>phone: {formatPhoneNumber(selectedDesign.client_phone)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Submitted</p>
+                      <p className="font-medium">{formatDate(selectedDesign.created_at)}</p>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Design Preview */}
-              <div className="mb-6">
-                <h3 className="font-semibold mb-3">Design Visualization</h3>
-                <DesignPreview
-                  designData={selectedDesign}
-                  hasKitchen={selectedDesign.include_kitchen && selectedDesign.kitchen_data}
-                  hasBathroom={selectedDesign.include_bathroom && selectedDesign.bathroom_data}
-                />
-              </div>
-
-              {/* Room Details */}
-              {selectedDesign.kitchen_data && selectedDesign.include_kitchen && (
+                {/* Design Summary */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-semibold mb-3">Kitchen Details</h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Room Dimensions: {selectedDesign.kitchen_data.dimensions.width}' × {selectedDesign.kitchen_data.dimensions.height}' × {selectedDesign.kitchen_data.dimensions.wallHeight}" height
-                  </p>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Total Items: {selectedDesign.kitchen_data.elements.length}
-                  </p>
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-2">Cabinet Summary:</p>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      {selectedDesign.kitchen_data.elements
-                        .filter(el => el.category === 'cabinet')
-                        .map((cabinet, idx) => (
-                          <li key={idx}>
-                            • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") -
-                            Material: {selectedDesign.kitchen_data.materials[cabinet.id] || 'laminate'}
-                          </li>
-                        ))
-                      }
-                    </ul>
+                  <h3 className="font-semibold mb-3">Design Summary</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Estimate</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        ${selectedDesign.total_price?.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Rooms Included</p>
+                      <div className="flex gap-2 mt-1">
+                        {selectedDesign.include_kitchen && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <Home className="w-3 h-3 mr-1" /> Kitchen
+                          </span>
+                        )}
+                        {selectedDesign.include_bathroom && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <Bath className="w-3 h-3 mr-1" /> Bathroom
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {selectedDesign.bathroom_data && selectedDesign.include_bathroom && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-semibold mb-3">Bathroom Details</h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Room Dimensions: {selectedDesign.bathroom_data.dimensions.width}' × {selectedDesign.bathroom_data.dimensions.height}' × {selectedDesign.bathroom_data.dimensions.wallHeight}" height
-                  </p>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Total Items: {selectedDesign.bathroom_data.elements.length}
-                  </p>
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-2">Cabinet Summary:</p>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      {selectedDesign.bathroom_data.elements
-                        .filter(el => el.category === 'cabinet')
-                        .map((cabinet, idx) => (
-                          <li key={idx}>
-                            • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") -
-                            Material: {selectedDesign.bathroom_data.materials[cabinet.id] || 'laminate'}
-                          </li>
-                        ))
-                      }
-                    </ul>
+                {/* Design Preview */}
+                <div className="mb-6">
+                  <h3 className="font-semibold mb-3">Design Visualization</h3>
+                  <DesignPreview
+                    designData={selectedDesign}
+                    hasKitchen={selectedDesign.include_kitchen && selectedDesign.kitchen_data}
+                    hasBathroom={selectedDesign.include_bathroom && selectedDesign.bathroom_data}
+                  />
+                </div>
+
+                {/* Room Details */}
+                {selectedDesign.kitchen_data && selectedDesign.include_kitchen && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold mb-3">Kitchen Details</h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Room Dimensions: {selectedDesign.kitchen_data.dimensions.width}' × {selectedDesign.kitchen_data.dimensions.height}' × {selectedDesign.kitchen_data.dimensions.wallHeight}" height
+                    </p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Total Items: {selectedDesign.kitchen_data.elements.length}
+                    </p>
+                    <div className="mt-3">
+                      <p className="text-sm font-medium mb-2">Cabinet Summary:</p>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        {selectedDesign.kitchen_data.elements
+                          .filter(el => el.category === 'cabinet')
+                          .map((cabinet, idx) => (
+                            <li key={idx}>
+                              • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") -
+                              Material: {selectedDesign.kitchen_data.materials[cabinet.id] || 'laminate'}
+                            </li>
+                          ))
+                        }
+                      </ul>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Customer Comments */}
-              {selectedDesign.comments && (
-                <div className="mb-6 p-4 bg-yellow-50 rounded-lg">
-                  <h3 className="font-semibold mb-2">Customer Notes</h3>
-                  <p className="text-gray-700">{selectedDesign.comments}</p>
-                </div>
-              )}
+                {selectedDesign.bathroom_data && selectedDesign.include_bathroom && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold mb-3">Bathroom Details</h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Room Dimensions: {selectedDesign.bathroom_data.dimensions.width}' × {selectedDesign.bathroom_data.dimensions.height}' × {selectedDesign.bathroom_data.dimensions.wallHeight}" height
+                    </p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Total Items: {selectedDesign.bathroom_data.elements.length}
+                    </p>
+                    <div className="mt-3">
+                      <p className="text-sm font-medium mb-2">Cabinet Summary:</p>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        {selectedDesign.bathroom_data.elements
+                          .filter(el => el.category === 'cabinet')
+                          .map((cabinet, idx) => (
+                            <li key={idx}>
+                              • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") -
+                              Material: {selectedDesign.bathroom_data.materials[cabinet.id] || 'laminate'}
+                            </li>
+                          ))
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
-              {/* Actions */}
-              <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    deleteDesign(selectedDesign.id);
-                    setSelectedDesign(null);
-                  }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Design
-                </button>
-                <div className="flex gap-4">
+                {/* Customer Comments */}
+                {selectedDesign.comments && (
+                  <div className="mb-6 p-4 bg-yellow-50 rounded-lg">
+                    <h3 className="font-semibold mb-2">Customer Notes</h3>
+                    <p className="text-gray-700">{selectedDesign.comments}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
                   <button
-                    onClick={() => downloadPDF(selectedDesign.id, selectedDesign.client_name)}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center gap-2"
+                    onClick={() => {
+                      deleteDesign(selectedDesign.id);
+                      setSelectedDesign(null);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
                   >
-                    <Download className="w-4 h-4" />
-                    Download PDF
+                    <Trash2 className="w-4 h-4" />
+                    Delete Design
                   </button>
-                  <a
-                    href={`mailto:${selectedDesign.client_email}`}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Email Client
-                  </a>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => downloadPDF(selectedDesign.id, selectedDesign.client_name)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download PDF
+                    </button>
+                    <a
+                      href={`mailto:${selectedDesign.client_email}`}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Email Client
+                    </a>
+                  </div>
                 </div>
-              </div>
               </div>
             </div>
           </div>
