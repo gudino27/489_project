@@ -26,9 +26,15 @@
   background: #a8a8a8;
 }
 
-/* Smooth transitions */
-* {
+/* Smooth transitions - exclude SVG elements during dragging */
+*:not(svg):not(svg *) {
   transition: all 0.2s ease-in-out;
+}
+
+/* Only apply transitions when NOT dragging */
+svg rect:not([data-dragging="true"]),
+svg g:not([data-dragging="true"]) {
+  transition: opacity 0.2s ease-in-out;
 }
 
 /* Custom focus styles */

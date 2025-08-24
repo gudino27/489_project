@@ -116,7 +116,6 @@ const KitchenDesigner = () => {
   const [isDragging, setIsDragging] = useState(false);                   // Floor plan dragging state
   const [isDraggingWallView, setIsDraggingWallView] = useState(false);   // Wall view dragging state
   const [dragPreviewPosition, setDragPreviewPosition] = useState(null);  // Preview position during drag
-  const [lastMoveTime, setLastMoveTime] = useState(0);                   // Throttle drag updates
   const [scale, setScale] = useState(1);                                 // Canvas scaling factor
   const [viewMode, setViewMode] = useState('floor');                     // 'floor' or 'wall' view
   const [selectedWall, setSelectedWall] = useState(1);                   // Wall number for wall view (1-4)
@@ -144,12 +143,13 @@ const KitchenDesigner = () => {
   });
   const [rotationStart, setRotationStart] = useState(null);                 // Start point for wall rotation
 
-  // Drag system refs for ultra-fast performance
+  // Drag system refs for zero-lag hybrid approach with click/drag detection
   const dragCacheRef = useRef({
-    svgMatrix: null,
-    lastUpdate: 0,
     lastPosition: null,
-    dragElement: null
+    rafId: null,
+    startPosition: null,
+    hasMoved: false,
+    pendingDrag: false
   });
 
   // Toggle collapsible sections
@@ -1765,13 +1765,24 @@ const KitchenDesigner = () => {
       svgPt.y = coords.clientY;
       const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
 
+      // Store initial mouse position for drag threshold detection
+      dragCacheRef.current.startPosition = {
+        x: coords.clientX,
+        y: coords.clientY
+      };
+      dragCacheRef.current.hasMoved = false;
+
       // Calculate offset from element position to cursor
       setDragOffset({
         x: cursorPt.x - element.x - 30, // Account for canvas offset
         y: cursorPt.y - element.y - 30
       });
-      setIsDragging(true);
+      
+      // Select the element immediately, but don't start dragging yet
       setSelectedElement(elementId);
+      
+      // Set up for potential dragging, but don't enable it yet
+      dragCacheRef.current.pendingDrag = true;
     }
   };
 
@@ -1799,7 +1810,7 @@ const KitchenDesigner = () => {
   const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
 
 
-  // Handle touch/mouse movement during dragging with RAF optimization
+  // Handle touch/mouse movement during dragging with hybrid DOM manipulation for zero-lag response
   const handleMouseMove = (e) => {
     // Handle wall drawing preview - show live preview as mouse moves
     if (isDrawingWall && wallDrawStart && canvasRef.current) {
@@ -1818,25 +1829,35 @@ const KitchenDesigner = () => {
       return;
     }
 
+    // Check if we should start dragging based on mouse movement threshold
+    if (dragCacheRef.current.pendingDrag && !isDragging && selectedElement) {
+      const coords = getEventCoordinates(e);
+      const deltaX = Math.abs(coords.clientX - dragCacheRef.current.startPosition.x);
+      const deltaY = Math.abs(coords.clientY - dragCacheRef.current.startPosition.y);
+      const dragThreshold = 5; // pixels
+      
+      if (deltaX > dragThreshold || deltaY > dragThreshold) {
+        // Start dragging - user moved mouse enough
+        setIsDragging(true);
+        dragCacheRef.current.pendingDrag = false;
+        dragCacheRef.current.hasMoved = true;
+      }
+    }
+
     if (isDragging && selectedElement) {
       const element = currentRoomData.elements.find(el => el.id === selectedElement);
       if (element && canvasRef.current) {
-        // Cache SVG transformation matrix for performance (refresh every 32ms = ~30fps)
-        if (!dragCacheRef.current.svgMatrix || Date.now() - dragCacheRef.current.lastUpdate > 32) {
-          dragCacheRef.current.svgMatrix = canvasRef.current.getScreenCTM().inverse();
-          dragCacheRef.current.lastUpdate = Date.now();
-        }
-
+        // Get transformation matrix immediately - no delay for zero-lag response
+        const svgMatrix = canvasRef.current.getScreenCTM().inverse();
+        
         // Get coordinates from touch or mouse event
         const coords = getEventCoordinates(e);
-
-        // Convert coordinates using cached matrix
         const svgPt = canvasRef.current.createSVGPoint();
         svgPt.x = coords.clientX;
         svgPt.y = coords.clientY;
-        const cursorPt = svgPt.matrixTransform(dragCacheRef.current.svgMatrix);
+        const cursorPt = svgPt.matrixTransform(svgMatrix);
 
-        // Calculate new position directly - no smoothing for immediate response
+        // Calculate new position directly
         const newX = cursorPt.x - dragOffset.x - 30;
         const newY = cursorPt.y - dragOffset.y - 30;
 
@@ -1883,18 +1904,22 @@ const KitchenDesigner = () => {
           return;
         }
 
-        // ZERO React re-renders during drag - use direct CSS transform manipulation
-        if (!dragCacheRef.current.dragElement) {
-          dragCacheRef.current.dragElement = document.querySelector(`[data-cabinet-id="${element.id}"]`);
+        // HYBRID APPROACH: Direct DOM manipulation for immediate visual feedback (zero lag)
+        // Find the SVG group element for this cabinet
+        const svgElement = canvasRef.current.querySelector(`[data-element-id="${element.id}"]`);
+        if (svgElement) {
+          // Calculate transform based on rotation for immediate visual update
+          const centerX = position.x + elementWidth / 2;
+          const centerY = position.y + elementDepth / 2;
+          const transform = element.rotation !== 0 
+            ? `translate(${centerX}, ${centerY}) rotate(${element.rotation}) translate(${-element.width * scale / 2}, ${-element.depth * scale / 2})`
+            : `translate(${position.x}, ${position.y})`;
+          
+          // Apply transform directly to DOM for zero lag response
+          svgElement.setAttribute('transform', transform);
         }
-        
-        if (dragCacheRef.current.dragElement) {
-          // Use CSS transform for immediate visual feedback (research shows this is optimal)
-          const translateValue = `translate(${position.x}px, ${position.y}px)`;
-          dragCacheRef.current.dragElement.style.transform = translateValue;
-        }
-        
-        // Store final position for React state update on mouse up only
+
+        // Store position for React state update on mouse up
         dragCacheRef.current.lastPosition = { x: position.x, y: position.y };
       }
     } else if (isDraggingWallView && selectedElement) {
@@ -1906,36 +1931,47 @@ const KitchenDesigner = () => {
         const wallHeight = parseFloat(currentRoomData.dimensions.wallHeight);
         const viewScale = Math.min(800 / (wallHeight * 12), 400 / wallHeight);
 
-        // Convert pixel movement to inches
-        const mountDelta = deltaY / viewScale;
-        let newMount = dragOffset.startMount - mountDelta;
+        // Convert pixel movement to mount height change
+        const mountHeightChange = deltaY / viewScale;
+        const newMountHeight = Math.max(0, Math.min(wallHeight * 12 - element.height, dragOffset.startMount + mountHeightChange));
 
-        // Constrain mount height to valid range
-        const maxMount = wallHeight - element.actualHeight;
-        newMount = Math.max(0, Math.min(newMount, maxMount));
-
-        updateElement(element.id, { mountHeight: newMount });
+        // Update mount height immediately for wall view
+        setCurrentRoomData(prevData => ({
+          ...prevData,
+          elements: prevData.elements.map(el =>
+            el.id === element.id
+              ? { ...el, mountHeight: newMountHeight }
+              : el
+          )
+        }));
       }
     }
   };
 
-  // Cleanup function for drag ending
+  // Cleanup function for drag ending or click completion
   const handleMouseUp = () => {
-    // Reset CSS transform and apply final position to React state
-    if (dragCacheRef.current.dragElement && dragCacheRef.current.lastPosition && selectedElement) {
-      // Clear the CSS transform since React will now handle positioning
-      dragCacheRef.current.dragElement.style.transform = '';
+    // If we were dragging, update React state with final position
+    if (isDragging && selectedElement && dragCacheRef.current.lastPosition) {
+      const finalPosition = dragCacheRef.current.lastPosition;
       
-      // Update React state with final position
-      updateElement(selectedElement, dragCacheRef.current.lastPosition);
+      // Update React state with final position to ensure proper data persistence
+      setCurrentRoomData(prevData => ({
+        ...prevData,
+        elements: prevData.elements.map(el =>
+          el.id === selectedElement
+            ? { ...el, x: finalPosition.x, y: finalPosition.y }
+            : el
+        )
+      }));
     }
 
     // Clear drag cache
     dragCacheRef.current = {
-      svgMatrix: null,
-      lastUpdate: 0,
       lastPosition: null,
-      dragElement: null
+      rafId: null,
+      startPosition: null,
+      hasMoved: false,
+      pendingDrag: false
     };
 
     setIsDragging(false);
@@ -2273,27 +2309,25 @@ const KitchenDesigner = () => {
   // Custom rendering for special cabinet types and visual effects
   // -----------------------------
 
-  // Render corner cabinet with special L-shape
+  // Render corner cabinet with special L-shape (relative positioning for transformed group)
   const renderCornerCabinet = (element) => {
-    const x = element.x;
-    const y = element.y;
     const size = element.width * scale;
 
-    // Create L-shaped path based on hinge direction
+    // Create L-shaped path based on hinge direction (using relative coordinates)
     const path = element.hingeDirection === 'left'
-      ? `M ${x} ${y} 
-         L ${x + size} ${y} 
-         L ${x + size} ${y + size * 0.6} 
-         L ${x + size * 0.6} ${y + size * 0.6}
-         L ${x + size * 0.6} ${y + size}
-         L ${x} ${y + size} 
+      ? `M 0 0 
+         L ${size} 0 
+         L ${size} ${size * 0.6} 
+         L ${size * 0.6} ${size * 0.6}
+         L ${size * 0.6} ${size}
+         L 0 ${size} 
          Z`
-      : `M ${x} ${y} 
-         L ${x + size} ${y} 
-         L ${x + size} ${y + size}
-         L ${x + size * 0.4} ${y + size}
-         L ${x + size * 0.4} ${y + size * 0.6}
-         L ${x} ${y + size * 0.6}
+      : `M 0 0 
+         L ${size} 0 
+         L ${size} ${size}
+         L ${size * 0.4} ${size}
+         L ${size * 0.4} ${size * 0.6}
+         L 0 ${size * 0.6}
          Z`;
 
     return (
@@ -2306,46 +2340,70 @@ const KitchenDesigner = () => {
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
           onMouseDown={(e) => handleMouseDown(e, element.id)}
         />
-        {/* Door division lines */}
+        {/* Door outlines and graphics */}
         {element.hingeDirection === 'left' ? (
           <>
-            <line x1={x + size * 0.6} y1={y} x2={x + size * 0.6} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
-            <line x1={x} y1={y + size * 0.6} x2={x + size * 0.6} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
-            {/* Door swing arcs for left hinge */}
-            <path
-              d={`M ${x} ${y + size * 0.6} L ${x} ${y + size * 0.45} A ${size * 0.15} ${size * 0.15} 0 0 1 ${x + size * 0.15} ${y + size * 0.6} Z`}
+            {/* Door division lines */}
+            <line x1={size * 0.6} y1={0} x2={size * 0.6} y2={size * 0.6} stroke="#333" strokeWidth="1" />
+            <line x1={0} y1={size * 0.6} x2={size * 0.6} y2={size * 0.6} stroke="#333" strokeWidth="1" />
+            
+            {/* Door outline rectangles to show door locations */}
+            {/* Top horizontal door */}
+            <rect
+              x={size * 0.6 + 2}
+              y={2}
+              width={size * 0.4 - 4}
+              height={size * 0.6 - 4}
               fill="none"
               stroke="#666"
               strokeWidth="0.5"
-              strokeDasharray="2,2"
+              rx="2"
             />
-            <path
-              d={`M ${x + size * 0.6} ${y} L ${x + size * 0.45} ${y} A ${size * 0.15} ${size * 0.15} 0 0 1 ${x + size * 0.6} ${y + size * 0.15} Z`}
+            {/* Left vertical door */}
+            <rect
+              x={2}
+              y={size * 0.6 + 2}
+              width={size * 0.6 - 4}
+              height={size * 0.4 - 4}
               fill="none"
               stroke="#666"
               strokeWidth="0.5"
-              strokeDasharray="2,2"
+              rx="2"
             />
+            
+            {/* Door swing arcs now handled by renderDoorGraphic in DraggableCabinet */}
           </>
         ) : (
           <>
-            <line x1={x + size * 0.4} y1={y} x2={x + size * 0.4} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
-            <line x1={x + size * 0.4} y1={y + size * 0.6} x2={x + size} y2={y + size * 0.6} stroke="#333" strokeWidth="1" />
-            {/* Door swing arcs for right hinge */}
-            <path
-              d={`M ${x + size * 0.4} ${y} L ${x + size * 0.25} ${y} A ${size * 0.15} ${size * 0.15} 0 0 0 ${x + size * 0.4} ${y + size * 0.15} Z`}
+            {/* Door division lines */}
+            <line x1={size * 0.4} y1={0} x2={size * 0.4} y2={size * 0.6} stroke="#333" strokeWidth="1" />
+            <line x1={size * 0.4} y1={size * 0.6} x2={size} y2={size * 0.6} stroke="#333" strokeWidth="1" />
+            
+            {/* Door outline rectangles to show door locations */}
+            {/* Left horizontal door */}
+            <rect
+              x={2}
+              y={2}
+              width={size * 0.4 - 4}
+              height={size * 0.6 - 4}
               fill="none"
               stroke="#666"
               strokeWidth="0.5"
-              strokeDasharray="2,2"
+              rx="2"
             />
-            <path
-              d={`M ${x + size * 0.4} ${y + size * 0.6} L ${x + size * 0.4} ${y + size * 0.45} A ${size * 0.15} ${size * 0.15} 0 0 0 ${x + size * 0.55} ${y + size * 0.6} Z`}
+            {/* Right vertical door */}
+            <rect
+              x={size * 0.4 + 2}
+              y={size * 0.6 + 2}
+              width={size * 0.6 - 4}
+              height={size * 0.4 - 4}
               fill="none"
               stroke="#666"
               strokeWidth="0.5"
-              strokeDasharray="2,2"
+              rx="2"
             />
+            
+            {/* Door swing arcs now handled by renderDoorGraphic in DraggableCabinet */}
           </>
         )}
       </g>

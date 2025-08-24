@@ -25,24 +25,71 @@ const DraggableCabinet = React.memo(({
   if (element.type === 'corner' || element.type === 'corner-wall') {
     return (
       <g 
-        key={element.id} 
-        data-cabinet-id={element.id}
-        style={{ willChange: 'transform' }}
+        key={element.id}
+        data-element-id={element.id}
+        transform={`translate(${element.x}, ${element.y})`}
+        style={{ 
+          cursor: isDragging && element.id === selectedElement ? 'grabbing' : 'grab'
+        }}
       >
+        {/* Render the corner cabinet with built-in door graphics */}
         {renderCornerCabinet(element)}
+
+        {/* Add door swing arcs using renderDoorGraphic for proper arc display */}
+        {element.hingeDirection === 'left' ? (
+          // Left-hinged corner cabinet door arcs
+          <>
+            {/* Door arc for horizontal section - hinge at bottom-left of right door */}
+            {renderDoorGraphic(
+              element.width * scale * 0.6, 
+              0, 
+              element.width * scale * 0.4, 
+              element.depth * scale * 0.6, 
+              180
+            )}
+            {/* Door arc for vertical section - hinge at top-right of bottom door */}
+            {renderDoorGraphic(
+              0, 
+              element.depth * scale * 0.6, 
+              element.width * scale * 0.6, 
+              element.depth * scale * 0.4, 
+              90
+            )}
+          </>
+        ) : (
+          // Right-hinged corner cabinet door arcs
+          <>
+            {/* Door arc for horizontal section - hinge at bottom-right of left door */}
+            {renderDoorGraphic(
+              0, 
+              0, 
+              element.width * scale * 0.4, 
+              element.depth * scale * 0.6, 
+              270
+            )}
+            {/* Door arc for vertical section - hinge at top-left of bottom door */}
+            {renderDoorGraphic(
+              element.width * scale * 0.4, 
+              element.depth * scale * 0.6, 
+              element.width * scale * 0.6, 
+              element.depth * scale * 0.4, 
+              0
+            )}
+          </>
+        )}
 
         {/* Corner cabinet number badge */}
         <circle
-          cx={element.x + (element.width * scale) / 2}
-          cy={element.y + (element.depth * scale) / 2}
+          cx={(element.width * scale) / 2}
+          cy={(element.depth * scale) / 2}
           r="12"
           fill="white"
           stroke="#333"
           strokeWidth="1"
         />
         <text
-          x={element.x + (element.width * scale) / 2}
-          y={element.y + (element.depth * scale) / 2}
+          x={(element.width * scale) / 2}
+          y={(element.depth * scale) / 2}
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize="10"
@@ -66,10 +113,14 @@ const DraggableCabinet = React.memo(({
 
   return (
     <g 
-      key={element.id} 
-      data-cabinet-id={element.id}
-      transform={`translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`}
-      style={{ willChange: 'transform' }}
+      key={element.id}
+      data-element-id={element.id}
+      transform={element.rotation !== 0 
+        ? `translate(${element.x + displayWidth / 2}, ${element.y + displayDepth / 2}) rotate(${element.rotation}) translate(${-displayWidth / 2}, ${-displayDepth / 2})`
+        : `translate(${element.x}, ${element.y})`}
+      style={{ 
+        cursor: isDragging && element.id === selectedElement ? 'grabbing' : 'grab'
+      }}
     >
 
       {/* Main Element Body */}
