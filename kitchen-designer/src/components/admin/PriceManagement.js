@@ -4,16 +4,16 @@ import {
   Save,
   Check
 } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
-import { usePricing } from '../contexts/PricingContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { usePricing } from '../../contexts/PricingContext';
 
 // Import modular pricing components
-import CabinetPricing from './pricing/CabinetPricing';
-import MaterialMultipliers from './pricing/MaterialMultipliers';
-import ColorPricing from './pricing/ColorPricing';
-import WallPricing from './pricing/WallPricing';
-import WallAvailability from './pricing/WallAvailability';
-import { SectionSaveButton, createSectionHelpers } from './pricing/PricingUtils';
+import CabinetPricing from '../pricing/CabinetPricing';
+import MaterialMultipliers from '../pricing/MaterialMultipliers';
+import ColorPricing from '../pricing/ColorPricing';
+import WallPricing from '../pricing/WallPricing';
+import WallAvailability from '../pricing/WallAvailability';
+import { SectionSaveButton, createSectionHelpers } from '../pricing/PricingUtils';
 
 const PriceManagement = ({ token, API_BASE, userRole }) => {
   // Language context

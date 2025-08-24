@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import Navigation from './Navigation';
-import './css/testimonial-form.css';
+import Navigation from '../ui/Navigation';
+import '../css/testimonial-form.css';
 
 const TestimonialForm = () => {
     const { token } = useParams();

@@ -13,7 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
-import sessionManager from './sessionManager';
+import sessionManager from '../utils/sessionManager';
 
 const DesignViewer = () => {
   const [designs, setDesigns] = useState([]);

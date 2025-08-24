@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Edit2, Save, Image, GripVertical, X } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
   const { t } = useLanguage();

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Navigation from './Navigation';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
-import './css/about.css';
-import { useAnalytics } from '../hooks/useAnalytics';
+import Navigation from '../ui/Navigation';
+import { useLanguage } from '../../contexts/LanguageContext';
+import '../css/about.css';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const About = () => {
     // Analytics tracking
@@ -100,10 +99,6 @@ const About = () => {
         <>
             <Navigation />
             <div className="container">
-                {/* Language Selector */}
-                <div className='fixed top-20 right-4 z-50 md:absolute md:top-15 md:right-4'>
-                    <LanguageSelector />
-                </div>
                 {/* Hero Section */}
                 <div className="hero-section">
                     <h1>{t('about.heroTitle')}</h1>

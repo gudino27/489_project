@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Navigation from './Navigation';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
-import './css/contact.css';
-import { useAnalytics } from '../hooks/useAnalytics';
+import Navigation from '../ui/Navigation';
+import { useLanguage } from '../../contexts/LanguageContext';
+import '../css/contact.css';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const Contact = () => {
   // Analytics tracking
@@ -60,9 +59,6 @@ const Contact = () => {
               {t('contact.heroSubtitle')}
             </p>
           </div>
-        </div>
-        <div className="fixed top-20 right-4 z-50 md:absolute md:top-15 md:right-4">
-          <LanguageSelector />
         </div>
         <div className="contact-content">
           <div className="contact-grid">

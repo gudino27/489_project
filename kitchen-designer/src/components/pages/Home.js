@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Navigation from './Navigation';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
-import './css/home.css';
-import { useAnalytics } from '../hooks/useAnalytics';
+import Navigation from '../ui/Navigation';
+import { useLanguage } from '../../contexts/LanguageContext';
+import '../css/home.css';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const Home = () => {
   // Analytics tracking
@@ -79,12 +78,7 @@ const Home = () => {
 
         <div className="curved-bottom"></div>
 
-        {/* Language selector positioned directly above scroll indicator */}
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-50">
-          <LanguageSelector />
-        </div>
-
-        <div className="scroll-indicator" style={{ bottom: '10px' }} onClick={() => {
+        <div className="scroll-indicator" onClick={() => {
           const targetPosition = window.innerHeight;
           const startPosition = window.pageYOffset;
           const distance = targetPosition - startPosition;

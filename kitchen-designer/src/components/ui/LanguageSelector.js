@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const LanguageSelector = ({ className = '' }) => {
   const { currentLanguage, changeLanguage, availableLanguages, t } = useLanguage();
@@ -58,7 +58,7 @@ const LanguageSelector = ({ className = '' }) => {
               padding: '10px'
             }}
           >
-            🌐 {lang.nativeName}
+🌐 {lang.nativeName}
           </option>
         ))}
       </select>

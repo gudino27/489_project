@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import './css/portfolio.css';
-import Navigation from './Navigation';
-import LanguageSelector from './LanguageSelector';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useAnalytics } from '../hooks/useAnalytics';
+import '../css/portfolio.css';
+import Navigation from '../ui/Navigation';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useAnalytics } from '../../hooks/useAnalytics';
 const API_BASE = "https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
@@ -285,12 +284,7 @@ const Portfolio = () => {
     <>
       <Navigation />
 
-      {/* Language Selector */}
-
       <div className="category-container">
-        <div>
-          <LanguageSelector />
-        </div>
         <h2 className="text-white mb-4">{t('portfolio.selectCategory')}</h2>
         <div className="category-buttons">
           {categories.map(cat => (
