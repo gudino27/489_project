@@ -18,7 +18,7 @@ const CabinetPricing = ({
       'blind-corner', 'appliance-garage', 'wine-rack', 'spice-rack', 
       'tray-divider', 'pull-out-drawer', 'soft-close-drawer', 'under-cabinet-lighting'
     ];
-    
+     
     return Object.entries(basePrices).filter(([type]) => kitchenTypes.includes(type));
   };
 
