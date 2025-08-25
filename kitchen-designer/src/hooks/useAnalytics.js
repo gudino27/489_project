@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const API_BASE = "https://api.gudinocustom.com";
 
-// Microsoft Clarity integration
-const initializeClarity = () => {
-  if (typeof window !== 'undefined' && window.clarity) {
-    return window.clarity;
-  }
-  return null;
-};
+
 
 // Get page category for Clarity tracking
 const getPageCategory = (pagePath) => {
@@ -105,13 +99,7 @@ export const useAnalytics = (pagePath) => {
           setViewId(result.viewId);
         }
 
-        // Track with Microsoft Clarity
-        const clarity = initializeClarity();
-        if (clarity) {
-          clarity('set', 'page_category', getPageCategory(pagePath));
-          clarity('set', 'user_type', userId ? 'authenticated' : 'anonymous');
-          clarity('set', 'session_id', sessionId);
-        }
+       
       } catch (error) {
         console.error('Analytics tracking error:', error);
       }
@@ -209,51 +197,11 @@ export const useEventTracking = () => {
       });
 
       // Track with Microsoft Clarity
-      const clarity = initializeClarity();
-      if (clarity) {
-        clarity('event', eventName, eventData);
-
-        // Set custom tags based on events
-        if (eventName === 'contact_form_submit') {
-          clarity('set', 'lead_generated', 'true');
-        }
-        if (eventName === 'portfolio_photo_click') {
-          clarity('set', 'engaged_with_portfolio', 'true');
-        }
-        if (eventName === 'design_tool_used') {
-          clarity('set', 'used_design_tool', 'true');
-        }
-      }
+      
     } catch (error) {
       console.error('Event tracking error:', error);
     }
   };
 
   return { trackEvent };
-};
-
-// Microsoft Clarity specific tracking functions
-export const useClarityTracking = () => {
-  const identifyUser = (userId, userData = {}) => {
-    const clarity = initializeClarity();
-    if (clarity) {
-      clarity('identify', userId, userData);
-    }
-  };
-
-  const setCustomTag = (key, value) => {
-    const clarity = initializeClarity();
-    if (clarity) {
-      clarity('set', key, value);
-    }
-  };
-
-  const upgradeSession = () => {
-    const clarity = initializeClarity();
-    if (clarity) {
-      clarity('upgrade');
-    }
-  };
-
-  return { identifyUser, setCustomTag, upgradeSession };
 };

@@ -1,26 +1,26 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Calculator,      // Pricing calculator icon
-  Send,            // Send quote icon
   Home,            // Kitchen room icon
   Bath,            // Bathroom room icon
 } from 'lucide-react';
-import jsPDF from 'jspdf';               // PDF generation library
 import MainNavBar from '../ui/Navigation';
 import WallView from '../design/WallView';
 import DraggableCabinet from '../design/DraggableCabinet';
 import DesignerSidebar from '../design/DesignerSidebar';
+import QuoteForm from '../forms/QuoteForm';
+import PricingDisplay from '../design/PricingDisplay';
+import ElementList from '../design/ElementList';
+import { elementTypes } from '../../constants/elementTypes';
+import { generatePDF, sendQuote } from '../../services/pdfService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { usePricing } from '../../contexts/PricingContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
-
 const KitchenDesigner = () => {
   // Analytics tracking
   useAnalytics('/designer');
-
   // Language context
   const { t } = useLanguage();
-
   // Shared pricing context
   const {
     materialMultipliers: sharedMaterialMultipliers,
@@ -35,24 +35,19 @@ const KitchenDesigner = () => {
   // -----------------------------
   const [deviceWarning, setDeviceWarning] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
-
   useEffect(() => {
     const checkDevice = () => {
       const minWidth = 1024; // Minimum width for designer
       const minHeight = 600; // Minimum height for designer
       const isSmallScreen = window.innerWidth < minWidth || window.innerHeight < minHeight;
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
       setDeviceWarning(isSmallScreen);
       setIsTouch(isTouchDevice);
     };
-
     checkDevice();
     window.addEventListener('resize', checkDevice);
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
-
-
   // -----------------------------
   // Business Configuration
   // In production, these would come from environment variables or database
@@ -81,7 +76,6 @@ const KitchenDesigner = () => {
     originalWalls: [1, 2, 3, 4],     // Track original walls for pricing
     doors: []          // Array to store doors: {id, wallNumber, position, width, type}
   });
-
   const [bathroomData, setBathroomData] = useState({
     dimensions: { width: '', height: '', wallHeight: '96' },
     elements: [],
@@ -94,19 +88,16 @@ const KitchenDesigner = () => {
     originalWalls: [1, 2, 3, 4],     // Track original walls for pricing
     doors: []          // Array to store doors: {id, wallNumber, position, width, type}
   });
-
   // -----------------------------
   // Current Room Helper Variables
   // These provide easy access to the currently active room's data
   // -----------------------------
   const currentRoomData = activeRoom === 'kitchen' ? kitchenData : bathroomData;
   const setCurrentRoomData = activeRoom === 'kitchen' ? setKitchenData : setBathroomData;
-
   // Helper accessors for wall data from current room
   const customWalls = currentRoomData.customWalls || [];
   const allAvailableWalls = currentRoomData.allAvailableWalls || [1, 2, 3, 4];
   const originalWalls = currentRoomData.originalWalls || [1, 2, 3, 4];
-
   // -----------------------------
   // UI and Interaction State
   // Controls user interface elements and interactions
@@ -133,7 +124,6 @@ const KitchenDesigner = () => {
   const [isRotatingWall, setIsRotatingWall] = useState(null);               // Wall being rotated
   const [isDoorMode, setIsDoorMode] = useState(false);                      // Door placement mode
   const [doorModeType, setDoorModeType] = useState('standard');             // Type of door being placed
-
   // Collapsible section states
   const [collapsedSections, setCollapsedSections] = useState({
     wallManagement: false,
@@ -142,7 +132,6 @@ const KitchenDesigner = () => {
     properties: false
   });
   const [rotationStart, setRotationStart] = useState(null);                 // Start point for wall rotation
-
   // Drag system refs for zero-lag hybrid approach with click/drag detection
   const dragCacheRef = useRef({
     lastPosition: null,
@@ -151,7 +140,6 @@ const KitchenDesigner = () => {
     hasMoved: false,
     pendingDrag: false
   });
-
   // Toggle collapsible sections
   const toggleSection = (sectionName) => {
     setCollapsedSections(prev => ({
@@ -159,7 +147,6 @@ const KitchenDesigner = () => {
       [sectionName]: !prev[sectionName]
     }));
   };
-
   // -----------------------------
   // Client Information for Quote Generation
   // Stores customer contact details and preferences
@@ -173,7 +160,6 @@ const KitchenDesigner = () => {
     includeKitchen: true,         // Include kitchen in quote
     includeBathroom: false        // Include bathroom in quote
   });
-
   // -----------------------------
   // Canvas References
   // DOM references for the different view canvases
@@ -181,7 +167,6 @@ const KitchenDesigner = () => {
   const canvasRef = useRef(null);      // Main floor plan canvas
   const floorPlanRef = useRef(null);   // Floor plan container for PDF export
   const wallViewRef = useRef(null);    // Wall elevation view canvas
-
   // -----------------------------
   // Dynamic Pricing State
   // Pricing data loaded from backend database
@@ -202,7 +187,6 @@ const KitchenDesigner = () => {
     'peninsula-base': 420,
     'pantry': 520,
     'corner-wall': 210,
-
     // Bathroom Cabinets
     'vanity': 280,
     'vanity-sink': 350,
@@ -214,7 +198,6 @@ const KitchenDesigner = () => {
     'medicine-mirror': 180,
     'linen': 350,
     'linen-tower': 420,
-
     // Kitchen Appliances
     'refrigerator': 0,        // Pricing handled separately for appliances
     'stove': 0,
@@ -223,47 +206,39 @@ const KitchenDesigner = () => {
     'wine-cooler': 0,
     'range-hood': 0,
     'double-oven': 0,
-
     // Bathroom Fixtures
     'toilet': 0,
     'bathtub': 0,
     'shower': 0
   });
-
   // Use shared material multipliers state
   const [materialMultipliers, setMaterialMultipliers] = useState(sharedMaterialMultipliers || {
     'laminate': 1.0,    // Standard pricing (no multiplier)
     'wood': 1.5,        // 50% upcharge for solid wood
     'plywood': 1.3      // 30% upcharge for plywood
   });
-
   const [colorPricing, setColorPricing] = useState({
     1: 0,           // Single color included
     2: 100,         // Two colors add $100
     3: 200,         // Three colors add $200
     'custom': 500   // Custom colors add $500
   });
-
   // Wall modification pricing (set by admin)
   const [wallPricing, setWallPricing] = useState({
     addWall: 1500,    // Cost to add a wall opening
     removeWall: 2000  // Cost to remove/modify a wall
   });
-
   // Wall service availability (controlled by admin)
   const [wallAvailability, setWallAvailability] = useState({
     addWallEnabled: true,
     removeWallEnabled: true
   });
-
   const [pricesLoading, setPricesLoading] = useState(true);
-
   // -----------------------------
   // API Configuration
   // Backend API endpoint for price loading
   // -----------------------------
   const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
-
   // -----------------------------
   // Load prices from backend on component mount
   // Fetches current pricing from database, falls back to defaults if unavailable
@@ -271,7 +246,6 @@ const KitchenDesigner = () => {
   useEffect(() => {
     loadPrices();
   }, []);
-
   // Sync with shared pricing context when pricing version changes
   useEffect(() => {
     if (sharedMaterialMultipliers && Object.keys(sharedMaterialMultipliers).length > 0) {
@@ -284,23 +258,19 @@ const KitchenDesigner = () => {
       } else {
         materialObject = sharedMaterialMultipliers;
       }
-
       setMaterialMultipliers(materialObject);
-      console.log('Updated Kitchen Designer with shared material multipliers:', materialObject);
+      //console.log('Updated Kitchen Designer with shared material multipliers:', materialObject);
     }
   }, [pricingVersion, sharedMaterialMultipliers]);
-
   const loadPrices = async () => {
     try {
       const [pricesResponse, wallAvailResponse] = await Promise.all([
         fetch(`${API_BASE}/api/prices`),
         fetch(`${API_BASE}/api/prices/wall-availability`)
       ]);
-
       if (pricesResponse.ok) {
         const data = await pricesResponse.json();
         setBasePrices(data.basePrices);
-
         // Convert new bilingual array format to old object format for backward compatibility
         const materialObject = {};
         if (Array.isArray(data.materialMultipliers)) {
@@ -313,21 +283,19 @@ const KitchenDesigner = () => {
         }
         setMaterialMultipliers(materialObject);
         setSharedMaterialMultipliers(materialObject); // Update shared context
-
         setColorPricing(data.colorPricing);
         if (data.wallPricing) {
           setWallPricing(data.wallPricing);
         }
-        console.log('Loaded prices from database:', data);
-        console.log('Converted material multipliers for designer:', materialObject);
+        //console.log('Loaded prices from database:', data);
+        //console.log('Converted material multipliers for designer:', materialObject);
       } else {
         console.error('Failed to load prices, using defaults');
       }
-
       if (wallAvailResponse.ok) {
         const wallAvailData = await wallAvailResponse.json();
         setWallAvailability(wallAvailData);
-        console.log('Loaded wall availability settings:', wallAvailData);
+        //console.log('Loaded wall availability settings:', wallAvailData);
       } else {
         console.error('Failed to load wall availability, using defaults');
       }
@@ -338,399 +306,19 @@ const KitchenDesigner = () => {
       setPricesLoading(false);
     }
   };
-
   // -----------------------------
   // Cabinet and Appliance Specifications
   // Defines all available elements with their properties, dimensions, and behavior
-  // Organized by room type (kitchen/bathroom) and category (cabinet/appliance)
+  // Element types are now imported from constants/elementTypes.js
   // -----------------------------
-  const elementTypes = {
-    // ========== KITCHEN CABINETS ==========
-    'base': {
-      name: 'Base Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 24,
-      fixedHeight: 34.5,        // Standard counter height
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,                // Render order (lower = behind)
-      room: 'kitchen'
-    },
-    'sink-base': {
-      name: 'Sink Base Cabinet',
-      defaultWidth: 33,         // Wider to accommodate sink
-      defaultDepth: 24,
-      fixedHeight: 34.5,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      hasSink: true             // Special rendering flag
-    },
-    'wall': {
-      name: 'Wall Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 12,         // Shallower depth for wall mounting
-      minHeight: 12,            // Minimum height constraint
-      defaultHeight: 30,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 2,                // Render above base cabinets
-      room: 'kitchen',
-      mountHeight: 54           // Default distance from floor to bottom of cabinet
-    },
-    'tall': {
-      name: 'Tall Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 24,
-      minHeight: 40,            // Minimum height for tall cabinets
-      defaultHeight: 84,        // Floor to ceiling typical
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'corner': {
-      name: 'Corner Cabinet (Lazy Susan)',
-      defaultWidth: 36,         // Square corner cabinet
-      defaultDepth: 36,
-      fixedHeight: 34.5,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      shape: 'corner',          // Special shape rendering
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'drawer-base': {
-      name: 'Drawer Base Cabinet',
-      defaultWidth: 18,
-      defaultDepth: 24,
-      fixedHeight: 34.5,
-      color: '#c8c8c8',         // Slightly different color
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      hasDrawers: true          // Special rendering flag
-    },
-    'double-drawer-base': {
-      name: 'Double Drawer Base',
-      defaultWidth: 30,
-      defaultDepth: 24,
-      fixedHeight: 34.5,
-      color: '#c8c8c8',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      hasDrawers: true
-    },
-    'glass-wall': {
-      name: 'Glass Front Wall Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 12,
-      minHeight: 12,
-      defaultHeight: 30,
-      color: '#e8e8e8',         // Lighter color for glass
-      category: 'cabinet',
-      zIndex: 2,
-      room: 'kitchen',
-      mountHeight: 54,
-      hasGlass: true            // Special rendering flag
-    },
-    'open-shelf': {
-      name: 'Open Shelf Cabinet',
-      defaultWidth: 30,
-      defaultDepth: 12,
-      minHeight: 12,
-      defaultHeight: 30,
-      color: '#b8b8b8',
-      category: 'cabinet',
-      zIndex: 2,
-      room: 'kitchen',
-      mountHeight: 54,
-      isOpen: true              // Special rendering flag
-    },
-    'island-base': {
-      name: 'Kitchen Island',
-      defaultWidth: 48,         // Larger for island
-      defaultDepth: 36,
-      fixedHeight: 34.5,
-      color: '#a8a8a8',         // Different color for islands
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      isIsland: true            // Special positioning and rendering
-    },
-    'peninsula-base': {
-      name: 'Peninsula Cabinet',
-      defaultWidth: 36,
-      defaultDepth: 24,
-      fixedHeight: 34.5,
-      color: '#a8a8a8',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      isPeninsula: true         // Special positioning flag
-    },
-    'pantry': {
-      name: 'Pantry Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 24,
-      minHeight: 60,
-      defaultHeight: 84,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'kitchen',
-      isPantry: true            // Special rendering flag
-    },
-    'corner-wall': {
-      name: 'Corner Wall Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 24,
-      minHeight: 12,
-      defaultHeight: 30,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      shape: 'corner',
-      zIndex: 2,
-      room: 'kitchen',
-      mountHeight: 54
-    },
-
-    // ========== BATHROOM CABINETS ==========
-    'vanity': {
-      name: 'Vanity Cabinet',
-      defaultWidth: 30,
-      defaultDepth: 21,         // Standard vanity depth
-      fixedHeight: 32,          // Lower than kitchen counters
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom'
-    },
-    'vanity-sink': {
-      name: 'Vanity with Sink',
-      defaultWidth: 36,         // Wider for sink accommodation
-      defaultDepth: 21,
-      fixedHeight: 32,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom',
-      hasSink: true
-    },
-    'medicine': {
-      name: 'Medicine Cabinet',
-      defaultWidth: 24,
-      defaultDepth: 6,          // Very shallow wall mount
-      fixedHeight: 30,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 2,
-      room: 'bathroom',
-      mountHeight: 48           // Higher mounting for mirror access
-    },
-    'linen': {
-      name: 'Linen Cabinet',
-      defaultWidth: 18,         // Narrow width
-      defaultDepth: 21,
-      defaultHeight: 84,        // Tall storage
-      minHeight: 60,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom'
-    },
-    'double-vanity': {
-      name: 'Double Vanity',
-      defaultWidth: 60,         // Wide for two sinks
-      defaultDepth: 21,
-      fixedHeight: 32,
-      color: '#c8c8c8',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom',
-      hasSink: true,
-      isDouble: true
-    },
-    'floating-vanity': {
-      name: 'Floating Vanity',
-      defaultWidth: 48,
-      defaultDepth: 18,         // Shallower for modern look
-      fixedHeight: 32,
-      color: '#b8b8b8',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom',
-      hasSink: true,
-      isFloating: true          // Special rendering flag
-    },
-    'corner-vanity': {
-      name: 'Corner Vanity',
-      defaultWidth: 30,
-      defaultDepth: 30,
-      fixedHeight: 32,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      shape: 'corner',
-      zIndex: 1,
-      room: 'bathroom',
-      hasSink: true
-    },
-    'vanity-tower': {
-      name: 'Vanity Tower',
-      defaultWidth: 12,         // Very narrow
-      defaultDepth: 21,
-      defaultHeight: 84,
-      minHeight: 60,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom',
-      isTower: true
-    },
-    'medicine-mirror': {
-      name: 'Medicine Cabinet w/ Mirror',
-      defaultWidth: 30,
-      defaultDepth: 6,
-      fixedHeight: 36,          // Larger than basic medicine cabinet
-      color: '#e8e8e8',
-      category: 'cabinet',
-      zIndex: 2,
-      room: 'bathroom',
-      mountHeight: 48,
-      hasMirror: true
-    },
-    'linen-tower': {
-      name: 'Linen Tower',
-      defaultWidth: 24,
-      defaultDepth: 18,         // Deeper than regular linen
-      defaultHeight: 84,
-      minHeight: 72,
-      color: '#d3d3d3',
-      category: 'cabinet',
-      zIndex: 1,
-      room: 'bathroom',
-      isTower: true
-    },
-
-    // ========== KITCHEN APPLIANCES ==========
-    'refrigerator': {
-      name: 'Refrigerator',
-      defaultWidth: 36,         // Standard fridge width
-      defaultDepth: 30,
-      fixedHeight: 70,          // Tall appliance
-      color: '#e0e0e0',         // Different color for appliances
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'stove': {
-      name: 'Stove/Range',
-      defaultWidth: 30,
-      defaultDepth: 26,
-      fixedHeight: 36,          // Counter height appliance
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'dishwasher': {
-      name: 'Dishwasher',
-      defaultWidth: 24,         // Standard DW width
-      defaultDepth: 24,
-      fixedHeight: 34,          // Fits under counter
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'microwave': {
-      name: 'Built-in Microwave',
-      defaultWidth: 30,
-      defaultDepth: 15,         // Shallower for built-in
-      fixedHeight: 18,          // Standard microwave height
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 2,                // Wall mounted
-      room: 'kitchen',
-      mountHeight: 54           // Above counter height
-    },
-    'wine-cooler': {
-      name: 'Wine Cooler',
-      defaultWidth: 24,
-      defaultDepth: 24,
-      fixedHeight: 34,
-      color: '#d0d0d0',         // Slightly different color
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-    'range-hood': {
-      name: 'Range Hood',
-      defaultWidth: 36,         // Wider than stove
-      defaultDepth: 18,
-      fixedHeight: 12,          // Low profile
-      color: '#c0c0c0',
-      category: 'appliance',
-      zIndex: 2,                // Wall mounted
-      room: 'kitchen',
-      mountHeight: 66           // Above stove height
-    },
-    'double-oven': {
-      name: 'Double Wall Oven',
-      defaultWidth: 30,
-      defaultDepth: 25,
-      fixedHeight: 50,          // Tall for double unit
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'kitchen'
-    },
-
-    // ========== BATHROOM FIXTURES ==========
-    'toilet': {
-      name: 'Toilet',
-      defaultWidth: 20,
-      defaultDepth: 28,         // Includes tank depth
-      fixedHeight: 30,
-      color: '#e0e0e0',
-      category: 'appliance',    // Grouped with appliances for simplicity
-      zIndex: 1,
-      room: 'bathroom'
-    },
-    'bathtub': {
-      name: 'Bathtub',
-      defaultWidth: 60,         // Standard tub length
-      defaultDepth: 30,
-      fixedHeight: 20,          // Tub height
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'bathroom'
-    },
-    'shower': {
-      name: 'Shower',
-      defaultWidth: 36,         // Square shower
-      defaultDepth: 36,
-      fixedHeight: 80,          // Shower enclosure height
-      color: '#e0e0e0',
-      category: 'appliance',
-      zIndex: 1,
-      room: 'bathroom'
-    }
-  };
-
   // -----------------------------
   // Local Storage Integration
   // Automatically save and restore design state
   // -----------------------------
-
   // Load saved state on component mount
   useEffect(() => {
     const savedKitchen = localStorage.getItem('kitchenDesignState');
     const savedBathroom = localStorage.getItem('bathroomDesignState');
-
     if (savedKitchen) {
       const state = JSON.parse(savedKitchen);
       // Clean up invalid elements that might exist from previous versions
@@ -752,7 +340,6 @@ const KitchenDesigner = () => {
       };
       setKitchenData(migratedState);
     }
-
     if (savedBathroom) {
       const state = JSON.parse(savedBathroom);
       // Clean up invalid elements that might exist from previous versions
@@ -775,7 +362,6 @@ const KitchenDesigner = () => {
       setBathroomData(migratedState);
     }
   }, []);
-
   // Save state whenever data changes (auto-save functionality)
   useEffect(() => {
     if (step === 'design') {
@@ -783,25 +369,21 @@ const KitchenDesigner = () => {
       localStorage.setItem('bathroomDesignState', JSON.stringify(bathroomData));
     }
   }, [kitchenData, bathroomData, step]);
-
   // Clean up deleted walls from UI whenever room data changes
   useEffect(() => {
     if (step === 'design') {
       const currentWalls = currentRoomData.walls || [];
       const existingCustomWallNumbers = customWalls.map(wall => wall.wallNumber);
       const existingWallNumbers = [...new Set([...currentWalls, ...existingCustomWallNumbers])];
-
       // Keep original walls (1-4) plus any existing custom walls
       const cleanedAvailableWalls = allAvailableWalls.filter(wallNum =>
         wallNum <= 4 || existingWallNumbers.includes(wallNum)
       );
-
       if (cleanedAvailableWalls.length !== allAvailableWalls.length) {
         // Only update if there's actually a change to avoid infinite loops
         const updatedData = activeRoom === 'kitchen' ?
           { ...kitchenData, allAvailableWalls: cleanedAvailableWalls } :
           { ...bathroomData, allAvailableWalls: cleanedAvailableWalls };
-
         if (activeRoom === 'kitchen') {
           setKitchenData(updatedData);
         } else {
@@ -810,12 +392,10 @@ const KitchenDesigner = () => {
       }
     }
   }, [kitchenData.customWalls, bathroomData.customWalls, kitchenData.walls, bathroomData.walls, activeRoom, step]);
-
   // -----------------------------
   // Room Setup and Navigation Functions
   // Handle initial room configuration and switching between rooms
   // -----------------------------
-
   const handleDimensionsSubmit = () => {
     const dims = currentRoomData.dimensions;
     if (dims.width && dims.height && dims.wallHeight) {
@@ -828,12 +408,10 @@ const KitchenDesigner = () => {
       setStep('design'); // Move to design interface
     }
   };
-
   // Wall management functions
   const addWall = (wallNumber) => {
     const currentWalls = currentRoomData.walls || [1, 2, 3, 4];
     const currentRemovedWalls = currentRoomData.removedWalls || [];
-
     if (!currentWalls.includes(wallNumber)) {
       setCurrentRoomData({
         ...currentRoomData,
@@ -842,38 +420,30 @@ const KitchenDesigner = () => {
       });
     }
   };
-
   const removeWall = (wallNumber) => {
     if (wallRemovalDisabled) {
       alert('Wall removal service is temporarily disabled.');
       return;
     }
-
     const currentWalls = currentRoomData.walls || [1, 2, 3, 4];
     const currentRemovedWalls = currentRoomData.removedWalls || [];
     const isOriginalWall = originalWalls.includes(wallNumber);
     const customWall = getCustomWallByNumber(wallNumber);
     const existedPrior = customWall?.existedPrior || false;
-
     if (currentWalls.includes(wallNumber)) {
       // Check if any elements are on this wall before removing
       const elementsOnWall = getElementsOnWall(wallNumber);
-
       // Determine if there will be a cost
       const willHaveCost = isOriginalWall || existedPrior;
       const costMessage = willHaveCost ? ` This will cost $${wallPricing.removeWall}.` : ' This is free (wall never existed or was custom-added).';
-
       let confirmMessage = `Remove ${getWallName(wallNumber)}?${costMessage}`;
-
       if (elementsOnWall.length > 0) {
         confirmMessage = `Wall ${wallNumber} has ${elementsOnWall.length} cabinet(s) on it. Removing the wall will also remove these cabinets.${costMessage} Continue?`;
       }
-
       if (window.confirm(confirmMessage)) {
         const newElements = elementsOnWall.length > 0
           ? currentRoomData.elements.filter(el => !elementsOnWall.includes(el))
           : currentRoomData.elements;
-
         setCurrentRoomData({
           ...currentRoomData,
           elements: newElements,
@@ -883,12 +453,10 @@ const KitchenDesigner = () => {
       }
     }
   };
-
   const getWallName = (wallNumber) => {
     const wallNames = { 1: 'North', 2: 'East', 3: 'South', 4: 'West' };
     return wallNames[wallNumber] || `Custom Wall ${wallNumber}`;
   };
-
   const toggleWallDrawingMode = () => {
     setIsDrawingWall(!isDrawingWall);
     if (isDrawingWall) {
@@ -898,30 +466,25 @@ const KitchenDesigner = () => {
       setWallDrawPreview(null);
     }
   };
-
   const toggleDoorMode = () => {
     setIsDoorMode(!isDoorMode);
     if (isDoorMode) {
       setSelectedElement(null);
     }
   };
-
   // Snap point to nearest wall endpoint for seamless connections (only if close enough)
   const snapToWallEndpoints = (x, y, excludeWallId = null) => {
     const snapDistance = 12; // Smaller snap distance - only snap if really close
     let bestSnap = { x, y, snapped: false };
     let minDistance = snapDistance + 1;
-
     // Check against existing custom walls
     for (const wall of customWalls) {
       if (wall.id === excludeWallId) continue;
-
       // Check both endpoints of each wall
       const endpoints = [
         { x: wall.x1, y: wall.y1 },
         { x: wall.x2, y: wall.y2 }
       ];
-
       for (const endpoint of endpoints) {
         const distance = Math.sqrt(Math.pow(x - endpoint.x, 2) + Math.pow(y - endpoint.y, 2));
         if (distance < minDistance) {
@@ -930,18 +493,15 @@ const KitchenDesigner = () => {
         }
       }
     }
-
     // Check against room corners for standard walls
     const roomWidth = (parseFloat(currentRoomData.dimensions.width) * 12) * scale;
     const roomHeight = (parseFloat(currentRoomData.dimensions.height) * 12) * scale;
-
     const roomCorners = [
       { x: 0, y: 0, name: 'top-left' },
       { x: roomWidth, y: 0, name: 'top-right' },
       { x: roomWidth, y: roomHeight, name: 'bottom-right' },
       { x: 0, y: roomHeight, name: 'bottom-left' }
     ];
-
     for (const corner of roomCorners) {
       const distance = Math.sqrt(Math.pow(x - corner.x, 2) + Math.pow(y - corner.y, 2));
       if (distance < minDistance) {
@@ -949,7 +509,6 @@ const KitchenDesigner = () => {
         bestSnap = { x: corner.x, y: corner.y, snapped: true, snapType: 'room-corner', corner: corner.name };
       }
     }
-
     // Also check against standard wall edges for perpendicular connections
     const standardWallEdges = [
       // Top wall (Wall 1) - check bottom edge
@@ -961,56 +520,43 @@ const KitchenDesigner = () => {
       // Left wall (Wall 4) - check right edge
       { x1: 0, y1: 0, x2: 0, y2: roomHeight, wallNum: 4 }
     ];
-
     for (const edge of standardWallEdges) {
       // Check if current walls includes this wall
       if (!(currentRoomData.walls || []).includes(edge.wallNum)) continue;
-
       // Find closest point on edge to our point
       const closestPoint = getClosestPointOnLine(x, y, edge.x1, edge.y1, edge.x2, edge.y2);
       const distance = Math.sqrt(Math.pow(x - closestPoint.x, 2) + Math.pow(y - closestPoint.y, 2));
-
       if (distance < minDistance) {
         minDistance = distance;
         bestSnap = { x: closestPoint.x, y: closestPoint.y, snapped: true, snapType: 'wall-edge', wallNum: edge.wallNum };
       }
     }
-
     return bestSnap;
   };
-
   // Helper function to find closest point on a line segment
   const getClosestPointOnLine = (px, py, x1, y1, x2, y2) => {
     const A = px - x1;
     const B = py - y1;
     const C = x2 - x1;
     const D = y2 - y1;
-
     const dot = A * C + B * D;
     const lenSq = C * C + D * D;
-
     if (lenSq === 0) return { x: x1, y: y1 }; // Point is on the line start
-
     let param = dot / lenSq;
-
     // Clamp to line segment
     if (param < 0) param = 0;
     if (param > 1) param = 1;
-
     return {
       x: x1 + param * C,
       y: y1 + param * D
     };
   };
-
   const addCustomWallAtPosition = (x1, y1, x2, y2) => {
     // Snap endpoints to existing walls for seamless connections
     const snappedStart = snapToWallEndpoints(x1, y1);
     const snappedEnd = snapToWallEndpoints(x2, y2);
-
     const newWallId = `custom-${Date.now()}`;
     const nextWallNumber = Math.max(...allAvailableWalls) + 1;
-
     const newCustomWall = {
       id: newWallId,
       x1: snappedStart.x,
@@ -1023,14 +569,12 @@ const KitchenDesigner = () => {
       wallNumber: nextWallNumber,
       doors: [] // Array to store doors on this wall
     };
-
-    console.log('Wall snapping:', {
+    /*console.log('Wall snapping:', {
       original: { x1, y1, x2, y2 },
       snapped: { x1: snappedStart.x, y1: snappedStart.y, x2: snappedEnd.x, y2: snappedEnd.y },
       startSnapped: snappedStart.snapped,
       endSnapped: snappedEnd.snapped
-    });
-
+    });*/
     // Add to current room walls
     const currentWalls = currentRoomData.walls || [1, 2, 3, 4];
     setCurrentRoomData({
@@ -1039,33 +583,27 @@ const KitchenDesigner = () => {
       allAvailableWalls: [...allAvailableWalls, nextWallNumber],
       walls: [...currentWalls, nextWallNumber].sort()
     });
-
     return nextWallNumber;
   };
-
   const markWallAsExistedPrior = (wallNumber) => {
     const updatedCustomWalls = customWalls.map(wall =>
       wall.wallNumber === wallNumber
         ? { ...wall, existedPrior: true }
         : wall
     );
-
     // Add to original walls for pricing calculation
     const updatedOriginalWalls = !originalWalls.includes(wallNumber)
       ? [...originalWalls, wallNumber]
       : originalWalls;
-
     setCurrentRoomData({
       ...currentRoomData,
       customWalls: updatedCustomWalls,
       originalWalls: updatedOriginalWalls
     });
   };
-
   const getCustomWallByNumber = (wallNumber) => {
     return customWalls.find(wall => wall.wallNumber === wallNumber);
   };
-
   // Door management functions
   const addDoor = (wallNumber, position, width = 32, type = 'standard') => {
     const doorId = `door-${Date.now()}`;
@@ -1076,22 +614,18 @@ const KitchenDesigner = () => {
       width: width, // Door width in inches
       type: type // 'standard', 'pantry', 'room', 'double'
     };
-
     setCurrentRoomData({
       ...currentRoomData,
       doors: [...(currentRoomData.doors || []), newDoor]
     });
-
     return doorId;
   };
-
   const removeDoor = (doorId) => {
     setCurrentRoomData({
       ...currentRoomData,
       doors: (currentRoomData.doors || []).filter(door => door.id !== doorId)
     });
   };
-
   const updateDoor = (doorId, updates) => {
     setCurrentRoomData({
       ...currentRoomData,
@@ -1100,11 +634,9 @@ const KitchenDesigner = () => {
       )
     });
   };
-
   const getDoorsOnWall = (wallNumber) => {
     return (currentRoomData.doors || []).filter(door => door.wallNumber === wallNumber);
   };
-
   const getDoorTypes = () => {
     return [
       { value: 'standard', label: 'Standard Door', width: 32 },
@@ -1114,29 +646,23 @@ const KitchenDesigner = () => {
       { value: 'sliding', label: 'Sliding Door', width: 48 }
     ];
   };
-
   // Render wall with doors as openings
   const renderWallWithDoors = (wallNumber, wallRect) => {
     const doors = getDoorsOnWall(wallNumber);
     const { x, y, width, height, isHorizontal } = wallRect;
-
     if (doors.length === 0) {
       // No doors, render solid wall
       return (
         <rect key={`wall-${wallNumber}`} x={x} y={y} width={width} height={height} fill="#666" />
       );
     }
-
     // Sort doors by position for proper rendering
     const sortedDoors = doors.sort((a, b) => a.position - b.position);
     const wallElements = [];
-
     let currentPos = 0; // Position along wall (0-100%)
-
     sortedDoors.forEach((door, index) => {
       // Calculate door width as percentage of wall length
       let wallLengthInches;
-
       if (wallNumber <= 4) {
         // Room walls: wall represents room dimension in feet, so convert to inches
         wallLengthInches = isHorizontal
@@ -1154,15 +680,12 @@ const KitchenDesigner = () => {
           wallLengthInches = 96;
         }
       }
-
       // Door width as percentage of wall length
       const doorWidthPercentage = (door.width / wallLengthInches) * 100;
       const halfDoorWidth = doorWidthPercentage / 2;
-
       // Ensure door doesn't go beyond wall boundaries
       const doorStart = Math.max(0, door.position - halfDoorWidth);
       const doorEnd = Math.min(100, door.position + halfDoorWidth);
-
       // Add wall segment before door
       if (currentPos < doorStart) {
         if (isHorizontal) {
@@ -1189,12 +712,10 @@ const KitchenDesigner = () => {
           );
         }
       }
-
       // Add door opening visualization with drag handles
       const doorColor = door.type === 'pantry' ? '#8B4513' : door.type === 'room' ? '#4CAF50' : '#2196F3';
       const doorCenterX = isHorizontal ? x + (door.position / 100) * width : x + width / 2;
       const doorCenterY = isHorizontal ? y + height / 2 : y + (door.position / 100) * height;
-
       if (isHorizontal) {
         wallElements.push(
           <g key={`door-${door.id}`}>
@@ -1292,10 +813,8 @@ const KitchenDesigner = () => {
           </g>
         );
       }
-
       currentPos = doorEnd;
     });
-
     // Add final wall segment after last door
     if (currentPos < 100) {
       if (isHorizontal) {
@@ -1322,21 +841,17 @@ const KitchenDesigner = () => {
         );
       }
     }
-
     return wallElements;
   };
-
   // Clean up allAvailableWalls to remove walls that no longer exist
   const cleanupDeletedWalls = () => {
     const currentWalls = currentRoomData.walls || [];
     const existingCustomWallNumbers = customWalls.map(wall => wall.wallNumber);
     const existingWallNumbers = [...new Set([...currentWalls, ...existingCustomWallNumbers])];
-
     // Keep original walls (1-4) plus any existing custom walls
     const cleanedAvailableWalls = allAvailableWalls.filter(wallNum =>
       wallNum <= 4 || existingWallNumbers.includes(wallNum)
     );
-
     if (cleanedAvailableWalls.length !== allAvailableWalls.length) {
       setCurrentRoomData({
         ...currentRoomData,
@@ -1344,17 +859,14 @@ const KitchenDesigner = () => {
       });
     }
   };
-
   const rotateCustomWall = (wallNumber, newAngleDegrees) => {
     const updatedCustomWalls = customWalls.map(wall => {
       if (wall.wallNumber === wallNumber) {
         const centerX = (wall.x1 + wall.x2) / 2;
         const centerY = (wall.y1 + wall.y2) / 2;
         const length = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
-
         const angleRad = (newAngleDegrees * Math.PI) / 180;
         const halfLength = length / 2;
-
         return {
           ...wall,
           x1: centerX - halfLength * Math.cos(angleRad),
@@ -1366,13 +878,11 @@ const KitchenDesigner = () => {
       }
       return wall;
     });
-
     setCurrentRoomData({
       ...currentRoomData,
       customWalls: updatedCustomWalls
     });
   };
-
   const getCurrentWallAngle = (wallNumber) => {
     const wall = getCustomWallByNumber(wallNumber);
     if (wall) {
@@ -1380,40 +890,31 @@ const KitchenDesigner = () => {
     }
     return 0;
   };
-
   const snapCabinetToCustomWall = (x, y, width, depth, excludeId) => {
     const snapDistance = 8;
     let bestSnap = { x, y, snapped: false };
     let minDistance = snapDistance + 1;
-
     for (const wall of customWalls) {
       if (!(currentRoomData.walls || []).includes(wall.wallNumber)) continue;
-
       const wallAngle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
       const cabinetCenterX = x + width / 2;
       const cabinetCenterY = y + depth / 2;
-
       // Find closest point on wall to cabinet center
       const wallLength = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
       const t = Math.max(0, Math.min(1,
         ((cabinetCenterX - wall.x1) * (wall.x2 - wall.x1) + (cabinetCenterY - wall.y1) * (wall.y2 - wall.y1)) /
         (wallLength * wallLength)
       ));
-
       const closestX = wall.x1 + t * (wall.x2 - wall.x1);
       const closestY = wall.y1 + t * (wall.y2 - wall.y1);
-
       const distance = Math.sqrt(Math.pow(cabinetCenterX - closestX, 2) + Math.pow(cabinetCenterY - closestY, 2));
-
       if (distance < minDistance) {
         // Snap cabinet parallel to wall at appropriate distance
         const offsetDistance = wall.thickness / 2 + Math.min(width, depth) / 2 + 2;
         const normalX = -Math.sin(wallAngle);
         const normalY = Math.cos(wallAngle);
-
         const snappedCenterX = closestX + normalX * offsetDistance;
         const snappedCenterY = closestY + normalY * offsetDistance;
-
         bestSnap = {
           x: snappedCenterX - width / 2,
           y: snappedCenterY - depth / 2,
@@ -1423,10 +924,8 @@ const KitchenDesigner = () => {
         minDistance = distance;
       }
     }
-
     return bestSnap;
   };
-
   // Floor Plan Preset Functions
   const applyFloorPlanPreset = (presetType) => {
     const presets = {
@@ -1456,7 +955,6 @@ const KitchenDesigner = () => {
         description: 'Peninsula layout - west wall removed'
       }
     };
-
     const preset = presets[presetType];
     if (preset) {
       setCurrentRoomData({
@@ -1468,7 +966,6 @@ const KitchenDesigner = () => {
       setShowFloorPlanPresets(false);
     }
   };
-
   // Show loading screen while prices are being fetched
   if (pricesLoading) {
     return (
@@ -1480,7 +977,6 @@ const KitchenDesigner = () => {
       </div>
     );
   }
-
   // -----------------------------
   // Pricing Calculation Functions
   // Calculate total cost based on cabinets, materials, and options
@@ -1489,21 +985,16 @@ const KitchenDesigner = () => {
     const data = roomData || currentRoomData;
     let total = 0;
     const cabinets = data.elements.filter(el => el.category === 'cabinet');
-
     cabinets.forEach(cabinet => {
       const basePrice = basePrices[cabinet.type] || 250;                    // Get base price for cabinet type
       const material = data.materials[cabinet.id] || 'laminate';            // Get material choice
       const materialMultiplier = materialMultipliers[material];             // Get material cost multiplier
-
       // Calculate size multiplier based on width (24" is standard)
       const sizeMultiplier = cabinet.width / 24;
-
       total += basePrice * materialMultiplier * sizeMultiplier;
     });
-
     // Add color upcharge based on number of colors selected
     total += colorPricing[data.colorCount] || 0;
-
     // Add wall modification costs
     const removedWalls = data.removedWalls || [];
     const dataOriginalWalls = data.originalWalls || [1, 2, 3, 4];
@@ -1512,29 +1003,24 @@ const KitchenDesigner = () => {
     if (chargeableRemovedWalls.length > 0) {
       total += chargeableRemovedWalls.length * wallPricing.removeWall;
     }
-
     // Add cost for custom walls that were added (walls beyond the original 4)
     const currentWalls = data.walls || [1, 2, 3, 4];
     const customAddedWalls = currentWalls.filter(wall => !dataOriginalWalls.includes(wall));
     if (customAddedWalls.length > 0) {
       total += customAddedWalls.length * wallPricing.addWall;
     }
-
     return total;
   };
-
   // -----------------------------
   // Cabinet Snapping Functions
   // Automatically align cabinets to each other and walls for clean layouts
   // -----------------------------
-
   // Snap cabinet to adjacent cabinets
   const snapToCabinet = (x, y, width, depth, excludeId, rotation) => {
     const snapDistance = 8; // Increased snap distance for easier snapping
     let snappedX = x;
     let snappedY = y;
     let snapped = false;
-
     currentRoomData.elements.forEach(element => {
       if (element.id !== excludeId && element.category === 'cabinet') {
         const elX = element.x;
@@ -1542,7 +1028,6 @@ const KitchenDesigner = () => {
         // Calculate element dimensions based on rotation
         const elWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
         const elDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-
         // Snap to right side of existing element
         if (Math.abs((elX + elWidth) - x) < snapDistance &&
           Math.abs(elY - y) < elDepth && Math.abs((elY + elDepth) - (y + depth)) < elDepth) {
@@ -1569,16 +1054,13 @@ const KitchenDesigner = () => {
         }
       }
     });
-
     return { x: snappedX, y: snappedY, snapped };
   };
-
   // Check if cabinet would collide with custom walls using proper line-rectangle intersection
   const checkWallCollision = (x, y, width, depth) => {
     for (const wall of customWalls) {
       // Only check walls that are present
       if (!(currentRoomData.walls || []).includes(wall.wallNumber)) continue;
-
       // Create cabinet rectangle corners
       const corners = [
         { x: x, y: y },
@@ -1586,37 +1068,31 @@ const KitchenDesigner = () => {
         { x: x + width, y: y + depth },
         { x: x, y: y + depth }
       ];
-
       // Check if wall line intersects with any cabinet edge or if cabinet overlaps wall
       const wallThickness = wall.thickness;
-
       // Calculate wall as a thick line (rectangle)
       const wallLength = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
       const wallAngle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
-
       // Wall center point
       const wallCenterX = (wall.x1 + wall.x2) / 2;
       const wallCenterY = (wall.y1 + wall.y2) / 2;
-
       // Check if cabinet center is too close to wall
       const cabinetCenterX = x + width / 2;
       const cabinetCenterY = y + depth / 2;
-
       // Distance from cabinet center to wall line
       const A = wall.y2 - wall.y1;
       const B = wall.x1 - wall.x2;
       const C = wall.x2 * wall.y1 - wall.x1 * wall.y2;
       const distance = Math.abs(A * cabinetCenterX + B * cabinetCenterY + C) / Math.sqrt(A * A + B * B);
-
       // Check if cabinet is too close to wall (considering both wall thickness and cabinet size)
-      const minDistance = (wallThickness + Math.min(width, depth)) / 2;
-
+      // Use a more conservative buffer for collision detection
+      const buffer = 60; // Reduced buffer to prevent over-aggressive collision detection
+      const minDistance = (wallThickness + Math.min(width, depth)) / 2 + buffer;
       if (distance < minDistance) {
         // Also check if the collision point is within the wall segment bounds
         const t = ((cabinetCenterX - wall.x1) * (wall.x2 - wall.x1) + (cabinetCenterY - wall.y1) * (wall.y2 - wall.y1)) /
           (Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
-
-        if (t >= -0.1 && t <= 1.1) { // Small buffer for edge cases
+        if (t >= 0.0 && t <= 1.0) { // Exact wall bounds - no clipping allowed
           return true; // Collision detected
         }
       }
@@ -1624,48 +1100,125 @@ const KitchenDesigner = () => {
     return false; // No collision
   };
 
+  // Push cabinet away from wall when collision detected
+  const pushAwayFromWall = (x, y, width, depth) => {
+    // Get all four corners of the cabinet
+    const cabinetCorners = [
+      { x: x, y: y }, // top-left
+      { x: x + width, y: y }, // top-right  
+      { x: x + width, y: y + depth }, // bottom-right
+      { x: x, y: y + depth } // bottom-left
+    ];
+
+    for (const wall of customWalls) {
+      if (!(currentRoomData.walls || []).includes(wall.wallNumber)) continue;
+
+      const wallThickness = wall.thickness;
+      const buffer = 20; // Safe distance from wall
+      let closestDistance = Infinity;
+      let closestCorner = null;
+      let wallNormalX = 0;
+      let wallNormalY = 0;
+
+      // Find the closest corner to the wall
+      for (const corner of cabinetCorners) {
+        const A = wall.y2 - wall.y1;
+        const B = wall.x1 - wall.x2;
+        const C = wall.x2 * wall.y1 - wall.x1 * wall.y2;
+        const distance = Math.abs(A * corner.x + B * corner.y + C) / Math.sqrt(A * A + B * B);
+
+        // Check if this corner is within the wall segment bounds
+        const t = ((corner.x - wall.x1) * (wall.x2 - wall.x1) + (corner.y - wall.y1) * (wall.y2 - wall.y1)) /
+          (Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
+
+        if (t >= -0.05 && t <= 1.05 && distance < closestDistance) {
+          closestDistance = distance;
+          closestCorner = corner;
+
+          // Calculate wall normal vector (perpendicular to wall)
+          const wallLength = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
+          wallNormalX = -(wall.y2 - wall.y1) / wallLength;
+          wallNormalY = (wall.x2 - wall.x1) / wallLength;
+
+          // Ensure normal points away from the cabinet center
+          const cabinetCenterX = x + width / 2;
+          const cabinetCenterY = y + depth / 2;
+          const closestPointX = wall.x1 + t * (wall.x2 - wall.x1);
+          const closestPointY = wall.y1 + t * (wall.y2 - wall.y1);
+
+          const toCenterX = cabinetCenterX - closestPointX;
+          const toCenterY = cabinetCenterY - closestPointY;
+
+          // If normal is pointing toward cabinet center, flip it
+          if (wallNormalX * toCenterX + wallNormalY * toCenterY < 0) {
+            wallNormalX = -wallNormalX;
+            wallNormalY = -wallNormalY;
+          }
+        }
+      }
+
+      const minDistance = wallThickness / 2 + buffer;
+
+      if (closestDistance < minDistance && closestCorner) {
+        // Push the entire cabinet away from the wall
+        const pushDistance = minDistance - closestDistance + 10; // Extra safety margin
+        const newX = x + wallNormalX * pushDistance;
+        const newY = y + wallNormalY * pushDistance;
+
+        // Make sure the new position is within room bounds
+        const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
+        const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
+        const clampedX = Math.max(0, Math.min(newX, roomWidth - width));
+        const clampedY = Math.max(0, Math.min(newY, roomHeight - depth));
+
+        return { x: clampedX, y: clampedY };
+      }
+    }
+
+    return null; // No push needed or possible
+  };
+
   // Snap cabinet to room walls
   const snapToWall = (x, y, width, depth) => {
     const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
     const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
     const snapDistance = 12; // Increased snap distance for walls
-
     let snappedX = x;
     let snappedY = y;
-
     // Snap to each wall if within snap distance
     if (x < snapDistance) snappedX = 0;                                    // Left wall
     if (x + width > roomWidth - snapDistance) snappedX = roomWidth - width; // Right wall
     if (y < snapDistance) snappedY = 0;                                    // Top wall
     if (y + depth > roomHeight - snapDistance) snappedY = roomHeight - depth; // Bottom wall
-
     // Ensure element stays within room bounds
     snappedX = Math.max(0, Math.min(snappedX, roomWidth - width));
     snappedY = Math.max(0, Math.min(snappedY, roomHeight - depth));
-
-    // Check for wall collision and adjust if needed
+    // Check for wall collision and push away from wall if needed
     if (checkWallCollision(snappedX, snappedY, width, depth)) {
-      // Try to find a nearby position that doesn't collide
+      // Push cabinet away from the colliding wall
+      const pushedPosition = pushAwayFromWall(snappedX, snappedY, width, depth);
+      if (pushedPosition) {
+        return pushedPosition;
+      }
+
+      // Fallback: Try to find a nearby position that doesn't collide
       const searchRadius = 20;
       for (let offsetX = -searchRadius; offsetX <= searchRadius; offsetX += 5) {
         for (let offsetY = -searchRadius; offsetY <= searchRadius; offsetY += 5) {
           const testX = Math.max(0, Math.min(snappedX + offsetX, roomWidth - width));
-          const testY = Math.max(0, Math.min(snappedY + offsetY, roomHeight - depth));
+          const testY = Math.max(0, Math.min(snappedY + offsetY, roomWidth - depth));
           if (!checkWallCollision(testX, testY, width, depth)) {
             return { x: testX, y: testY };
           }
         }
       }
     }
-
     return { x: snappedX, y: snappedY };
   };
-
   // -----------------------------
   // Element Management Functions
   // Add, update, delete, and manipulate cabinet/appliance elements
   // -----------------------------
-
   // Add new element to the room
   const addElement = (type) => {
     const elementSpec = elementTypes[type];
@@ -1673,24 +1226,20 @@ const KitchenDesigner = () => {
       console.warn('Cannot add element: Missing elementSpec for type:', type);
       return;
     }
-
     // Calculate element dimensions in pixels
     const elementWidth = elementSpec.defaultWidth * scale;
     const elementDepth = elementSpec.defaultDepth * scale;
-
     // Try to place new element in center of room first
     let roomCenter = {
       x: (parseFloat(currentRoomData.dimensions.width) * 12 * scale) / 2 - elementWidth / 2,
       y: (parseFloat(currentRoomData.dimensions.height) * 12 * scale) / 2 - elementDepth / 2
     };
-
     // Check if center position conflicts with door clearance
     if (checkDoorClearanceCollision(roomCenter.x, roomCenter.y, elementWidth, elementDepth)) {
       // Find alternative position away from door clearances
       const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
       const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
       let foundPosition = false;
-
       // Try different positions in a grid pattern
       for (let offsetY = 0; offsetY < roomHeight - elementDepth && !foundPosition; offsetY += 50) {
         for (let offsetX = 0; offsetX < roomWidth - elementWidth && !foundPosition; offsetX += 50) {
@@ -1700,13 +1249,11 @@ const KitchenDesigner = () => {
           }
         }
       }
-
       // If no position found, warn user and use center anyway
       if (!foundPosition) {
         alert('Warning: Element placed in door clearance area. Please move it to ensure proper door access.');
       }
     }
-
     const newElement = {
       id: Date.now(),                                                        // Unique ID based on timestamp
       type: type,
@@ -1722,26 +1269,21 @@ const KitchenDesigner = () => {
       category: elementSpec.category,
       zIndex: elementSpec.zIndex
     };
-
     const updatedData = {
       ...currentRoomData,
       elements: [...currentRoomData.elements, newElement]
     };
-
     // Set default material for cabinets
     if (newElement.category === 'cabinet') {
       updatedData.materials = { ...updatedData.materials, [newElement.id]: 'laminate' };
     }
-
     setCurrentRoomData(updatedData);
     setSelectedElement(newElement.id); // Auto-select newly added element
   };
-
   // -----------------------------
   // Touch and Mouse Event Handlers
   // Handle dragging and interaction with elements on the canvas for both touch and mouse
   // -----------------------------
-
   // Get coordinates from either touch or mouse event
   const getEventCoordinates = (e) => {
     if (e.touches && e.touches.length > 0) {
@@ -1749,7 +1291,6 @@ const KitchenDesigner = () => {
     }
     return { clientX: e.clientX, clientY: e.clientY };
   };
-
   // Start dragging an element in floor plan view (supports both touch and mouse)
   const handleMouseDown = (e, elementId) => {
     e.preventDefault();
@@ -1757,35 +1298,31 @@ const KitchenDesigner = () => {
     if (element) {
       // Get coordinates from touch or mouse event
       const coords = getEventCoordinates(e);
-
       // Convert coordinates to SVG coordinates
       const rect = canvasRef.current.getBoundingClientRect();
       const svgPt = canvasRef.current.createSVGPoint();
       svgPt.x = coords.clientX;
       svgPt.y = coords.clientY;
       const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
-
       // Store initial mouse position for drag threshold detection
       dragCacheRef.current.startPosition = {
         x: coords.clientX,
         y: coords.clientY
       };
       dragCacheRef.current.hasMoved = false;
-
       // Calculate offset from element position to cursor
       setDragOffset({
         x: cursorPt.x - element.x - 30, // Account for canvas offset
         y: cursorPt.y - element.y - 30
       });
-      
+
       // Select the element immediately, but don't start dragging yet
       setSelectedElement(elementId);
-      
+
       // Set up for potential dragging, but don't enable it yet
       dragCacheRef.current.pendingDrag = true;
     }
   };
-
   // Start dragging wall-mounted element in wall view (supports both touch and mouse)
   const handleWallViewMouseDown = (e, elementId) => {
     e.preventDefault();
@@ -1793,7 +1330,6 @@ const KitchenDesigner = () => {
     if (element && (element.type === 'wall' || element.type === 'medicine')) {
       setIsDraggingWallView(false);
       setSelectedElement(elementId);
-
       // Get coordinates from touch or mouse event
       const coords = getEventCoordinates(e);
       const rect = e.currentTarget.getBoundingClientRect();
@@ -1804,12 +1340,9 @@ const KitchenDesigner = () => {
       });
     }
   };
-
   // Enhanced easing functions for smooth animations
   const easeOutQuad = (t) => t * (2 - t);
   const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-
-
   // Handle touch/mouse movement during dragging with hybrid DOM manipulation for zero-lag response
   const handleMouseMove = (e) => {
     // Handle wall drawing preview - show live preview as mouse moves
@@ -1819,7 +1352,6 @@ const KitchenDesigner = () => {
       svgPt.x = coords.clientX;
       svgPt.y = coords.clientY;
       const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
-
       setWallDrawPreview({
         x1: wallDrawStart.x,
         y1: wallDrawStart.y,
@@ -1828,14 +1360,13 @@ const KitchenDesigner = () => {
       });
       return;
     }
-
     // Check if we should start dragging based on mouse movement threshold
     if (dragCacheRef.current.pendingDrag && !isDragging && selectedElement) {
       const coords = getEventCoordinates(e);
       const deltaX = Math.abs(coords.clientX - dragCacheRef.current.startPosition.x);
       const deltaY = Math.abs(coords.clientY - dragCacheRef.current.startPosition.y);
       const dragThreshold = 5; // pixels
-      
+
       if (deltaX > dragThreshold || deltaY > dragThreshold) {
         // Start dragging - user moved mouse enough
         setIsDragging(true);
@@ -1843,43 +1374,56 @@ const KitchenDesigner = () => {
         dragCacheRef.current.hasMoved = true;
       }
     }
-
     if (isDragging && selectedElement) {
       const element = currentRoomData.elements.find(el => el.id === selectedElement);
       if (element && canvasRef.current) {
         // Get transformation matrix immediately - no delay for zero-lag response
         const svgMatrix = canvasRef.current.getScreenCTM().inverse();
-        
+
         // Get coordinates from touch or mouse event
         const coords = getEventCoordinates(e);
         const svgPt = canvasRef.current.createSVGPoint();
         svgPt.x = coords.clientX;
         svgPt.y = coords.clientY;
         const cursorPt = svgPt.matrixTransform(svgMatrix);
-
         // Calculate new position directly
         const newX = cursorPt.x - dragOffset.x - 30;
         const newY = cursorPt.y - dragOffset.y - 30;
-
         // Calculate element dimensions based on rotation
         const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
         const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-
         // Keep element within room bounds
         const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
         const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
-
         let boundedX = Math.max(0, Math.min(newX, roomWidth - elementWidth));
         let boundedY = Math.max(0, Math.min(newY, roomHeight - elementDepth));
+        // Convert standard room walls to customWalls format for collision detection
+        const standardWallsForCollision = [];
+
+        if ((currentRoomData.walls || []).includes(1)) {
+          standardWallsForCollision.push({ wallNumber: 1, x1: 0, y1: 0, x2: roomWidth, y2: 0, thickness: 10 });
+        }
+        if ((currentRoomData.walls || []).includes(2)) {
+          standardWallsForCollision.push({ wallNumber: 2, x1: roomWidth, y1: 0, x2: roomWidth, y2: roomHeight, thickness: 10 });
+        }
+        if ((currentRoomData.walls || []).includes(3)) {
+          standardWallsForCollision.push({ wallNumber: 3, x1: 0, y1: roomHeight, x2: roomWidth, y2: roomHeight, thickness: 10 });
+        }
+        if ((currentRoomData.walls || []).includes(4)) {
+          standardWallsForCollision.push({ wallNumber: 4, x1: 0, y1: 0, x2: 0, y2: roomHeight, thickness: 10 });
+        }
+
+        // Combine standard walls with custom walls
+        const allWallsForCollision = [...standardWallsForCollision, ...customWalls];
 
         // Try snapping to other cabinets first
         let position = snapToCabinet(boundedX, boundedY, elementWidth, elementDepth, element.id, element.rotation);
-
+        //console.log('Cabinet snap result:', position);
         // If not snapped to cabinet, try snapping to walls
         if (!position.snapped) {
-          position = snapToWall(boundedX, boundedY, elementWidth, elementDepth);
+          position = snapToWall(boundedX, boundedY, elementWidth, elementDepth, currentRoomData, scale, allWallsForCollision, checkWallCollision, pushAwayFromWall);
+          //console.log('Wall snap result:', position);
         }
-
         // If not snapped to regular walls, try snapping to custom walls
         if (!position.snapped) {
           const customWallSnap = snapCabinetToCustomWall(boundedX, boundedY, elementWidth, elementDepth, element.id);
@@ -1891,19 +1435,44 @@ const KitchenDesigner = () => {
             // }
           }
         }
+        // Check for wall collision and push away if needed
+        //console.log('About to check wall collision for element:', element.id, 'at position:', position);
+        //console.log('customWalls length:', customWalls?.length, 'currentRoomData.walls:', currentRoomData?.walls);
+        //console.log('Full customWalls array:', customWalls);
+        //console.log('currentRoomData object keys:', Object.keys(currentRoomData));
 
-        // Check for wall collision before allowing the move
-        if (checkWallCollision(position.x, position.y, elementWidth, elementDepth)) {
-          // Don't allow the move if it would cause a collision
-          return;
+        // Check for room boundary collision since customWalls is empty
+        let hasCollision = false;
+        const wallThickness = 10; // Assume standard wall thickness
+        const wallBoundary = roomWidth - wallThickness - (elementWidth / 2); // Right wall boundary
+
+        //console.log('Room width:', roomWidth, 'Wall boundary:', wallBoundary, 'Element width:', elementWidth);
+
+        if (position.x >= wallBoundary) {
+          hasCollision = true;
+          //console.log('COLLISION DETECTED! X position', position.x, 'is at/beyond room wall boundary at', wallBoundary);
         }
 
-        // Check for door clearance collision before allowing the move
-        if (checkDoorClearanceCollision(position.x, position.y, elementWidth, elementDepth)) {
-          // Don't allow the move if it would block door clearance
+        if (hasCollision && !position.snapped) {
+          // Only push away from wall if not successfully snapped to another cabinet
+          const pushedPosition = pushAwayFromWall(position.x, position.y, elementWidth, elementDepth, allWallsForCollision, currentRoomData, scale, element.rotation || 0);
+          if (pushedPosition) {
+            position = pushedPosition;
+          } else {
+            // If we can't push it away, don't allow the move
+            return;
+          }
+        }
+        // Check for door clearance collision before allowing the move (skip if snapped to cabinet)
+        if (!position.snapped && checkDoorClearanceCollision(position.x, position.y, elementWidth, elementDepth)) {
+          // Don't allow the move if it would block door clearance (unless snapped to another cabinet)
           return;
         }
-
+        // Check for element-to-element collision before allowing the move (but allow touching if snapped)
+        if (!position.snapped && checkElementCollision(position.x, position.y, elementWidth, elementDepth, element)) {
+          // Don't allow the move if it would cause elements to overlap (unless snapped to another cabinet)
+          return;
+        }
         // HYBRID APPROACH: Direct DOM manipulation for immediate visual feedback (zero lag)
         // Find the SVG group element for this cabinet
         const svgElement = canvasRef.current.querySelector(`[data-element-id="${element.id}"]`);
@@ -1911,14 +1480,13 @@ const KitchenDesigner = () => {
           // Calculate transform based on rotation for immediate visual update
           const centerX = position.x + elementWidth / 2;
           const centerY = position.y + elementDepth / 2;
-          const transform = element.rotation !== 0 
+          const transform = element.rotation !== 0
             ? `translate(${centerX}, ${centerY}) rotate(${element.rotation}) translate(${-element.width * scale / 2}, ${-element.depth * scale / 2})`
             : `translate(${position.x}, ${position.y})`;
-          
+
           // Apply transform directly to DOM for zero lag response
           svgElement.setAttribute('transform', transform);
         }
-
         // Store position for React state update on mouse up
         dragCacheRef.current.lastPosition = { x: position.x, y: position.y };
       }
@@ -1930,11 +1498,9 @@ const KitchenDesigner = () => {
         const deltaY = e.clientY - dragOffset.x;
         const wallHeight = parseFloat(currentRoomData.dimensions.wallHeight);
         const viewScale = Math.min(800 / (wallHeight * 12), 400 / wallHeight);
-
         // Convert pixel movement to mount height change
         const mountHeightChange = deltaY / viewScale;
         const newMountHeight = Math.max(0, Math.min(wallHeight * 12 - element.height, dragOffset.startMount + mountHeightChange));
-
         // Update mount height immediately for wall view
         setCurrentRoomData(prevData => ({
           ...prevData,
@@ -1947,13 +1513,12 @@ const KitchenDesigner = () => {
       }
     }
   };
-
   // Cleanup function for drag ending or click completion
   const handleMouseUp = () => {
     // If we were dragging, update React state with final position
     if (isDragging && selectedElement && dragCacheRef.current.lastPosition) {
       const finalPosition = dragCacheRef.current.lastPosition;
-      
+
       // Update React state with final position to ensure proper data persistence
       setCurrentRoomData(prevData => ({
         ...prevData,
@@ -1964,7 +1529,6 @@ const KitchenDesigner = () => {
         )
       }));
     }
-
     // Clear drag cache
     dragCacheRef.current = {
       lastPosition: null,
@@ -1973,17 +1537,14 @@ const KitchenDesigner = () => {
       hasMoved: false,
       pendingDrag: false
     };
-
     setIsDragging(false);
     setIsDraggingWallView(false);
     setDragPreviewPosition(null); // Clear preview position
   };
-
   // -----------------------------
   // Element Property Update Functions
   // Modify element properties like dimensions, position, rotation
   // -----------------------------
-
   // Update any property of an element
   const updateElement = (elementId, updates) => {
     setCurrentRoomData({
@@ -1993,22 +1554,18 @@ const KitchenDesigner = () => {
       )
     });
   };
-
   // Update element dimensions with validation
   const updateElementDimensions = (elementId, property, value) => {
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue <= 0) return;
-
     const element = currentRoomData.elements.find(el => el.id === elementId);
     if (!element) return;
-
     const elementSpec = elementTypes[element.type];
     if (!elementSpec) {
       console.warn('Missing elementSpec for type:', element.type);
       return;
     }
     let updates = {};
-
     if (property === 'width') {
       updates.width = numValue;
     } else if (property === 'depth') {
@@ -2029,10 +1586,8 @@ const KitchenDesigner = () => {
       const maxMount = parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight;
       updates.mountHeight = Math.max(0, Math.min(numValue, maxMount));
     }
-
     updateElement(elementId, updates);
   };
-
   // Rotate element by specified angle
   const rotateElement = (elementId, angle) => {
     const element = currentRoomData.elements.find(el => el.id === elementId);
@@ -2040,35 +1595,29 @@ const KitchenDesigner = () => {
       updateElement(elementId, { rotation: (element.rotation + angle) % 360 });
     }
   };
-
   // Set corner cabinet hinge direction
   const rotateCornerCabinet = (elementId, direction) => {
     updateElement(elementId, { hingeDirection: direction });
   };
-
   // Delete element and its associated data
   const deleteElement = (elementId) => {
     const updatedData = {
       ...currentRoomData,
       elements: currentRoomData.elements.filter(el => el.id !== elementId)
     };
-
     // Remove material selection for deleted cabinet
     if (currentRoomData.materials[elementId]) {
       const newMaterials = { ...currentRoomData.materials };
       delete newMaterials[elementId];
       updatedData.materials = newMaterials;
     }
-
     setCurrentRoomData(updatedData);
     setSelectedElement(null);
   };
-
   // -----------------------------
   // Design Management Functions
   // Handle room switching, design reset, and data persistence
   // -----------------------------
-
   // Reset current room design
   const resetDesign = () => {
     if (activeRoom === 'kitchen') {
@@ -2090,13 +1639,11 @@ const KitchenDesigner = () => {
     setStep('dimensions');
     localStorage.removeItem(`${activeRoom}DesignState`);
   };
-
   // Switch between kitchen and bathroom design
   const switchRoom = (room) => {
     setActiveRoom(room);
     setSelectedElement(null);
     setViewMode('floor');
-
     // Update canvas scale for the new room
     const roomData = room === 'kitchen' ? kitchenData : bathroomData;
     if (roomData.dimensions.width && roomData.dimensions.height) {
@@ -2107,22 +1654,18 @@ const KitchenDesigner = () => {
       setScale(newScale);
     }
   };
-
   // -----------------------------
   // Wall View Helper Functions
   // Calculate which elements are positioned against specific walls
   // -----------------------------
-
   // Get elements positioned against a specific wall
   const getElementsOnWall = (wallNumber) => {
     const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
     const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
     const threshold = 20; // Distance from wall to be considered "on wall"
-
     return currentRoomData.elements.filter(element => {
       const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
       const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-
       switch (wallNumber) {
         case 1: // Bottom wall
           return element.y + elementDepth > roomHeight - threshold;
@@ -2137,7 +1680,6 @@ const KitchenDesigner = () => {
       }
     });
   };
-
   // Calculate extended door clearance zones for ADA compliance - zones extend beyond room boundaries
   const getDoorClearanceZones = () => {
     // Configurable clearance offsets - adjust these values to test different clearance positioning
@@ -2145,20 +1687,16 @@ const KitchenDesigner = () => {
     const CLEARANCE_WIDTH_MULTIPLIER = 1.0;  // How wide the clearance is (1.0x = same as door width)
     const POSITION_OFFSET_X = -33;              // Manual X offset adjustment
     const POSITION_OFFSET_Y = 0;              // Manual Y offset adjustment
-
     const clearanceZones = [];
     const doors = currentRoomData.doors || [];
     const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
     const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
-
     doors.forEach(door => {
       const doorWidthPixels = door.width * scale;
       // Use configurable multipliers for clearance dimensions
       const clearanceDepth = doorWidthPixels * CLEARANCE_DEPTH_MULTIPLIER;
       const clearanceWidth = doorWidthPixels * CLEARANCE_WIDTH_MULTIPLIER;
-
       let clearanceZone = null;
-
       if (door.wallNumber <= 4) {
         // Standard walls (1-4) - match exact wall rendering coordinates
         // Define wall parameters exactly as they are in renderWallWithDoors calls
@@ -2177,11 +1715,9 @@ const KitchenDesigner = () => {
             wallParams = { x: 20, y: 20, width: 10, height: roomHeight + 20, isHorizontal: false };
             break;
         }
-
         // Calculate door center using EXACT same logic as renderWallWithDoors
         const doorCenterX = wallParams.isHorizontal ? wallParams.x + (door.position / 100) * wallParams.width : wallParams.x + wallParams.width / 2;
         const doorCenterY = wallParams.isHorizontal ? wallParams.y + wallParams.height / 2 : wallParams.y + (door.position / 100) * wallParams.height;
-
         // Create clearance zone centered exactly on the door with configurable offsets
         if (wallParams.isHorizontal) {
           // Horizontal walls (top/bottom) - clearance extends vertically into room
@@ -2209,17 +1745,14 @@ const KitchenDesigner = () => {
           // Calculate wall properties
           const wallLength = Math.sqrt(Math.pow(customWall.x2 - customWall.x1, 2) + Math.pow(customWall.y2 - customWall.y1, 2));
           const wallAngle = Math.atan2(customWall.y2 - customWall.y1, customWall.x2 - customWall.x1);
-
           // Calculate door position along the wall
           const doorPosAlongWall = (door.position / 100) * wallLength;
           const doorCenterX = 30 + customWall.x1 + Math.cos(wallAngle) * doorPosAlongWall;
           const doorCenterY = 30 + customWall.y1 + Math.sin(wallAngle) * doorPosAlongWall;
-
           // Calculate perpendicular direction (into room) - rotate wall direction by 90 degrees
           const perpAngle = wallAngle + Math.PI / 2;
           const clearanceCenterX = doorCenterX + Math.cos(perpAngle) * (clearanceDepth / 2);
           const clearanceCenterY = doorCenterY + Math.sin(perpAngle) * (clearanceDepth / 2);
-
           // For custom walls, create clearance zone with configurable dimensions
           clearanceZone = {
             x: clearanceCenterX - clearanceWidth / 2 + POSITION_OFFSET_X,
@@ -2234,20 +1767,16 @@ const KitchenDesigner = () => {
           };
         }
       }
-
       if (clearanceZone) {
         clearanceZones.push(clearanceZone);
         // Debug logging for door clearance zones
       }
     });
-
     return clearanceZones;
   };
-
   // Check if an element position conflicts with door clearance zones
   const checkDoorClearanceCollision = (elementX, elementY, elementWidth, elementHeight) => {
     const clearanceZones = getDoorClearanceZones();
-
     return clearanceZones.some(zone => {
       if (zone.rotation !== undefined) {
         // Rotated clearance zone (custom wall) - use more complex collision detection
@@ -2261,58 +1790,94 @@ const KitchenDesigner = () => {
           elementX > zone.x + zone.width ||
           elementY + elementHeight < zone.y ||
           elementY > zone.y + zone.height);
-
-
         return collision;
       }
     });
   };
+  // Check if an element would collide with other elements
+  const checkElementCollision = (elementX, elementY, elementWidth, elementHeight, draggedElement) => {
+    const overlapBuffer = 5; // Allow 5px overlap (negative means elements can touch/slightly overlap)
 
+    return currentRoomData.elements.some(otherElement => {
+      // Skip self and non-cabinet elements
+      if (otherElement.id === draggedElement.id || otherElement.category !== 'cabinet') {
+        return false;
+      }
+      // Get element specifications for height information
+      const draggedSpec = elementTypes[draggedElement.type];
+      const otherSpec = elementTypes[otherElement.type];
+
+      if (!draggedSpec || !otherSpec) {
+        return false;
+      }
+      // Calculate heights and mount positions
+      const draggedHeight = draggedElement.actualHeight || draggedSpec.fixedHeight || draggedSpec.defaultHeight;
+      const draggedMountHeight = draggedElement.mountHeight || draggedSpec.mountHeight || 0;
+      const draggedTopHeight = draggedMountHeight + draggedHeight;
+
+      const otherHeight = otherElement.actualHeight || otherSpec.fixedHeight || otherSpec.defaultHeight;
+      const otherMountHeight = otherElement.mountHeight || otherSpec.mountHeight || 0;
+      const otherTopHeight = otherMountHeight + otherHeight;
+      // Check if elements don't conflict vertically (can coexist at different heights)
+      const verticalClearance = Math.max(
+        draggedMountHeight - otherTopHeight,  // Distance from dragged bottom to other top
+        otherMountHeight - draggedTopHeight   // Distance from other bottom to dragged top  
+      );
+
+      // If there's sufficient vertical clearance (>= 3 inches), allow horizontal overlap
+      if (verticalClearance >= 3) {
+        return false; // No collision - elements at different heights
+      }
+      // Calculate other element's dimensions based on rotation
+      const otherWidth = otherElement.rotation % 180 === 0 ? otherElement.width * scale : otherElement.depth * scale;
+      const otherDepth = otherElement.rotation % 180 === 0 ? otherElement.depth * scale : otherElement.width * scale;
+      // AABB collision detection with overlap buffer
+      const collision = !(
+        elementX + elementWidth < otherElement.x + overlapBuffer ||
+        elementX > otherElement.x + otherWidth - overlapBuffer ||
+        elementY + elementHeight < otherElement.y + overlapBuffer ||
+        elementY > otherElement.y + otherDepth - overlapBuffer
+      );
+      return collision;
+    });
+  };
   // Check collision between an axis-aligned rectangle and a rotated rectangle
   const checkRotatedRectCollision = (ax, ay, aWidth, aHeight, aRotation, bx, by, bWidth, bHeight, bRotation) => {
     // For simplicity, we'll use a conservative approach:
     // Calculate the bounding box of the rotated clearance zone and check against that
     const angleRad = (bRotation || 0) * Math.PI / 180;
-
     // Calculate corners of rotated rectangle
     const halfWidth = bWidth / 2;
     const halfHeight = bHeight / 2;
-
     const corners = [
       { x: -halfWidth, y: -halfHeight },
       { x: halfWidth, y: -halfHeight },
       { x: halfWidth, y: halfHeight },
       { x: -halfWidth, y: halfHeight }
     ];
-
     // Rotate corners and find bounding box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     corners.forEach(corner => {
       const rotatedX = corner.x * Math.cos(angleRad) - corner.y * Math.sin(angleRad) + bx;
       const rotatedY = corner.x * Math.sin(angleRad) + corner.y * Math.cos(angleRad) + by;
-
       minX = Math.min(minX, rotatedX);
       maxX = Math.max(maxX, rotatedX);
       minY = Math.min(minY, rotatedY);
       maxY = Math.max(maxY, rotatedY);
     });
-
     // Check collision with expanded bounding box
     return !(ax + aWidth < minX ||
       ax > maxX ||
       ay + aHeight < minY ||
       ay > maxY);
   };
-
   // -----------------------------
   // Special Rendering Functions
   // Custom rendering for special cabinet types and visual effects
   // -----------------------------
-
   // Render corner cabinet with special L-shape (relative positioning for transformed group)
   const renderCornerCabinet = (element) => {
     const size = element.width * scale;
-
     // Create L-shaped path based on hinge direction (using relative coordinates)
     const path = element.hingeDirection === 'left'
       ? `M 0 0 
@@ -2329,7 +1894,6 @@ const KitchenDesigner = () => {
          L ${size * 0.4} ${size * 0.6}
          L 0 ${size * 0.6}
          Z`;
-
     return (
       <g>
         <path
@@ -2346,7 +1910,7 @@ const KitchenDesigner = () => {
             {/* Door division lines */}
             <line x1={size * 0.6} y1={0} x2={size * 0.6} y2={size * 0.6} stroke="#333" strokeWidth="1" />
             <line x1={0} y1={size * 0.6} x2={size * 0.6} y2={size * 0.6} stroke="#333" strokeWidth="1" />
-            
+
             {/* Door outline rectangles to show door locations */}
             {/* Top horizontal door */}
             <rect
@@ -2370,7 +1934,7 @@ const KitchenDesigner = () => {
               strokeWidth="0.5"
               rx="2"
             />
-            
+
             {/* Door swing arcs now handled by renderDoorGraphic in DraggableCabinet */}
           </>
         ) : (
@@ -2378,7 +1942,7 @@ const KitchenDesigner = () => {
             {/* Door division lines */}
             <line x1={size * 0.4} y1={0} x2={size * 0.4} y2={size * 0.6} stroke="#333" strokeWidth="1" />
             <line x1={size * 0.4} y1={size * 0.6} x2={size} y2={size * 0.6} stroke="#333" strokeWidth="1" />
-            
+
             {/* Door outline rectangles to show door locations */}
             {/* Left horizontal door */}
             <rect
@@ -2402,14 +1966,13 @@ const KitchenDesigner = () => {
               strokeWidth="0.5"
               rx="2"
             />
-            
+
             {/* Door swing arcs now handled by renderDoorGraphic in DraggableCabinet */}
           </>
         )}
       </g>
     );
   };
-
   // Render door swing arc for cabinets
   const renderDoorGraphic = (x, y, width, depth, rotation) => {
     const cx = rotation === 0 ? x : rotation === 90 ? x + depth : rotation === 180 ? x + width : x;
@@ -2417,15 +1980,12 @@ const KitchenDesigner = () => {
     const radius = Math.min(width, depth) * 0.3;
     const startAngle = rotation;
     const endAngle = rotation + 90;
-
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
-
     const x1 = cx + radius * Math.cos(startRad);
     const y1 = cy + radius * Math.sin(startRad);
     const x2 = cx + radius * Math.cos(endRad);
     const y2 = cy + radius * Math.sin(endRad);
-
     return (
       <path
         d={`M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`}
@@ -2436,487 +1996,40 @@ const KitchenDesigner = () => {
       />
     );
   };
-
   // -----------------------------
   // PDF Generation and Quote Functions
   // Create professional quotes and send to contractor
   // -----------------------------
-
-  // Generate PDF quote document
-  const generatePDF = async () => {
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let currentY = 20;
-
-    // PDF Header
-    pdf.setFontSize(20);
-    pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 10;
-
-    pdf.setFontSize(12);
-    pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
-    currentY += 15;
-
-    // Client Information Section
-    pdf.setFontSize(12);
-    pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Contact Method: ${clientInfo.contactPreference}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
-    currentY += 15;
-
-    // Process each room included in quote
-    const roomsToInclude = [];
-    if (clientInfo.includeKitchen && kitchenData.elements.length > 0) roomsToInclude.push({ name: 'Kitchen', data: kitchenData });
-    if (clientInfo.includeBathroom && bathroomData.elements.length > 0) roomsToInclude.push({ name: 'Bathroom', data: bathroomData });
-
-    for (const room of roomsToInclude) {
-      // Start new page if needed
-      if (currentY > pageHeight - 50) {
-        pdf.addPage();
-        currentY = 20;
-      }
-
-      // Room header
-      pdf.setFontSize(16);
-      pdf.text(room.name + ' Design', 20, currentY);
-      currentY += 10;
-
-      // Room dimensions
-      pdf.setFontSize(10);
-      pdf.text(`Room Dimensions: ${room.data.dimensions.width}' × ${room.data.dimensions.height}' × ${room.data.dimensions.wallHeight}" height`, 20, currentY);
-      currentY += 10;
-
-      // Cabinet specifications for this room
-      const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
-      if (cabinets.length > 0) {
-        pdf.setFontSize(12);
-        pdf.text('Cabinet Specifications:', 20, currentY);
-        currentY += 8;
-
-        pdf.setFontSize(10);
-        cabinets.forEach((cabinet, index) => {
-          const spec = elementTypes[cabinet.type];
-          const material = room.data.materials[cabinet.id] || 'laminate';
-          const basePrice = basePrices[cabinet.type] || 250;
-          const materialMultiplier = materialMultipliers[material];
-          const sizeMultiplier = cabinet.width / 24;
-          const price = basePrice * materialMultiplier * sizeMultiplier;
-
-          pdf.text(`${index + 1}. ${spec.name}: ${cabinet.width}" × ${cabinet.depth}" × ${cabinet.actualHeight || spec.fixedHeight}"`, 25, currentY);
-          pdf.text(`Material: ${material} - $${price.toFixed(2)}`, 140, currentY);
-          currentY += 6;
-
-          // Check if new page needed
-          if (currentY > pageHeight - 20) {
-            pdf.addPage();
-            currentY = 20;
-          }
-        });
-
-        // Wall modifications for this room
-        const removedWalls = room.data.removedWalls || [];
-        const chargeableRemoved = removedWalls.filter(wall => originalWalls.includes(wall));
-        const customAdded = (room.data.walls || []).filter(wall => !originalWalls.includes(wall));
-
-        if (chargeableRemoved.length > 0 || customAdded.length > 0) {
-          currentY += 5;
-          pdf.setFontSize(10);
-          pdf.text('Wall Modifications:', 20, currentY);
-          currentY += 5;
-
-          if (chargeableRemoved.length > 0) {
-            pdf.text(`• ${chargeableRemoved.length} wall(s) removed: $${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}`, 25, currentY);
-            currentY += 5;
-          }
-
-          if (customAdded.length > 0) {
-            pdf.text(`• ${customAdded.length} custom wall(s) added: $${(customAdded.length * wallPricing.addWall).toFixed(2)}`, 25, currentY);
-            currentY += 5;
-          }
-        }
-
-        // Room subtotal
-        currentY += 5;
-        const roomTotal = calculateTotalPrice(room.data);
-        pdf.setFontSize(11);
-        pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
-        currentY += 10;
-      }
-    }
-
-    // Grand total calculation
-    if (currentY > pageHeight - 40) {
-      pdf.addPage();
-      currentY = 20;
-    }
-
-    currentY += 10;
-    pdf.setFontSize(14);
-    let grandTotal = 0;
-    if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
-    if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
-
-    pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
-    currentY += 10;
-
-    // Disclaimer
-    pdf.setFontSize(10);
-    pdf.text('* This is an estimate. Final pricing may vary based on specific requirements.', 20, currentY);
-    currentY += 10;
-
-    // Customer comments section
-    if (clientInfo.comments) {
-      pdf.text('Customer Notes:', 20, currentY);
-      currentY += 6;
-      const lines = pdf.splitTextToSize(clientInfo.comments, 170);
-      pdf.text(lines, 20, currentY);
-    }
-
-    // Save PDF with client name and date
-    pdf.save(`cabinet-design-${clientInfo.name.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
-
-    // Return PDF blob for potential email attachment
-    return pdf.output('blob');
-  };
-
-  // Send quote to contractor
-  // Send quote to contractor (modified to save to database)
-
-
-  const sendQuote = async () => {
-    // Validate required client information
-    if (!clientInfo.name || !clientInfo.email || !clientInfo.phone) {
-      if (!clientInfo.name) {
-        alert('please fill in your name');
-        return;
-      }
-      else if (!clientInfo.email) {
-        alert('please fill in your email');
-        return;
-      }
-      else if (!clientInfo.phone) {
-        alert('please fill in your phone number');
-        return;
-      }
-    }
-
-
-    try {
-      // Show loading state
-      const loadingMessage = document.createElement('div');
-      loadingMessage.innerHTML = 'Capturing your design...';
-      loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;';
-      document.body.appendChild(loadingMessage);
-
-      // Helper function to capture SVG and convert to canvas for PDF
-      const captureSVG = async (svgElement) => {
-        if (!svgElement) return null;
-
-        try {
-          // Clone the SVG to avoid modifying the original
-          const clonedSvg = svgElement.cloneNode(true);
-
-          // Set explicit dimensions if missing
-          const rect = svgElement.getBoundingClientRect();
-          if (!clonedSvg.getAttribute('width')) {
-            clonedSvg.setAttribute('width', rect.width);
-          }
-          if (!clonedSvg.getAttribute('height')) {
-            clonedSvg.setAttribute('height', rect.height);
-          }
-
-          // Add white background
-          const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          background.setAttribute('width', '100%');
-          background.setAttribute('height', '100%');
-          background.setAttribute('fill', 'white');
-          clonedSvg.insertBefore(background, clonedSvg.firstChild);
-
-          // Convert SVG to canvas for better PDF compatibility
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-
-          // Set canvas size
-          canvas.width = parseFloat(clonedSvg.getAttribute('width')) || rect.width;
-          canvas.height = parseFloat(clonedSvg.getAttribute('height')) || rect.height;
-
-          // Create image from SVG
-          const img = new Image();
-          const svgData = new XMLSerializer().serializeToString(clonedSvg);
-          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(svgBlob);
-
-          return new Promise((resolve) => {
-            img.onload = () => {
-              ctx.fillStyle = 'white';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(img, 0, 0);
-              URL.revokeObjectURL(url);
-              const dataURL = canvas.toDataURL('image/png', 1.0);
-              resolve(dataURL);
-            };
-            img.onerror = () => {
-              console.error('Error loading SVG image');
-              URL.revokeObjectURL(url);
-              resolve(null);
-            };
-            img.src = url;
-          });
-        } catch (error) {
-          console.error('Error capturing SVG:', error);
-          return null;
-        }
-      };
-
-      // Capture floor plan
-      let floorPlanImage = null;
-      if (viewMode !== 'floor') {
-        setViewMode('floor');
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      const floorCanvas = canvasRef.current;
-      if (floorCanvas) {
-        floorPlanImage = await captureSVG(floorCanvas);
-      }
-
-      // Capture wall views
-      const wallViewImages = [];
-      setViewMode('wall');
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      for (let wall = 1; wall <= 4; wall++) {
-        setSelectedWall(wall);
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const wallCanvas = wallViewRef.current;
-        if (wallCanvas) {
-          const wallImage = await captureSVG(wallCanvas);
-          if (wallImage) {
-            wallViewImages.push({
-              wall: wall,
-              image: wallImage
-            });
-          }
-        }
-      }
-
-      // Return to floor view
-      setViewMode('floor');
-
-      loadingMessage.innerHTML = 'Generating PDF...';
-
-      // Generate PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let currentY = 20;
-
-      // PDF Header
-      pdf.setFontSize(20);
-      pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 10;
-
-      pdf.setFontSize(12);
-      pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
-      currentY += 15;
-
-      // Client Information
-      pdf.setFontSize(12);
-      pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
-      currentY += 8;
-      pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
-      currentY += 8;
-      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
-      currentY += 15;
-
-      // Add floor plan to PDF
-      if (floorPlanImage) {
-        pdf.setFontSize(14);
-        pdf.text('Floor Plan Design', 20, currentY);
-        currentY += 10;
-
-        try {
-          pdf.addImage(floorPlanImage, 'PNG', 20, currentY, 170, 100);
-          currentY += 110;
-        } catch (e) {
-          console.error('Error adding floor plan to PDF:', e);
-          pdf.text('(Wall view available in admin panel)', 20, currentY);
-          currentY += 10;
-        }
-      }
-
-      // Calculate totals
-      let grandTotal = 0;
-      if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
-      if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
-
-      // Add wall views on new page
-      if (wallViewImages.length > 0) {
-        pdf.addPage();
-        currentY = 20;
-
-        pdf.setFontSize(16);
-        pdf.text('Wall Elevation Views', pageWidth / 2, currentY, { align: 'center' });
-        currentY += 15;
-
-        for (let i = 0; i < wallViewImages.length; i++) {
-          if (i % 2 === 0 && i > 0) {
-            pdf.addPage();
-            currentY = 20;
-          }
-
-          pdf.setFontSize(12);
-          pdf.text(`Wall ${wallViewImages[i].wall}`, 20, currentY);
-          currentY += 5;
-
-          try {
-            pdf.addImage(wallViewImages[i].image, 'PNG', 20, currentY, 170, 80);
-            currentY += 90;
-          } catch (e) {
-            console.error('Error adding wall view to PDF:', e);
-            pdf.text('(Wall view available in admin panel)', 20, currentY);
-            currentY += 10;
-          }
-        }
-      }
-
-      // Add specifications
-      pdf.addPage();
-      currentY = 20;
-
-      pdf.setFontSize(16);
-      pdf.text('Cabinet Specifications', 20, currentY);
-      currentY += 15;
-
-      // Process each room
-      const roomsToInclude = [];
-      if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
-        roomsToInclude.push({ name: 'Kitchen', data: kitchenData });
-      }
-      if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
-        roomsToInclude.push({ name: 'Bathroom', data: bathroomData });
-      }
-
-      for (const room of roomsToInclude) {
-        pdf.setFontSize(14);
-        pdf.text(`${room.name} (${room.data.dimensions.width}' × ${room.data.dimensions.height}')`, 20, currentY);
-        currentY += 8;
-
-        const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
-
-        pdf.setFontSize(10);
-        cabinets.forEach((cabinet, index) => {
-          const material = room.data.materials[cabinet.id] || 'laminate';
-          pdf.text(`${index + 1}. ${cabinet.type}: ${cabinet.width}" × ${cabinet.depth}" - ${material}`, 25, currentY);
-          currentY += 6;
-
-          if (currentY > pageHeight - 30) {
-            pdf.addPage();
-            currentY = 20;
-          }
-        });
-
-        const roomTotal = calculateTotalPrice(room.data);
-        pdf.setFontSize(11);
-        pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
-        currentY += 10;
-      }
-
-      // Grand total
-      pdf.setFontSize(14);
-      pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
-
-      // Get PDF blob
-      const pdfBlob = pdf.output('blob');
-
-      loadingMessage.innerHTML = 'Sending design...';
-
-      // Create form data
-      const formData = new FormData();
-      formData.append('pdf', pdfBlob, 'design.pdf');
-
-      // Design data with images
-      const designData = {
-        client_name: clientInfo.name,
-        client_email: clientInfo.email || '',
-        client_phone: clientInfo.phone || '',
-        contact_preference: clientInfo.contactPreference,
-        kitchen_data: clientInfo.includeKitchen ? kitchenData : null,
-        bathroom_data: clientInfo.includeBathroom ? bathroomData : null,
-        include_kitchen: clientInfo.includeKitchen,
-        include_bathroom: clientInfo.includeBathroom,
-        total_price: grandTotal,
-        comments: clientInfo.comments || '',
-        floor_plan_image: floorPlanImage,
-        wall_view_images: wallViewImages
-      };
-
-      console.log('Sending design:', {
-        hasFloorPlan: !!floorPlanImage,
-        wallViews: wallViewImages.length,
-        dataSize: JSON.stringify(designData).length
-      });
-
-      formData.append('designData', JSON.stringify(designData));
-
-      // Send to backend
-      const response = await fetch(`${API_BASE}/api/designs`, {
-        method: 'POST',
-        body: formData
-      });
-
-      document.body.removeChild(loadingMessage);
-
-      if (response.ok) {
-        const result = await response.json();
-
-        alert(`Thank you! Your design has been sent to ${COMPANY_NAME}.`);
-
-        // Reset form
-        setClientInfo({
-          name: '',
-          email: '',
-          phone: '',
-          contactPreference: 'email',
-          includeKitchen: true,
-          includeBathroom: false,
-          comments: ''
-        });
-
-        // Offer download
-        if (window.confirm('Would you like to download a copy?')) {
-          pdf.save(`cabinet-design-${clientInfo.name.replace(/\s+/g, '-')}.pdf`);
-        }
-      } else {
-        throw new Error('Failed to send design');
-      }
-
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error sending your design. Please try again.', alert);
+  // PDF and quote services are now handled by the pdfService module
+  // Wrapper function to call the PDF service
+  const handleSendQuote = async () => {
+    const result = await sendQuote({
+      clientInfo,
+      kitchenData,
+      bathroomData,
+      calculateTotalPrice,
+      canvasRef,
+      wallViewRef,
+      viewMode,
+      setViewMode,
+      selectedWall,
+      setSelectedWall
+    });
+    if (result?.success && result?.resetClientInfo) {
+      setClientInfo(result.resetClientInfo);
     }
   };
-
-
   // -----------------------------
   // MAIN RENDER LOGIC
   // Conditional rendering based on current application step and state
   // Controls the overall application flow and interface display
   // -----------------------------
-
   // STEP 1: Room Dimensions Setup
   // Initial configuration screen where users input room measurements and select room type
   if (step === 'dimensions') {
     return (
       <>
         <MainNavBar />
-
         <div className="min-h-screen p-8" style={{ background: 'rgb(110,110,110)' }}>
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -2927,7 +2040,6 @@ const KitchenDesigner = () => {
               <p className="text-gray-600 mb-8 text-center">
                 Design your {activeRoom}
               </p>
-
               <div className="space-y-6">
                 {/* Room Type Selection */}
                 {/* Toggle between kitchen and bathroom design modes */}
@@ -2958,7 +2070,6 @@ const KitchenDesigner = () => {
                     </button>
                   </div>
                 </div>
-
                 {/* Room Dimensions Input */}
                 {/* Grid layout for width and depth input fields */}
                 <div className="grid md:grid-cols-2 gap-6">
@@ -3001,7 +2112,6 @@ const KitchenDesigner = () => {
                     />
                   </div>
                 </div>
-
                 {/* Wall height input */}
                 {/* Single input for ceiling/wall height measurement */}
                 <div>
@@ -3021,7 +2131,6 @@ const KitchenDesigner = () => {
                     max="144"
                   />
                 </div>
-
                 {/* Submit button to proceed to design interface */}
                 <button
                   onClick={handleDimensionsSubmit}
@@ -3029,7 +2138,6 @@ const KitchenDesigner = () => {
                 >
                   Start Designing
                 </button>
-
                 {/* Show existing design status */}
                 {/* Display current progress if user has existing designs */}
                 <div className="text-center text-sm text-gray-600">
@@ -3047,7 +2155,6 @@ const KitchenDesigner = () => {
       </>
     );
   }
-
   // STEP 2: Main Design Interface
   // Full-featured design environment with sidebar controls and main canvas
   return (
@@ -3093,10 +2200,8 @@ const KitchenDesigner = () => {
           </div>
         </div>
       )}
-
       <div className="min-h-screen bg-gray-100" >
         <div className="flex h-screen">
-
           {/* ========== LEFT SIDEBAR ========== */}
           <DesignerSidebar
             // UI State
@@ -3106,13 +2211,13 @@ const KitchenDesigner = () => {
             switchRoom={switchRoom}
             viewMode={viewMode}
             setViewMode={setViewMode}
-            
+
             // Design Data
             currentRoomData={currentRoomData}
             setCurrentRoomData={setCurrentRoomData}
             selectedElement={selectedElement}
             elementTypes={elementTypes}
-            
+
             // Pricing
             showPricing={showPricing}
             setShowPricing={setShowPricing}
@@ -3122,20 +2227,20 @@ const KitchenDesigner = () => {
             colorPricing={colorPricing}
             wallPricing={wallPricing}
             wallAvailability={wallAvailability}
-            
+
             // Actions
             addElement={addElement}
             updateElement={updateElement}
             deleteElement={deleteElement}
             setShowQuoteForm={setShowQuoteForm}
-            
+
             // Wall/Elements
             allAvailableWalls={allAvailableWalls}
             selectedWall={selectedWall}
             setSelectedWall={setSelectedWall}
             getWallName={getWallName}
             getCustomWallByNumber={getCustomWallByNumber}
-            
+
             // Wall Management
             isDrawingWall={isDrawingWall}
             setIsDrawingWall={setIsDrawingWall}
@@ -3158,7 +2263,7 @@ const KitchenDesigner = () => {
             updateDoor={updateDoor}
             getDoorsOnWall={getDoorsOnWall}
             getDoorTypes={getDoorTypes}
-            
+
             // Additional state needed
             collapsedSections={collapsedSections}
             toggleSection={toggleSection}
@@ -3167,13 +2272,10 @@ const KitchenDesigner = () => {
             resetDesign={resetDesign}
             originalWalls={originalWalls}
           />
-
-
           {/* ========== MAIN CANVAS AREA ========== */}
           {/* Primary design workspace containing the visual interface */}
           <div className="flex-1 p-8 overflow-auto">
             <div className="bg-white rounded-lg shadow-lg p-6">
-
               {/* Header */}
               {/* Title bar with room name and date */}
               <div className="flex justify-between items-start mb-6 border-b pb-4">
@@ -3185,73 +2287,23 @@ const KitchenDesigner = () => {
                   <p className="text-xs text-gray-600">Not To Scale</p>
                 </div>
               </div>
-
               {/* Pricing Summary */}
-              {/* Expandable pricing panel showing cost breakdown */}
-              {showPricing && currentRoomData.elements.some(el => el.category === 'cabinet') && (
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-semibold mb-3">Pricing Summary - {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'}</h3>
-                  <div className="space-y-2 text-sm">
-                    {/* Base cabinet pricing */}
-                    <div className="flex justify-between">
-                      <span>Base Cabinet Price:</span>
-                      <span>${(calculateTotalPrice() - (colorPricing[currentRoomData.colorCount] || 0) -
-                        ((currentRoomData.removedWalls || []).length * wallPricing.removeWall)).toFixed(2)}</span>
-                    </div>
-
-                    {/* Color options selector */}
-                    <div className="flex justify-between">
-                      <span>Color Options:</span>
-                      <select
-                        value={currentRoomData.colorCount}
-                        onChange={(e) => setCurrentRoomData({
-                          ...currentRoomData,
-                          colorCount: e.target.value
-                        })}
-                        className="px-2 py-1 border rounded text-xs"
-                      >
-                        <option value={1}>Single Color (Included)</option>
-                        <option value={2}>Two Colors (+$100)</option>
-                        <option value={3}>Three Colors (+$200)</option>
-                        <option value="custom">Custom Colors (+$500)</option>
-                      </select>
-                    </div>
-
-                    {/* Wall modification pricing */}
-                    {(() => {
-                      const removedWalls = currentRoomData.removedWalls || [];
-                      const chargeableRemoved = removedWalls.filter(wall => originalWalls.includes(wall));
-                      const customAdded = (currentRoomData.walls || []).filter(wall => !originalWalls.includes(wall));
-                      const totalWallCost = (chargeableRemoved.length * wallPricing.removeWall) + (customAdded.length * wallPricing.addWall);
-
-                      return totalWallCost > 0 ? (
-                        <div className="flex justify-between">
-                          <span>Wall Modifications:</span>
-                          <span>${totalWallCost.toFixed(2)}</span>
-                        </div>
-                      ) : null;
-                    })()}
-
-                    {/* Total price display */}
-                    <div className="border-t pt-2 font-semibold flex justify-between">
-                      <span>Total Estimate:</span>
-                      <span>${calculateTotalPrice().toFixed(2)}</span>
-                    </div>
-
-                    {/* Pricing disclaimer */}
-                    <p className="text-xs text-gray-600 mt-2">
-                      * This is an estimate. Final pricing may vary based on specific requirements.
-                    </p>
-                  </div>
-                </div>
-              )}
+              <PricingDisplay
+                isVisible={showPricing}
+                activeRoom={activeRoom}
+                currentRoomData={currentRoomData}
+                setCurrentRoomData={setCurrentRoomData}
+                calculateTotalPrice={calculateTotalPrice}
+                colorPricing={colorPricing}
+                wallPricing={wallPricing}
+                originalWalls={originalWalls}
+              />
               {viewMode === 'floor' ? (
                 <>
                   {/* Floor Plan Instructions */}
                   <p className="text-sm text-gray-600 mb-4">
                     Click and drag cabinets to position them. They will snap to walls and other cabinets.
                   </p>
-
                   {/* Floor Plan SVG Container */}
                   {/* Main interactive canvas for cabinet placement and arrangement */}
                   <div className="inline-block bg-white" ref={floorPlanRef}>
@@ -3260,6 +2312,16 @@ const KitchenDesigner = () => {
                       width={(parseFloat(currentRoomData.dimensions.width) * 12) * scale + 60}
                       height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale + 60}
                       className={isDrawingWall ? "cursor-crosshair" : "cursor-default"}
+                      style={{
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                      onSelectStart={(e) => e.preventDefault()}
+                      onDragStart={(e) => e.preventDefault()}
                       onMouseMove={handleMouseMove}
                       onMouseUp={(e) => {
                         // Handle wall drawing completion on mouse up if in drawing mode
@@ -3268,32 +2330,27 @@ const KitchenDesigner = () => {
                             e.target.tagName === 'rect' && e.target.id === 'room-floor' ||
                             e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)' ||
                             e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'white';
-
                           if (targetIsCanvas) {
                             const coords = getEventCoordinates(e);
                             const svgPt = canvasRef.current.createSVGPoint();
                             svgPt.x = coords.clientX;
                             svgPt.y = coords.clientY;
                             const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
-
                             const clickX = cursorPt.x - 30;
                             const clickY = cursorPt.y - 30;
-
                             const minWallLength = 20;
                             const wallLength = Math.sqrt(
                               Math.pow(clickX - wallDrawStart.x, 2) +
                               Math.pow(clickY - wallDrawStart.y, 2)
                             );
-
-                            console.log('Wall drawing mouseUp:', {
+                            /*console.log('Wall drawing mouseUp:', {
                               startX: wallDrawStart.x,
                               startY: wallDrawStart.y,
                               endX: clickX,
                               endY: clickY,
                               wallLength: wallLength.toFixed(1),
                               target: e.target.tagName
-                            });
-
+                            });*/
                             if (wallLength >= minWallLength) {
                               addCustomWallAtPosition(
                                 wallDrawStart.x,
@@ -3301,18 +2358,16 @@ const KitchenDesigner = () => {
                                 clickX,
                                 clickY
                               );
-                              console.log('Wall completed via mouseUp');
+                              //console.log('Wall completed via mouseUp');
                             } else if (wallLength > 5) { // Only show alert if they actually tried to draw something
                               alert(`Wall is too short (${wallLength.toFixed(1)}px). Minimum length is ${minWallLength}px.`);
                             }
-
                             // Reset drawing state
                             setWallDrawStart(null);
                             setWallDrawPreview(null);
                             return;
                           }
                         }
-
                         // Default mouse up handling
                         handleMouseUp(e);
                       }}
@@ -3330,27 +2385,23 @@ const KitchenDesigner = () => {
                             e.target.tagName === 'rect' && e.target.getAttribute('fill') === '#666' || // Allow clicking on wall rectangles
                             e.target.tagName === 'line' && e.target.getAttribute('stroke-dasharray') === '5,5' || // Allow clicking on preview line
                             e.target.tagName === 'line' && e.target.getAttribute('stroke') === '#666'; // Allow clicking on custom wall lines
-
                           if (targetIsCanvas) {
                             e.preventDefault();
                             e.stopPropagation();
-
                             const coords = getEventCoordinates(e);
                             const svgPt = canvasRef.current.createSVGPoint();
                             svgPt.x = coords.clientX;
                             svgPt.y = coords.clientY;
                             const cursorPt = svgPt.matrixTransform(canvasRef.current.getScreenCTM().inverse());
-
                             const clickX = cursorPt.x - 30; // Account for canvas offset
                             const clickY = cursorPt.y - 30;
-
                             if (!wallDrawStart) {
                               // First click: Set start point
                               setWallDrawStart({
                                 x: clickX,
                                 y: clickY
                               });
-                              console.log('Wall drawing started at:', { x: clickX, y: clickY });
+                              //console.log('Wall drawing started at:', { x: clickX, y: clickY });
                             } else {
                               // Second click: Complete wall
                               const minWallLength = 20; // Minimum wall length in pixels
@@ -3358,17 +2409,15 @@ const KitchenDesigner = () => {
                                 Math.pow(clickX - wallDrawStart.x, 2) +
                                 Math.pow(clickY - wallDrawStart.y, 2)
                               );
-
-                              console.log('Attempting to complete wall:', {
-                                startX: wallDrawStart.x,
-                                startY: wallDrawStart.y,
-                                endX: clickX,
-                                endY: clickY,
-                                wallLength: wallLength.toFixed(1),
-                                target: e.target.tagName,
-                                targetId: e.target.id
-                              });
-
+                              //console.log('Attempting to complete wall:', {
+                              //  startX: wallDrawStart.x,
+                              //  startY: wallDrawStart.y,
+                              //  endX: clickX,
+                              //  endY: clickY,
+                              //  wallLength: wallLength.toFixed(1),
+                              // target: e.target.tagName,
+                              //  targetId: e.target.id
+                              //});
                               if (wallLength >= minWallLength) {
                                 addCustomWallAtPosition(
                                   wallDrawStart.x,
@@ -3376,11 +2425,10 @@ const KitchenDesigner = () => {
                                   clickX,
                                   clickY
                                 );
-                                console.log('Wall completed successfully');
+                                // console.log('Wall completed successfully');
                               } else {
                                 alert(`Wall is too short (${wallLength.toFixed(1)}px). Minimum length is ${minWallLength}px.`);
                               }
-
                               // Reset drawing state
                               setWallDrawStart(null);
                               setWallDrawPreview(null);
@@ -3388,23 +2436,19 @@ const KitchenDesigner = () => {
                             return;
                           } else {
                             // Log what was clicked if not a valid target
-                            console.log('Invalid wall drawing target:', {
-                              tagName: e.target.tagName,
-                              id: e.target.id,
-                              className: e.target.className,
-                              fill: e.target.getAttribute('fill'),
-                              wallDrawStart: !!wallDrawStart
-                            });
+                            /*   console.log('Invalid wall drawing target:', {
+                                tagName: e.target.tagName,
+                                id: e.target.id,
+                                className: e.target.className,
+                                fill: e.target.getAttribute('fill'),
+                                wallDrawStart: !!wallDrawStart
+                              }); */
                           }
                         }
-
                         // Deselect elements when clicking empty canvas
                         if (e.target === e.currentTarget || e.target.tagName === 'rect' && e.target.id === 'room-floor') {
                           setSelectedElement(null);
                         }
-                      }}
-                      style={{
-                        touchAction: isTouch ? 'manipulation' : 'auto'
                       }}
                     >
                       {/* Grid Pattern Definition */}
@@ -3414,10 +2458,8 @@ const KitchenDesigner = () => {
                           <path d={`M ${12 * scale} 0 L 0 0 0 ${12 * scale}`} fill="none" stroke="#f0f0f0" strokeWidth="0.5" />
                         </pattern>
                       </defs>
-
                       {/* Canvas Background */}
                       <rect x="0" y="0" width="100%" height="100%" fill="white" />
-
                       {/* Room Floor with Grid Overlay */}
                       {/* Visual representation of room floor space with measurement grid */}
                       <rect
@@ -3428,7 +2470,6 @@ const KitchenDesigner = () => {
                         height={(parseFloat(currentRoomData.dimensions.height) * 12) * scale}
                         fill="url(#grid)"
                       />
-
                       {/* Wall Structures with Thickness */}
                       {/* Gray rectangles representing physical walls with realistic thickness */}
                       <g>
@@ -3476,12 +2517,10 @@ const KitchenDesigner = () => {
                             })}
                           </>
                         )}
-
                         {/* Wall removal indicators - show openings where walls are removed */}
                         {(currentRoomData.removedWalls || []).map(wallNum => {
                           const roomWidth = (parseFloat(currentRoomData.dimensions.width) * 12) * scale;
                           const roomHeight = (parseFloat(currentRoomData.dimensions.height) * 12) * scale;
-
                           if (wallNum === 1) { // Top wall opening
                             return (
                               <g key={`opening-${wallNum}`}>
@@ -3513,7 +2552,6 @@ const KitchenDesigner = () => {
                           }
                           return null;
                         })}
-
                         {/* Custom Drawn Walls */}
                         {customWalls.map((wall, index) => {
                           const wallLength = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
@@ -3521,11 +2559,9 @@ const KitchenDesigner = () => {
                           const wallIsPresent = (currentRoomData.walls || []).includes(wall.wallNumber);
                           const wallIsRemoved = (currentRoomData.removedWalls || []).includes(wall.wallNumber);
                           const isSelected = selectedWallForEdit === wall.id;
-
                           // Show wall if present and either preview is off or wall is not removed
                           if (wallIsPresent && (!showWallPreview || !wallIsRemoved)) {
                             const doorsOnWall = getDoorsOnWall(wall.wallNumber);
-                            
                             return (
                               <g key={wall.id}>
                                 {/* Render custom wall with door openings */}
@@ -3550,19 +2586,16 @@ const KitchenDesigner = () => {
                                       />
                                     );
                                   }
-
                                   // Has doors - render wall segments with openings
                                   const wallLengthInches = (wallLength / scale);
                                   const sortedDoors = doorsOnWall.sort((a, b) => a.position - b.position);
                                   const wallSegments = [];
                                   let currentPos = 0; // Position as percentage
-
                                   sortedDoors.forEach((door, index) => {
                                     const doorWidthPercentage = (door.width / wallLengthInches) * 100;
                                     const halfDoorWidth = doorWidthPercentage / 2;
                                     const doorStart = Math.max(0, door.position - halfDoorWidth);
                                     const doorEnd = Math.min(100, door.position + halfDoorWidth);
-
                                     // Add wall segment before door
                                     if (currentPos < doorStart) {
                                       wallSegments.push(
@@ -3584,12 +2617,10 @@ const KitchenDesigner = () => {
                                         />
                                       );
                                     }
-
                                     // Add door opening marker
                                     const doorColor = door.type === 'pantry' ? '#8B4513' : door.type === 'room' ? '#4CAF50' : '#2196F3';
                                     const doorCenterX = 30 + wall.x1 + (door.position / 100) * wallLength;
                                     const doorCenterY = 30 + wall.y1;
-
                                     wallSegments.push(
                                       <g key={`door-${door.id}`}>
                                         <circle
@@ -3613,10 +2644,8 @@ const KitchenDesigner = () => {
                                         </text>
                                       </g>
                                     );
-
                                     currentPos = doorEnd;
                                   });
-
                                   // Add final wall segment after last door
                                   if (currentPos < 100) {
                                     wallSegments.push(
@@ -3638,10 +2667,8 @@ const KitchenDesigner = () => {
                                       />
                                     );
                                   }
-
                                   return wallSegments;
                                 })()}
-
                                 {/* Wall adjustment handles - only show when selected */}
                                 {isSelected && (
                                   <>
@@ -3660,7 +2687,6 @@ const KitchenDesigner = () => {
                                         // TODO: Add drag handling for start point
                                       }}
                                     />
-
                                     {/* End point handle */}
                                     <circle
                                       cx={30 + wall.x2}
@@ -3676,7 +2702,6 @@ const KitchenDesigner = () => {
                                         // TODO: Add drag handling for end point
                                       }}
                                     />
-
                                     {/* Wall info overlay */}
                                     <g transform={`translate(${30 + (wall.x1 + wall.x2) / 2}, ${30 + (wall.y1 + wall.y2) / 2 - 15})`}>
                                       <rect
@@ -3699,7 +2724,6 @@ const KitchenDesigner = () => {
                                     </g>
                                   </>
                                 )}
-
                                 {/* Wall existed prior indicator */}
                                 {wall.existedPrior && (
                                   <text
@@ -3718,7 +2742,6 @@ const KitchenDesigner = () => {
                           }
                           return null;
                         })}
-
                         {/* Wall Drawing Preview */}
                         {wallDrawPreview && (
                           <line
@@ -3733,7 +2756,6 @@ const KitchenDesigner = () => {
                             opacity="0.8"
                           />
                         )}
-
                         {/* Wall Drawing Start Point Indicator */}
                         {wallDrawStart && (
                           <g>
@@ -3758,7 +2780,6 @@ const KitchenDesigner = () => {
                           </g>
                         )}
                       </g>
-
                       {/* Room Dimension Labels */}
                       {/* Text labels showing room measurements */}
                       <g>
@@ -3767,14 +2788,12 @@ const KitchenDesigner = () => {
                         <text x={30 + ((parseFloat(currentRoomData.dimensions.width) * 12) * scale) / 2} y="7" textAnchor="middle" fontSize="10" fill="#333">
                           {currentRoomData.dimensions.width}'
                         </text>
-
                         {/* Height dimension label at left */}
                         <line x1="10" y1="30" x2="10" y2={30 + (parseFloat(currentRoomData.dimensions.height) * 12) * scale} stroke="#333" strokeWidth="1" />
                         <text x="5" y={30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2} textAnchor="middle" fontSize="10" fill="#333" transform={`rotate(-90, 5, ${30 + ((parseFloat(currentRoomData.dimensions.height) * 12) * scale) / 2})`}>
                           {currentRoomData.dimensions.height}'
                         </text>
                       </g>
-
                       {/* Render Design Elements */}
                       {/* Container for all cabinets and appliances, sorted by z-index for proper layering */}
                       <g transform="translate(30, 30)">
@@ -3795,39 +2814,34 @@ const KitchenDesigner = () => {
                           />
                         ))}
                       </g>
-
                       {/* Enhanced Drag Preview - Ghost Element */}
                       {dragPreviewPosition && isDragging && dragPreviewPosition.x !== undefined && dragPreviewPosition.y !== undefined && (
                         <g transform="translate(30, 30)" opacity="0.5">
                           {(() => {
                             const previewElement = currentRoomData.elements.find(el => el.id === dragPreviewPosition.elementId);
                             if (!previewElement) return null;
-                            
                             const elementSpec = elementTypes[previewElement.type];
                             if (!elementSpec) return null;
-                            
                             // Enhanced visual feedback with snap indicators
                             const snapIndicatorColor = dragPreviewPosition.snapped ? '#22c55e' : '#3b82f6';
                             const strokeWidth = dragPreviewPosition.snapped ? '3' : '2';
-                            
                             return (
                               <g>
                                 {/* Snap target indicator */}
-                                {dragPreviewPosition.snapped && dragPreviewPosition.snapTarget && 
+                                {dragPreviewPosition.snapped && dragPreviewPosition.snapTarget &&
                                   dragPreviewPosition.snapTarget.x !== undefined && dragPreviewPosition.snapTarget.y !== undefined && (
-                                  <rect
-                                    x={dragPreviewPosition.snapTarget.x - 5}
-                                    y={dragPreviewPosition.snapTarget.y - 5}
-                                    width={dragPreviewPosition.snapTarget.width + 10}
-                                    height={dragPreviewPosition.snapTarget.height + 10}
-                                    fill="none"
-                                    stroke="#22c55e"
-                                    strokeWidth="2"
-                                    strokeDasharray="8,4"
-                                    opacity="0.7"
-                                  />
-                                )}
-                                
+                                    <rect
+                                      x={dragPreviewPosition.snapTarget.x - 5}
+                                      y={dragPreviewPosition.snapTarget.y - 5}
+                                      width={dragPreviewPosition.snapTarget.width + 10}
+                                      height={dragPreviewPosition.snapTarget.height + 10}
+                                      fill="none"
+                                      stroke="#22c55e"
+                                      strokeWidth="2"
+                                      strokeDasharray="8,4"
+                                      opacity="0.7"
+                                    />
+                                  )}
                                 {/* Ghost element */}
                                 <rect
                                   x={dragPreviewPosition.x}
@@ -3840,7 +2854,6 @@ const KitchenDesigner = () => {
                                   strokeDasharray="5,5"
                                   rx="2"
                                 />
-                                
                                 {/* Element type indicator */}
                                 <text
                                   x={dragPreviewPosition.x + (previewElement.width * scale) / 2}
@@ -3854,7 +2867,6 @@ const KitchenDesigner = () => {
                                 >
                                   {elementSpec.name}
                                 </text>
-                                
                                 {/* Smooth position indicators */}
                                 <circle
                                   cx={dragPreviewPosition.x}
@@ -3875,7 +2887,6 @@ const KitchenDesigner = () => {
                           })()}
                         </g>
                       )}
-
                       {/* Wall Number Labels */}
                       {/* Numbered labels on each wall for reference in wall view */}
                       <g>
@@ -3920,175 +2931,28 @@ const KitchenDesigner = () => {
                   />
                 </div>
               )}
-
               {/* Element List Summary */}
-              {/* Table showing all placed elements with their specifications */}
-              {currentRoomData.elements.length > 0 && viewMode === 'floor' && (
-                <div className="mt-6 border-t pt-4">
-                  <h4 className="font-semibold mb-2">Element List:</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {currentRoomData.elements.map((element, index) => (
-                      <div key={element.id} className="flex items-center gap-2">
-                        {/* Element number */}
-                        <span className="font-bold">#{index + 1}:</span>
-                        {/* Element name */}
-                        <span>{elementTypes[element.type]?.name || element.type}</span>
-                        {/* Element dimensions */}
-                        <span className="text-gray-500">
-                          {element.width}" × {element.depth}"d
-                          {element.actualHeight && ` × ${element.actualHeight}"h`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <ElementList
+                currentRoomData={currentRoomData}
+                viewMode={viewMode}
+                elementTypes={elementTypes}
+              />
             </div>
           </div>
         </div>
-
         {/* Quote Form Modal */}
-        {/* Overlay modal for collecting customer information and generating quotes */}
-        {showQuoteForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-              {/* Modal header */}
-              <h3 className="text-xl font-bold mb-4">Request Quote</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Fill out your information below and we'll send you a detailed quote.
-              </p>
-
-              <div className="space-y-4">
-                {/* Customer name input */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Your Name *</label>
-                  <input
-                    type="text"
-                    value={clientInfo.name}
-                    onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="Your full name"
-                  />
-                </div>
-
-                {/* Contact information - collect both email and phone */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Your Email *</label>
-                  <input
-                    type="email"
-                    value={clientInfo.email}
-                    onChange={(e) => setClientInfo({ ...clientInfo, email: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="your.email@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Your Phone Number *</label>
-                  <input
-                    type="tel"
-                    value={clientInfo.phone}
-                    onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-
-                {/* Contact preference selector - now for preferred method only */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Preferred Contact Method *</label>
-                  <select
-                    value={clientInfo.contactPreference}
-                    onChange={(e) => setClientInfo({ ...clientInfo, contactPreference: e.target.value })}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="email">Email</option>
-                    <option value="phone">Phone Call</option>
-                    <option value="text">Text Message</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    We'll collect both your email and phone, but contact you via your preferred method first.
-                  </p>
-                </div>
-
-                {/* Room inclusion options */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Include in Quote:</label>
-                  <div className="space-y-2">
-                    {/* Kitchen inclusion checkbox */}
-                    {kitchenData.elements.length > 0 && (
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={clientInfo.includeKitchen}
-                          onChange={(e) => setClientInfo({ ...clientInfo, includeKitchen: e.target.checked })}
-                          className="rounded"
-                        />
-                        <span className="text-sm">Kitchen ({kitchenData.elements.length} items - ${calculateTotalPrice(kitchenData).toFixed(2)})</span>
-                      </label>
-                    )}
-                    {/* Bathroom inclusion checkbox */}
-                    {bathroomData.elements.length > 0 && (
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={clientInfo.includeBathroom}
-                          onChange={(e) => setClientInfo({ ...clientInfo, includeBathroom: e.target.checked })}
-                          className="rounded"
-                        />
-                        <span className="text-sm">Bathroom ({bathroomData.elements.length} items - ${calculateTotalPrice(bathroomData).toFixed(2)})</span>
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional comments field */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Comments/Special Requests</label>
-                  <textarea
-                    value={clientInfo.comments}
-                    onChange={(e) => setClientInfo({ ...clientInfo, comments: e.target.value })}
-                    className="w-full p-2 border rounded h-24"
-                    placeholder="Any specific requirements, questions, or notes about wall modifications..."
-                  />
-                </div>
-
-                {/* Process information panel */}
-                <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
-                  <p className="font-medium mb-1">What happens next?</p>
-                  <ul className="list-disc list-inside text-xs space-y-1">
-                    <li>Your design and quote will be sent to our team</li>
-                    <li>We'll review your requirements and contact you to get proper measurements</li>
-                    <li>You'll receive a PDF copy of your design after we plan with you</li>
-                    <li>We'll contact you within 1-4 business days via your preferred method</li>
-                  </ul>
-                </div>
-
-                {/* Modal action buttons */}
-                <div className="flex gap-2 pt-4">
-                  {/* Cancel button */}
-                  <button
-                    onClick={() => setShowQuoteForm(false)}
-                    className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  {/* Submit quote request button */}
-                  <button
-                    onClick={sendQuote}
-                    className="flex-1 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-                  >
-                    <Send size={16} />
-                    Send Quote Request
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <QuoteForm
+          isVisible={showQuoteForm}
+          onClose={() => setShowQuoteForm(false)}
+          clientInfo={clientInfo}
+          setClientInfo={setClientInfo}
+          kitchenData={kitchenData}
+          bathroomData={bathroomData}
+          calculateTotalPrice={calculateTotalPrice}
+          onSendQuote={handleSendQuote}
+        />
       </div>
     </>
   );
 };
-
 export default KitchenDesigner;

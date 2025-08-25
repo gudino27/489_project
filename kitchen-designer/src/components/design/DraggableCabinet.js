@@ -35,47 +35,25 @@ const DraggableCabinet = React.memo(({
         {/* Render the corner cabinet with built-in door graphics */}
         {renderCornerCabinet(element)}
 
-        {/* Add door swing arcs using renderDoorGraphic for proper arc display */}
+        {/* Add single door swing arc for corner cabinet */}
         {element.hingeDirection === 'left' ? (
-          // Left-hinged corner cabinet door arcs
-          <>
-            {/* Door arc for horizontal section - hinge at bottom-left of right door */}
-            {renderDoorGraphic(
-              element.width * scale * 0.6, 
-              0, 
-              element.width * scale * 0.4, 
-              element.depth * scale * 0.6, 
-              180
-            )}
-            {/* Door arc for vertical section - hinge at top-right of bottom door */}
-            {renderDoorGraphic(
-              0, 
-              element.depth * scale * 0.6, 
-              element.width * scale * 0.6, 
-              element.depth * scale * 0.4, 
-              90
-            )}
-          </>
+          // Left-hinged corner cabinet - arc from inner corner outward
+          renderDoorGraphic(
+            element.width * scale * 0.6, 
+            element.depth * scale * 0, 
+            element.width * scale * 0.9, 
+            element.depth * scale * 0.6, 
+            0
+          )
         ) : (
-          // Right-hinged corner cabinet door arcs
-          <>
-            {/* Door arc for horizontal section - hinge at bottom-right of left door */}
-            {renderDoorGraphic(
-              0, 
-              0, 
-              element.width * scale * 0.4, 
-              element.depth * scale * 0.6, 
-              270
-            )}
-            {/* Door arc for vertical section - hinge at top-left of bottom door */}
-            {renderDoorGraphic(
-              element.width * scale * 0.4, 
-              element.depth * scale * 0.6, 
-              element.width * scale * 0.6, 
-              element.depth * scale * 0.4, 
-              0
-            )}
-          </>
+          // Right-hinged corner cabinet - arc from inner corner outward  
+          renderDoorGraphic(
+            element.width * scale * -0.1,
+            element.depth * scale * 0.6,
+            element.width * scale * 0.9,
+            element.depth * scale * 0.5,
+            90
+          )
         )}
 
         {/* Corner cabinet number badge */}

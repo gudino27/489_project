@@ -53,7 +53,7 @@ const LanguageSelector = ({ className = '' }) => {
             key={lang.code}
             value={lang.code}
             style={{
-              background: '#333',
+              background: 'white',
               color: 'black',
               padding: '10px'
             }}

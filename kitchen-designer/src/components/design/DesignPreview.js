@@ -234,35 +234,22 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
         );
     }
 
-    // SVG Generation code (rest remains the same but uses roomData)
+    // SVG Generation code - use same scaling logic as main designer
     const calculateScale = () => {
         if (!roomData || !roomData.dimensions) return 2;
 
         const roomWidthFeet = parseFloat(roomData.dimensions.width) || 10;
         const roomHeightFeet = parseFloat(roomData.dimensions.height) || 10;
 
-        // Determine desired canvas size based on room type
-        const isSmallRoom = roomWidthFeet <= 10 && roomHeightFeet <= 10;
-        const maxCanvasSize = 600; // Maximum canvas dimension
-
-        // Calculate scale to fit room nicely in canvas
+        // Use the same scale calculation as the main designer
         const roomWidthInches = roomWidthFeet * 12;
         const roomHeightInches = roomHeightFeet * 12;
-
-        const scaleX = (maxCanvasSize - 60) / roomWidthInches;
-        const scaleY = (maxCanvasSize - 60) / roomHeightInches;
-
-        let scale = Math.min(scaleX, scaleY);
-
-        // Ensure minimum and maximum scale
-        scale = Math.max(1.5, Math.min(scale, 4));
-
-        // For very small rooms (like bathrooms), use a larger scale
-        if (isSmallRoom) {
-            scale = Math.min(scale * 1.5, 4);
-        }
-
-        return scale;
+        const maxCanvasSize = 600;
+        
+        const scaleX = maxCanvasSize / roomWidthInches;
+        const scaleY = maxCanvasSize / roomHeightInches;
+        
+        return Math.min(scaleX, scaleY);
     };
 
     const scale = calculateScale();
@@ -280,8 +267,14 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
         'sink-base': { name: 'Sink Base', defaultHeight: 34.5, color: '#8B4513' },
         'vanity': { name: 'Vanity Cabinet', defaultHeight: 32, color: '#8B4513' },
         'vanity-sink': { name: 'Vanity with Sink', defaultHeight: 32, color: '#654321' },
-        'medicine': { name: 'Medicine Cabinet', defaultHeight: 30, color: '#A0522D' },
+        'medicine': { name: 'Medicine Cabinet', defaultHeight: 30, color: '#A0522D', mountHeight: 48 },
+        'medicine-mirror': { name: 'Medicine Cabinet w/ Mirror', defaultHeight: 36, color: '#A0522D', mountHeight: 48 },
         'linen': { name: 'Linen Cabinet', defaultHeight: 84, color: '#8B4513' },
+        'linen-tower': { name: 'Linen Tower', defaultHeight: 84, color: '#8B4513' },
+        'double-vanity': { name: 'Double Vanity', defaultHeight: 32, color: '#8B4513' },
+        'floating-vanity': { name: 'Floating Vanity', defaultHeight: 32, color: '#8B4513' },
+        'corner-vanity': { name: 'Corner Vanity', defaultHeight: 32, color: '#8B4513' },
+        'vanity-tower': { name: 'Vanity Tower', defaultHeight: 84, color: '#8B4513' },
         'refrigerator': { name: 'Refrigerator', defaultHeight: 70, color: '#C0C0C0' },
         'stove': { name: 'Stove/Range', defaultHeight: 36, color: '#666' },
         'dishwasher': { name: 'Dishwasher', defaultHeight: 34, color: '#C0C0C0' },
@@ -392,8 +385,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
             {viewMode === 'floor' ? (
                 <div className="border rounded-lg p-4 bg-white">
                     <svg
-                        width={roomWidth + 60}
-                        height={roomHeight + 60}
+                        width={600}
+                        height={600}
                         className="border"
                         viewBox={`0 0 ${roomWidth + 60} ${roomHeight + 60}`}
                     >
@@ -428,11 +421,23 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             const spec = elementTypes[element.type] || { color: '#999', stroke: '#666' };
                             const width = element.width * scale;
                             const depth = element.depth * scale;
+                            
+                            // Use element coordinates directly (they should already be scaled)
+                            // For wall-mounted elements, check if they need special positioning
+                            const elementSpec = elementTypes[element.type] || {};
+                            let elementX = element.x;
+                            let elementY = element.y;
+                            
+                            // Wall-mounted elements like medicine cabinets may need position adjustment
+                            if (elementSpec.mountHeight && element.category === 'cabinet') {
+                                // This is a wall-mounted element - position should be correct as stored
+                                // The mountHeight is just metadata for rendering
+                            }
 
                             // Special rendering for bathroom fixtures
                             if (element.type === 'toilet') {
                                 return (
-                                    <g key={element.id || index} transform={`translate(${30 + element.x}, ${30 + element.y})`}>
+                                    <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
                                         {/* Toilet bowl */}
                                         <ellipse
                                             cx={width / 2}
@@ -471,7 +476,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
 
                             if (element.type === 'tub') {
                                 return (
-                                    <g key={element.id || index} transform={`translate(${30 + element.x}, ${30 + element.y})`}>
+                                    <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
                                         <rect
                                             width={width}
                                             height={depth}
@@ -508,7 +513,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
 
                             if (element.type === 'shower') {
                                 return (
-                                    <g key={element.id || index} transform={`translate(${30 + element.x}, ${30 + element.y})`}>
+                                    <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
                                         <rect
                                             width={width}
                                             height={depth}
@@ -541,61 +546,183 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                 );
                             }
 
-                            if (element.type === 'vanity' || element.type === 'vanity-sink') {
+                            if (element.type === 'vanity' || element.type === 'vanity-sink' || element.type === 'double-vanity' || element.type === 'floating-vanity' || element.type === 'corner-vanity') {
                                 return (
-                                    <g key={element.id || index} transform={`translate(${30 + element.x}, ${30 + element.y})`}>
-                                        {/* Vanity cabinet */}
+                                    <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
+                                        <defs>
+                                            <linearGradient id={`vanityGrad${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stopColor="#A0522D" />
+                                                <stop offset="50%" stopColor="#8B4513" />
+                                                <stop offset="100%" stopColor="#654321" />
+                                            </linearGradient>
+                                        </defs>
+                                        {/* Drop shadow */}
                                         <rect
-                                            width={width}
-                                            height={depth}
-                                            fill={spec.color}
-                                            stroke="#333"
+                                            x="2" y="2"
+                                            width={width} height={depth}
+                                            fill="#00000020" rx="3"
+                                        />
+                                        {/* Main cabinet body */}
+                                        <rect
+                                            width={width} height={depth}
+                                            fill={`url(#vanityGrad${index})`}
+                                            stroke="#2F1B14"
                                             strokeWidth="2"
+                                            rx="3"
+                                        />
+                                        {/* Countertop */}
+                                        <rect
+                                            x="-2" y="-4"
+                                            width={width + 4} height="6"
+                                            fill="#F5F5DC"
+                                            stroke="#D3D3D3"
+                                            strokeWidth="1"
                                             rx="2"
                                         />
+                                        {/* Cabinet door panels */}
+                                        <rect
+                                            x={width * 0.1} y={depth * 0.15}
+                                            width={width * 0.35} height={depth * 0.7}
+                                            fill="none"
+                                            stroke="#2F1B14"
+                                            strokeWidth="1"
+                                            rx="2"
+                                        />
+                                        {width > 40 && (
+                                            <rect
+                                                x={width * 0.55} y={depth * 0.15}
+                                                width={width * 0.35} height={depth * 0.7}
+                                                fill="none"
+                                                stroke="#2F1B14"
+                                                strokeWidth="1"
+                                                rx="2"
+                                            />
+                                        )}
+                                        {/* Door handles */}
+                                        <circle cx={width * 0.25} cy={depth * 0.5} r="2" fill="#C0C0C0" stroke="#999" />
+                                        {width > 40 && <circle cx={width * 0.75} cy={depth * 0.5} r="2" fill="#C0C0C0" stroke="#999" />}
                                         {/* Sink if vanity-sink */}
                                         {element.type === 'vanity-sink' && (
                                             <>
                                                 <ellipse
-                                                    cx={width / 2}
-                                                    cy={depth / 2}
-                                                    rx={width * 0.25}
-                                                    ry={depth * 0.25}
+                                                    cx={width / 2} cy={depth / 2}
+                                                    rx={width * 0.2} ry={depth * 0.25}
                                                     fill="#ffffff"
                                                     stroke="#999"
                                                     strokeWidth="1"
                                                 />
-                                                <circle
-                                                    cx={width / 2}
-                                                    cy={depth / 2}
-                                                    r="2"
-                                                    fill="#999"
+                                                <circle cx={width / 2} cy={depth / 2} r="2" fill="#999" />
+                                            </>
+                                        )}
+                                        {/* Double sinks for double vanity */}
+                                        {element.type === 'double-vanity' && (
+                                            <>
+                                                <ellipse
+                                                    cx={width * 0.3} cy={depth / 2}
+                                                    rx={width * 0.15} ry={depth * 0.25}
+                                                    fill="#ffffff"
+                                                    stroke="#999"
+                                                    strokeWidth="1"
                                                 />
+                                                <circle cx={width * 0.3} cy={depth / 2} r="2" fill="#999" />
+                                                <ellipse
+                                                    cx={width * 0.7} cy={depth / 2}
+                                                    rx={width * 0.15} ry={depth * 0.25}
+                                                    fill="#ffffff"
+                                                    stroke="#999"
+                                                    strokeWidth="1"
+                                                />
+                                                <circle cx={width * 0.7} cy={depth / 2} r="2" fill="#999" />
                                             </>
                                         )}
                                         <text
                                             x={width / 2}
-                                            y={element.type === 'vanity-sink' ? depth * 0.8 : depth / 2}
-                                            textAnchor="middle"
-                                            dominantBaseline="middle"
-                                            fontSize="8"
-                                            fill="white"
-                                            fontWeight="bold"
+                                            y={depth * 0.9}
+                                            textAnchor="middle" dominantBaseline="middle"
+                                            fontSize={Math.min(width, depth) * 0.12}
+                                            fill="white" fontWeight="bold"
                                         >
-                                            {element.type === 'vanity-sink' ? 'SINK' : 'VANITY'}
+                                            {element.type.toUpperCase().replace('-', ' ')}
                                         </text>
                                     </g>
                                 );
                             }
 
-                            // Default rendering for other elements
+                            // Enhanced rendering for other cabinet elements
+                            if (element.category === 'cabinet') {
+                                return (
+                                    <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
+                                        <defs>
+                                            <linearGradient id={`cabinetGrad${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stopColor="#A0522D" />
+                                                <stop offset="50%" stopColor="#8B4513" />
+                                                <stop offset="100%" stopColor="#654321" />
+                                            </linearGradient>
+                                        </defs>
+                                        {/* Drop shadow */}
+                                        <rect
+                                            x="2" y="2"
+                                            width={width} height={depth}
+                                            fill="#00000015" rx="2"
+                                        />
+                                        {/* Main cabinet body */}
+                                        <rect
+                                            width={width} height={depth}
+                                            fill={`url(#cabinetGrad${index})`}
+                                            stroke="#2F1B14"
+                                            strokeWidth="2"
+                                            rx="2"
+                                        />
+                                        {/* Cabinet door frame */}
+                                        <rect
+                                            x={width * 0.1} y={depth * 0.1}
+                                            width={width * 0.8} height={depth * 0.8}
+                                            fill="none"
+                                            stroke="#2F1B14"
+                                            strokeWidth="1"
+                                            rx="1"
+                                        />
+                                        {/* Door handle */}
+                                        <circle
+                                            cx={width * 0.8}
+                                            cy={depth * 0.5}
+                                            r="2"
+                                            fill="#C0C0C0"
+                                            stroke="#999"
+                                            strokeWidth="1"
+                                        />
+                                        {/* Wall-mounted indicator */}
+                                        {elementSpec.mountHeight && (
+                                            <rect
+                                                x="0" y={depth - 2}
+                                                width={width} height="2"
+                                                fill="#2F1B14"
+                                                opacity="0.5"
+                                            />
+                                        )}
+                                        <text
+                                            x={width / 2}
+                                            y={depth / 2}
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            fontSize={Math.min(width, depth) * 0.12}
+                                            fill="white"
+                                            fontWeight="bold"
+                                        >
+                                            {element.type.toUpperCase().replace('-', ' ')}
+                                        </text>
+                                    </g>
+                                );
+                            }
+                            
+                            // Default rendering for non-cabinet elements
                             return (
-                                <g key={element.id || index} transform={`translate(${30 + element.x}, ${30 + element.y})`}>
+                                <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
                                     <rect
                                         width={width}
                                         height={depth}
-                                        fill={spec.color}
-                                        stroke={spec.stroke || "#333"}
+                                        fill={spec.color || '#999'}
+                                        stroke={spec.stroke || '#333'}
                                         strokeWidth="2"
                                         opacity="0.9"
                                         rx="2"
@@ -685,6 +812,75 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                     xPos = 30 + element.y;
                                 }
 
+                                // Enhanced elevation view rendering for cabinets
+                                if (element.category === 'cabinet') {
+                                    return (
+                                        <g key={element.id || index}>
+                                            <defs>
+                                                <linearGradient id={`elevGrad${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                                    <stop offset="0%" stopColor="#A0522D" />
+                                                    <stop offset="50%" stopColor="#8B4513" />
+                                                    <stop offset="100%" stopColor="#654321" />
+                                                </linearGradient>
+                                            </defs>
+                                            {/* Cabinet body */}
+                                            <rect
+                                                x={xPos} y={yPos}
+                                                width={elementWidth} height={height}
+                                                fill={`url(#elevGrad${index})`}
+                                                stroke="#2F1B14"
+                                                strokeWidth="2"
+                                                rx="3"
+                                            />
+                                            {/* Cabinet doors - elevation view */}
+                                            {elementWidth > 40 ? (
+                                                // Double doors for wider cabinets
+                                                <>
+                                                    <rect
+                                                        x={xPos + 4} y={yPos + 4}
+                                                        width={elementWidth/2 - 6} height={height - 8}
+                                                        fill="none" stroke="#2F1B14"
+                                                        strokeWidth="1.5" rx="2"
+                                                    />
+                                                    <rect
+                                                        x={xPos + elementWidth/2 + 2} y={yPos + 4}
+                                                        width={elementWidth/2 - 6} height={height - 8}
+                                                        fill="none" stroke="#2F1B14"
+                                                        strokeWidth="1.5" rx="2"
+                                                    />
+                                                    {/* Door handles */}
+                                                    <circle cx={xPos + elementWidth/2 - 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
+                                                    <circle cx={xPos + elementWidth/2 + 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
+                                                </>
+                                            ) : (
+                                                // Single door for narrow cabinets
+                                                <>
+                                                    <rect
+                                                        x={xPos + 4} y={yPos + 4}
+                                                        width={elementWidth - 8} height={height - 8}
+                                                        fill="none" stroke="#2F1B14"
+                                                        strokeWidth="1.5" rx="2"
+                                                    />
+                                                    <circle cx={xPos + elementWidth - 12} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
+                                                </>
+                                            )}
+                                            {/* Cabinet label */}
+                                            <text
+                                                x={xPos + elementWidth / 2}
+                                                y={yPos + height + 15}
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                                fontSize="8"
+                                                fill="#333"
+                                                fontWeight="bold"
+                                            >
+                                                {element.type.toUpperCase().replace('-', ' ')}
+                                            </text>
+                                        </g>
+                                    );
+                                }
+                                
+                                // Default rendering for non-cabinet elements
                                 return (
                                     <g key={element.id || index}>
                                         <rect

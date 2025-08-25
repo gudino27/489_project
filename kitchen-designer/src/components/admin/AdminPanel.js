@@ -126,7 +126,6 @@ const AdminPanel = () => {
         },
         body: JSON.stringify(loginCredentials)
       });
-
       const data = await response.json();
 
       if (response.ok) {
@@ -238,21 +237,29 @@ const AdminPanel = () => {
                   <label className="block text-sm font-medium mb-2">{t('admin.username')}</label>
                   <input
                     type="text"
+                    name="username"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     value={loginCredentials.username}
                     onChange={(e) => setLoginCredentials({ ...loginCredentials, username: e.target.value })}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder={t('admin.enterUsername')}
-                    required />
+                    required
+                  />
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">{t('admin.password')}</label>
                   <input
                     type="password"
+                    name="password"
+                    autoComplete="current-password"
                     value={loginCredentials.password}
                     onChange={(e) => setLoginCredentials({ ...loginCredentials, password: e.target.value })}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder={t('admin.enterPassword')}
-                    required />
+                    required
+                  />
                 </div>
                 <div className="mb-6 text-right">
                   <button
