@@ -33,8 +33,9 @@ export const checkWallCollision = (x, y, width, depth, customWalls, currentRoomD
       const B = wall.x1 - wall.x2;
       const C = wall.x2 * wall.y1 - wall.x1 * wall.y2;
       const distance = Math.abs(A * cabinetCenterX + B * cabinetCenterY + C) / Math.sqrt(A * A + B * B);
-      const buffer = 50;
-      const minDistance = (wall.thickness + Math.min(width, depth)) / 2 + buffer;
+      const elementMinDimension = Math.min(width, depth);
+      const buffer = Math.min(50, elementMinDimension * 2);
+      const minDistance = (wall.thickness + elementMinDimension) / 2 + buffer;
       
       console.log(`Wall ${wall.wallNumber} collision check:`, {
         wallNumber: wall.wallNumber,
@@ -61,9 +62,10 @@ export const checkWallCollision = (x, y, width, depth, customWalls, currentRoomD
     const distance = Math.abs(A * cabinetCenterX + B * cabinetCenterY + C) / Math.sqrt(A * A + B * B);
     
     // Check if cabinet is too close to wall (considering both wall thickness and cabinet size)
-    // Use a more conservative buffer for collision detection
-    const buffer = 50; // Buffer for collision detection
-    const minDistance = (wallThickness + Math.min(width, depth)) / 2 + buffer; // Use precise calculation without aggressive rounding
+    // Use a more conservative buffer for collision detection, but scale it for very shallow elements
+    const elementMinDimension = Math.min(width, depth);
+    const buffer = Math.min(50, elementMinDimension * 2); // Cap buffer at 2x the smallest dimension for shallow elements
+    const minDistance = (wallThickness + elementMinDimension) / 2 + buffer; // Use precise calculation without aggressive rounding
     
     if (distance < minDistance) {
       // Also check if the collision point is within the wall segment bounds
@@ -78,7 +80,7 @@ export const checkWallCollision = (x, y, width, depth, customWalls, currentRoomD
 };
 
 // Smart cabinet positioning based on which side touches the wall
-export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomData, scale, elementRotation = 0) => {
+export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomData, scale, elementRotation = 0, elementType = null) => {
   const cabinetCenter = { x: x + width / 2, y: y + depth / 2 };
   
   for (const wall of customWalls) {
@@ -135,16 +137,20 @@ export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomDat
       const dotProduct = wallToCenter.x * backDirectionX + wallToCenter.y * backDirectionY;
       const isBackSide = dotProduct > 0;
       
-      // Debug logging for 90-degree rotations
-      if (Math.abs((elementRotation || 0) % 360 - 90) < 1) {
-        console.log('90-degree cabinet collision:', {
+      // Debug logging for 90-degree rotations, especially wall 4
+      if (Math.abs((elementRotation || 0) % 360 - 90) < 1 && wall.wallNumber === 4) {
+        console.log('90-degree cabinet collision with Wall 4:', {
           rotation: elementRotation,
+          wallNumber: wall.wallNumber,
+          wallCoords: { x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 },
+          cabinetPos: { x, y, width, depth },
           backDirection: { x: backDirectionX, y: backDirectionY },
           wallNormal: wallToCenter,
           dotProduct,
           isBackSide,
           centerDistance,
-          collisionThreshold
+          collisionThreshold,
+          willPush: centerDistance < collisionThreshold
         });
       }
       
@@ -153,11 +159,13 @@ export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomDat
       
       if (isBackSide) {
         // Back side - move cabinet so back edge touches the wall
-        const targetDistance = wallThickness / 2 + 5; // Small buffer to avoid clipping
+        // Special handling for wall-mounted elements like medicine cabinets
+        const isWallMounted = elementType && (elementType.includes('medicine') || elementType.includes('mirror'));
+        const targetDistance = isWallMounted ? wallThickness / 2 + 1 : wallThickness / 2 + 5; // Minimal buffer for wall-mounted items
         const moveDistance = centerDistance - targetDistance;
         newX = x - wallNormalX * moveDistance;
         newY = y - wallNormalY * moveDistance;
-        console.log('Back side collision - moving closer to wall:', { moveDistance, newX, newY });
+        console.log('Back side collision - moving closer to wall:', { moveDistance, newX, newY, isWallMounted, targetDistance });
       } else {
         // Front side - push cabinet away to provide door clearance
         const targetDistance = wallThickness / 2 + 50; // Extra space for door opening
@@ -188,15 +196,16 @@ export const snapToWall = (x, y, width, depth, currentRoomData, scale, customWal
   let snappedX = x;
   let snappedY = y;
   
-  // Snap to each wall if within snap distance
-  if (x < snapDistance) snappedX = 0;                                    // Left wall
-  if (x + width > roomWidth - snapDistance) snappedX = roomWidth - width; // Right wall
-  if (y < snapDistance) snappedY = 0;                                    // Top wall
-  if (y + depth > roomHeight - snapDistance) snappedY = roomHeight - depth; // Bottom wall
+  // Snap to each wall if within snap distance (with small offset to prevent wall penetration)
+  const wallOffset = 3; // Small offset to keep elements slightly away from walls
+  if (x < snapDistance) snappedX = wallOffset;                                    // Left wall
+  if (x + width > roomWidth - snapDistance) snappedX = roomWidth - width - wallOffset; // Right wall
+  if (y < snapDistance) snappedY = wallOffset;                                    // Top wall
+  if (y + depth > roomHeight - snapDistance) snappedY = roomHeight - depth - wallOffset; // Bottom wall
   
-  // Ensure element stays within room bounds
-  snappedX = Math.max(0, Math.min(snappedX, roomWidth - width));
-  snappedY = Math.max(0, Math.min(snappedY, roomHeight - depth));
+  // Ensure element stays within room bounds (with wall offset)
+  snappedX = Math.max(wallOffset, Math.min(snappedX, roomWidth - width - wallOffset));
+  snappedY = Math.max(wallOffset, Math.min(snappedY, roomHeight - depth - wallOffset));
   
   // Check for wall collision and push away from wall if needed
   if (checkWallCollision(snappedX, snappedY, width, depth, customWalls, currentRoomData)) {

@@ -103,8 +103,36 @@ const DraggableCabinet = React.memo(({
 
       {/* Main Element Body */}
       <rect
-        x={0}
-        y={0}
+        x={(element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 0;
+                  case 180: return 0;
+                  case 270: return -40;
+                  case -90: return -40;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0}
+        y={(element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 30;
+                  case 180: return 0;
+                  case 270: return 28;
+                  case -90: return 28;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0}
         width={element.width * scale}
         height={element.depth * scale}
         fill={fillColor}
@@ -124,13 +152,88 @@ const DraggableCabinet = React.memo(({
         onTouchStart={(e) => onMouseDown(e, element.id)}
       />
 
-      {/* Door Indication for Cabinets */}
+      {/* Special rendering for medicine cabinets to show actual shallow depth */}
+      {(element.type === 'medicine' || element.type === 'medicine-mirror') && (
+        <>
+          {(() => {
+            // Shift medicine cabinets based on rotation to sync with wall view positioning
+            const getOffsetByRotation = () => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return { x: 0, y: 0 };
+                  case 90: return { x: 0, y: 30 }; // Move back closer to wall
+                  case 180: return { x: 0, y: 0 };
+                  case 270: return { x: -40, y: 28 }; // Both x and y offset
+                  case -90: return { x: -40, y: 28 }; // Handle negative rotation
+                  default: return { x: 0, y: 0 };
+                }
+              }
+              return { x: 0, y: 0 }; // Regular medicine cabinet stays at 0
+            };
+            const offset = getOffsetByRotation();
+            return (
+              <>
+                {/* Show actual shallow depth with hatched pattern */}
+                <rect
+                  x={2 + offset.x}
+                  y={2 + offset.y}
+                  width={element.width * scale - 4}
+                  height={Math.max(element.depth * scale - 4, 8)} // Minimum 8px to be visible
+                  fill="none"
+                  stroke="#999"
+                  strokeWidth="1"
+                  strokeDasharray="2,2"
+                />
+                {/* Medicine cabinet icon */}
+                <rect
+                  x={(element.width * scale) * 0.2 + offset.x}
+                  y={2 + offset.y}
+                  width={(element.width * scale) * 0.6}
+                  height={Math.max(element.depth * scale - 4, 6)}
+                  fill="rgba(255,255,255,0.3)"
+                  stroke="#666"
+                  strokeWidth="0.5"
+                />
+                {/* Mirror indicator for medicine-mirror - show actual wall-mounted depth */}
+                {element.type === 'medicine-mirror' && (
+                  <rect
+                    x={(element.width * scale) * 0.2 + offset.x}
+                    y={1 + offset.y}
+                    width={(element.width * scale) * 0.6}
+                    height={Math.max(element.depth * scale - 2, 8)}
+                    fill="rgba(173,216,230,0.5)"
+                    stroke="rgba(100,149,237,0.8)"
+                    strokeWidth="1"
+                    rx="1"
+                  />
+                )}
+                {/* Depth indicator text for shallow medicine cabinets */}
+                <text
+                  x={(element.width * scale) / 2 + offset.x}
+                  y={element.depth * scale / 2 + offset.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="6"
+                  fill="#666"
+                  fontWeight="bold"
+                >
+                  {element.depth}"D
+                </text>
+              </>
+            );
+          })()}
+        </>
+      )}
+
+      {/* Door Indication for Regular Cabinets */}
       {element.category === 'cabinet' &&
         element.type !== 'sink-base' &&
         element.type !== 'vanity-sink' &&
         element.type !== 'open-shelf' &&
         element.type !== 'corner' &&
         element.type !== 'corner-wall' &&
+        element.type !== 'medicine' &&
+        element.type !== 'medicine-mirror' &&
         renderDoorGraphic(0, 0, element.width * scale, element.depth * scale, 0)}
 
       {/* Special Sink Cabinet Graphics */}
@@ -260,16 +363,72 @@ const DraggableCabinet = React.memo(({
 
       {/* Element Number Badge */}
       <circle
-        cx={(element.width * scale) / 2}
-        cy={(element.depth * scale) / 2}
+        cx={(element.width * scale) / 2 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 0;
+                  case 180: return 0;
+                  case 270: return -40;
+                  case -90: return -40;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
+        cy={(element.depth * scale) / 2 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 30;
+                  case 180: return 0;
+                  case 270: return 28;
+                  case -90: return 28;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
         r="12"
         fill="white"
         stroke="#333"
         strokeWidth="1"
       />
       <text
-        x={(element.width * scale) / 2}
-        y={(element.depth * scale) / 2}
+        x={(element.width * scale) / 2 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 0;
+                  case 180: return 0;
+                  case 270: return -40;
+                  case -90: return -40;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
+        y={(element.depth * scale) / 2 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 30;
+                  case 180: return 0;
+                  case 270: return 28;
+                  case -90: return 28;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
         textAnchor="middle"
         dominantBaseline="middle"
         fontSize="10"
@@ -281,8 +440,36 @@ const DraggableCabinet = React.memo(({
 
       {/* Element Type Label */}
       <text
-        x={(element.width * scale) / 2}
-        y={(element.depth * scale) + 15}
+        x={(element.width * scale) / 2 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 0;
+                  case 180: return 0;
+                  case 270: return -40;
+                  case -90: return -40;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
+        y={(element.depth * scale) + 15 + ((element.type === 'medicine' || element.type === 'medicine-mirror') 
+          ? (() => {
+              if (element.type === 'medicine-mirror') {
+                switch (element.rotation) {
+                  case 0: return 0;
+                  case 90: return 30;
+                  case 180: return 0;
+                  case 270: return 28;
+                  case -90: return 28;
+                  default: return 0;
+                }
+              }
+              return 0;
+            })()
+          : 0)}
         textAnchor="middle"
         fontSize="8"
         fill="#666"

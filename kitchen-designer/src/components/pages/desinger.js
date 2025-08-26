@@ -8,6 +8,7 @@ import MainNavBar from '../ui/Navigation';
 import WallView from '../design/WallView';
 import DraggableCabinet from '../design/DraggableCabinet';
 import DesignerSidebar from '../design/DesignerSidebar';
+import { checkWallCollision as wallHelpersCollision, pushAwayFromWall as wallHelpersPush } from '../../utils/wallHelpers';
 import QuoteForm from '../forms/QuoteForm';
 import PricingDisplay from '../design/PricingDisplay';
 import ElementList from '../design/ElementList';
@@ -1026,8 +1027,8 @@ const KitchenDesigner = () => {
         const elX = element.x;
         const elY = element.y;
         // Calculate element dimensions based on rotation
-        const elWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-        const elDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
+        const elWidth = (element.rotation === 0 || element.rotation === 180) ? element.width * scale : element.depth * scale;
+        const elDepth = (element.rotation === 0 || element.rotation === 180) ? element.depth * scale : element.width * scale;
         // Snap to right side of existing element
         if (Math.abs((elX + elWidth) - x) < snapDistance &&
           Math.abs(elY - y) < elDepth && Math.abs((elY + elDepth) - (y + depth)) < elDepth) {
@@ -1057,10 +1058,10 @@ const KitchenDesigner = () => {
     return { x: snappedX, y: snappedY, snapped };
   };
   // Check if cabinet would collide with custom walls using proper line-rectangle intersection
-  const checkWallCollision = (x, y, width, depth) => {
-    for (const wall of customWalls) {
+  const checkWallCollision = (x, y, width, depth, wallsArray = customWalls, roomData = currentRoomData, rotation = 0) => {
+    for (const wall of wallsArray) {
       // Only check walls that are present
-      if (!(currentRoomData.walls || []).includes(wall.wallNumber)) continue;
+      if (!(roomData.walls || []).includes(wall.wallNumber)) continue;
       // Create cabinet rectangle corners
       const corners = [
         { x: x, y: y },
@@ -1311,6 +1312,7 @@ const KitchenDesigner = () => {
       };
       dragCacheRef.current.hasMoved = false;
       // Calculate offset from element position to cursor
+      // Use the same logic for all elements - the SVG transform handles rotation
       setDragOffset({
         x: cursorPt.x - element.x - 30, // Account for canvas offset
         y: cursorPt.y - element.y - 30
@@ -1327,8 +1329,11 @@ const KitchenDesigner = () => {
   const handleWallViewMouseDown = (e, elementId) => {
     e.preventDefault();
     const element = currentRoomData.elements.find(el => el.id === elementId);
-    if (element && (element.type === 'wall' || element.type === 'medicine')) {
-      setIsDraggingWallView(false);
+    // Allow height adjustment for all wall-mounted elements
+    const elementSpec = elementTypes[element?.type];
+    const isWallMounted = elementSpec && elementSpec.mountHeight !== undefined;
+    if (element && isWallMounted) {
+      setIsDraggingWallView(true);
       setSelectedElement(elementId);
       // Get coordinates from touch or mouse event
       const coords = getEventCoordinates(e);
@@ -1389,9 +1394,9 @@ const KitchenDesigner = () => {
         // Calculate new position directly
         const newX = cursorPt.x - dragOffset.x - 30;
         const newY = cursorPt.y - dragOffset.y - 30;
-        // Calculate element dimensions based on rotation
-        const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-        const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
+        // Calculate element dimensions based on rotation (fix for 90-degree rotations)
+        const elementWidth = (element.rotation === 0 || element.rotation === 180) ? element.width * scale : element.depth * scale;
+        const elementDepth = (element.rotation === 0 || element.rotation === 180) ? element.depth * scale : element.width * scale;
         // Keep element within room bounds
         const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
         const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
@@ -1421,7 +1426,7 @@ const KitchenDesigner = () => {
         //console.log('Cabinet snap result:', position);
         // If not snapped to cabinet, try snapping to walls
         if (!position.snapped) {
-          position = snapToWall(boundedX, boundedY, elementWidth, elementDepth, currentRoomData, scale, allWallsForCollision, checkWallCollision, pushAwayFromWall);
+          position = snapToWall(boundedX, boundedY, elementWidth, elementDepth, currentRoomData, scale, allWallsForCollision, wallHelpersCollision, wallHelpersPush);
           //console.log('Wall snap result:', position);
         }
         // If not snapped to regular walls, try snapping to custom walls
@@ -1453,9 +1458,13 @@ const KitchenDesigner = () => {
           //console.log('COLLISION DETECTED! X position', position.x, 'is at/beyond room wall boundary at', wallBoundary);
         }
 
-        if (hasCollision && !position.snapped) {
-          // Only push away from wall if not successfully snapped to another cabinet
-          const pushedPosition = pushAwayFromWall(position.x, position.y, elementWidth, elementDepth, allWallsForCollision, currentRoomData, scale, element.rotation || 0);
+        // Wall-mounted elements (with mountHeight) should be exempt from floor-level collision detection
+        const elementSpec = elementTypes[element.type];
+        const isWallMounted = elementSpec && elementSpec.mountHeight !== undefined;
+        
+        if (hasCollision && !position.snapped && !isWallMounted) {
+          // Only push away from wall if not successfully snapped to another cabinet and not wall-mounted
+          const pushedPosition = wallHelpersPush(position.x, position.y, elementWidth, elementDepth, allWallsForCollision, currentRoomData, scale, element.rotation || 0, element.type);
           if (pushedPosition) {
             position = pushedPosition;
           } else {
@@ -1477,11 +1486,11 @@ const KitchenDesigner = () => {
         // Find the SVG group element for this cabinet
         const svgElement = canvasRef.current.querySelector(`[data-element-id="${element.id}"]`);
         if (svgElement) {
-          // Calculate transform based on rotation for immediate visual update
+          // Calculate transform based on rotation for immediate visual update (match DraggableCabinet.js)
           const centerX = position.x + elementWidth / 2;
           const centerY = position.y + elementDepth / 2;
           const transform = element.rotation !== 0
-            ? `translate(${centerX}, ${centerY}) rotate(${element.rotation}) translate(${-element.width * scale / 2}, ${-element.depth * scale / 2})`
+            ? `translate(${centerX}, ${centerY}) rotate(${element.rotation}) translate(${-elementWidth / 2}, ${-elementDepth / 2})`
             : `translate(${position.x}, ${position.y})`;
 
           // Apply transform directly to DOM for zero lag response
@@ -1664,8 +1673,8 @@ const KitchenDesigner = () => {
     const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
     const threshold = 20; // Distance from wall to be considered "on wall"
     return currentRoomData.elements.filter(element => {
-      const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-      const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
+      const elementWidth = (element.rotation === 0 || element.rotation === 180) ? element.width * scale : element.depth * scale;
+      const elementDepth = (element.rotation === 0 || element.rotation === 180) ? element.depth * scale : element.width * scale;
       switch (wallNumber) {
         case 1: // Bottom wall
           return element.y + elementDepth > roomHeight - threshold;
@@ -1829,8 +1838,8 @@ const KitchenDesigner = () => {
         return false; // No collision - elements at different heights
       }
       // Calculate other element's dimensions based on rotation
-      const otherWidth = otherElement.rotation % 180 === 0 ? otherElement.width * scale : otherElement.depth * scale;
-      const otherDepth = otherElement.rotation % 180 === 0 ? otherElement.depth * scale : otherElement.width * scale;
+      const otherWidth = (otherElement.rotation === 0 || otherElement.rotation === 180) ? otherElement.width * scale : otherElement.depth * scale;
+      const otherDepth = (otherElement.rotation === 0 || otherElement.rotation === 180) ? otherElement.depth * scale : otherElement.width * scale;
       // AABB collision detection with overlap buffer
       const collision = !(
         elementX + elementWidth < otherElement.x + overlapBuffer ||

@@ -1288,6 +1288,290 @@ Object.assign(analyticsDb, {
   }
 });
 
+// Invoice database operations
+const invoiceDb = {
+  // Client operations
+  async getAllClients() {
+    const db = await getDb();
+    const clients = await db.all('SELECT * FROM clients ORDER BY created_at DESC');
+    await db.close();
+    return clients;
+  },
+
+  async getClientById(id) {
+    const db = await getDb();
+    const client = await db.get('SELECT * FROM clients WHERE id = ?', [id]);
+    await db.close();
+    return client;
+  },
+
+  async createClient(clientData) {
+    const db = await getDb();
+    const result = await db.run(
+      `INSERT INTO clients (company_name, first_name, last_name, email, phone, address, is_business, tax_exempt_number) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [clientData.company_name, clientData.first_name, clientData.last_name, clientData.email, 
+       clientData.phone, clientData.address, clientData.is_business || 0, clientData.tax_exempt_number]
+    );
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async updateClient(id, clientData) {
+    const db = await getDb();
+    await db.run(
+      `UPDATE clients SET company_name = ?, first_name = ?, last_name = ?, email = ?, phone = ?, 
+       address = ?, is_business = ?, tax_exempt_number = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [clientData.company_name, clientData.first_name, clientData.last_name, clientData.email,
+       clientData.phone, clientData.address, clientData.is_business || 0, clientData.tax_exempt_number, id]
+    );
+    await db.close();
+  },
+
+  // Line item label operations (admin configurable)
+  async getLineItemLabels() {
+    const db = await getDb();
+    const labels = await db.all('SELECT * FROM line_item_labels ORDER BY label_name');
+    await db.close();
+    return labels;
+  },
+
+  async createLineItemLabel(labelData) {
+    const db = await getDb();
+    const result = await db.run(
+      'INSERT INTO line_item_labels (label_name, default_unit_price) VALUES (?, ?)',
+      [labelData.label_name, labelData.default_unit_price]
+    );
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async updateLineItemLabel(id, labelData) {
+    const db = await getDb();
+    await db.run(
+      'UPDATE line_item_labels SET label_name = ?, default_unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [labelData.label_name, labelData.default_unit_price, id]
+    );
+    await db.close();
+  },
+
+  async deleteLineItemLabel(id) {
+    const db = await getDb();
+    await db.run('DELETE FROM line_item_labels WHERE id = ?', [id]);
+    await db.close();
+  },
+
+  // Invoice operations
+  async getAllInvoices() {
+    const db = await getDb();
+    const invoices = await db.all(`
+      SELECT i.*, c.company_name, c.first_name, c.last_name, c.is_business
+      FROM invoices i
+      JOIN clients c ON i.client_id = c.id
+      ORDER BY i.created_at DESC
+    `);
+    await db.close();
+    return invoices;
+  },
+
+  async getInvoiceById(id) {
+    const db = await getDb();
+    const invoice = await db.get(`
+      SELECT i.*, c.* 
+      FROM invoices i
+      JOIN clients c ON i.client_id = c.id
+      WHERE i.id = ?
+    `, [id]);
+
+    if (invoice) {
+      // Get line items
+      invoice.line_items = await db.all(
+        'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_order',
+        [id]
+      );
+
+      // Get payments
+      invoice.payments = await db.all(
+        'SELECT * FROM invoice_payments WHERE invoice_id = ? ORDER BY payment_date DESC',
+        [id]
+      );
+    }
+
+    await db.close();
+    return invoice;
+  },
+
+  async createInvoice(invoiceData) {
+    const db = await getDb();
+    
+    try {
+      await db.run('BEGIN TRANSACTION');
+
+      // Generate unique invoice number
+      const invoiceNumber = await this.generateInvoiceNumber(db);
+
+      // Create invoice
+      const invoiceResult = await db.run(`
+        INSERT INTO invoices (
+          client_id, invoice_number, invoice_date, due_date, status, 
+          subtotal, tax_rate, tax_amount, discount_amount, markup_amount, 
+          total_amount, logo_url, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [invoiceData.client_id, invoiceNumber, invoiceData.invoice_date, invoiceData.due_date, 
+         invoiceData.status || 'draft', invoiceData.subtotal, invoiceData.tax_rate, 
+         invoiceData.tax_amount, invoiceData.discount_amount || 0, invoiceData.markup_amount || 0, 
+         invoiceData.total_amount, invoiceData.logo_url, invoiceData.notes]
+      );
+
+      const invoiceId = invoiceResult.lastID;
+
+      // Create line items
+      if (invoiceData.line_items && invoiceData.line_items.length > 0) {
+        for (let i = 0; i < invoiceData.line_items.length; i++) {
+          const item = invoiceData.line_items[i];
+          await db.run(`
+            INSERT INTO invoice_line_items (
+              invoice_id, description, quantity, unit_price, total_price, item_type, line_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [invoiceId, item.description, item.quantity, item.unit_price, 
+             item.total_price, item.item_type || 'material', i]
+          );
+        }
+      }
+
+      // Generate persistent token
+      const token = crypto.randomBytes(32).toString('hex');
+      await db.run(
+        'INSERT INTO invoice_tokens (token, invoice_id) VALUES (?, ?)',
+        [token, invoiceId]
+      );
+
+      await db.run('COMMIT');
+      await db.close();
+      
+      return { id: invoiceId, invoice_number: invoiceNumber, token };
+    } catch (error) {
+      await db.run('ROLLBACK');
+      await db.close();
+      throw error;
+    }
+  },
+
+  async generateInvoiceNumber(db) {
+    const year = new Date().getFullYear();
+    const prefix = `INV-${year}-`;
+    
+    const lastInvoice = await db.get(
+      'SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY id DESC LIMIT 1',
+      [`${prefix}%`]
+    );
+    
+    let nextNumber = 1;
+    if (lastInvoice) {
+      const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[2]);
+      nextNumber = lastNumber + 1;
+    }
+    
+    return `${prefix}${nextNumber.toString().padStart(4, '0')}`;
+  },
+
+  // Token operations for client access
+  async getInvoiceByToken(token) {
+    const db = await getDb();
+    
+    const tokenData = await db.get(`
+      SELECT t.*, i.*, c.*
+      FROM invoice_tokens t
+      JOIN invoices i ON t.invoice_id = i.id
+      JOIN clients c ON i.client_id = c.id
+      WHERE t.token = ? AND t.is_active = 1
+    `, [token]);
+
+    if (tokenData) {
+      // Update view count and last viewed
+      await db.run(
+        'UPDATE invoice_tokens SET viewed_at = CURRENT_TIMESTAMP, view_count = view_count + 1 WHERE token = ?',
+        [token]
+      );
+
+      // Get line items
+      tokenData.line_items = await db.all(
+        'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_order',
+        [tokenData.invoice_id]
+      );
+
+      // Get payments
+      tokenData.payments = await db.all(
+        'SELECT * FROM invoice_payments WHERE invoice_id = ? ORDER BY payment_date DESC',
+        [tokenData.invoice_id]
+      );
+    }
+
+    await db.close();
+    return tokenData;
+  },
+
+  // Payment tracking
+  async addPayment(paymentData) {
+    const db = await getDb();
+    const result = await db.run(`
+      INSERT INTO invoice_payments (
+        invoice_id, payment_amount, payment_method, check_number, payment_date, notes, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [paymentData.invoice_id, paymentData.payment_amount, paymentData.payment_method,
+       paymentData.check_number, paymentData.payment_date, paymentData.notes, paymentData.created_by]
+    );
+
+    // Update invoice status if fully paid
+    await this.updateInvoiceStatus(paymentData.invoice_id);
+    
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async updateInvoiceStatus(invoiceId) {
+    const db = await getDb();
+    
+    const invoice = await db.get('SELECT total_amount FROM invoices WHERE id = ?', [invoiceId]);
+    const paymentsResult = await db.get(
+      'SELECT SUM(payment_amount) as total_paid FROM invoice_payments WHERE invoice_id = ?',
+      [invoiceId]
+    );
+    
+    const totalPaid = paymentsResult.total_paid || 0;
+    let status = 'draft';
+    
+    if (totalPaid >= invoice.total_amount) {
+      status = 'paid';
+    } else if (totalPaid > 0) {
+      status = 'partial';
+    } else {
+      status = 'sent';
+    }
+    
+    await db.run('UPDATE invoices SET status = ? WHERE id = ?', [status, invoiceId]);
+    await db.close();
+  },
+
+  // Tax rate operations
+  async getTaxRates() {
+    const db = await getDb();
+    const rates = await db.all('SELECT * FROM tax_rates WHERE is_active = 1 ORDER BY state_code, county, city');
+    await db.close();
+    return rates;
+  },
+
+  async updateTaxRate(id, taxData) {
+    const db = await getDb();
+    await db.run(
+      'UPDATE tax_rates SET tax_rate = ?, last_updated = CURRENT_TIMESTAMP, updated_by = ? WHERE id = ?',
+      [taxData.tax_rate, taxData.updated_by, id]
+    );
+    await db.close();
+  }
+};
+
 module.exports = {
   getDb,
   photoDb,
@@ -1295,5 +1579,6 @@ module.exports = {
   designDb,
   userDb,
   analyticsDb,
-  testimonialDb
+  testimonialDb,
+  invoiceDb
 };

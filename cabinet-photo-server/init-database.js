@@ -35,6 +35,9 @@ async function initializeDatabase() {
     console.log(' Adding testimonial tables...');
     await addTestimonialTables(db);
 
+    console.log(' Adding invoice tables...');
+    await addInvoiceTables(db);
+
     console.log('\n Database initialization completed successfully!');
 
   } catch (error) {
@@ -574,6 +577,182 @@ async function addTestimonialTables(db) {
   `);
 
   console.log(' Created testimonial tables and indexes');
+}
+
+async function addInvoiceTables(db) {
+  // Clients table for invoice system
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_name TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      email TEXT,
+      phone TEXT,
+      address TEXT,
+      is_business BOOLEAN DEFAULT 0,
+      tax_exempt_number TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Line item labels for customizable dropdown options
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS line_item_labels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label_name TEXT NOT NULL UNIQUE,
+      default_unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Invoices table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL,
+      invoice_number TEXT NOT NULL UNIQUE,
+      invoice_date DATE NOT NULL,
+      due_date DATE NOT NULL,
+      status TEXT DEFAULT 'draft',
+      subtotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      tax_rate DECIMAL(5, 4) NOT NULL DEFAULT 0.00,
+      tax_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      discount_amount DECIMAL(10, 2) DEFAULT 0.00,
+      markup_amount DECIMAL(10, 2) DEFAULT 0.00,
+      total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      logo_url TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Invoice line items
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_line_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      description TEXT NOT NULL,
+      quantity DECIMAL(10, 2) NOT NULL DEFAULT 1.00,
+      unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      total_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+      item_type TEXT DEFAULT 'material',
+      line_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Invoice tokens for persistent client access
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      invoice_id INTEGER NOT NULL,
+      is_active BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      viewed_at DATETIME,
+      view_count INTEGER DEFAULT 0,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Invoice payments tracking
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      payment_amount DECIMAL(10, 2) NOT NULL,
+      payment_method TEXT NOT NULL,
+      check_number TEXT,
+      payment_date DATE NOT NULL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_by INTEGER,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `);
+
+  // Tax rates table for multi-state support
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS tax_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      state_code TEXT NOT NULL,
+      county TEXT,
+      city TEXT,
+      tax_rate DECIMAL(5, 4) NOT NULL,
+      is_active BOOLEAN DEFAULT 1,
+      last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by INTEGER,
+      FOREIGN KEY (updated_by) REFERENCES users(id)
+    )
+  `);
+
+  // Create indexes for invoice tables
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);
+    CREATE INDEX IF NOT EXISTS idx_clients_business ON clients(is_business);
+    CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at);
+    CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
+    CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+    CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date);
+    CREATE INDEX IF NOT EXISTS idx_line_items_invoice ON invoice_line_items(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_tokens_token ON invoice_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_tokens_invoice ON invoice_tokens(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_tokens_active ON invoice_tokens(is_active);
+    CREATE INDEX IF NOT EXISTS idx_payments_invoice ON invoice_payments(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_payments_date ON invoice_payments(payment_date);
+    CREATE INDEX IF NOT EXISTS idx_tax_rates_state ON tax_rates(state_code);
+    CREATE INDEX IF NOT EXISTS idx_tax_rates_active ON tax_rates(is_active);
+  `);
+
+  // Insert default line item labels
+  const defaultLabels = [
+    ['Cabinet - Base', 250.00],
+    ['Cabinet - Wall', 180.00],
+    ['Cabinet - Tall', 450.00],
+    ['Hardware - Handles', 15.00],
+    ['Hardware - Hinges', 8.00],
+    ['Labor - Installation', 85.00],
+    ['Labor - Demolition', 45.00],
+    ['Material - Wood', 12.00],
+    ['Material - Plywood', 8.00],
+    ['Appliance - Built-in', 500.00],
+    ['Countertop - Linear Foot', 75.00],
+    ['Backsplash - Square Foot', 12.00],
+    ['Paint - Per Room', 200.00],
+    ['Electrical - Outlet', 150.00],
+    ['Plumbing - Connection', 200.00]
+  ];
+
+  for (const [labelName, defaultPrice] of defaultLabels) {
+    await db.run(
+      'INSERT OR IGNORE INTO line_item_labels (label_name, default_unit_price) VALUES (?, ?)',
+      [labelName, defaultPrice]
+    );
+  }
+
+  // Insert default tax rates for WA, OR, ID
+  const defaultTaxRates = [
+    ['WA', null, null, 0.065], // Washington base rate 6.5%
+    ['OR', null, null, 0.0],   // Oregon no sales tax
+    ['ID', null, null, 0.06]   // Idaho base rate 6%
+  ];
+
+  for (const [state, county, city, rate] of defaultTaxRates) {
+    await db.run(
+      'INSERT OR IGNORE INTO tax_rates (state_code, county, city, tax_rate) VALUES (?, ?, ?, ?)',
+      [state, county, city, rate]
+    );
+  }
+
+  console.log(' Created invoice system tables and default data');
 }
 
 // Only run if this file is executed directly

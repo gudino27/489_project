@@ -1112,7 +1112,7 @@ const WallView = ({
               </>
             )}
 
-            {/* Medicine cabinet details */}
+            {/* Medicine cabinet details - enhanced rectangular appearance */}
             {(element.type === 'medicine' || element.type === 'medicine-mirror') && (
               <>
                 {/* Medicine cabinet frame */}
@@ -1131,10 +1131,10 @@ const WallView = ({
                   // Mirror cabinet with reflection effect
                   <>
                     <rect
-                      x={50 + x * calculatedViewScale + 4}
-                      y={30 + yPos * calculatedViewScale + 4}
-                      width={width * calculatedViewScale - 8}
-                      height={height * calculatedViewScale - 8}
+                      x={50 + x * calculatedViewScale + 6}
+                      y={30 + yPos * calculatedViewScale + 6}
+                      width={width * calculatedViewScale - 12}
+                      height={height * calculatedViewScale - 12}
                       fill="rgba(191, 219, 254, 0.3)"
                       stroke="rgba(59, 130, 246, 0.5)"
                       strokeWidth="0.5"

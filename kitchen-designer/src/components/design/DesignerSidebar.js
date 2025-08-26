@@ -479,8 +479,8 @@ const DesignerSidebar = ({
                         </div>
                       )}
 
-                      {/* Mount height for wall cabinets */}
-                      {elementSpec.category === 'cabinet' && elementSpec.mountType === 'wall' && (
+                      {/* Mount height for wall-mounted elements */}
+                      {elementSpec.mountHeight !== undefined && (
                         <div>
                           <label className="block text-sm text-gray-600 mb-1">Mount Height (inches)</label>
                           <input
@@ -490,7 +490,7 @@ const DesignerSidebar = ({
                             onChange={(e) => updateElement(element.id, { mountHeight: parseFloat(e.target.value) })}
                             className="w-full p-2 border rounded"
                             min="0"
-                            max={parseFloat(currentRoomData.dimensions.wallHeight) - element.actualHeight}
+                            max={parseFloat(currentRoomData.dimensions.wallHeight) - (element.actualHeight || elementSpec.fixedHeight || elementSpec.defaultHeight)}
                           />
                           <p className="text-xs text-gray-500 mt-1">
                             Distance from floor to bottom of cabinet

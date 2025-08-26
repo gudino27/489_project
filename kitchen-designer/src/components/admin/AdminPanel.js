@@ -14,7 +14,8 @@ import {
   Users,
   Shield,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  Receipt
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
@@ -31,6 +32,7 @@ import DesignViewer from '../design/DesignViewer';
 import UserManagement from './UserManagement';
 import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
+import InvoiceManager from './InvoiceManager';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 // ----------------------------------------------------
@@ -212,7 +214,7 @@ const AdminPanel = () => {
 
   // Tab access control
   const getAvailableTabs = () => {
-    const baseTabs = ['prices', 'photos', 'employees', 'designs', 'testimonials'];
+    const baseTabs = ['prices', 'photos', 'employees', 'designs', 'invoices', 'testimonials'];
     if (user?.role === 'super_admin') {
       return [...baseTabs, 'users', 'analytics'];
     }
@@ -388,6 +390,7 @@ const AdminPanel = () => {
                   {tab === 'photos' && <Image size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'employees' && <IdCardLanyard size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'designs' && <FileText size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'invoices' && <Receipt size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'testimonials' && <MessageSquare size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'users' && <Users size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'analytics' && <BarChart3 size={16} className="md:w-[18px] md:h-[18px]" />}
@@ -427,6 +430,10 @@ const AdminPanel = () => {
          Design Viewer Tab
         */}
         {activeTab === 'designs' && (<DesignViewer token={token} API_BASE={API_BASE} />)}
+        {/*
+         Invoice Management Tab
+        */}
+        {activeTab === 'invoices' && (<InvoiceManager token={token} API_BASE={API_BASE} />)}
         {/*
          Testimonial Management Tab
         */}

@@ -5,8 +5,9 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 const cors = require('cors');
-const { photoDb, employeeDb, designDb, userDb, analyticsDb, testimonialDb } = require('./db-helpers');
+const { photoDb, employeeDb, designDb, userDb, analyticsDb, testimonialDb, invoiceDb } = require('./db-helpers');
 const nodemailer = require('nodemailer');
+const twilio = require('twilio');
 const app = express();
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gudinocustom.com', 'https://www.gudinocustom.com', 'https://api.gudinocustom.com'],
@@ -33,12 +34,21 @@ const uploadMemory = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 const emailTransporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: process.env.EMAIL_SECURE === 'true',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
 });
+
+// Initialize Twilio client
+let twilioClient = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
+
 // Middleware for authentication
 const authenticateUser = async (req, res, next) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -1405,7 +1415,7 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
         const info = await emailTransporter.sendMail({
-          from: `"Cabinet Designer" <${process.env.EMAIL_USER}>`,
+          from: process.env.EMAIL_FROM,
           to: 'info@gudinocustom.com',
           subject: `New Cabinet Design - ${designData.client_name} - $${designData.total_price.toFixed(2)}`,
           html: `
@@ -1860,16 +1870,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       // Send email with reset link
       const resetUrl = `https://gudinocustom.com/reset-password?token=${resetData.token}`;
 
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        }
-      });
-
       const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: process.env.EMAIL_FROM,
         to: resetData.user.email,
         subject: 'Password Reset - GudinoCustom Admin',
         html: `
@@ -1886,7 +1888,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         `
       };
 
-      await transporter.sendMail(mailOptions);
+      await emailTransporter.sendMail(mailOptions);
       console.log(`Password reset email sent to ${email}`);
     }
 
@@ -2031,6 +2033,262 @@ app.get('/api/analytics/realtime', authenticateUser, requireRole('super_admin'),
 });
 
 // =========================
+// INVOICE ENDPOINTS
+// =========================
+
+// Admin endpoint - Get all invoices
+app.get('/api/admin/invoices', authenticateUser, async (req, res) => {
+  try {
+    const invoices = await invoiceDb.getAllInvoices();
+    res.json(invoices);
+  } catch (error) {
+    console.error('Error getting invoices:', error);
+    res.status(500).json({ error: 'Failed to get invoices' });
+  }
+});
+
+// Admin endpoint - Get invoice by ID
+app.get('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
+  try {
+    const invoice = await invoiceDb.getInvoiceById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    res.json(invoice);
+  } catch (error) {
+    console.error('Error getting invoice:', error);
+    res.status(500).json({ error: 'Failed to get invoice' });
+  }
+});
+
+// Admin endpoint - Create new invoice
+app.post('/api/admin/invoices', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.createInvoice(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    res.status(500).json({ error: 'Failed to create invoice' });
+  }
+});
+
+// Admin endpoint - Get all clients
+app.get('/api/admin/clients', authenticateUser, async (req, res) => {
+  try {
+    const clients = await invoiceDb.getAllClients();
+    res.json(clients);
+  } catch (error) {
+    console.error('Error getting clients:', error);
+    res.status(500).json({ error: 'Failed to get clients' });
+  }
+});
+
+// Admin endpoint - Create new client
+app.post('/api/admin/clients', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.createClient(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating client:', error);
+    res.status(500).json({ error: 'Failed to create client' });
+  }
+});
+
+// Admin endpoint - Update client
+app.put('/api/admin/clients/:id', authenticateUser, async (req, res) => {
+  try {
+    await invoiceDb.updateClient(req.params.id, req.body);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating client:', error);
+    res.status(500).json({ error: 'Failed to update client' });
+  }
+});
+
+// Admin endpoint - Get line item labels
+app.get('/api/admin/line-item-labels', authenticateUser, async (req, res) => {
+  try {
+    const labels = await invoiceDb.getLineItemLabels();
+    res.json(labels);
+  } catch (error) {
+    console.error('Error getting line item labels:', error);
+    res.status(500).json({ error: 'Failed to get line item labels' });
+  }
+});
+
+// Admin endpoint - Create line item label
+app.post('/api/admin/line-item-labels', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.createLineItemLabel(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating line item label:', error);
+    res.status(500).json({ error: 'Failed to create line item label' });
+  }
+});
+
+// Admin endpoint - Update line item label
+app.put('/api/admin/line-item-labels/:id', authenticateUser, async (req, res) => {
+  try {
+    await invoiceDb.updateLineItemLabel(req.params.id, req.body);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating line item label:', error);
+    res.status(500).json({ error: 'Failed to update line item label' });
+  }
+});
+
+// Admin endpoint - Delete line item label
+app.delete('/api/admin/line-item-labels/:id', authenticateUser, async (req, res) => {
+  try {
+    await invoiceDb.deleteLineItemLabel(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting line item label:', error);
+    res.status(500).json({ error: 'Failed to delete line item label' });
+  }
+});
+
+// Admin endpoint - Add payment to invoice
+app.post('/api/admin/invoices/:id/payments', authenticateUser, async (req, res) => {
+  try {
+    const paymentData = { ...req.body, invoice_id: req.params.id, created_by: req.user.id };
+    const result = await invoiceDb.addPayment(paymentData);
+    res.json(result);
+  } catch (error) {
+    console.error('Error adding payment:', error);
+    res.status(500).json({ error: 'Failed to add payment' });
+  }
+});
+
+// Admin endpoint - Send invoice via email
+app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    const { message } = req.body;
+    
+    // Get invoice details with client info
+    const invoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const client = await invoiceDb.getClientById(invoice.client_id);
+    if (!client || !client.email) {
+      return res.status(400).json({ error: 'Client email not found' });
+    }
+
+    // Get the invoice token for the client access link
+    const invoiceWithToken = await invoiceDb.getInvoiceByToken(invoice.token || '');
+    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoice.token || invoiceWithToken?.token}`;
+
+    const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: client.email,
+      subject: `Invoice ${invoice.invoice_number} from Gudino Custom Cabinets`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #1e3a8a; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0;">Gudino Custom Cabinets</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #f8fafc;">
+            <h2 style="color: #1e3a8a; margin-top: 0;">Invoice ${invoice.invoice_number}</h2>
+            
+            <p>Hello ${clientName},</p>
+            
+            <p>Please find your invoice attached. You can view and download your invoice using the secure link below:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${viewLink}" 
+                 style="background: #1e3a8a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Invoice Online
+              </a>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0;">
+              <h3 style="margin-top: 0; color: #374151;">Invoice Details:</h3>
+              <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
+              <p><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
+              <p><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+              <p><strong>Total Amount:</strong> $${invoice.total_amount.toFixed(2)}</p>
+            </div>
+            
+            ${message ? `
+            <div style="margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid #1e3a8a;">
+              <p style="margin: 0;"><strong>Additional Message:</strong></p>
+              <p style="margin: 5px 0 0 0;">${message}</p>
+            </div>
+            ` : ''}
+            
+            <p style="margin-top: 30px;">If you have any questions about this invoice, please don't hesitate to contact us.</p>
+            
+            <p>Thank you for choosing Gudino Custom Cabinets!</p>
+            
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
+              <p>Gudino Custom Cabinets</p>
+              <p>Email: ${process.env.ADMIN_EMAIL}</p>
+              <p>This link will remain active permanently for your records.</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    await emailTransporter.sendMail(mailOptions);
+    
+    res.json({ 
+      success: true, 
+      message: 'Invoice email sent successfully',
+      sentTo: client.email
+    });
+    
+  } catch (error) {
+    console.error('Error sending invoice email:', error);
+    res.status(500).json({ error: 'Failed to send invoice email' });
+  }
+});
+
+// Admin endpoint - Get tax rates
+app.get('/api/admin/tax-rates', authenticateUser, async (req, res) => {
+  try {
+    const rates = await invoiceDb.getTaxRates();
+    res.json(rates);
+  } catch (error) {
+    console.error('Error getting tax rates:', error);
+    res.status(500).json({ error: 'Failed to get tax rates' });
+  }
+});
+
+// Admin endpoint - Update tax rate
+app.put('/api/admin/tax-rates/:id', authenticateUser, async (req, res) => {
+  try {
+    const taxData = { ...req.body, updated_by: req.user.id };
+    await invoiceDb.updateTaxRate(req.params.id, taxData);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating tax rate:', error);
+    res.status(500).json({ error: 'Failed to update tax rate' });
+  }
+});
+
+// Public endpoint - Get invoice by token (for client viewing)
+app.get('/api/invoice/:token', async (req, res) => {
+  try {
+    const invoice = await invoiceDb.getInvoiceByToken(req.params.token);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found or expired' });
+    }
+    res.json(invoice);
+  } catch (error) {
+    console.error('Error getting invoice by token:', error);
+    res.status(500).json({ error: 'Failed to get invoice' });
+  }
+});
+
+// =========================
 // TESTIMONIAL ENDPOINTS
 // =========================
 
@@ -2160,7 +2418,7 @@ app.post('/api/admin/send-testimonial-link', authenticateUser, async (req, res) 
     const testimonialLink = `${req.protocol}://${req.get('host').replace('api.', '')}/testimonial/${tokenData.token}`;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM,
       to: client_email,
       subject: 'Share Your Experience with Gudino Custom Woodworking',
       html: `
