@@ -429,11 +429,11 @@ const AdminPanel = () => {
         {/*
          Design Viewer Tab
         */}
-        {activeTab === 'designs' && (<DesignViewer token={token} API_BASE={API_BASE} />)}
+        {activeTab === 'designs' && (<DesignViewer token={token} API_BASE={API_BASE} userRole={user?.role} />)}
         {/*
          Invoice Management Tab
         */}
-        {activeTab === 'invoices' && (<InvoiceManager token={token} API_BASE={API_BASE} />)}
+        {activeTab === 'invoices' && (<InvoiceManager token={token} API_BASE={API_BASE} userRole={user?.role} />)}
         {/*
          Testimonial Management Tab
         */}

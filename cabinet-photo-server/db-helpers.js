@@ -1298,6 +1298,34 @@ const invoiceDb = {
     return clients;
   },
 
+  async searchClients(searchTerm) {
+    const db = await getDb();
+    const searchPattern = `%${searchTerm}%`;
+    const clients = await db.all(`
+      SELECT * FROM clients 
+      WHERE 
+        company_name LIKE ? OR 
+        first_name LIKE ? OR 
+        last_name LIKE ? OR 
+        email LIKE ? OR 
+        phone LIKE ?
+      ORDER BY 
+        CASE 
+          WHEN company_name LIKE ? THEN 1
+          WHEN first_name LIKE ? OR last_name LIKE ? THEN 2
+          WHEN email LIKE ? THEN 3
+          ELSE 4
+        END,
+        created_at DESC
+      LIMIT 20
+    `, [
+      searchPattern, searchPattern, searchPattern, searchPattern, searchPattern,
+      searchPattern, searchPattern, searchPattern, searchPattern
+    ]);
+    await db.close();
+    return clients;
+  },
+
   async getClientById(id) {
     const db = await getDb();
     const client = await db.get('SELECT * FROM clients WHERE id = ?', [id]);

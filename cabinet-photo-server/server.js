@@ -46,7 +46,16 @@ const emailTransporter = nodemailer.createTransport({
 // Initialize Twilio client
 let twilioClient = null;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-  twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  try {
+    if (process.env.TWILIO_ACCOUNT_SID.startsWith('AC')) {
+      twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      console.log('✅ Twilio client initialized successfully');
+    } else {
+      console.warn('⚠️  Invalid Twilio Account SID format. Account SID must start with "AC"');
+    }
+  } catch (error) {
+    console.error('⚠️  Failed to initialize Twilio client:', error.message);
+  }
 }
 
 // Middleware for authentication
@@ -1412,7 +1421,8 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
     console.log(` Design #${designId} saved for ${designData.client_name}`);
 
     // email notification
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    const notificationType = process.env.DESIGN_NOTIFICATION_TYPE || 'email';
+    if ((notificationType === 'email' || notificationType === 'both') && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
         const info = await emailTransporter.sendMail({
           from: process.env.EMAIL_FROM,
@@ -1469,6 +1479,23 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
         console.log('📧 Email sent:', info.messageId);
       } catch (emailError) {
         console.error('⚠️  Email failed:', emailError.message);
+      }
+    }
+
+    // SMS notification for design submissions
+    if ((notificationType === 'sms' || notificationType === 'both') && twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+      try {
+        const smsBody = `New cabinet design from ${designData.client_name} - $${designData.total_price.toFixed(2)}. Contact: ${designData.contact_preference === 'email' ? designData.client_email : designData.client_phone}`;
+        
+        await twilioClient.messages.create({
+          body: smsBody,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: process.env.ADMIN_PHONE || '+15097903516' // Default to your number if not set
+        });
+        
+        console.log('📱 Design SMS notification sent');
+      } catch (smsError) {
+        console.error('⚠️  SMS failed:', smsError.message);
       }
     }
 
@@ -2083,6 +2110,23 @@ app.get('/api/admin/clients', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Search clients with debouncing support
+app.get('/api/admin/clients/search', authenticateUser, async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json([]); // Return empty array for short queries
+    }
+    
+    const clients = await invoiceDb.searchClients(q);
+    res.json(clients);
+  } catch (error) {
+    console.error('Error searching clients:', error);
+    res.status(500).json({ error: 'Failed to search clients' });
+  }
+});
+
 // Admin endpoint - Create new client
 app.post('/api/admin/clients', authenticateUser, async (req, res) => {
   try {
@@ -2248,6 +2292,116 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
   } catch (error) {
     console.error('Error sending invoice email:', error);
     res.status(500).json({ error: 'Failed to send invoice email' });
+  }
+});
+
+// Admin endpoint - Send invoice via SMS
+app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) => {
+  try {
+    if (!twilioClient) {
+      return res.status(500).json({ error: 'SMS service not configured' });
+    }
+
+    const invoiceId = req.params.id;
+    const { message, customPhone } = req.body;
+    
+    // Get invoice details with client info
+    const invoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const client = await invoiceDb.getClientById(invoice.client_id);
+    
+    // Use custom phone if provided by super admin, otherwise use client phone
+    let targetPhone = customPhone;
+    if (!customPhone) {
+      if (!client || !client.phone) {
+        return res.status(400).json({ error: 'Client phone number not found' });
+      }
+      targetPhone = client.phone;
+    }
+
+    // Get the invoice token for the client access link
+    const invoiceWithToken = await invoiceDb.getInvoiceByToken(invoice.token || '');
+    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoice.token || invoiceWithToken?.token}`;
+
+    const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
+    
+    // Format phone number (ensure it has country code)
+    let phoneNumber = targetPhone.replace(/\D/g, ''); // Remove non-digits
+    if (phoneNumber.length === 10) {
+      phoneNumber = `+1${phoneNumber}`; // Add US country code
+    } else if (phoneNumber.length === 11 && phoneNumber.startsWith('1')) {
+      phoneNumber = `+${phoneNumber}`;
+    } else if (!phoneNumber.startsWith('+')) {
+      phoneNumber = `+1${phoneNumber}`;
+    }
+
+    const smsBody = `Hi ${clientName}, your invoice ${invoice.invoice_number} from Gudino Custom Cabinets is ready. Total: $${invoice.total_amount.toFixed(2)}. View online: ${viewLink}${message ? `. Message: ${message}` : ''}`;
+
+    // Send SMS
+    await twilioClient.messages.create({
+      body: smsBody,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phoneNumber
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Invoice SMS sent successfully',
+      sentTo: phoneNumber
+    });
+    
+  } catch (error) {
+    console.error('Error sending invoice SMS:', error);
+    res.status(500).json({ error: 'Failed to send invoice SMS' });
+  }
+});
+
+// Admin endpoint - Get design notification settings (super_admin only)
+app.get('/api/admin/design-notification-settings', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Super admin access required' });
+    }
+    
+    res.json({
+      notificationType: process.env.DESIGN_NOTIFICATION_TYPE || 'email',
+      adminEmail: process.env.ADMIN_EMAIL,
+      adminPhone: process.env.ADMIN_PHONE
+    });
+  } catch (error) {
+    console.error('Error getting notification settings:', error);
+    res.status(500).json({ error: 'Failed to get notification settings' });
+  }
+});
+
+// Admin endpoint - Update design notification settings (super_admin only)
+app.put('/api/admin/design-notification-settings', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Super admin access required' });
+    }
+    
+    const { notificationType } = req.body;
+    
+    if (!['email', 'sms', 'both'].includes(notificationType)) {
+      return res.status(400).json({ error: 'Invalid notification type' });
+    }
+    
+    // Note: In a production environment, you'd want to store this in a database
+    // For now, we'll just acknowledge the change (it won't persist across server restarts)
+    process.env.DESIGN_NOTIFICATION_TYPE = notificationType;
+    
+    res.json({ 
+      success: true,
+      notificationType: notificationType,
+      message: 'Notification settings updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ error: 'Failed to update notification settings' });
   }
 });
 

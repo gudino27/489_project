@@ -10,12 +10,13 @@ import {
   AlertCircle,
   MessageSquare,
   CheckCircle,
-  Trash2
+  Trash2,
+  Settings
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
 import sessionManager from '../utils/sessionManager';
 
-const DesignViewer = () => {
+const DesignViewer = ({ token, API_BASE, userRole }) => {
   const [designs, setDesigns] = useState([]);
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,13 +29,21 @@ const DesignViewer = () => {
 
   // New state for enhanced functionality
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+  
+  // Notification settings state (super admin only)
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    notificationType: 'email',
+    adminEmail: '',
+    adminPhone: ''
+  });
   const [selectedDesigns, setSelectedDesigns] = useState(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [noteValues, setNoteValues] = useState({});
   const [statusChanging, setStatusChanging] = useState(null);
 
-  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
+  // API_BASE now comes from props
 
   // Add the auth headers helper function
   const getAuthHeaders = () => {
@@ -51,7 +60,53 @@ const DesignViewer = () => {
   useEffect(() => {
     loadDesigns();
     loadStats();
+    fetchNotificationSettings();
   }, [filter]);
+
+  // Fetch notification settings (super admin only)
+  const fetchNotificationSettings = async () => {
+    if (userRole !== 'super_admin' || !API_BASE || !token) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/design-notification-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotificationSettings(data);
+      }
+    } catch (error) {
+      console.error('Error fetching notification settings:', error);
+    }
+  };
+
+  // Update notification settings
+  const updateNotificationSettings = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/design-notification-settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ notificationType: notificationSettings.notificationType })
+      });
+
+      if (response.ok) {
+        setShowSettingsModal(false);
+        alert('Design notification settings updated successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to update settings: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+      alert('Failed to update settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Updated loadDesigns with auth headers
   const loadDesigns = async () => {
@@ -502,6 +557,34 @@ const DesignViewer = () => {
           </nav>
         </div>
       </div>
+
+      {/* Notification Settings for Super Admin */}
+      {userRole === 'super_admin' && (
+        <div className="mb-6 flex justify-between items-center">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm flex-1 mr-4">
+            <strong>Customer Design Notifications:</strong> Currently sending to{' '}
+            <span className="font-medium">
+              {notificationSettings.notificationType === 'email' ? 'Email only' :
+               notificationSettings.notificationType === 'sms' ? 'SMS only' :
+               'Both Email & SMS'}
+            </span>
+            {' '}when customers submit cabinet designs.
+          </div>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2 text-sm relative"
+            title={`Design Notifications: ${notificationSettings.notificationType.toUpperCase()}`}
+          >
+            <Settings size={16} />
+            Notification Settings
+            <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
+              notificationSettings.notificationType === 'email' ? 'bg-green-500' :
+              notificationSettings.notificationType === 'sms' ? 'bg-blue-500' :
+              'bg-purple-500'
+            }`}></span>
+          </button>
+        </div>
+      )}
 
       {/* Bulk Actions */}
       {selectedDesigns.size > 0 && (
@@ -1019,6 +1102,102 @@ const DesignViewer = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Settings Modal */}
+      {showSettingsModal && userRole === 'super_admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Settings size={20} />
+              Customer Design Notification Settings
+            </h3>
+            
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Choose how you want to receive notifications when customers submit new cabinet designs.
+              </p>
+              
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="notificationType"
+                    value="email"
+                    checked={notificationSettings.notificationType === 'email'}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, notificationType: e.target.value }))}
+                    className="mr-3"
+                  />
+                  <div>
+                    <div className="font-medium">Email Only</div>
+                    <div className="text-sm text-gray-500">Send to: {notificationSettings.adminEmail}</div>
+                  </div>
+                </label>
+                
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="notificationType"
+                    value="sms"
+                    checked={notificationSettings.notificationType === 'sms'}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, notificationType: e.target.value }))}
+                    className="mr-3"
+                  />
+                  <div>
+                    <div className="font-medium">SMS Only</div>
+                    <div className="text-sm text-gray-500">Send to: {notificationSettings.adminPhone}</div>
+                  </div>
+                </label>
+                
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="notificationType"
+                    value="both"
+                    checked={notificationSettings.notificationType === 'both'}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, notificationType: e.target.value }))}
+                    className="mr-3"
+                  />
+                  <div>
+                    <div className="font-medium">Both Email & SMS</div>
+                    <div className="text-sm text-gray-500">Maximum notifications</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowSettingsModal(false);
+                  // Reset to current settings
+                  fetchNotificationSettings();
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateNotificationSettings}
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Settings size={16} />
+                    Update Settings
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -11,10 +11,11 @@ import {
   Clock,
   AlertCircle,
   Download,
-  Send
+  Send,
+  MessageCircle
 } from 'lucide-react';
 
-const InvoiceManager = ({ token, API_BASE }) => {
+const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
   const [lineItemLabels, setLineItemLabels] = useState([]);
@@ -27,7 +28,17 @@ const InvoiceManager = ({ token, API_BASE }) => {
   const [emailInvoice, setEmailInvoice] = useState(null);
   const [emailMessage, setEmailMessage] = useState('');
   const [emailSending, setEmailSending] = useState(false);
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [smsInvoice, setSmsInvoice] = useState(null);
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsSending, setSmsSending] = useState(false);
+  const [customPhoneNumber, setCustomPhoneNumber] = useState('');
+  const [useCustomPhone, setUseCustomPhone] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({
     label: '',
@@ -65,6 +76,32 @@ const InvoiceManager = ({ token, API_BASE }) => {
     fetchLineItemLabels();
     fetchTaxRates();
   }, []);
+
+  // Debounced client search
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (clientSearchTerm.length >= 2) {
+        searchClients(clientSearchTerm);
+      } else if (clientSearchTerm.length === 0) {
+        setSearchResults([]);
+        setShowClientDropdown(false);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(debounceTimer);
+  }, [clientSearchTerm]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showClientDropdown && !event.target.closest('.client-dropdown-container')) {
+        setShowClientDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showClientDropdown]);
 
   const fetchInvoices = async () => {
     try {
@@ -260,6 +297,25 @@ const InvoiceManager = ({ token, API_BASE }) => {
     );
   };
 
+  // Search clients function
+  const searchClients = async (searchTerm) => {
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/clients/search?q=${encodeURIComponent(searchTerm)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const results = await response.json();
+        setSearchResults(results);
+        setShowClientDropdown(true);
+      }
+    } catch (error) {
+      console.error('Error searching clients:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   // Send email function
   const sendInvoiceEmail = async () => {
     setEmailSending(true);
@@ -306,7 +362,16 @@ const InvoiceManager = ({ token, API_BASE }) => {
       });
 
       if (response.ok) {
+        const newClientData = await response.json();
         setShowClientModal(false);
+        
+        // Auto-select the newly created client
+        setNewInvoice(prev => ({ ...prev, client_id: newClientData.id }));
+        const clientName = newClient.is_business 
+          ? newClient.company_name 
+          : `${newClient.first_name} ${newClient.last_name}`;
+        setClientSearchTerm(clientName);
+        
         setNewClient({
           is_business: false,
           company_name: '',
@@ -318,7 +383,7 @@ const InvoiceManager = ({ token, API_BASE }) => {
           tax_exempt_number: ''
         });
         fetchClients(); // Refresh client list
-        alert('Client created successfully!');
+        alert('Client created and selected successfully!');
       } else {
         const errorData = await response.json();
         alert(`Failed to create client: ${errorData.error}`);
@@ -330,6 +395,47 @@ const InvoiceManager = ({ token, API_BASE }) => {
       setLoading(false);
     }
   };
+
+  // Send SMS function
+  const sendInvoiceSms = async () => {
+    setSmsSending(true);
+    try {
+      const requestBody = { 
+        message: smsMessage 
+      };
+      
+      // Add custom phone number if super admin is using override
+      if (useCustomPhone && customPhoneNumber && userRole === 'super_admin') {
+        requestBody.customPhone = customPhoneNumber;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${smsInvoice.id}/send-sms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setShowSmsModal(false);
+        setSmsMessage('');
+        setSmsInvoice(null);
+        alert(`Invoice SMS sent successfully to ${data.sentTo}`);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to send SMS: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      alert('Failed to send SMS. Please try again.');
+    } finally {
+      setSmsSending(false);
+    }
+  };
+
 
   // Create label function
   const createLabel = async () => {
@@ -481,6 +587,16 @@ const InvoiceManager = ({ token, API_BASE }) => {
                   >
                     <Send size={16} />
                   </button>
+                  <button 
+                    onClick={() => {
+                      setSmsInvoice(invoice);
+                      setShowSmsModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-900"
+                    title="Send SMS"
+                  >
+                    <MessageCircle size={16} />
+                  </button>
                   <button className="text-gray-600 hover:text-gray-900" title="Download PDF">
                     <Download size={16} />
                   </button>
@@ -516,23 +632,113 @@ const InvoiceManager = ({ token, API_BASE }) => {
       <div className="bg-white rounded-lg shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Client Selection */}
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Client *
             </label>
-            <select
-              value={newInvoice.client_id}
-              onChange={(e) => setNewInvoice(prev => ({ ...prev, client_id: e.target.value }))}
-              className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              required
-            >
-              <option value="">Select a client...</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.is_business ? client.company_name : `${client.first_name} ${client.last_name}`}
-                </option>
-              ))}
-            </select>
+            <div className="relative client-dropdown-container">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={clientSearchTerm}
+                  onChange={(e) => {
+                    setClientSearchTerm(e.target.value);
+                    setNewInvoice(prev => ({ ...prev, client_id: '' }));
+                  }}
+                  onFocus={() => setShowClientDropdown(true)}
+                  onClick={() => setShowClientDropdown(true)}
+                  className="w-full p-3 pr-10 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Click to select client or type to search..."
+                  required={!newInvoice.client_id}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowClientDropdown(!showClientDropdown)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Dropdown with search results */}
+              {showClientDropdown && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {/* Add New Client Option - Always visible */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowClientModal(true);
+                      setShowClientDropdown(false);
+                      setClientSearchTerm('');
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 flex items-center gap-2 text-blue-600 font-medium"
+                  >
+                    <Plus size={16} />
+                    Add New Client
+                  </button>
+                  
+                  {/* Show message when no search term */}
+                  {clientSearchTerm.length === 0 && (
+                    <div className="px-4 py-3 text-gray-500 text-center text-sm">
+                      Type to search existing clients
+                    </div>
+                  )}
+                  
+                  {/* Search Results */}
+                  {clientSearchTerm.length >= 2 && searchResults.map((client) => (
+                    <button
+                      key={client.id}
+                      type="button"
+                      onClick={() => {
+                        setNewInvoice(prev => ({ ...prev, client_id: client.id }));
+                        setClientSearchTerm(
+                          client.is_business 
+                            ? client.company_name 
+                            : `${client.first_name} ${client.last_name}`
+                        );
+                        setShowClientDropdown(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {client.is_business 
+                            ? client.company_name 
+                            : `${client.first_name} ${client.last_name}`}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {client.email}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                  
+                  {/* No results message */}
+                  {clientSearchTerm.length >= 2 && searchResults.length === 0 && !isSearching && (
+                    <div className="px-4 py-3 text-gray-500 text-center text-sm">
+                      No clients found matching "{clientSearchTerm}"
+                    </div>
+                  )}
+                  
+                  {/* Loading indicator */}
+                  {isSearching && clientSearchTerm.length >= 2 && (
+                    <div className="px-4 py-3 text-gray-500 text-center text-sm flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      Searching...
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Selected client display */}
+              {newInvoice.client_id && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                  ✓ Selected: {clientSearchTerm}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Invoice Date */}
@@ -1190,6 +1396,119 @@ const InvoiceManager = ({ token, API_BASE }) => {
     );
   };
 
+  // SMS Modal
+  const renderSmsModal = () => {
+    if (!showSmsModal || !smsInvoice) return null;
+    
+    const clientName = smsInvoice.is_business 
+      ? smsInvoice.company_name 
+      : `${smsInvoice.first_name} ${smsInvoice.last_name}`;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <h3 className="text-lg font-semibold mb-4">Send Invoice SMS</h3>
+          
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Invoice:</strong> {smsInvoice.invoice_number}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Client:</strong> {clientName}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>Phone:</strong> {smsInvoice.phone || 'Not provided'}
+            </p>
+          </div>
+
+          {/* Super Admin Phone Override */}
+          {userRole === 'super_admin' && (
+            <div className="mb-4">
+              <label className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  checked={useCustomPhone}
+                  onChange={(e) => setUseCustomPhone(e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm font-medium">Send to different phone number</span>
+              </label>
+              
+              {useCustomPhone && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Custom Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={customPhoneNumber}
+                    onChange={(e) => setCustomPhoneNumber(e.target.value)}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="e.g., (509) 790-3516"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Override client phone number (admin only)
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Additional Message (Optional)
+            </label>
+            <textarea
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+              rows={4}
+              className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Add a brief message to include with the SMS..."
+              maxLength={160}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {smsMessage.length}/160 characters
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                setShowSmsModal(false);
+                setSmsMessage('');
+                setSmsInvoice(null);
+                setCustomPhoneNumber('');
+                setUseCustomPhone(false);
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              disabled={smsSending}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={sendInvoiceSms}
+              disabled={smsSending || (useCustomPhone && !customPhoneNumber)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {smsSending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <MessageCircle size={16} />
+                  Send SMS
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
   // Main render
   return (
     <div className="p-6">
@@ -1198,6 +1517,7 @@ const InvoiceManager = ({ token, API_BASE }) => {
       {activeView === 'clients' && renderClientManagement()}
       {activeView === 'labels' && renderLabelManagement()}
       {renderEmailModal()}
+      {renderSmsModal()}
       {renderClientModal()}
       {renderLabelModal()}
     </div>
