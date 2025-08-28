@@ -2928,6 +2928,484 @@ app.get('/api/invoice/:token', async (req, res) => {
   }
 });
 
+// Public endpoint - Generate invoice PDF by token (for client download)
+app.get('/api/invoice/:token/pdf', async (req, res) => {
+  try {
+    const token = req.params.token;
+    
+    // Get invoice details with client info and line items using token
+    const invoice = await invoiceDb.getInvoiceByToken(token);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found or access expired' });
+    }
+
+    const clientName = invoice.is_business 
+      ? invoice.company_name 
+      : `${invoice.first_name} ${invoice.last_name}`;
+
+    const clientAddress = invoice.address || '';
+    
+    // Generate HTML for PDF (same as admin version)
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invoice ${invoice.invoice_number}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+          }
+          
+          .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+          }
+          
+          .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #1e3a8a;
+            padding-bottom: 30px;
+          }
+          
+          .company-info {
+            flex: 1;
+          }
+          
+          .company-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+          }
+          
+          .company-details {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+          }
+          
+          .invoice-title {
+            text-align: right;
+            flex: 1;
+          }
+          
+          .invoice-title h1 {
+            font-size: 36px;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+          }
+          
+          .invoice-number {
+            font-size: 18px;
+            color: #666;
+            font-weight: 500;
+          }
+          
+          .invoice-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+          }
+          
+          .bill-to, .invoice-dates {
+            flex: 1;
+          }
+          
+          .bill-to {
+            margin-right: 40px;
+          }
+          
+          .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          
+          .client-info {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #1e3a8a;
+          }
+          
+          .client-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 8px;
+          }
+          
+          .client-details {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+          }
+          
+          .invoice-dates-content {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #16a34a;
+          }
+          
+          .date-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+          }
+          
+          .date-label {
+            font-weight: 500;
+            color: #374151;
+          }
+          
+          .date-value {
+            color: #666;
+          }
+          
+          .line-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          
+          .line-items-table th {
+            background: #1e3a8a;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .line-items-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+          }
+          
+          .line-items-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          
+          .line-items-table tbody tr:hover {
+            background: #eff6ff;
+          }
+          
+          .item-description {
+            font-weight: 500;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+          }
+          
+          .item-details {
+            font-size: 12px;
+            color: #666;
+          }
+          
+          .text-right {
+            text-align: right;
+          }
+          
+          .text-center {
+            text-align: center;
+          }
+          
+          .totals-section {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+          }
+          
+          .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          .totals-table td {
+            padding: 10px 15px;
+            border-top: 1px solid #e2e8f0;
+          }
+          
+          .totals-table .label {
+            font-weight: 500;
+            color: #374151;
+          }
+          
+          .totals-table .amount {
+            text-align: right;
+            color: #666;
+          }
+          
+          .total-row {
+            background: #1e3a8a;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+          }
+          
+          .notes-section {
+            clear: both;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+          }
+          
+          .notes-content {
+            background: #fffbeb;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+          }
+          
+          .footer {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+          }
+          
+          .payment-info {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+            margin-top: 30px;
+          }
+          
+          .payment-info h3 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+          }
+          
+          @media print {
+            .invoice-container {
+              padding: 20px;
+            }
+            
+            .invoice-header {
+              page-break-inside: avoid;
+            }
+            
+            .line-items-table {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <!-- Header -->
+          <div class="invoice-header">
+            <div class="company-info">
+              <div class="company-name">Gudino Custom Cabinets</div>
+              <div class="company-details">
+                Professional Cabinet Solutions<br>
+                Email: ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}<br>
+                Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}<br>
+                www.gudinocustom.com
+              </div>
+            </div>
+            <div class="invoice-title">
+              <h1>INVOICE</h1>
+              <div class="invoice-number">${invoice.invoice_number}</div>
+            </div>
+          </div>
+          
+          <!-- Invoice Meta Information -->
+          <div class="invoice-meta">
+            <div class="bill-to">
+              <div class="section-title">Bill To</div>
+              <div class="client-info">
+                <div class="client-name">${clientName}</div>
+                <div class="client-details">
+                  ${invoice.email ? `${invoice.email}<br>` : ''}
+                  ${invoice.phone ? `${invoice.phone}<br>` : ''}
+                  ${clientAddress ? `${clientAddress}<br>` : ''}
+                  ${invoice.tax_exempt_number ? `Tax Exempt: ${invoice.tax_exempt_number}` : ''}
+                </div>
+              </div>
+            </div>
+            
+            <div class="invoice-dates">
+              <div class="section-title">Invoice Details</div>
+              <div class="invoice-dates-content">
+                <div class="date-row">
+                  <span class="date-label">Invoice Date:</span>
+                  <span class="date-value">${new Date(invoice.invoice_date).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</span>
+                </div>
+                <div class="date-row">
+                  <span class="date-label">Due Date:</span>
+                  <span class="date-value">${new Date(invoice.due_date).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</span>
+                </div>
+                <div class="date-row">
+                  <span class="date-label">Status:</span>
+                  <span class="date-value" style="color: ${invoice.status === 'paid' ? '#16a34a' : invoice.status === 'overdue' ? '#dc2626' : '#f59e0b'};">
+                    ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Line Items -->
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th style="width: 50%;">Description</th>
+                <th style="width: 15%;" class="text-center">Quantity</th>
+                <th style="width: 17.5%;" class="text-right">Unit Price</th>
+                <th style="width: 17.5%;" class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoice.line_items?.map(item => `
+                <tr>
+                  <td>
+                    <div class="item-description">${item.description}</div>
+                    ${item.notes ? `<div class="item-details">${item.notes}</div>` : ''}
+                  </td>
+                  <td class="text-center">${item.quantity}</td>
+                  <td class="text-right">$${parseFloat(item.unit_price).toFixed(2)}</td>
+                  <td class="text-right">$${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <!-- Totals -->
+          <div class="totals-section">
+            <table class="totals-table">
+              <tr>
+                <td class="label">Subtotal:</td>
+                <td class="amount">$${invoice.subtotal_amount.toFixed(2)}</td>
+              </tr>
+              ${invoice.discount_amount > 0 ? `
+              <tr>
+                <td class="label">Discount:</td>
+                <td class="amount">-$${invoice.discount_amount.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${invoice.markup_amount > 0 ? `
+              <tr>
+                <td class="label">Markup:</td>
+                <td class="amount">$${invoice.markup_amount.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${invoice.tax_amount > 0 ? `
+              <tr>
+                <td class="label">Tax (${(invoice.tax_rate * 100).toFixed(2)}%):</td>
+                <td class="amount">$${invoice.tax_amount.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              <tr class="total-row">
+                <td class="label">TOTAL:</td>
+                <td class="amount">$${invoice.total_amount.toFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Notes -->
+          ${invoice.notes ? `
+          <div class="notes-section">
+            <div class="section-title">Additional Notes</div>
+            <div class="notes-content">
+              ${invoice.notes.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+          ` : ''}
+          
+          <!-- Payment Information -->
+          <div class="payment-info">
+            <h3>Payment Information</h3>
+            <p>Thank you for choosing Gudino Custom Cabinets. Please remit payment by the due date shown above.</p>
+            <p>For questions regarding this invoice, please contact us at ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}.</p>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            <p>Gudino Custom Cabinets - Professional Cabinet Solutions</p>
+            <p>This invoice was generated on ${new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // PDF generation options
+    const options = {
+      format: 'A4',
+      border: {
+        top: '0.5in',
+        right: '0.5in',
+        bottom: '0.5in',
+        left: '0.5in'
+      },
+      paginationOffset: 1,
+      type: 'pdf',
+      quality: '75',
+      orientation: 'portrait',
+      timeout: 30000
+    };
+
+    // Generate PDF
+    const file = { content: htmlContent };
+    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoice_number}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    // Send PDF
+    res.send(pdfBuffer);
+    
+  } catch (error) {
+    console.error('Error generating public PDF:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
+
 // =========================
 // TESTIMONIAL ENDPOINTS
 // =========================

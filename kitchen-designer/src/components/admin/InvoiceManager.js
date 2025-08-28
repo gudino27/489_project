@@ -437,6 +437,41 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   };
 
 
+  // Download PDF function
+  const downloadInvoicePdf = async (invoice) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${invoice.id}/pdf`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Get the PDF blob
+        const pdfBlob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `invoice-${invoice.invoice_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to generate PDF: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
   // Create label function
   const createLabel = async () => {
     setLoading(true);
@@ -597,7 +632,11 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   >
                     <MessageCircle size={16} />
                   </button>
-                  <button className="text-gray-600 hover:text-gray-900" title="Download PDF">
+                  <button 
+                    onClick={() => downloadInvoicePdf(invoice)}
+                    className="text-gray-600 hover:text-gray-900" 
+                    title="Download PDF"
+                  >
                     <Download size={16} />
                   </button>
                 </td>
