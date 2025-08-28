@@ -1357,19 +1357,81 @@ const invoiceDb = {
     await db.close();
   },
 
+  async deleteClient(id) {
+    const db = await getDb();
+    try {
+      await db.run('BEGIN TRANSACTION');
+      
+      // Check if client has any invoices
+      const invoiceCount = await db.get('SELECT COUNT(*) as count FROM invoices WHERE client_id = ?', [id]);
+      if (invoiceCount.count > 0) {
+        throw new Error('Cannot delete client with existing invoices. Please delete or reassign invoices first.');
+      }
+      
+      // Delete the client
+      const result = await db.run('DELETE FROM clients WHERE id = ?', [id]);
+      await db.run('COMMIT');
+      
+      return { success: true, changes: result.changes };
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
+    } finally {
+      await db.close();
+    }
+  },
+
   // Line item label operations (admin configurable)
   async getLineItemLabels() {
     const db = await getDb();
-    const labels = await db.all('SELECT * FROM line_item_labels ORDER BY label_name');
+    
+    // Check if new columns exist, if not add them
+    try {
+      await db.exec(`
+        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
+        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
+      `);
+    } catch (error) {
+      // Columns might already exist, ignore error
+    }
+    
+    const labels = await db.all(`
+      SELECT 
+        id,
+        label_name as label,
+        COALESCE(item_type, 'material') as item_type,
+        COALESCE(description, '') as description,
+        default_unit_price,
+        created_at,
+        updated_at
+      FROM line_item_labels 
+      ORDER BY label_name
+    `);
     await db.close();
     return labels;
   },
 
   async createLineItemLabel(labelData) {
     const db = await getDb();
+    
+    // Ensure new columns exist
+    try {
+      await db.exec(`
+        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
+        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
+      `);
+    } catch (error) {
+      // Columns might already exist, ignore error
+    }
+    
     const result = await db.run(
-      'INSERT INTO line_item_labels (label_name, default_unit_price) VALUES (?, ?)',
-      [labelData.label_name, labelData.default_unit_price]
+      'INSERT INTO line_item_labels (label_name, item_type, description, default_unit_price) VALUES (?, ?, ?, ?)',
+      [
+        labelData.label || labelData.label_name, 
+        labelData.item_type || 'material', 
+        labelData.description || '', 
+        labelData.default_unit_price || 0
+      ]
     );
     await db.close();
     return { id: result.lastID };
@@ -1377,9 +1439,26 @@ const invoiceDb = {
 
   async updateLineItemLabel(id, labelData) {
     const db = await getDb();
+    
+    // Ensure new columns exist
+    try {
+      await db.exec(`
+        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
+        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
+      `);
+    } catch (error) {
+      // Columns might already exist, ignore error
+    }
+    
     await db.run(
-      'UPDATE line_item_labels SET label_name = ?, default_unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [labelData.label_name, labelData.default_unit_price, id]
+      'UPDATE line_item_labels SET label_name = ?, item_type = ?, description = ?, default_unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [
+        labelData.label || labelData.label_name, 
+        labelData.item_type || 'material',
+        labelData.description || '',
+        labelData.default_unit_price || 0,
+        id
+      ]
     );
     await db.close();
   },
@@ -1394,7 +1473,7 @@ const invoiceDb = {
   async getAllInvoices() {
     const db = await getDb();
     const invoices = await db.all(`
-      SELECT i.*, c.company_name, c.first_name, c.last_name, c.is_business
+      SELECT i.*, c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email
       FROM invoices i
       JOIN clients c ON i.client_id = c.id
       ORDER BY i.created_at DESC
@@ -1538,6 +1617,270 @@ const invoiceDb = {
 
     await db.close();
     return tokenData;
+  },
+
+  async createInvoiceToken(invoiceId) {
+    const db = await getDb();
+    
+    try {
+      // Check if token already exists
+      const existingToken = await db.get(
+        'SELECT token FROM invoice_tokens WHERE invoice_id = ? AND is_active = 1',
+        [invoiceId]
+      );
+      
+      if (existingToken) {
+        await db.close();
+        return { token: existingToken.token };
+      }
+      
+      // Generate new token
+      const token = crypto.randomBytes(32).toString('hex');
+      await db.run(
+        'INSERT INTO invoice_tokens (token, invoice_id) VALUES (?, ?)',
+        [token, invoiceId]
+      );
+      
+      await db.close();
+      return { token };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getInvoiceByNumber(invoiceNumber) {
+    const db = await getDb();
+    const invoice = await db.get('SELECT * FROM invoices WHERE invoice_number = ?', [invoiceNumber]);
+    await db.close();
+    return invoice;
+  },
+
+  async updateInvoiceNumber(invoiceId, newInvoiceNumber, updatedBy) {
+    const db = await getDb();
+    
+    try {
+      const result = await db.run(
+        'UPDATE invoices SET invoice_number = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [newInvoiceNumber, invoiceId]
+      );
+      
+      await db.close();
+      return { success: true, changes: result.changes };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateInvoice(invoiceId, updateData) {
+    const db = await getDb();
+    
+    try {
+      await db.run('BEGIN TRANSACTION');
+
+      // Update invoice basic fields
+      const invoiceFields = [
+        'client_id', 'invoice_date', 'due_date', 'discount_amount', 
+        'markup_amount', 'tax_rate', 'notes', 'status'
+      ];
+      
+      const updateFields = [];
+      const updateValues = [];
+      
+      invoiceFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          updateFields.push(`${field} = ?`);
+          updateValues.push(updateData[field]);
+        }
+      });
+      
+      if (updateFields.length > 0) {
+        updateFields.push('updated_at = CURRENT_TIMESTAMP');
+        updateValues.push(invoiceId);
+        
+        await db.run(
+          `UPDATE invoices SET ${updateFields.join(', ')} WHERE id = ?`,
+          updateValues
+        );
+      }
+
+      // Update line items if provided
+      if (updateData.line_items) {
+        // Delete existing line items
+        await db.run('DELETE FROM invoice_line_items WHERE invoice_id = ?', [invoiceId]);
+        
+        // Insert new line items
+        for (let i = 0; i < updateData.line_items.length; i++) {
+          const item = updateData.line_items[i];
+          await db.run(`
+            INSERT INTO invoice_line_items (
+              invoice_id, label_id, description, quantity, unit_price, notes, line_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [
+            invoiceId,
+            item.label_id || null,
+            item.description,
+            item.quantity,
+            item.unit_price,
+            item.notes || '',
+            i + 1
+          ]);
+        }
+      }
+
+      // Recalculate totals
+      const lineItemsResult = await db.all(
+        'SELECT quantity, unit_price FROM invoice_line_items WHERE invoice_id = ?',
+        [invoiceId]
+      );
+      
+      const subtotal = lineItemsResult.reduce((sum, item) => {
+        return sum + (parseFloat(item.quantity) * parseFloat(item.unit_price));
+      }, 0);
+      
+      const discountAmount = parseFloat(updateData.discount_amount || 0);
+      const markupAmount = parseFloat(updateData.markup_amount || 0);
+      const taxRate = parseFloat(updateData.tax_rate || 0);
+      
+      const afterDiscount = subtotal - discountAmount;
+      const afterMarkup = afterDiscount + markupAmount;
+      const taxAmount = afterMarkup * (taxRate / 100);
+      const totalAmount = afterMarkup + taxAmount;
+
+      // Update calculated totals
+      await db.run(`
+        UPDATE invoices 
+        SET subtotal_amount = ?, tax_amount = ?, total_amount = ?
+        WHERE id = ?
+      `, [subtotal, taxAmount, totalAmount, invoiceId]);
+
+      await db.run('COMMIT');
+      
+      // Return updated invoice
+      const updatedInvoice = await this.getInvoiceById(invoiceId);
+      await db.close();
+      
+      return updatedInvoice;
+    } catch (error) {
+      await db.run('ROLLBACK');
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteInvoice(invoiceId, deletedBy) {
+    const db = await getDb();
+    
+    try {
+      await db.run('BEGIN TRANSACTION');
+      
+      // Delete related records first (in correct order to avoid foreign key constraints)
+      await db.run('DELETE FROM invoice_line_items WHERE invoice_id = ?', [invoiceId]);
+      await db.run('DELETE FROM invoice_payments WHERE invoice_id = ?', [invoiceId]);
+      await db.run('DELETE FROM invoice_tokens WHERE invoice_id = ?', [invoiceId]);
+      
+      // Finally delete the invoice
+      const result = await db.run('DELETE FROM invoices WHERE id = ?', [invoiceId]);
+      
+      await db.run('COMMIT');
+      await db.close();
+      
+      return { success: true, changes: result.changes };
+    } catch (error) {
+      await db.run('ROLLBACK');
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Tax rate management
+  async findTaxRate(stateCode, county, city) {
+    const db = await getDb();
+    const taxRate = await db.get(`
+      SELECT * FROM tax_rates 
+      WHERE state_code = ? AND 
+            COALESCE(county, '') = ? AND 
+            COALESCE(city, '') = ? AND 
+            is_active = 1
+    `, [stateCode.toUpperCase(), county || '', city || '']);
+    await db.close();
+    return taxRate;
+  },
+
+  async getTaxRateById(id) {
+    const db = await getDb();
+    const taxRate = await db.get('SELECT * FROM tax_rates WHERE id = ?', [id]);
+    await db.close();
+    return taxRate;
+  },
+
+  async createTaxRate(taxRateData) {
+    const db = await getDb();
+    const result = await db.run(`
+      INSERT INTO tax_rates (state_code, county, city, tax_rate, description, updated_by) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      taxRateData.state_code,
+      taxRateData.county,
+      taxRateData.city,
+      taxRateData.tax_rate,
+      taxRateData.description,
+      taxRateData.updated_by
+    ]);
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async updateTaxRate(id, taxRateData) {
+    const db = await getDb();
+    const result = await db.run(`
+      UPDATE tax_rates 
+      SET state_code = ?, county = ?, city = ?, tax_rate = ?, description = ?, 
+          is_active = ?, updated_by = ?, last_updated = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `, [
+      taxRateData.state_code,
+      taxRateData.county,
+      taxRateData.city,
+      taxRateData.tax_rate,
+      taxRateData.description,
+      taxRateData.is_active,
+      taxRateData.updated_by,
+      id
+    ]);
+    await db.close();
+    return { changes: result.changes };
+  },
+
+  async deleteTaxRate(id) {
+    const db = await getDb();
+    const result = await db.run('DELETE FROM tax_rates WHERE id = ?', [id]);
+    await db.close();
+    return { changes: result.changes };
+  },
+
+  async isTaxRateInUse(taxRateId) {
+    const db = await getDb();
+    const taxRate = await db.get('SELECT tax_rate FROM tax_rates WHERE id = ?', [taxRateId]);
+    if (!taxRate) {
+      await db.close();
+      return false;
+    }
+    
+    const invoice = await db.get('SELECT id FROM invoices WHERE tax_rate = ? LIMIT 1', [taxRate.tax_rate]);
+    await db.close();
+    return !!invoice;
+  },
+
+  async getAllTaxRates() {
+    const db = await getDb();
+    const taxRates = await db.all(`
+      SELECT * FROM tax_rates 
+      ORDER BY state_code, city, county, is_active DESC
+    `);
+    await db.close();
+    return taxRates;
   },
 
   // Payment tracking

@@ -2100,6 +2100,27 @@ app.post('/api/admin/invoices', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Update invoice
+app.put('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    const updateData = req.body;
+
+    // Check if invoice exists
+    const existingInvoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!existingInvoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Update the invoice
+    const result = await invoiceDb.updateInvoice(invoiceId, updateData);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating invoice:', error);
+    res.status(500).json({ error: 'Failed to update invoice' });
+  }
+});
+
 // Admin endpoint - Get all clients
 app.get('/api/admin/clients', authenticateUser, async (req, res) => {
   try {
@@ -2147,6 +2168,17 @@ app.put('/api/admin/clients/:id', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error updating client:', error);
     res.status(500).json({ error: 'Failed to update client' });
+  }
+});
+
+// Admin endpoint - Delete client
+app.delete('/api/admin/clients/:id', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.deleteClient(req.params.id);
+    res.json({ success: true, changes: result.changes });
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    res.status(500).json({ error: 'Failed to delete client' });
   }
 });
 
@@ -2223,9 +2255,14 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
       return res.status(400).json({ error: 'Client email not found' });
     }
 
-    // Get the invoice token for the client access link
-    const invoiceWithToken = await invoiceDb.getInvoiceByToken(invoice.token || '');
-    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoice.token || invoiceWithToken?.token}`;
+    // Get or create the invoice token for the client access link
+    let invoiceToken = invoice.token;
+    if (!invoiceToken) {
+      // Create a new token for this invoice if it doesn't exist
+      const tokenResult = await invoiceDb.createInvoiceToken(invoiceId);
+      invoiceToken = tokenResult.token;
+    }
+    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoiceToken}`;
 
     const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
     
@@ -2323,9 +2360,14 @@ app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) 
       targetPhone = client.phone;
     }
 
-    // Get the invoice token for the client access link
-    const invoiceWithToken = await invoiceDb.getInvoiceByToken(invoice.token || '');
-    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoice.token || invoiceWithToken?.token}`;
+    // Get or create the invoice token for the client access link
+    let invoiceToken = invoice.token;
+    if (!invoiceToken) {
+      // Create a new token for this invoice if it doesn't exist
+      const tokenResult = await invoiceDb.createInvoiceToken(invoiceId);
+      invoiceToken = tokenResult.token;
+    }
+    const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoiceToken}`;
 
     const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
     
@@ -2357,6 +2399,241 @@ app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) 
   } catch (error) {
     console.error('Error sending invoice SMS:', error);
     res.status(500).json({ error: 'Failed to send invoice SMS' });
+  }
+});
+
+// Admin endpoint - Update invoice number
+app.put('/api/admin/invoices/:id/invoice-number', authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    const { invoice_number } = req.body;
+
+    if (!invoice_number || !invoice_number.trim()) {
+      return res.status(400).json({ error: 'Invoice number is required' });
+    }
+
+    // Check if invoice exists
+    const existingInvoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!existingInvoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Check if invoice number is already in use by another invoice
+    const duplicateInvoice = await invoiceDb.getInvoiceByNumber(invoice_number.trim());
+    if (duplicateInvoice && duplicateInvoice.id !== parseInt(invoiceId)) {
+      return res.status(400).json({ error: 'Invoice number already in use' });
+    }
+
+    // Update the invoice number
+    const result = await invoiceDb.updateInvoiceNumber(invoiceId, invoice_number.trim(), req.user.id);
+    
+    res.json({
+      success: true,
+      message: 'Invoice number updated successfully',
+      invoice_number: invoice_number.trim()
+    });
+  } catch (error) {
+    console.error('Error updating invoice number:', error);
+    res.status(500).json({ error: 'Failed to update invoice number' });
+  }
+});
+
+// Admin endpoint - Get invoice tracking data
+app.get('/api/admin/invoices/tracking', authenticateUser, async (req, res) => {
+  try {
+    const { getDb } = require('./db-helpers');
+    const db = await getDb();
+    
+    // Get invoice tracking data with view counts and last viewed times
+    const trackingData = await db.all(`
+      SELECT 
+        i.id,
+        i.invoice_number,
+        i.client_id,
+        i.total_amount,
+        i.status,
+        i.created_at,
+        c.company_name,
+        c.first_name,
+        c.last_name,
+        c.email,
+        c.phone,
+        c.is_business,
+        t.token,
+        t.viewed_at,
+        t.view_count,
+        t.created_at as token_created_at
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
+      ORDER BY i.created_at DESC
+    `);
+    
+    await db.close();
+    
+    // Format the data for frontend consumption
+    const formattedData = trackingData.map(item => ({
+      ...item,
+      client_name: item.is_business ? item.company_name : `${item.first_name} ${item.last_name}`,
+      has_token: !!item.token,
+      is_viewed: !!item.viewed_at,
+      view_count: item.view_count || 0,
+      last_viewed: item.viewed_at
+    }));
+    
+    res.json(formattedData);
+  } catch (error) {
+    console.error('Error getting invoice tracking data:', error);
+    res.status(500).json({ error: 'Failed to get invoice tracking data' });
+  }
+});
+
+// Admin endpoint - Delete invoice completely
+app.delete('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+
+    // Check if invoice exists
+    const existingInvoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!existingInvoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Delete the invoice (cascade delete will handle related records)
+    const result = await invoiceDb.deleteInvoice(invoiceId, req.user.id);
+    
+    res.json({
+      success: true,
+      message: 'Invoice deleted successfully',
+      invoice_number: existingInvoice.invoice_number
+    });
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    res.status(500).json({ error: 'Failed to delete invoice' });
+  }
+});
+
+// Admin endpoint - Create tax rate
+app.post('/api/admin/tax-rates', authenticateUser, async (req, res) => {
+  try {
+    const { state_code, county, city, tax_rate, description } = req.body;
+
+    if (!state_code || !tax_rate) {
+      return res.status(400).json({ error: 'State code and tax rate are required' });
+    }
+
+    // Validate tax rate is a valid number
+    const numericTaxRate = parseFloat(tax_rate);
+    if (isNaN(numericTaxRate) || numericTaxRate < 0 || numericTaxRate > 1) {
+      return res.status(400).json({ error: 'Tax rate must be a valid number between 0 and 1' });
+    }
+
+    // Check for duplicate
+    const existing = await invoiceDb.findTaxRate(state_code, county || '', city || '');
+    if (existing) {
+      return res.status(400).json({ error: 'Tax rate already exists for this location' });
+    }
+
+    const result = await invoiceDb.createTaxRate({
+      state_code: state_code.toUpperCase(),
+      county: county || null,
+      city: city || null,
+      tax_rate: numericTaxRate,
+      description: description || null,
+      updated_by: req.user.id
+    });
+    
+    res.json({
+      success: true,
+      message: 'Tax rate created successfully',
+      id: result.id
+    });
+  } catch (error) {
+    console.error('Error creating tax rate:', error);
+    res.status(500).json({ error: 'Failed to create tax rate' });
+  }
+});
+
+// Admin endpoint - Update tax rate
+app.put('/api/admin/tax-rates/:id', authenticateUser, async (req, res) => {
+  try {
+    const taxRateId = req.params.id;
+    const { state_code, county, city, tax_rate, description, is_active } = req.body;
+
+    if (!state_code || tax_rate === undefined) {
+      return res.status(400).json({ error: 'State code and tax rate are required' });
+    }
+
+    // Validate tax rate is a valid number
+    const numericTaxRate = parseFloat(tax_rate);
+    if (isNaN(numericTaxRate) || numericTaxRate < 0 || numericTaxRate > 1) {
+      return res.status(400).json({ error: 'Tax rate must be a valid number between 0 and 1' });
+    }
+
+    // Check if tax rate exists
+    const existing = await invoiceDb.getTaxRateById(taxRateId);
+    if (!existing) {
+      return res.status(404).json({ error: 'Tax rate not found' });
+    }
+
+    // Check for duplicate if location changed
+    if (state_code !== existing.state_code || 
+        (county || '') !== (existing.county || '') || 
+        (city || '') !== (existing.city || '')) {
+      const duplicate = await invoiceDb.findTaxRate(state_code, county || '', city || '');
+      if (duplicate && duplicate.id !== parseInt(taxRateId)) {
+        return res.status(400).json({ error: 'Tax rate already exists for this location' });
+      }
+    }
+
+    const result = await invoiceDb.updateTaxRate(taxRateId, {
+      state_code: state_code.toUpperCase(),
+      county: county || null,
+      city: city || null,
+      tax_rate: numericTaxRate,
+      description: description || null,
+      is_active: is_active !== undefined ? is_active : existing.is_active,
+      updated_by: req.user.id
+    });
+    
+    res.json({
+      success: true,
+      message: 'Tax rate updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating tax rate:', error);
+    res.status(500).json({ error: 'Failed to update tax rate' });
+  }
+});
+
+// Admin endpoint - Delete tax rate
+app.delete('/api/admin/tax-rates/:id', authenticateUser, async (req, res) => {
+  try {
+    const taxRateId = req.params.id;
+
+    // Check if tax rate exists
+    const existing = await invoiceDb.getTaxRateById(taxRateId);
+    if (!existing) {
+      return res.status(404).json({ error: 'Tax rate not found' });
+    }
+
+    // Check if tax rate is being used by any invoices
+    const inUse = await invoiceDb.isTaxRateInUse(taxRateId);
+    if (inUse) {
+      return res.status(400).json({ 
+        error: 'Cannot delete tax rate that is being used by existing invoices. Deactivate it instead.' 
+      });
+    }
+
+    const result = await invoiceDb.deleteTaxRate(taxRateId);
+    
+    res.json({
+      success: true,
+      message: 'Tax rate deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting tax rate:', error);
+    res.status(500).json({ error: 'Failed to delete tax rate' });
   }
 });
 
