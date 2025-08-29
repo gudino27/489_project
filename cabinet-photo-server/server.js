@@ -1484,15 +1484,23 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
     }
 
     // SMS notification for design submissions
-    if ((notificationType === 'sms' || notificationType === 'both') && twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+    if ((notificationType === 'sms' || notificationType === 'both') && twilioClient && (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_PHONE_NUMBER)) {
       try {
         const smsBody = `New cabinet design from ${designData.client_name} - $${designData.total_price.toFixed(2)}. Contact: ${designData.contact_preference === 'email' ? designData.client_email : designData.client_phone}`;
         
-        await twilioClient.messages.create({
+        const designSmsOptions = {
           body: smsBody,
-          from: process.env.TWILIO_PHONE_NUMBER,
           to: process.env.ADMIN_PHONE || '+15097903516' // Default to your number if not set
-        });
+        };
+
+        // Use messaging service if available, otherwise fallback to phone number
+        if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+          designSmsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+        } else if (process.env.TWILIO_PHONE_NUMBER) {
+          designSmsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+        }
+
+        await twilioClient.messages.create(designSmsOptions);
         
         console.log('📱 Design SMS notification sent');
       } catch (smsError) {
@@ -2333,6 +2341,51 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
   }
 });
 
+// Test SMS endpoint
+app.post('/api/admin/test-sms', authenticateUser, requireRole(['super_admin']), async (req, res) => {
+  try {
+    if (!twilioClient) {
+      return res.status(500).json({ error: 'SMS service not configured' });
+    }
+
+    const { phone, message } = req.body;
+    const testMessage = message || 'Test message from Gudino Custom Cabinets! 👋';
+    const testPhone = phone || process.env.ADMIN_PHONE || '+15095154089';
+
+    console.log('🧪 Testing SMS to:', testPhone);
+
+    const smsOptions = {
+      body: testMessage,
+      to: testPhone
+    };
+
+    // Use messaging service if available, otherwise fallback to phone number
+    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+      smsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+      console.log('📱 Using messaging service SID:', process.env.TWILIO_MESSAGING_SERVICE_SID);
+    } else if (process.env.TWILIO_PHONE_NUMBER) {
+      smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+      console.log('📱 Using phone number:', process.env.TWILIO_PHONE_NUMBER);
+    } else {
+      throw new Error('Neither messaging service SID nor phone number configured');
+    }
+
+    const result = await twilioClient.messages.create(smsOptions);
+    console.log('✅ Test SMS sent successfully! SID:', result.sid);
+    
+    res.json({ 
+      success: true, 
+      message: 'Test SMS sent successfully',
+      sid: result.sid,
+      sentTo: testPhone
+    });
+    
+  } catch (error) {
+    console.error('❌ Test SMS failed:', error);
+    res.status(500).json({ error: `Failed to send test SMS: ${error.message}` });
+  }
+});
+
 // Admin endpoint - Send invoice via SMS
 app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) => {
   try {
@@ -2383,12 +2436,22 @@ app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) 
 
     const smsBody = `Hi ${clientName}, your invoice ${invoice.invoice_number} from Gudino Custom Cabinets is ready. Total: $${invoice.total_amount.toFixed(2)}. View online: ${viewLink}${message ? `. Message: ${message}` : ''}`;
 
-    // Send SMS
-    await twilioClient.messages.create({
+    // Send SMS using messaging service (preferred method)
+    const smsOptions = {
       body: smsBody,
-      from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber
-    });
+    };
+
+    // Use messaging service if available, otherwise fallback to phone number
+    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+      smsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+    } else if (process.env.TWILIO_PHONE_NUMBER) {
+      smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+    } else {
+      throw new Error('Neither messaging service SID nor phone number configured');
+    }
+
+    await twilioClient.messages.create(smsOptions);
     
     res.json({ 
       success: true, 

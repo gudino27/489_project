@@ -92,6 +92,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     is_primary_email: false
   });
 
+  // Error handling for client creation
+  const [clientError, setClientError] = useState(null);
+
   // Google Maps state
   const [autocomplete, setAutocomplete] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -192,11 +195,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
-  // Reset Google Maps state when modal closes
+  // Reset Google Maps state and clear errors when modal closes
   useEffect(() => {
     if (!showClientModal) {
       setAutocomplete(null);
       setMapLoaded(false);
+      setClientError(null); // Clear errors when modal closes
     }
   }, [showClientModal]);
   const [newInvoice, setNewInvoice] = useState({
@@ -712,7 +716,41 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   // Create client function
   const createClient = async (clientData = null) => {
     setLoading(true);
+    setClientError(null); // Clear previous errors
+    
     const clientToSubmit = clientData || newClient;
+    
+    // Client-side validation
+    const validationErrors = [];
+    
+    if (!clientToSubmit.email || !clientToSubmit.email.trim()) {
+      validationErrors.push('Email address is required');
+    } else if (!/\S+@\S+\.\S+/.test(clientToSubmit.email)) {
+      validationErrors.push('Please enter a valid email address');
+    }
+    
+    if (clientToSubmit.is_business) {
+      if (!clientToSubmit.company_name || !clientToSubmit.company_name.trim()) {
+        validationErrors.push('Company name is required for business clients');
+      }
+    } else {
+      if (!clientToSubmit.first_name || !clientToSubmit.first_name.trim()) {
+        validationErrors.push('First name is required');
+      }
+      if (!clientToSubmit.last_name || !clientToSubmit.last_name.trim()) {
+        validationErrors.push('Last name is required');
+      }
+    }
+    
+    if (validationErrors.length > 0) {
+      setClientError({
+        title: 'Missing Required Information',
+        messages: validationErrors
+      });
+      setLoading(false);
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_BASE}/api/admin/clients`, {
         method: 'POST',
@@ -726,6 +764,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       if (response.ok) {
         const newClientData = await response.json();
         setShowClientModal(false);
+        setClientError(null);
         
         // Auto-select the newly created client
         setNewInvoice(prev => ({ ...prev, client_id: newClientData.id }));
@@ -734,25 +773,35 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           : `${newClient.first_name} ${newClient.last_name}`;
         setClientSearchTerm(clientName);
         
+        // Reset form
         setNewClient({
           is_business: false,
+          title: '',
           company_name: '',
           first_name: '',
           last_name: '',
           email: '',
           phone: '',
           address: '',
-          tax_exempt_number: ''
+          tax_exempt_number: '',
+          is_primary_phone: false,
+          is_primary_email: false
         });
+        
         fetchClients(); // Refresh client list
-        alert('Client created and selected successfully!');
       } else {
         const errorData = await response.json();
-        alert(`Failed to create client: ${errorData.error}`);
+        setClientError({
+          title: 'Failed to Create Client',
+          messages: [errorData.error || 'Unknown server error occurred']
+        });
       }
     } catch (error) {
       console.error('Error creating client:', error);
-      alert('Failed to create client. Please try again.');
+      setClientError({
+        title: 'Connection Error',
+        messages: ['Failed to create client. Please check your connection and try again.']
+      });
     } finally {
       setLoading(false);
     }
@@ -2314,6 +2363,45 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           {/* Form */}
           <div className="p-6 overflow-y-auto">
             <h3 className="text-xl font-semibold mb-6 text-gray-800">Add New Client</h3>
+            
+            {/* Error Alert */}
+            {clientError && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        {clientError.title}
+                      </h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        <ul className="list-disc pl-5 space-y-1">
+                          {clientError.messages.map((message, index) => (
+                            <li key={index}>{message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setClientError(null)}
+                      className="inline-flex text-red-400 hover:text-red-600 focus:outline-none"
+                    >
+                      <span className="sr-only">Dismiss</span>
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Tab Navigation */}
             <div className="border-b border-gray-200 mb-6">
