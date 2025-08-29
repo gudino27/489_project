@@ -678,6 +678,36 @@ async function addInvoiceTables(db) {
     )
   `);
 
+  // Invoice reminders tracking
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      reminder_type TEXT NOT NULL, -- 'email', 'sms', 'both'
+      days_overdue INTEGER DEFAULT 0,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      sent_by INTEGER,
+      message TEXT,
+      successful BOOLEAN DEFAULT 1,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (sent_by) REFERENCES users(id)
+    )
+  `);
+
+  // Invoice reminder settings (per invoice override)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_reminder_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL UNIQUE,
+      reminders_enabled BOOLEAN DEFAULT 0, -- Default: no reminders
+      reminder_days TEXT DEFAULT '7,14,30', -- Days after due date to send reminders
+      last_reminder_sent_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    )
+  `);
+
   // Tax rates table for multi-state support
   await db.exec(`
     CREATE TABLE IF NOT EXISTS tax_rates (
@@ -710,6 +740,26 @@ async function addInvoiceTables(db) {
     CREATE INDEX IF NOT EXISTS idx_payments_date ON invoice_payments(payment_date);
     CREATE INDEX IF NOT EXISTS idx_tax_rates_state ON tax_rates(state_code);
     CREATE INDEX IF NOT EXISTS idx_tax_rates_active ON tax_rates(is_active);
+    CREATE INDEX IF NOT EXISTS idx_reminders_invoice ON invoice_reminders(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_reminders_sent_at ON invoice_reminders(sent_at);
+    CREATE INDEX IF NOT EXISTS idx_reminder_settings_invoice ON invoice_reminder_settings(invoice_id);
+  `);
+
+  // Create invoice view tracking table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_views (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      token TEXT NOT NULL,
+      client_ip TEXT,
+      user_agent TEXT,
+      viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_invoice_views_invoice ON invoice_views(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_invoice_views_token ON invoice_views(token);
+    CREATE INDEX IF NOT EXISTS idx_invoice_views_viewed_at ON invoice_views(viewed_at);
   `);
 
   // Insert default line item labels

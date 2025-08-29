@@ -1381,6 +1381,127 @@ const invoiceDb = {
     }
   },
 
+  async findClientByEmailOrPhone(email, phone) {
+    const db = await getDb();
+    const client = await db.get(`
+      SELECT * FROM clients 
+      WHERE (email = ? AND email IS NOT NULL AND email != '') 
+         OR (phone = ? AND phone IS NOT NULL AND phone != '')
+      LIMIT 1
+    `, [email, phone]);
+    await db.close();
+    return client;
+  },
+
+  async getInvoicesByClientId(clientId) {
+    const db = await getDb();
+    const invoices = await db.all(`
+      SELECT 
+        i.*,
+        COALESCE(p.total_paid, 0) as total_paid
+      FROM invoices i
+      LEFT JOIN (
+        SELECT invoice_id, SUM(payment_amount) as total_paid
+        FROM invoice_payments
+        GROUP BY invoice_id
+      ) p ON i.id = p.invoice_id
+      WHERE i.client_id = ?
+      ORDER BY i.created_at DESC
+    `, [clientId]);
+    await db.close();
+    return invoices;
+  },
+
+  // Invoice reminder operations
+  async getReminderSettings(invoiceId) {
+    const db = await getDb();
+    const settings = await db.get(`
+      SELECT * FROM invoice_reminder_settings 
+      WHERE invoice_id = ?
+    `, [invoiceId]);
+    await db.close();
+    return settings;
+  },
+
+  async updateReminderSettings(invoiceId, settings) {
+    const db = await getDb();
+    const result = await db.run(`
+      INSERT OR REPLACE INTO invoice_reminder_settings 
+      (invoice_id, reminders_enabled, reminder_days, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    `, [invoiceId, settings.reminders_enabled, settings.reminder_days]);
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async getInvoicesNeedingReminders() {
+    const db = await getDb();
+    const invoices = await db.all(`
+      SELECT 
+        i.*,
+        c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email,
+        rs.reminders_enabled, rs.reminder_days, rs.last_reminder_sent_at,
+        COALESCE(p.total_paid, 0) as total_paid,
+        JULIANDAY('now') - JULIANDAY(i.due_date) as days_overdue
+      FROM invoices i
+      JOIN clients c ON i.client_id = c.id
+      LEFT JOIN invoice_reminder_settings rs ON i.id = rs.invoice_id
+      LEFT JOIN (
+        SELECT invoice_id, SUM(payment_amount) as total_paid
+        FROM invoice_payments
+        GROUP BY invoice_id
+      ) p ON i.id = p.invoice_id
+      WHERE rs.reminders_enabled = 1
+        AND i.status != 'paid'
+        AND JULIANDAY('now') > JULIANDAY(i.due_date)
+        AND (COALESCE(p.total_paid, 0) < i.total_amount)
+      ORDER BY days_overdue DESC
+    `);
+    await db.close();
+    return invoices;
+  },
+
+  async logReminder(reminderData) {
+    const db = await getDb();
+    const result = await db.run(`
+      INSERT INTO invoice_reminders 
+      (invoice_id, reminder_type, days_overdue, sent_by, message, successful)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      reminderData.invoice_id,
+      reminderData.reminder_type,
+      reminderData.days_overdue,
+      reminderData.sent_by,
+      reminderData.message,
+      reminderData.successful
+    ]);
+
+    // Update last reminder sent timestamp
+    await db.run(`
+      UPDATE invoice_reminder_settings 
+      SET last_reminder_sent_at = CURRENT_TIMESTAMP 
+      WHERE invoice_id = ?
+    `, [reminderData.invoice_id]);
+
+    await db.close();
+    return { id: result.lastID };
+  },
+
+  async getReminderHistory(invoiceId) {
+    const db = await getDb();
+    const reminders = await db.all(`
+      SELECT 
+        r.*,
+        u.username as sent_by_username
+      FROM invoice_reminders r
+      LEFT JOIN users u ON r.sent_by = u.id
+      WHERE r.invoice_id = ?
+      ORDER BY r.sent_at DESC
+    `, [invoiceId]);
+    await db.close();
+    return reminders;
+  },
+
   // Line item label operations (admin configurable)
   async getLineItemLabels() {
     const db = await getDb();
@@ -1473,13 +1594,56 @@ const invoiceDb = {
   async getAllInvoices() {
     const db = await getDb();
     const invoices = await db.all(`
-      SELECT i.*, c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email
+      SELECT 
+        i.*, 
+        c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email,
+        COALESCE(p.total_paid, 0) as total_paid
       FROM invoices i
       JOIN clients c ON i.client_id = c.id
+      LEFT JOIN (
+        SELECT invoice_id, SUM(payment_amount) as total_paid
+        FROM invoice_payments
+        GROUP BY invoice_id
+      ) p ON i.id = p.invoice_id
       ORDER BY i.created_at DESC
     `);
+    
+    // Calculate payment status for each invoice
+    const invoicesWithStatus = invoices.map(invoice => {
+      const totalPaid = parseFloat(invoice.total_paid || 0);
+      const totalAmount = parseFloat(invoice.total_amount || 0);
+      const balanceDue = totalAmount - totalPaid;
+      
+      let paymentStatus;
+      if (totalPaid >= totalAmount) {
+        paymentStatus = 'paid';
+      } else if (totalPaid > 0) {
+        paymentStatus = 'partial';
+      } else {
+        paymentStatus = 'unpaid';
+      }
+      
+      // Update status if needed based on payment status and due date
+      const dueDate = new Date(invoice.due_date);
+      const today = new Date();
+      
+      if (paymentStatus !== 'paid' && dueDate < today) {
+        invoice.status = 'overdue';
+      } else if (paymentStatus === 'paid') {
+        invoice.status = 'paid';
+      } else if (paymentStatus === 'partial' || paymentStatus === 'unpaid') {
+        invoice.status = invoice.status || 'pending';
+      }
+      
+      return {
+        ...invoice,
+        payment_status: paymentStatus,
+        balance_due: balanceDue.toFixed(2)
+      };
+    });
+    
     await db.close();
-    return invoices;
+    return invoicesWithStatus;
   },
 
   async getInvoiceById(id) {
@@ -1569,16 +1733,13 @@ const invoiceDb = {
     const year = new Date().getFullYear();
     const prefix = `INV-${year}-`;
     
-    const lastInvoice = await db.get(
-      'SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY id DESC LIMIT 1',
+    // Count existing invoices for this year to get the next sequential number
+    const count = await db.get(
+      'SELECT COUNT(*) as count FROM invoices WHERE invoice_number LIKE ?',
       [`${prefix}%`]
     );
     
-    let nextNumber = 1;
-    if (lastInvoice) {
-      const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[2]);
-      nextNumber = lastNumber + 1;
-    }
+    const nextNumber = (count.count || 0) + 1;
     
     return `${prefix}${nextNumber.toString().padStart(4, '0')}`;
   },
@@ -1775,13 +1936,25 @@ const invoiceDb = {
     try {
       await db.run('BEGIN TRANSACTION');
       
+      // Get the invoice being deleted to know its year
+      const invoice = await db.get('SELECT invoice_number FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) {
+        throw new Error('Invoice not found');
+      }
+      
+      const year = invoice.invoice_number.split('-')[1];
+      
       // Delete related records first (in correct order to avoid foreign key constraints)
       await db.run('DELETE FROM invoice_line_items WHERE invoice_id = ?', [invoiceId]);
       await db.run('DELETE FROM invoice_payments WHERE invoice_id = ?', [invoiceId]);
       await db.run('DELETE FROM invoice_tokens WHERE invoice_id = ?', [invoiceId]);
+      await db.run('DELETE FROM invoice_reminders WHERE invoice_id = ?', [invoiceId]);
       
       // Finally delete the invoice
       const result = await db.run('DELETE FROM invoices WHERE id = ?', [invoiceId]);
+      
+      // Renumber remaining invoices for this year
+      await this.renumberInvoicesForYear(db, year);
       
       await db.run('COMMIT');
       await db.close();
@@ -1789,6 +1962,113 @@ const invoiceDb = {
       return { success: true, changes: result.changes };
     } catch (error) {
       await db.run('ROLLBACK');
+      await db.close();
+      throw error;
+    }
+  },
+
+  async renumberInvoicesForYear(db, year) {
+    // Get all invoices for this year ordered by creation date
+    const invoices = await db.all(
+      'SELECT id, invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY created_at ASC',
+      [`INV-${year}-%`]
+    );
+    
+    // Renumber each invoice sequentially
+    for (let i = 0; i < invoices.length; i++) {
+      const newNumber = `INV-${year}-${(i + 1).toString().padStart(4, '0')}`;
+      await db.run(
+        'UPDATE invoices SET invoice_number = ? WHERE id = ?',
+        [newNumber, invoices[i].id]
+      );
+    }
+  },
+
+  async deleteAllInvoices(deletedBy, confirmationCode) {
+    // Safety check - require specific confirmation code
+    if (confirmationCode !== 'DELETE_ALL_INVOICES_CONFIRM') {
+      throw new Error('Invalid confirmation code');
+    }
+    
+    const db = await getDb();
+    
+    try {
+      await db.run('BEGIN TRANSACTION');
+      
+      // Delete all related records first
+      await db.run('DELETE FROM invoice_line_items');
+      await db.run('DELETE FROM invoice_payments');
+      await db.run('DELETE FROM invoice_tokens');
+      await db.run('DELETE FROM invoice_reminders');
+      await db.run('DELETE FROM invoice_reminder_settings');
+      
+      // Finally delete all invoices
+      const result = await db.run('DELETE FROM invoices');
+      
+      await db.run('COMMIT');
+      await db.close();
+      
+      return { success: true, deletedCount: result.changes };
+    } catch (error) {
+      await db.run('ROLLBACK');
+      await db.close();
+      throw error;
+    }
+  },
+
+  async trackInvoiceView(invoiceId, token, clientIp = null, userAgent = null) {
+    const db = await getDb();
+    try {
+      await db.run(`
+        INSERT INTO invoice_views (invoice_id, token, client_ip, user_agent)
+        VALUES (?, ?, ?, ?)
+      `, [invoiceId, token, clientIp, userAgent]);
+    } catch (error) {
+      console.error('Error tracking invoice view:', error);
+    } finally {
+      await db.close();
+    }
+  },
+
+  async getInvoiceViewStats(invoiceId) {
+    const db = await getDb();
+    try {
+      const stats = await db.get(`
+        SELECT 
+          COUNT(*) as total_views,
+          MAX(viewed_at) as last_viewed,
+          MIN(viewed_at) as first_viewed
+        FROM invoice_views 
+        WHERE invoice_id = ?
+      `, [invoiceId]);
+      
+      await db.close();
+      return stats;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getAllInvoiceViewStats() {
+    const db = await getDb();
+    try {
+      const stats = await db.all(`
+        SELECT 
+          i.id,
+          i.invoice_number,
+          COUNT(iv.id) as total_views,
+          MAX(iv.viewed_at) as last_viewed,
+          MIN(iv.viewed_at) as first_viewed
+        FROM invoices i
+        LEFT JOIN invoice_views iv ON i.id = iv.invoice_id
+        GROUP BY i.id, i.invoice_number
+        ORDER BY i.id DESC
+      `);
+      
+      await db.close();
+      return stats;
+    } catch (error) {
       await db.close();
       throw error;
     }

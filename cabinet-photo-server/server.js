@@ -1483,10 +1483,41 @@ app.post('/api/designs', uploadMemory.single('pdf'), async (req, res) => {
       }
     }
 
+    // Check for existing client invoices and payment status
+    let clientPaymentStatus = '';
+    try {
+      const clientEmail = designData.client_email;
+      const clientPhone = designData.client_phone;
+      
+      if (clientEmail || clientPhone) {
+        const existingClient = await invoiceDb.findClientByEmailOrPhone(clientEmail, clientPhone);
+        if (existingClient) {
+          const clientInvoices = await invoiceDb.getInvoicesByClientId(existingClient.id);
+          if (clientInvoices.length > 0) {
+            const unpaidInvoices = clientInvoices.filter(inv => {
+              const totalPaid = inv.total_paid || 0;
+              const balanceDue = (inv.total_amount || 0) - totalPaid;
+              return balanceDue > 0.01; // Consider small amounts as paid due to rounding
+            });
+            
+            if (unpaidInvoices.length > 0) {
+              const totalUnpaid = unpaidInvoices.reduce((sum, inv) => sum + ((inv.total_amount || 0) - (inv.total_paid || 0)), 0);
+              clientPaymentStatus = `\n⚠️  OUTSTANDING BALANCE: $${totalUnpaid.toFixed(2)} (${unpaidInvoices.length} unpaid invoice${unpaidInvoices.length > 1 ? 's' : ''})`;
+            } else {
+              clientPaymentStatus = '\n✅ All invoices paid';
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking client payment status:', error);
+      // Continue without payment status if there's an error
+    }
+
     // SMS notification for design submissions
     if ((notificationType === 'sms' || notificationType === 'both') && twilioClient && (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_PHONE_NUMBER)) {
       try {
-        const smsBody = `New cabinet design from ${designData.client_name} - $${designData.total_price.toFixed(2)}. Contact: ${designData.contact_preference === 'email' ? designData.client_email : designData.client_phone}`;
+        const smsBody = `New cabinet design from ${designData.client_name} - $${designData.total_price.toFixed(2)}. Contact: ${designData.contact_preference === 'email' ? designData.client_email : designData.client_phone}${clientPaymentStatus}`;
         
         const designSmsOptions = {
           body: smsBody,
@@ -2277,7 +2308,7 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: client.email,
-      subject: `Invoice ${invoice.invoice_number} from Gudino Custom Cabinets`,
+      subject: `Invoice ${invoice.invoice_number.split('-').pop()} from Gudino Custom Cabinets`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #1e3a8a; color: white; padding: 20px; text-align: center;">
@@ -2285,11 +2316,11 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
           </div>
           
           <div style="padding: 30px; background: #f8fafc;">
-            <h2 style="color: #1e3a8a; margin-top: 0;">Invoice ${invoice.invoice_number}</h2>
+            <h2 style="color: black; margin-top: 0;">${invoice.invoice_number.split('-').pop()}</h2>
             
-            <p>Hello ${clientName},</p>
+            <p style="color: black;">Hello ${clientName},</p>
             
-            <p>Please find your invoice attached. You can view and download your invoice using the secure link below:</p>
+            <p style="color: black;">Please find your invoice attached. You can view and download your invoice using the secure link below:</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${viewLink}" 
@@ -2299,23 +2330,23 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
             </div>
             
             <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0;">
-              <h3 style="margin-top: 0; color: #374151;">Invoice Details:</h3>
-              <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
-              <p><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
-              <p><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
-              <p><strong>Total Amount:</strong> $${invoice.total_amount.toFixed(2)}</p>
+              <h3 style="margin-top: 0; color: black;">Invoice Details:</h3>
+              <p style="color: black;"><strong>Invoice Number:</strong> ${invoice.invoice_number.split('-').pop()}</p>
+              <p style="color: black;"><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
+              <p style="color: black;"><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+              <p style="color: black;"><strong>Total Amount:</strong> $${(invoice.total_amount || 0).toFixed(2)}</p>
             </div>
             
             ${message ? `
             <div style="margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid #1e3a8a;">
-              <p style="margin: 0;"><strong>Additional Message:</strong></p>
-              <p style="margin: 5px 0 0 0;">${message}</p>
+              <p style="margin: 0; color: black;"><strong>Additional Message:</strong></p>
+              <p style="margin: 5px 0 0 0; color: black;">${message}</p>
             </div>
             ` : ''}
             
-            <p style="margin-top: 30px;">If you have any questions about this invoice, please don't hesitate to contact us.</p>
+            <p style="margin-top: 30px; color: black;">If you have any questions about this invoice, please don't hesitate to contact us.</p>
             
-            <p>Thank you for choosing Gudino Custom Cabinets!</p>
+            <p style="color: black;">Thank you for choosing Gudino Custom Cabinets!</p>
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
               <p>Gudino Custom Cabinets</p>
@@ -2434,7 +2465,7 @@ app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) 
       phoneNumber = `+1${phoneNumber}`;
     }
 
-    const smsBody = `Hi ${clientName}, your invoice ${invoice.invoice_number} from Gudino Custom Cabinets is ready. Total: $${invoice.total_amount.toFixed(2)}. View online: ${viewLink}${message ? `. Message: ${message}` : ''}`;
+    const smsBody = `Hi ${clientName}, your invoice ${invoice.invoice_number.split('-').pop()} from Gudino Custom Cabinets is ready. Total: $${invoice.total_amount.toFixed(2)}. View online: ${viewLink}${message ? `. Message: ${message}` : ''}`;
 
     // Send SMS using messaging service (preferred method)
     const smsOptions = {
@@ -2498,6 +2529,17 @@ app.put('/api/admin/invoices/:id/invoice-number', authenticateUser, async (req, 
   } catch (error) {
     console.error('Error updating invoice number:', error);
     res.status(500).json({ error: 'Failed to update invoice number' });
+  }
+});
+
+// Admin endpoint - Get invoice view statistics
+app.get('/api/admin/invoices/view-stats', authenticateUser, async (req, res) => {
+  try {
+    const stats = await invoiceDb.getAllInvoiceViewStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting invoice view stats:', error);
+    res.status(500).json({ error: 'Failed to get invoice view statistics' });
   }
 });
 
@@ -2573,6 +2615,41 @@ app.delete('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Error deleting invoice:', error);
     res.status(500).json({ error: 'Failed to delete invoice' });
+  }
+});
+
+// Superadmin endpoint - Delete ALL invoices (requires special confirmation)
+app.delete('/api/superadmin/invoices/delete-all', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is superadmin (you may need to add this field to users table)
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Superadmin access required' });
+    }
+    
+    const { confirmationCode } = req.body;
+    
+    if (!confirmationCode) {
+      return res.status(400).json({ 
+        error: 'Confirmation code required',
+        required_code: 'DELETE_ALL_INVOICES_CONFIRM'
+      });
+    }
+
+    const result = await invoiceDb.deleteAllInvoices(req.user.id, confirmationCode);
+    
+    res.json({ 
+      message: `All invoices deleted successfully. ${result.deletedCount} invoices removed.`,
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    console.error('Error deleting all invoices:', error);
+    if (error.message === 'Invalid confirmation code') {
+      return res.status(400).json({ 
+        error: error.message,
+        required_code: 'DELETE_ALL_INVOICES_CONFIRM'
+      });
+    }
+    res.status(500).json({ error: 'Failed to delete all invoices' });
   }
 });
 
@@ -2700,6 +2777,128 @@ app.delete('/api/admin/tax-rates/:id', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Bulk delete tax rates
+app.post('/api/admin/tax-rates/bulk-delete', authenticateUser, async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Array of tax rate IDs is required' });
+    }
+
+    let deletedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (const id of ids) {
+      try {
+        // Check if tax rate exists
+        const existing = await invoiceDb.getTaxRateById(id);
+        if (!existing) {
+          errors.push(`Tax rate with ID ${id} not found`);
+          errorCount++;
+          continue;
+        }
+
+        // Check if tax rate is being used by any invoices
+        const inUse = await invoiceDb.isTaxRateInUse(id);
+        if (inUse) {
+          errors.push(`Cannot delete tax rate ID ${id} - it is being used by existing invoices`);
+          errorCount++;
+          continue;
+        }
+
+        await invoiceDb.deleteTaxRate(id);
+        deletedCount++;
+      } catch (error) {
+        console.error(`Error deleting tax rate ${id}:`, error);
+        errors.push(`Failed to delete tax rate ID ${id}`);
+        errorCount++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${deletedCount} tax rate(s)${errorCount > 0 ? `, failed to delete ${errorCount}` : ''}`,
+      deletedCount,
+      errorCount,
+      errors
+    });
+  } catch (error) {
+    console.error('Error bulk deleting tax rates:', error);
+    res.status(500).json({ error: 'Failed to bulk delete tax rates' });
+  }
+});
+
+// Admin endpoint - Bulk add tax rates
+app.post('/api/admin/tax-rates/bulk-add', authenticateUser, async (req, res) => {
+  try {
+    const { taxRates } = req.body;
+
+    if (!Array.isArray(taxRates) || taxRates.length === 0) {
+      return res.status(400).json({ error: 'Array of tax rates is required' });
+    }
+
+    let createdCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (const taxRate of taxRates) {
+      try {
+        const { state_code, county, city, tax_rate, description } = taxRate;
+
+        if (!state_code || !tax_rate) {
+          errors.push(`Missing required fields (state_code, tax_rate) for entry: ${JSON.stringify(taxRate)}`);
+          errorCount++;
+          continue;
+        }
+
+        // Validate tax rate is a valid number
+        const numericTaxRate = parseFloat(tax_rate);
+        if (isNaN(numericTaxRate) || numericTaxRate < 0 || numericTaxRate > 1) {
+          errors.push(`Invalid tax rate ${tax_rate} - must be between 0 and 1`);
+          errorCount++;
+          continue;
+        }
+
+        // Check for duplicate
+        const existing = await invoiceDb.findTaxRate(state_code, county || '', city || '');
+        if (existing) {
+          errors.push(`Tax rate already exists for ${state_code}${county ? `, ${county}` : ''}${city ? `, ${city}` : ''}`);
+          errorCount++;
+          continue;
+        }
+
+        await invoiceDb.createTaxRate({
+          state_code: state_code.toUpperCase(),
+          county: county || null,
+          city: city || null,
+          tax_rate: numericTaxRate,
+          description: description || null,
+          updated_by: req.user.id
+        });
+        
+        createdCount++;
+      } catch (error) {
+        console.error(`Error creating tax rate:`, error);
+        errors.push(`Failed to create tax rate: ${JSON.stringify(taxRate)}`);
+        errorCount++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Successfully created ${createdCount} tax rate(s)${errorCount > 0 ? `, failed to create ${errorCount}` : ''}`,
+      createdCount,
+      errorCount,
+      errors
+    });
+  } catch (error) {
+    console.error('Error bulk adding tax rates:', error);
+    res.status(500).json({ error: 'Failed to bulk add tax rates' });
+  }
+});
+
 // Admin endpoint - Generate invoice PDF
 app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
   try {
@@ -2724,6 +2923,18 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
 
     const clientAddress = client.address || '';
     
+    // Read logo file and convert to base64
+    const fs = require('fs');
+    const path = require('path');
+    let logoBase64 = '';
+    try {
+      const logoPath = path.join(__dirname, '..', 'kitchen-designer', 'public', 'O.png');
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    } catch (error) {
+      console.log('Logo file not found, PDF will generate without logo');
+    }
+    
     // Generate HTML for PDF
     const htmlContent = `
       <!DOCTYPE html>
@@ -2731,7 +2942,7 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invoice ${invoice.invoice_number}</title>
+        <title>Invoice ${invoice.invoice_number.split('-').pop()}</title>
         <style>
           * {
             margin: 0;
@@ -2763,6 +2974,20 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
           }
           
           .company-info {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+          }
+          
+          .company-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+          
+          .company-text {
             flex: 1;
           }
           
@@ -3003,17 +3228,20 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
           <!-- Header -->
           <div class="invoice-header">
             <div class="company-info">
-              <div class="company-name">Gudino Custom Cabinets</div>
-              <div class="company-details">
-                Professional Cabinet Solutions<br>
-                Email: ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}<br>
-                Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}<br>
-                www.gudinocustom.com
+              ${logoBase64 ? `<img src="${logoBase64}" alt="Gudino Custom Cabinets Logo" class="company-logo" />` : ''}
+              <div class="company-text">
+                <div class="company-name">Gudino Custom Cabinets</div>
+                <div class="company-details">
+                  Professional Cabinet Solutions<br>
+                  Email: ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}<br>
+                  Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}<br>
+                  www.gudinocustom.com
+                </div>
               </div>
             </div>
             <div class="invoice-title">
               <h1>INVOICE</h1>
-              <div class="invoice-number">${invoice.invoice_number}</div>
+              <div class="invoice-number">${invoice.invoice_number.split('-').pop()}</div>
             </div>
           </div>
           
@@ -3079,8 +3307,8 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
                     ${item.notes ? `<div class="item-details">${item.notes}</div>` : ''}
                   </td>
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-right">$${parseFloat(item.unit_price).toFixed(2)}</td>
-                  <td class="text-right">$${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td>
+                  <td class="text-right">$${parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                  <td class="text-right">$${((item.quantity || 0) * parseFloat(item.unit_price || 0)).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -3091,29 +3319,29 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
             <table class="totals-table">
               <tr>
                 <td class="label">Subtotal:</td>
-                <td class="amount">$${invoice.subtotal_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.subtotal || 0).toFixed(2)}</td>
               </tr>
               ${invoice.discount_amount > 0 ? `
               <tr>
                 <td class="label">Discount:</td>
-                <td class="amount">-$${invoice.discount_amount.toFixed(2)}</td>
+                <td class="amount">-$${(invoice.discount_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               ${invoice.markup_amount > 0 ? `
               <tr>
                 <td class="label">Markup:</td>
-                <td class="amount">$${invoice.markup_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.markup_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               ${invoice.tax_amount > 0 ? `
               <tr>
-                <td class="label">Tax (${(invoice.tax_rate * 100).toFixed(2)}%):</td>
-                <td class="amount">$${invoice.tax_amount.toFixed(2)}</td>
+                <td class="label">Tax (${((invoice.tax_rate || 0) * 100).toFixed(2)}%):</td>
+                <td class="amount">$${(invoice.tax_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               <tr class="total-row">
                 <td class="label">TOTAL:</td>
-                <td class="amount">$${invoice.total_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.total_amount || 0).toFixed(2)}</td>
               </tr>
             </table>
           </div>
@@ -3173,7 +3401,7 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoice_number}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoice_number.split('-').pop()}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
     
     // Send PDF
@@ -3254,13 +3482,199 @@ app.put('/api/admin/tax-rates/:id', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Get reminder settings for an invoice
+app.get('/api/admin/invoices/:id/reminder-settings', authenticateUser, async (req, res) => {
+  try {
+    const settings = await invoiceDb.getReminderSettings(req.params.id);
+    res.json(settings || { reminders_enabled: false, reminder_days: '7,14,30' });
+  } catch (error) {
+    console.error('Error getting reminder settings:', error);
+    res.status(500).json({ error: 'Failed to get reminder settings' });
+  }
+});
+
+// Admin endpoint - Update reminder settings for an invoice
+app.put('/api/admin/invoices/:id/reminder-settings', authenticateUser, async (req, res) => {
+  try {
+    const { reminders_enabled, reminder_days } = req.body;
+    await invoiceDb.updateReminderSettings(req.params.id, {
+      reminders_enabled,
+      reminder_days
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating reminder settings:', error);
+    res.status(500).json({ error: 'Failed to update reminder settings' });
+  }
+});
+
+// Admin endpoint - Send manual reminder for an invoice
+app.post('/api/admin/invoices/:id/send-reminder', authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    const { reminder_type = 'both', custom_message } = req.body;
+    
+    // Get invoice with client info
+    const invoice = await invoiceDb.getInvoiceById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const client = await invoiceDb.getClientById(invoice.client_id);
+    const clientName = client.is_business ? client.company_name : `${client.first_name} ${client.last_name}`;
+    
+    // Calculate days overdue
+    const dueDate = new Date(invoice.due_date);
+    const today = new Date();
+    const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+    
+    // Calculate balance due
+    const payments = await invoiceDb.getInvoicePayments(invoiceId);
+    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payment_amount), 0);
+    const balanceDue = invoice.total_amount - totalPaid;
+    
+    const viewLink = `${process.env.FRONTEND_URL || 'https://gudinocustom.com'}/invoice/${invoice.public_token}`;
+    
+    let emailSuccess = true;
+    let smsSuccess = true;
+    
+    // Send email reminder
+    if (reminder_type === 'email' || reminder_type === 'both') {
+      try {
+        const emailMessage = custom_message || `This is a friendly reminder that your invoice is ${daysOverdue > 0 ? `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue` : 'due soon'}.`;
+        
+        await emailTransporter.sendMail({
+          from: process.env.EMAIL_FROM,
+          to: client.email,
+          subject: `Payment Reminder - Invoice ${invoice.invoice_number.split('-').pop()}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #f59e0b; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0;">Payment Reminder</h1>
+              </div>
+              
+              <div style="padding: 30px; background: #f8fafc;">
+                <h2 style="color: #1e3a8a; margin-top: 0;">Invoice ${invoice.invoice_number.split('-').pop()}</h2>
+                
+                <p>Dear ${clientName},</p>
+                
+                <p>${emailMessage}</p>
+                
+                <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                  <p><strong>Invoice Details:</strong></p>
+                  <p><strong>Invoice Number:</strong> ${invoice.invoice_number.split('-').pop()}</p>
+                  <p><strong>Original Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+                  <p><strong>Amount Due:</strong> $${balanceDue.toFixed(2)}</p>
+                  ${daysOverdue > 0 ? `<p style="color: #dc2626;"><strong>Days Overdue:</strong> ${daysOverdue}</p>` : ''}
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${viewLink}" 
+                     style="background-color: #1e3a8a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    View Invoice & Pay Online
+                  </a>
+                </div>
+                
+                <p>Please contact us if you have any questions about this invoice.</p>
+                
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
+                  <p>Gudino Custom Cabinets</p>
+                  <p>Email: ${process.env.ADMIN_EMAIL}</p>
+                  <p>Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}</p>
+                </div>
+              </div>
+            </div>
+          `
+        });
+      } catch (error) {
+        console.error('Email reminder failed:', error);
+        emailSuccess = false;
+      }
+    }
+    
+    // Send SMS reminder
+    if ((reminder_type === 'sms' || reminder_type === 'both') && client.phone && twilioClient) {
+      try {
+        const smsMessage = custom_message 
+          ? `Payment reminder: ${custom_message} Invoice ${invoice.invoice_number.split('-').pop()} - $${balanceDue.toFixed(2)} due. View: ${viewLink}`
+          : `Payment reminder: Invoice ${invoice.invoice_number.split('-').pop()} is ${daysOverdue > 0 ? `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue` : 'due'} - $${balanceDue.toFixed(2)}. View: ${viewLink}`;
+        
+        const smsOptions = {
+          body: smsMessage,
+          to: client.phone
+        };
+
+        if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+          smsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+        } else if (process.env.TWILIO_PHONE_NUMBER) {
+          smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+        }
+
+        await twilioClient.messages.create(smsOptions);
+      } catch (error) {
+        console.error('SMS reminder failed:', error);
+        smsSuccess = false;
+      }
+    }
+    
+    // Log the reminder attempt
+    await invoiceDb.logReminder({
+      invoice_id: invoiceId,
+      reminder_type,
+      days_overdue: daysOverdue,
+      sent_by: req.user.id,
+      message: custom_message || `${daysOverdue > 0 ? 'Overdue' : 'Due'} payment reminder`,
+      successful: emailSuccess && smsSuccess
+    });
+    
+    res.json({ 
+      success: true, 
+      emailSent: reminder_type === 'email' || reminder_type === 'both' ? emailSuccess : null,
+      smsSent: reminder_type === 'sms' || reminder_type === 'both' ? smsSuccess : null
+    });
+    
+  } catch (error) {
+    console.error('Error sending reminder:', error);
+    res.status(500).json({ error: 'Failed to send reminder' });
+  }
+});
+
+// Admin endpoint - Get invoices needing reminders
+app.get('/api/admin/invoices/needing-reminders', authenticateUser, async (req, res) => {
+  try {
+    const invoices = await invoiceDb.getInvoicesNeedingReminders();
+    res.json(invoices);
+  } catch (error) {
+    console.error('Error getting invoices needing reminders:', error);
+    res.status(500).json({ error: 'Failed to get invoices needing reminders' });
+  }
+});
+
+// Admin endpoint - Get reminder history for an invoice
+app.get('/api/admin/invoices/:id/reminder-history', authenticateUser, async (req, res) => {
+  try {
+    const history = await invoiceDb.getReminderHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    console.error('Error getting reminder history:', error);
+    res.status(500).json({ error: 'Failed to get reminder history' });
+  }
+});
+
 // Public endpoint - Get invoice by token (for client viewing)
 app.get('/api/invoice/:token', async (req, res) => {
   try {
-    const invoice = await invoiceDb.getInvoiceByToken(req.params.token);
+    const token = req.params.token;
+    const invoice = await invoiceDb.getInvoiceByToken(token);
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found or expired' });
     }
+    
+    // Track the view
+    const clientIp = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+    const userAgent = req.headers['user-agent'];
+    await invoiceDb.trackInvoiceView(invoice.id, token, clientIp, userAgent);
+    
     res.json(invoice);
   } catch (error) {
     console.error('Error getting invoice by token:', error);
@@ -3279,11 +3693,31 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
       return res.status(404).json({ error: 'Invoice not found or access expired' });
     }
 
+    // Get line items and payments for this invoice
+    const lineItems = await invoiceDb.getInvoiceLineItems(invoice.id);
+    const payments = await invoiceDb.getInvoicePayments(invoice.id);
+
+    // Add line items and payments to invoice object
+    invoice.line_items = lineItems;
+    invoice.payments = payments;
+
     const clientName = invoice.is_business 
       ? invoice.company_name 
       : `${invoice.first_name} ${invoice.last_name}`;
 
     const clientAddress = invoice.address || '';
+    
+    // Read logo file and convert to base64
+    const fs = require('fs');
+    const path = require('path');
+    let logoBase64 = '';
+    try {
+      const logoPath = path.join(__dirname, '..', 'kitchen-designer', 'public', 'O.png');
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    } catch (error) {
+      console.log('Logo file not found, PDF will generate without logo');
+    }
     
     // Generate HTML for PDF (same as admin version)
     const htmlContent = `
@@ -3292,7 +3726,7 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invoice ${invoice.invoice_number}</title>
+        <title>Invoice ${invoice.invoice_number.split('-').pop()}</title>
         <style>
           * {
             margin: 0;
@@ -3324,6 +3758,20 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
           }
           
           .company-info {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+          }
+          
+          .company-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+          
+          .company-text {
             flex: 1;
           }
           
@@ -3564,17 +4012,20 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
           <!-- Header -->
           <div class="invoice-header">
             <div class="company-info">
-              <div class="company-name">Gudino Custom Cabinets</div>
-              <div class="company-details">
-                Professional Cabinet Solutions<br>
-                Email: ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}<br>
-                Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}<br>
-                www.gudinocustom.com
+              ${logoBase64 ? `<img src="${logoBase64}" alt="Gudino Custom Cabinets Logo" class="company-logo" />` : ''}
+              <div class="company-text">
+                <div class="company-name">Gudino Custom Cabinets</div>
+                <div class="company-details">
+                  Professional Cabinet Solutions<br>
+                  Email: ${process.env.ADMIN_EMAIL || 'contact@gudinocustom.com'}<br>
+                  Phone: ${process.env.ADMIN_PHONE || '(509) 790-3516'}<br>
+                  www.gudinocustom.com
+                </div>
               </div>
             </div>
             <div class="invoice-title">
               <h1>INVOICE</h1>
-              <div class="invoice-number">${invoice.invoice_number}</div>
+              <div class="invoice-number">${invoice.invoice_number.split('-').pop()}</div>
             </div>
           </div>
           
@@ -3640,8 +4091,8 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
                     ${item.notes ? `<div class="item-details">${item.notes}</div>` : ''}
                   </td>
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-right">$${parseFloat(item.unit_price).toFixed(2)}</td>
-                  <td class="text-right">$${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}</td>
+                  <td class="text-right">$${parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                  <td class="text-right">$${((item.quantity || 0) * parseFloat(item.unit_price || 0)).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -3652,29 +4103,29 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
             <table class="totals-table">
               <tr>
                 <td class="label">Subtotal:</td>
-                <td class="amount">$${invoice.subtotal_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.subtotal || 0).toFixed(2)}</td>
               </tr>
               ${invoice.discount_amount > 0 ? `
               <tr>
                 <td class="label">Discount:</td>
-                <td class="amount">-$${invoice.discount_amount.toFixed(2)}</td>
+                <td class="amount">-$${(invoice.discount_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               ${invoice.markup_amount > 0 ? `
               <tr>
                 <td class="label">Markup:</td>
-                <td class="amount">$${invoice.markup_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.markup_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               ${invoice.tax_amount > 0 ? `
               <tr>
-                <td class="label">Tax (${(invoice.tax_rate * 100).toFixed(2)}%):</td>
-                <td class="amount">$${invoice.tax_amount.toFixed(2)}</td>
+                <td class="label">Tax (${((invoice.tax_rate || 0) * 100).toFixed(2)}%):</td>
+                <td class="amount">$${(invoice.tax_amount || 0).toFixed(2)}</td>
               </tr>
               ` : ''}
               <tr class="total-row">
                 <td class="label">TOTAL:</td>
-                <td class="amount">$${invoice.total_amount.toFixed(2)}</td>
+                <td class="amount">$${(invoice.total_amount || 0).toFixed(2)}</td>
               </tr>
             </table>
           </div>
@@ -3734,7 +4185,7 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoice_number}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoice.invoice_number.split('-').pop()}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
     
     // Send PDF

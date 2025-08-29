@@ -254,10 +254,10 @@ const InvoiceViewer = () => {
                           {item.quantity}
                         </td>
                         <td className="px-6 py-4 text-right text-gray-900">
-                          ${parseFloat(item.unit_price).toFixed(2)}
+                          ${parseFloat(item.unit_price || 0).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-gray-900">
-                          ${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}
+                          ${((item.quantity || 0) * parseFloat(item.unit_price || 0)).toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -288,43 +288,43 @@ const InvoiceViewer = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium">${invoice.subtotal_amount.toFixed(2)}</span>
+                  <span className="font-medium">${(invoice.subtotal || 0).toFixed(2)}</span>
                 </div>
-                {invoice.discount_amount > 0 && (
+                {(invoice.discount_amount || 0) > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount:</span>
-                    <span>-${invoice.discount_amount.toFixed(2)}</span>
+                    <span>-${(invoice.discount_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
-                {invoice.markup_amount > 0 && (
+                {(invoice.markup_amount || 0) > 0 && (
                   <div className="flex justify-between">
                     <span>Markup:</span>
-                    <span>${invoice.markup_amount.toFixed(2)}</span>
+                    <span>${(invoice.markup_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
-                {invoice.tax_amount > 0 && (
+                {(invoice.tax_amount || 0) > 0 && (
                   <div className="flex justify-between">
-                    <span>Tax ({(invoice.tax_rate * 100).toFixed(2)}%):</span>
-                    <span>${invoice.tax_amount.toFixed(2)}</span>
+                    <span>Tax ({((invoice.tax_rate || 0) * 100).toFixed(2)}%):</span>
+                    <span>${(invoice.tax_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total:</span>
-                    <span className="text-blue-600">${invoice.total_amount.toFixed(2)}</span>
+                    <span className="text-blue-600">${(invoice.total_amount || 0).toFixed(2)}</span>
                   </div>
                 </div>
                 {totalPaid > 0 && (
                   <>
                     <div className="flex justify-between text-green-600">
                       <span>Amount Paid:</span>
-                      <span>-${totalPaid.toFixed(2)}</span>
+                      <span>-${(totalPaid || 0).toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-3">
                       <div className="flex justify-between text-lg font-semibold">
                         <span>Remaining Balance:</span>
-                        <span className={remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}>
-                          ${remainingBalance.toFixed(2)}
+                        <span className={(remainingBalance || 0) > 0 ? 'text-red-600' : 'text-green-600'}>
+                          ${(remainingBalance || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -343,7 +343,7 @@ const InvoiceViewer = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium text-green-800">
-                            ${parseFloat(payment.payment_amount).toFixed(2)}
+                            ${parseFloat(payment.payment_amount || 0).toFixed(2)}
                           </p>
                           <p className="text-sm text-green-600">
                             {payment.payment_method}
@@ -373,11 +373,11 @@ const InvoiceViewer = () => {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 flex items-center gap-2">
                     <Mail className="w-4 h-4" />
-                    contact@gudinocustom.com
+                    admin@gudinocustom.com
                   </p>
                   <p className="text-sm text-gray-600 flex items-center gap-2">
                     <Phone className="w-4 h-4" />
-                    (509) 790-3516
+                    (509) 515-4090
                   </p>
                 </div>
               </div>
