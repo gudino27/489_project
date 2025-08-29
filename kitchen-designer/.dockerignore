@@ -1,11 +1,96 @@
+# Node.js
 node_modules
-npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
 .env
 .env.local
-.DS_Store
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+*.log.*
+
+# Coverage directory used by tools like istanbul
+coverage
+.nyc_output
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Production build
 build
+
+# Parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# Gatsby files
+.cache/
+public/static
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Local development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Git
 .git
 .gitignore
 README.md
-.vscode
-*.log
+
+# Test files
+src/**/*.test.js
+src/**/*.spec.js
+src/setupTests.js
+src/reportWebVitals.js
+
+# Development dependencies
+jspm_packages/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency lock files
+package-lock.json
+yarn.lock
+
+# Optional npm cache directory
+.npm
+
+# Build artifacts
+dist

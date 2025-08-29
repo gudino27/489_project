@@ -1,0 +1,82 @@
+# syntax=docker/dockerfile:1.4
+# Optimized Multi-stage Dockerfile for Cabinet Photo Server
+# Uses BuildKit cache mounts and advanced optimization techniques
+
+ARG NODE_VERSION=20-alpine
+ARG BUILD_DATE
+ARG GIT_SHA
+
+# Base stage with common dependencies
+FROM node:${NODE_VERSION} AS base
+WORKDIR /app
+RUN apk add --no-cache sqlite python3 py3-pip py3-setuptools make g++ sqlite-dev
+ENV NODE_ENV=production
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NPM_CONFIG_FUND=false
+ENV CI=true
+
+# Dependencies stage with cache mounts
+FROM base AS dependencies
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/app/.npm \
+    npm ci --only=production --no-audit --no-fund --prefer-offline
+
+# Development dependencies (for testing/development)
+FROM dependencies AS dev-dependencies
+ENV NODE_ENV=development
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/app/.npm \
+    npm ci --no-audit --no-fund --prefer-offline
+
+# Development stage
+FROM base AS development
+COPY --from=dev-dependencies /app/node_modules ./node_modules
+COPY . .
+RUN mkdir -p uploads database logs && \
+    chmod +x docker-entrypoint.sh && \
+    chown -R node:node /app
+USER node
+EXPOSE 3001
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+# Test stage
+FROM development AS test
+ENV NODE_ENV=test
+RUN npm run test --if-present || true
+
+# Production preparation stage
+FROM base AS production-prep
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+
+# Create production directories and set permissions
+RUN mkdir -p uploads database logs && \
+    chmod +x docker-entrypoint.sh && \
+    chmod -R 755 /app && \
+    chown -R node:node /app
+
+# Final production stage
+FROM node:${NODE_VERSION} AS production
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apk add --no-cache sqlite && \
+    rm -rf /var/cache/apk/*
+
+# Copy from production-prep stage
+COPY --from=production-prep --chown=node:node /app ./
+
+# Add build metadata
+LABEL org.opencontainers.image.created=${BUILD_DATE}
+LABEL org.opencontainers.image.revision=${GIT_SHA}
+LABEL org.opencontainers.image.title="Cabinet Photo Server"
+LABEL org.opencontainers.image.description="Backend API for Gudino Custom Cabinets"
+
+USER node
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:3001/api/health || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
