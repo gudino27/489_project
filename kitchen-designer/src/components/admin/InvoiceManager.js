@@ -1735,9 +1735,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             </button>
             <button
               onClick={() => setActiveView('list')}
-              className="text-gray-600 hover:text-gray-900"
+              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2 text-sm border border-gray-300"
             >
-              Back to List
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Invoices
             </button>
           </div>
         </div>
