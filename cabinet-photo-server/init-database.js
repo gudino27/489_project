@@ -713,15 +713,25 @@ async function addInvoiceTables(db) {
     CREATE TABLE IF NOT EXISTS tax_rates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       state_code TEXT NOT NULL,
-      county TEXT,
       city TEXT,
       tax_rate DECIMAL(5, 4) NOT NULL,
+      description TEXT,
       is_active BOOLEAN DEFAULT 1,
       last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_by INTEGER,
       FOREIGN KEY (updated_by) REFERENCES users(id)
     )
   `);
+
+  // Add description column to tax_rates table if it doesn't exist
+  try {
+    await db.exec(`ALTER TABLE tax_rates ADD COLUMN description TEXT`);
+  } catch (error) {
+    // Column might already exist, ignore error
+    if (!error.message.includes('duplicate column name')) {
+      console.log('Note: description column may already exist in tax_rates table');
+    }
+  }
 
   // Create indexes for invoice tables
   await db.exec(`

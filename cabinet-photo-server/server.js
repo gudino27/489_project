@@ -2656,7 +2656,7 @@ app.delete('/api/superadmin/invoices/delete-all', authenticateUser, async (req, 
 // Admin endpoint - Create tax rate
 app.post('/api/admin/tax-rates', authenticateUser, async (req, res) => {
   try {
-    const { state_code, county, city, tax_rate, description } = req.body;
+    const { state_code, city, tax_rate, description } = req.body;
 
     if (!state_code || !tax_rate) {
       return res.status(400).json({ error: 'State code and tax rate are required' });
@@ -2669,14 +2669,13 @@ app.post('/api/admin/tax-rates', authenticateUser, async (req, res) => {
     }
 
     // Check for duplicate
-    const existing = await invoiceDb.findTaxRate(state_code, county || '', city || '');
+    const existing = await invoiceDb.findTaxRate(state_code, city || '');
     if (existing) {
       return res.status(400).json({ error: 'Tax rate already exists for this location' });
     }
 
     const result = await invoiceDb.createTaxRate({
       state_code: state_code.toUpperCase(),
-      county: county || null,
       city: city || null,
       tax_rate: numericTaxRate,
       description: description || null,
@@ -2845,7 +2844,7 @@ app.post('/api/admin/tax-rates/bulk-add', authenticateUser, async (req, res) => 
 
     for (const taxRate of taxRates) {
       try {
-        const { state_code, county, city, tax_rate, description } = taxRate;
+        const { state_code, city, tax_rate, description } = taxRate;
 
         if (!state_code || !tax_rate) {
           errors.push(`Missing required fields (state_code, tax_rate) for entry: ${JSON.stringify(taxRate)}`);
@@ -2862,16 +2861,15 @@ app.post('/api/admin/tax-rates/bulk-add', authenticateUser, async (req, res) => 
         }
 
         // Check for duplicate
-        const existing = await invoiceDb.findTaxRate(state_code, county || '', city || '');
+        const existing = await invoiceDb.findTaxRate(state_code, city || '');
         if (existing) {
-          errors.push(`Tax rate already exists for ${state_code}${county ? `, ${county}` : ''}${city ? `, ${city}` : ''}`);
+          errors.push(`Tax rate already exists for ${state_code}${city ? `, ${city}` : ''}`);
           errorCount++;
           continue;
         }
 
         await invoiceDb.createTaxRate({
           state_code: state_code.toUpperCase(),
-          county: county || null,
           city: city || null,
           tax_rate: numericTaxRate,
           description: description || null,

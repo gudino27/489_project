@@ -2075,15 +2075,14 @@ const invoiceDb = {
   },
 
   // Tax rate management
-  async findTaxRate(stateCode, county, city) {
+  async findTaxRate(stateCode, city) {
     const db = await getDb();
     const taxRate = await db.get(`
       SELECT * FROM tax_rates 
       WHERE state_code = ? AND 
-            COALESCE(county, '') = ? AND 
             COALESCE(city, '') = ? AND 
             is_active = 1
-    `, [stateCode.toUpperCase(), county || '', city || '']);
+    `, [stateCode.toUpperCase(), city || '']);
     await db.close();
     return taxRate;
   },
@@ -2098,11 +2097,10 @@ const invoiceDb = {
   async createTaxRate(taxRateData) {
     const db = await getDb();
     const result = await db.run(`
-      INSERT INTO tax_rates (state_code, county, city, tax_rate, description, updated_by) 
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO tax_rates (state_code, city, tax_rate, description, updated_by) 
+      VALUES (?, ?, ?, ?, ?)
     `, [
       taxRateData.state_code,
-      taxRateData.county,
       taxRateData.city,
       taxRateData.tax_rate,
       taxRateData.description,
@@ -2116,12 +2114,11 @@ const invoiceDb = {
     const db = await getDb();
     const result = await db.run(`
       UPDATE tax_rates 
-      SET state_code = ?, county = ?, city = ?, tax_rate = ?, description = ?, 
+      SET state_code = ?, city = ?, tax_rate = ?, description = ?, 
           is_active = ?, updated_by = ?, last_updated = CURRENT_TIMESTAMP 
       WHERE id = ?
     `, [
       taxRateData.state_code,
-      taxRateData.county,
       taxRateData.city,
       taxRateData.tax_rate,
       taxRateData.description,
