@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
+import Footer from '../ui/Footer';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/contact.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -191,6 +192,7 @@ const Contact = () => {
 
         </div>
       </div>
+      <Footer />
     </>
   );
 };

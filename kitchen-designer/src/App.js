@@ -9,6 +9,7 @@ import AdminPanel from './components/admin/AdminPanel';
 import PasswordReset from './components/admin/PasswordReset';
 import TestimonialForm from './components/forms/TestimonialForm';
 import InvoiceViewer from './components/invoice/InvoiceViewer';
+import SmsCompliance from './components/SmsCompliance';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
@@ -33,6 +34,9 @@ function App() {
             <Route path="/reset-password" element={<PasswordReset />} />
             <Route path="/testimonial/:token" element={<TestimonialForm />} />
             <Route path="/invoice/:token" element={<InvoiceViewer />} />
+            <Route path="/sms-consent-verification" element={<SmsCompliance />} />
+            <Route path="/sms-terms" element={<SmsCompliance defaultTab="terms" />} />
+            <Route path="/privacy" element={<SmsCompliance defaultTab="privacy" />} />
           </Routes>
         </Router>
       </PricingProvider>

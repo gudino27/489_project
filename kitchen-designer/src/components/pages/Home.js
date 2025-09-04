@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
+import Footer from '../ui/Footer';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/home.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -232,6 +233,7 @@ const Home = () => {
           </div>
         </section>
       </div>
+      <Footer />
     </>
   );
 };
