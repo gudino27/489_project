@@ -2155,6 +2155,78 @@ app.get('/api/admin/invoices', authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Get invoice tracking data
+app.get('/api/admin/invoices/tracking', authenticateUser, async (req, res) => {
+  try {
+    const { getDb } = require('./db-helpers');
+    const db = await getDb();
+    
+    // Get invoice tracking data with view counts and last viewed times
+    const trackingData = await db.all(`
+      SELECT 
+        i.id,
+        i.invoice_number,
+        i.client_id,
+        i.total_amount,
+        i.status,
+        i.created_at,
+        c.company_name,
+        c.first_name,
+        c.last_name,
+        c.email,
+        c.phone,
+        c.is_business,
+        t.token,
+        t.viewed_at,
+        t.view_count,
+        t.created_at as token_created_at
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
+      ORDER BY i.created_at DESC
+    `);
+    
+    await db.close();
+    
+    // Format the data for frontend consumption
+    const formattedData = trackingData.map(item => ({
+      ...item,
+      client_name: item.is_business ? item.company_name : `${item.first_name} ${item.last_name}`,
+      has_token: !!item.token,
+      is_viewed: !!item.viewed_at,
+      view_count: item.view_count || 0,
+      last_viewed: item.viewed_at
+    }));
+    
+    res.json(formattedData);
+  } catch (error) {
+    console.error('Error getting invoice tracking data:', error);
+    res.status(500).json({ error: 'Failed to get invoice tracking data' });
+  }
+});
+
+// Admin endpoint - Get invoice view statistics
+app.get('/api/admin/invoices/view-stats', authenticateUser, async (req, res) => {
+  try {
+    const stats = await invoiceDb.getAllInvoiceViewStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting invoice view stats:', error);
+    res.status(500).json({ error: 'Failed to get invoice view statistics' });
+  }
+});
+
+// Admin endpoint - Get invoices needing reminders
+app.get('/api/admin/invoices/needing-reminders', authenticateUser, async (req, res) => {
+  try {
+    const invoices = await invoiceDb.getInvoicesNeedingReminders();
+    res.json(invoices);
+  } catch (error) {
+    console.error('Error getting invoices needing reminders:', error);
+    res.status(500).json({ error: 'Failed to get invoices needing reminders' });
+  }
+});
+
 // Admin endpoint - Get invoice by ID
 app.get('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
   try {
@@ -2977,56 +3049,6 @@ app.get('/api/admin/invoices/view-stats', authenticateUser, async (req, res) => 
   } catch (error) {
     console.error('Error getting invoice view stats:', error);
     res.status(500).json({ error: 'Failed to get invoice view statistics' });
-  }
-});
-
-// Admin endpoint - Get invoice tracking data
-app.get('/api/admin/invoices/tracking', authenticateUser, async (req, res) => {
-  try {
-    const { getDb } = require('./db-helpers');
-    const db = await getDb();
-    
-    // Get invoice tracking data with view counts and last viewed times
-    const trackingData = await db.all(`
-      SELECT 
-        i.id,
-        i.invoice_number,
-        i.client_id,
-        i.total_amount,
-        i.status,
-        i.created_at,
-        c.company_name,
-        c.first_name,
-        c.last_name,
-        c.email,
-        c.phone,
-        c.is_business,
-        t.token,
-        t.viewed_at,
-        t.view_count,
-        t.created_at as token_created_at
-      FROM invoices i
-      LEFT JOIN clients c ON i.client_id = c.id
-      LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
-      ORDER BY i.created_at DESC
-    `);
-    
-    await db.close();
-    
-    // Format the data for frontend consumption
-    const formattedData = trackingData.map(item => ({
-      ...item,
-      client_name: item.is_business ? item.company_name : `${item.first_name} ${item.last_name}`,
-      has_token: !!item.token,
-      is_viewed: !!item.viewed_at,
-      view_count: item.view_count || 0,
-      last_viewed: item.viewed_at
-    }));
-    
-    res.json(formattedData);
-  } catch (error) {
-    console.error('Error getting invoice tracking data:', error);
-    res.status(500).json({ error: 'Failed to get invoice tracking data' });
   }
 });
 
