@@ -2178,27 +2178,44 @@ const invoiceDb = {
     return { id: result.lastID };
   },
 
+  async getInvoicePayments(invoiceId) {
+    const db = await getDb();
+    const payments = await db.all(
+      'SELECT * FROM invoice_payments WHERE invoice_id = ? ORDER BY payment_date DESC',
+      [invoiceId]
+    );
+    await db.close();
+    return payments;
+  },
+
   async updateInvoiceStatus(invoiceId) {
     const db = await getDb();
     
-    const invoice = await db.get('SELECT total_amount FROM invoices WHERE id = ?', [invoiceId]);
+    const invoice = await db.get('SELECT total_amount, status FROM invoices WHERE id = ?', [invoiceId]);
     const paymentsResult = await db.get(
       'SELECT SUM(payment_amount) as total_paid FROM invoice_payments WHERE invoice_id = ?',
       [invoiceId]
     );
     
     const totalPaid = paymentsResult.total_paid || 0;
-    let status = 'draft';
+    let status = invoice.status || 'draft';
     
     if (totalPaid >= invoice.total_amount) {
       status = 'paid';
     } else if (totalPaid > 0) {
       status = 'partial';
-    } else {
-      status = 'sent';
+    } else if (invoice.status !== 'draft') {
+      // If invoice has been sent (not draft) and no payments, it's unpaid
+      status = 'unpaid';
     }
     
     await db.run('UPDATE invoices SET status = ? WHERE id = ?', [status, invoiceId]);
+    await db.close();
+  },
+
+  async markInvoiceAsSent(invoiceId) {
+    const db = await getDb();
+    await db.run('UPDATE invoices SET status = ? WHERE id = ?', ['unpaid', invoiceId]);
     await db.close();
   },
 

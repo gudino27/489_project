@@ -2075,6 +2075,47 @@ app.post('/api/analytics/time', async (req, res) => {
   }
 });
 
+// Analytics event tracking endpoint
+app.post('/api/analytics/event', async (req, res) => {
+  try {
+    const {
+      event_name,
+      event_data,
+      session_id,
+      user_id,
+      page_path
+    } = req.body;
+
+    if (!event_name) {
+      return res.status(400).json({ error: 'Event name is required' });
+    }
+
+    // Get client IP
+    const clientIp = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+    
+    // Track the event (you can expand this to store in database if needed)
+    const eventRecord = {
+      event_name,
+      event_data: event_data || {},
+      session_id,
+      user_id,
+      page_path,
+      ip_address: clientIp,
+      user_agent: req.headers['user-agent'],
+      timestamp: new Date().toISOString()
+    };
+
+    // For now, just log the event (you can add database storage later)
+    console.log('Analytics Event:', eventRecord);
+    
+    res.json({ success: true, eventId: Date.now() });
+    
+  } catch (error) {
+    console.error('Analytics event error:', error);
+    res.status(500).json({ error: 'Failed to track event' });
+  }
+});
+
 // Analytics dashboard endpoints (super admin only)
 app.get('/api/analytics/stats', authenticateUser, requireRole('super_admin'), async (req, res) => {
   try {
@@ -2277,7 +2318,383 @@ app.post('/api/admin/invoices/:id/payments', authenticateUser, async (req, res) 
   }
 });
 
+// Admin endpoint - Get payments for an invoice
+app.get('/api/admin/invoices/:id/payments', authenticateUser, async (req, res) => {
+  try {
+    const payments = await invoiceDb.getInvoicePayments(req.params.id);
+    res.json(payments);
+  } catch (error) {
+    console.error('Error getting invoice payments:', error);
+    res.status(500).json({ error: 'Failed to get invoice payments' });
+  }
+});
+
 // Admin endpoint - Send invoice via email
+// Helper function to generate invoice PDF buffer
+async function generateInvoicePdf(invoiceId) {
+  // Get invoice details with client info and line items
+  const invoice = await invoiceDb.getInvoiceById(invoiceId);
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  const client = await invoiceDb.getClientById(invoice.client_id);
+  if (!client) {
+    throw new Error('Client not found');
+  }
+
+  const lineItems = await invoiceDb.getInvoiceLineItems(invoiceId);
+
+  const clientName = client.is_business 
+    ? client.company_name 
+    : `${client.first_name} ${client.last_name}`;
+
+  const clientAddress = [
+    client.address_line_1,
+    client.address_line_2,
+    client.city,
+    client.state,
+    client.zip_code
+  ].filter(Boolean).join(', ');
+
+  // Load logo as base64
+  const fs = require('fs');
+  const path = require('path');
+  const logoPath = path.join(__dirname, 'uploads/logo.png');
+  let logoBase64 = '';
+  
+  try {
+    logoBase64 = fs.readFileSync(logoPath, 'base64');
+  } catch (error) {
+    console.log('Logo not found, proceeding without logo');
+  }
+
+  // Generate HTML content (reusing the existing template)
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          background: white;
+        }
+        
+        .invoice-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: start;
+          margin-bottom: 40px;
+          border-bottom: 3px solid #1e3a8a;
+          padding-bottom: 20px;
+        }
+        
+        .logo-section {
+          display: flex;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        
+        .company-logo {
+          height: 60px;
+          width: auto;
+          margin-right: 15px;
+          border-radius: 8px;
+        }
+        
+        .company-info h1 {
+          color: #1e3a8a;
+          font-size: 32px;
+          font-weight: bold;
+          margin: 0;
+        }
+        
+        .company-info p {
+          margin: 2px 0;
+          color: #666;
+        }
+        
+        .invoice-title {
+          text-align: right;
+        }
+        
+        .invoice-title h2 {
+          color: #1e3a8a;
+          font-size: 36px;
+          margin: 0;
+          font-weight: 300;
+        }
+        
+        .invoice-meta {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 40px;
+        }
+        
+        .client-info, .invoice-details {
+          width: 48%;
+        }
+        
+        .client-info h3, .invoice-details h3 {
+          color: #1e3a8a;
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 15px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .client-info p, .invoice-details p {
+          margin: 8px 0;
+          color: #444;
+        }
+        
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .items-table th {
+          background: #1e3a8a;
+          color: white;
+          padding: 15px 10px;
+          text-align: left;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-size: 12px;
+        }
+        
+        .items-table td {
+          padding: 15px 10px;
+          border-bottom: 1px solid #e2e8f0;
+          vertical-align: top;
+        }
+        
+        .items-table tbody tr:nth-child(even) {
+          background: #f8fafc;
+        }
+        
+        .items-table tbody tr:hover {
+          background: #e2e8f0;
+        }
+        
+        .item-description {
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 5px;
+        }
+        
+        .item-details {
+          font-size: 12px;
+          color: #666;
+        }
+        
+        .text-right {
+          text-align: right;
+        }
+        
+        .text-center {
+          text-align: center;
+        }
+        
+        .totals-section {
+          float: right;
+          width: 300px;
+          margin-top: 20px;
+        }
+        
+        .totals-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        
+        .totals-table td {
+          padding: 10px 15px;
+          border-top: 1px solid #e2e8f0;
+        }
+        
+        .totals-table .label {
+          font-weight: 500;
+          color: #374151;
+        }
+        
+        .totals-table .amount {
+          text-align: right;
+          color: #666;
+        }
+        
+        .total-row {
+          background: #1e3a8a;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+        }
+        
+        .notes-section {
+          clear: both;
+          margin-top: 60px;
+          padding-top: 30px;
+          border-top: 1px solid #e2e8f0;
+        }
+        
+        .notes-section h4 {
+          color: #1e3a8a;
+          margin-bottom: 15px;
+        }
+        
+        .footer {
+          margin-top: 50px;
+          text-align: center;
+          color: #666;
+          font-size: 12px;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 20px;
+        }
+        
+        .status-badge {
+          display: inline-block;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        @page {
+          margin: 0.5in;
+          size: A4;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-header">
+        <div class="company-info">
+          <div class="logo-section">
+            ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Gudino Custom Cabinets Logo" class="company-logo" />` : ''}
+            <h1>Gudino Custom Cabinets</h1>
+          </div>
+          <p><strong>Email:</strong> ${process.env.ADMIN_EMAIL || 'admin@gudinocustom.com'}</p>
+          <p><strong>Phone:</strong> ${process.env.ADMIN_PHONE || '+1 (509) 790-3516'}</p>
+        </div>
+        <div class="invoice-title">
+          <h2>INVOICE</h2>
+        </div>
+      </div>
+
+      <div class="invoice-meta">
+        <div class="client-info">
+          <h3>Bill To:</h3>
+          <p><strong>${clientName}</strong></p>
+          ${client.email ? `<p>Email: ${client.email}</p>` : ''}
+          ${client.phone ? `<p>Phone: ${client.phone}</p>` : ''}
+          ${clientAddress ? `<p>Address: ${clientAddress}</p>` : ''}
+        </div>
+        
+        <div class="invoice-details">
+          <h3>Invoice Details:</h3>
+          <p><strong>Invoice #:</strong> ${invoice.invoice_number.split('-').pop()}</p>
+          <p><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
+          <p><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+          <div class="date-row">
+            <span class="date-label">Status:</span>
+            <span class="date-value" style="color: ${invoice.status === 'paid' ? '#16a34a' : invoice.status === 'overdue' ? '#dc2626' : '#f59e0b'};">
+              ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 50%;">Description</th>
+            <th style="width: 15%; text-align: center;">Qty</th>
+            <th style="width: 17.5%; text-align: right;">Unit Price</th>
+            <th style="width: 17.5%; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lineItems.map(item => `
+            <tr>
+              <td>
+                <div class="item-description">${item.description}</div>
+                ${item.details ? `<div class="item-details">${item.details}</div>` : ''}
+              </td>
+              <td class="text-center">${item.quantity}</td>
+              <td class="text-right">$${(item.unit_price || 0).toFixed(2)}</td>
+              <td class="text-right">$${((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals-section">
+        <table class="totals-table">
+          <tr>
+            <td class="label">Subtotal:</td>
+            <td class="amount">$${(invoice.subtotal || 0).toFixed(2)}</td>
+          </tr>
+          ${(invoice.tax_rate && invoice.tax_rate > 0) ? `
+          <tr>
+            <td class="label">Tax (${(invoice.tax_rate * 100).toFixed(2)}%):</td>
+            <td class="amount">$${(((invoice.subtotal || 0) * (invoice.tax_rate || 0))).toFixed(2)}</td>
+          </tr>
+          ` : ''}
+          <tr class="total-row">
+            <td class="label">Total:</td>
+            <td class="amount">$${(invoice.total_amount || 0).toFixed(2)}</td>
+          </tr>
+        </table>
+      </div>
+
+      ${invoice.notes ? `
+      <div class="notes-section">
+        <h4>Notes:</h4>
+        <p>${invoice.notes}</p>
+      </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>This invoice was generated on ${new Date().toLocaleDateString()}</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // PDF generation options
+  const options = {
+    format: 'A4',
+    border: {
+      top: '0.5in',
+      right: '0.5in',
+      bottom: '0.5in',
+      left: '0.5in'
+    },
+    paginationOffset: 1,
+    type: 'pdf',
+    quality: '75',
+    orientation: 'portrait',
+    timeout: 30000
+  };
+
+  // Generate PDF
+  const file = { content: htmlContent };
+  const pdfBuffer = await htmlPdf.generatePdf(file, options);
+  
+  return pdfBuffer;
+}
+
 app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res) => {
   try {
     const invoiceId = req.params.id;
@@ -2294,6 +2711,11 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
       return res.status(400).json({ error: 'Client email not found' });
     }
 
+    // Update invoice status from draft to unpaid when sending
+    if (invoice.status === 'draft') {
+      await invoiceDb.markInvoiceAsSent(invoiceId);
+    }
+
     // Get or create the invoice token for the client access link
     let invoiceToken = invoice.token;
     if (!invoiceToken) {
@@ -2304,6 +2726,9 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
     const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoiceToken}`;
 
     const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
+    
+    // Generate PDF for attachment
+    const pdfBuffer = await generateInvoicePdf(invoiceId);
     
     const mailOptions = {
       from: process.env.EMAIL_FROM,
@@ -2316,11 +2741,11 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
           </div>
           
           <div style="padding: 30px; background: #f8fafc;">
-            <h2 style="color: black; margin-top: 0;">${invoice.invoice_number.split('-').pop()}</h2>
+            <h2 style="color: black; margin-top: 0;">Invoice ${invoice.invoice_number.split('-').pop()}</h2>
             
             <p style="color: black;">Hello ${clientName},</p>
             
-            <p style="color: black;">Please find your invoice attached. You can view and download your invoice using the secure link below:</p>
+            <p style="color: black;">Please find your invoice attached. You can also view and download your invoice using the secure link below:</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${viewLink}" 
@@ -2355,14 +2780,21 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
             </div>
           </div>
         </div>
-      `
+      `,
+      attachments: [
+        {
+          filename: `invoice-${invoice.invoice_number.split('-').pop()}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
     };
 
     await emailTransporter.sendMail(mailOptions);
     
     res.json({ 
       success: true, 
-      message: 'Invoice email sent successfully',
+      message: 'Invoice email sent successfully with PDF attachment',
       sentTo: client.email
     });
     
@@ -2434,6 +2866,11 @@ app.post('/api/admin/invoices/:id/send-sms', authenticateUser, async (req, res) 
     }
 
     const client = await invoiceDb.getClientById(invoice.client_id);
+    
+    // Update invoice status from draft to unpaid when sending
+    if (invoice.status === 'draft') {
+      await invoiceDb.markInvoiceAsSent(invoiceId);
+    }
     
     // Use custom phone if provided by super admin, otherwise use client phone
     let targetPhone = customPhone;
