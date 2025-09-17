@@ -2188,6 +2188,16 @@ const invoiceDb = {
     return payments;
   },
 
+  async getInvoiceLineItems(invoiceId) {
+    const db = await getDb();
+    const lineItems = await db.all(
+      'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_order',
+      [invoiceId]
+    );
+    await db.close();
+    return lineItems;
+  },
+
   async updateInvoiceStatus(invoiceId) {
     const db = await getDb();
     
