@@ -1,5 +1,5 @@
-import React from 'react';
-import { Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Globe } from 'lucide-react';
 
 const EmailModal = ({
   show,
@@ -10,6 +10,7 @@ const EmailModal = ({
   onCancel,
   onSend
 }) => {
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
   if (!show || !emailInvoice) return null;
   
   const clientName = emailInvoice.is_business 
@@ -34,15 +35,33 @@ const EmailModal = ({
         </div>
 
         <div className="mb-4">
+          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <Globe size={16} />
+            Language / Idioma
+          </label>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none mb-4"
+          >
+            <option value="english">English</option>
+            <option value="spanish">Español</option>
+          </select>
+        </div>
+
+        <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Additional Message (Optional)
+            Additional Message (Optional) / Mensaje Adicional (Opcional)
           </label>
           <textarea
             value={emailMessage}
             onChange={(e) => setEmailMessage(e.target.value)}
             rows={4}
             className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-            placeholder="Add a personal message to include with the invoice..."
+            placeholder={selectedLanguage === 'spanish'
+              ? "Agregue un mensaje personal para incluir con la factura..."
+              : "Add a personal message to include with the invoice..."
+            }
           />
         </div>
 
@@ -55,7 +74,7 @@ const EmailModal = ({
             Cancel
           </button>
           <button
-            onClick={onSend}
+            onClick={() => onSend(selectedLanguage)}
             disabled={emailSending}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >

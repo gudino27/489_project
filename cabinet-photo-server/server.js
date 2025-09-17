@@ -2432,11 +2432,26 @@ async function generateInvoicePdf(invoiceId) {
   // Load logo as base64
   const fs = require('fs');
   const path = require('path');
-  const logoPath = path.join(__dirname, 'uploads/logo.png');
   let logoBase64 = '';
-  
+
   try {
-    logoBase64 = fs.readFileSync(logoPath, 'base64');
+    // Try multiple possible logo paths
+    const possibleLogoPaths = [
+      path.join(__dirname, 'uploads', 'logo.png'),
+      path.join(__dirname, '..', 'kitchen-designer', 'public', 'O.png'),
+      path.join(__dirname, '..', 'kitchen-designer', 'public', 'logo.png')
+    ];
+
+    for (const logoPath of possibleLogoPaths) {
+      try {
+        const logoBuffer = fs.readFileSync(logoPath);
+        logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+        console.log(`Logo loaded from: ${logoPath}`);
+        break;
+      } catch (err) {
+        // Continue to next path
+      }
+    }
   } catch (error) {
     console.log('Logo not found, proceeding without logo');
   }
@@ -2760,17 +2775,88 @@ async function generateInvoicePdf(invoiceId) {
     timeout: 30000
   };
 
-  // Generate PDF
-  const file = { content: htmlContent };
-  const pdfBuffer = await htmlPdf.generatePdf(file, options);
-  
-  return pdfBuffer;
+  // Generate PDF with error handling
+  try {
+    const file = { content: htmlContent };
+    console.log('Generating PDF for email attachment...');
+    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+
+    // Validate PDF buffer
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('Generated PDF buffer is empty');
+    }
+
+    console.log(`PDF generated successfully for email, size: ${pdfBuffer.length} bytes`);
+    return pdfBuffer;
+  } catch (pdfError) {
+    console.error('PDF generation error in generateInvoicePdf:', pdfError);
+    console.error('HTML content length:', htmlContent.length);
+    throw new Error(`PDF generation failed: ${pdfError.message}`);
+  }
+}
+
+// Translation helper function for invoices
+function getInvoiceTranslations(language = 'english') {
+  const translations = {
+    english: {
+      subject: 'Invoice from Gudino Custom Cabinets',
+      greeting: 'Hello',
+      invoiceTitle: 'Invoice',
+      billTo: 'Bill To',
+      description: 'Description',
+      quantity: 'Qty',
+      unitPrice: 'Unit Price',
+      total: 'Total',
+      subtotal: 'Subtotal',
+      discount: 'Discount',
+      markup: 'Markup',
+      tax: 'Tax',
+      grandTotal: 'Total',
+      amountPaid: 'Amount Paid',
+      remainingBalance: 'Remaining Balance',
+      dueDate: 'Due Date',
+      invoiceDate: 'Invoice Date',
+      paymentHistory: 'Payment History',
+      notes: 'Notes',
+      thankYou: 'Thank you for your business!',
+      questions: 'If you have any questions about this invoice, please contact us',
+      viewOnline: 'View Invoice Online',
+      companyName: 'Gudino Custom Cabinets'
+    },
+    spanish: {
+      subject: 'Factura de Gudino Custom Cabinets',
+      greeting: 'Hola',
+      invoiceTitle: 'Factura',
+      billTo: 'Facturar a',
+      description: 'Descripción',
+      quantity: 'Cant.',
+      unitPrice: 'Precio Unitario',
+      total: 'Total',
+      subtotal: 'Subtotal',
+      discount: 'Descuento',
+      markup: 'Margen',
+      tax: 'Impuesto',
+      grandTotal: 'Total',
+      amountPaid: 'Cantidad Pagada',
+      remainingBalance: 'Saldo Pendiente',
+      dueDate: 'Fecha de Vencimiento',
+      invoiceDate: 'Fecha de Factura',
+      paymentHistory: 'Historial de Pagos',
+      notes: 'Notas',
+      thankYou: '¡Gracias por su negocio!',
+      questions: 'Si tiene alguna pregunta sobre esta factura, por favor contáctenos',
+      viewOnline: 'Ver Factura en Línea',
+      companyName: 'Gudino Custom Cabinets'
+    }
+  };
+
+  return translations[language] || translations.english;
 }
 
 app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res) => {
   try {
     const invoiceId = req.params.id;
-    const { message } = req.body;
+    const { message, language = 'english' } = req.body;
     
     // Get invoice details with client info
     const invoice = await invoiceDb.getInvoiceById(invoiceId);
@@ -2798,57 +2884,73 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
     const viewLink = `${process.env.FRONTEND_URL}/invoice/${invoiceToken}`;
 
     const clientName = client.company_name || `${client.first_name} ${client.last_name}`;
-    
+
+    // Get translations based on selected language
+    const t = getInvoiceTranslations(language);
+
     // Generate PDF for attachment
-    const pdfBuffer = await generateInvoicePdf(invoiceId);
+    let pdfBuffer;
+    try {
+      pdfBuffer = await generateInvoicePdf(invoiceId);
+    } catch (pdfError) {
+      console.error('Failed to generate PDF for email:', pdfError);
+      return res.status(500).json({
+        error: 'Failed to generate PDF attachment',
+        details: process.env.NODE_ENV === 'development' ? pdfError.message : undefined
+      });
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: client.email,
-      subject: `Invoice ${invoice.invoice_number.split('-').pop()} from Gudino Custom Cabinets`,
+      subject: `${t.subject} ${invoice.invoice_number.split('-').pop()}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #1e3a8a; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0;">Gudino Custom Cabinets</h1>
+            <h1 style="margin: 0;">${t.companyName}</h1>
           </div>
-          
+
           <div style="padding: 30px; background: #f8fafc;">
-            <h2 style="color: black; margin-top: 0;">Invoice ${invoice.invoice_number.split('-').pop()}</h2>
-            
-            <p style="color: black;">Hello ${clientName},</p>
-            
-            <p style="color: black;">Please find your invoice attached. You can also view and download your invoice using the secure link below:</p>
+            <h2 style="color: black; margin-top: 0;">${t.invoiceTitle} ${invoice.invoice_number.split('-').pop()}</h2>
+
+            <p style="color: black;">${t.greeting} ${clientName},</p>
+
+            <p style="color: black;">${language === 'spanish'
+              ? 'Adjunto encontrará su factura. También puede verla y descargarla usando el enlace seguro de abajo:'
+              : 'Please find your invoice attached. You can also view and download your invoice using the secure link below:'}</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${viewLink}" 
                  style="background: #1e3a8a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Invoice Online
+                ${t.viewOnline}
               </a>
             </div>
             
             <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0;">
-              <h3 style="margin-top: 0; color: black;">Invoice Details:</h3>
-              <p style="color: black;"><strong>Invoice Number:</strong> ${invoice.invoice_number.split('-').pop()}</p>
-              <p style="color: black;"><strong>Invoice Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
-              <p style="color: black;"><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
-              <p style="color: black;"><strong>Total Amount:</strong> $${(invoice.total_amount || 0).toFixed(2)}</p>
+              <h3 style="margin-top: 0; color: black;">${language === 'spanish' ? 'Detalles de la Factura:' : 'Invoice Details:'}</h3>
+              <p style="color: black;"><strong>${language === 'spanish' ? 'Número de Factura:' : 'Invoice Number:'}</strong> ${invoice.invoice_number.split('-').pop()}</p>
+              <p style="color: black;"><strong>${t.invoiceDate}:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
+              <p style="color: black;"><strong>${t.dueDate}:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>
+              <p style="color: black;"><strong>${language === 'spanish' ? 'Cantidad Total:' : 'Total Amount:'}</strong> $${(invoice.total_amount || 0).toFixed(2)}</p>
             </div>
             
             ${message ? `
             <div style="margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid #1e3a8a;">
-              <p style="margin: 0; color: black;"><strong>Additional Message:</strong></p>
+              <p style="margin: 0; color: black;"><strong>${language === 'spanish' ? 'Mensaje Adicional:' : 'Additional Message:'}</strong></p>
               <p style="margin: 5px 0 0 0; color: black;">${message}</p>
             </div>
             ` : ''}
-            
-            <p style="margin-top: 30px; color: black;">If you have any questions about this invoice, please don't hesitate to contact us.</p>
-            
-            <p style="color: black;">Thank you for choosing Gudino Custom Cabinets!</p>
+
+            <p style="margin-top: 30px; color: black;">${t.questions}</p>
+
+            <p style="color: black;">${t.thankYou}</p>
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
-              <p>Gudino Custom Cabinets</p>
+              <p>${t.companyName}</p>
               <p>Email: ${process.env.ADMIN_EMAIL}</p>
-              <p>This link will remain active permanently for your records.</p>
+              <p>${language === 'spanish'
+                ? 'Este enlace permanecerá activo permanentemente para sus registros.'
+                : 'This link will remain active permanently for your records.'}</p>
             </div>
           </div>
         </div>
@@ -2862,17 +2964,30 @@ app.post('/api/admin/invoices/:id/send-email', authenticateUser, async (req, res
       ]
     };
 
-    await emailTransporter.sendMail(mailOptions);
-    
-    res.json({ 
-      success: true, 
-      message: 'Invoice email sent successfully with PDF attachment',
-      sentTo: client.email
-    });
-    
+    try {
+      await emailTransporter.sendMail(mailOptions);
+      console.log(`Invoice email sent successfully to: ${client.email}`);
+
+      res.json({
+        success: true,
+        message: 'Invoice email sent successfully with PDF attachment',
+        sentTo: client.email
+      });
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+      return res.status(500).json({
+        error: 'Failed to send invoice email',
+        details: process.env.NODE_ENV === 'development' ? emailError.message : undefined
+      });
+    }
+
   } catch (error) {
-    console.error('Error sending invoice email:', error);
-    res.status(500).json({ error: 'Failed to send invoice email' });
+    console.error('Error in invoice email endpoint:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Failed to process invoice email request',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -3041,17 +3156,6 @@ app.put('/api/admin/invoices/:id/invoice-number', authenticateUser, async (req, 
   }
 });
 
-// Admin endpoint - Get invoice view statistics
-app.get('/api/admin/invoices/view-stats', authenticateUser, async (req, res) => {
-  try {
-    const stats = await invoiceDb.getAllInvoiceViewStats();
-    res.json(stats);
-  } catch (error) {
-    console.error('Error getting invoice view stats:', error);
-    res.status(500).json({ error: 'Failed to get invoice view statistics' });
-  }
-});
-
 // Admin endpoint - Delete invoice completely
 app.delete('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
   try {
@@ -3065,6 +3169,14 @@ app.delete('/api/admin/invoices/:id', authenticateUser, async (req, res) => {
 
     // Delete the invoice (cascade delete will handle related records)
     const result = await invoiceDb.deleteInvoice(invoiceId, req.user.id);
+    
+    // Run health check to fix ID gaps after deletion
+    try {
+      await invoiceDb.performDatabaseHealthCheck();
+    } catch (healthError) {
+      console.error('Health check after invoice deletion failed:', healthError);
+      // Continue even if health check fails
+    }
     
     res.json({
       success: true,
@@ -3095,6 +3207,14 @@ app.delete('/api/superadmin/invoices/delete-all', authenticateUser, async (req, 
     }
 
     const result = await invoiceDb.deleteAllInvoices(req.user.id, confirmationCode);
+    
+    // Run health check to reset sequences after deleting all invoices
+    try {
+      await invoiceDb.performDatabaseHealthCheck();
+    } catch (healthError) {
+      console.error('Health check after deleting all invoices failed:', healthError);
+      // Continue even if health check fails
+    }
     
     res.json({ 
       message: `All invoices deleted successfully. ${result.deletedCount} invoices removed.`,
@@ -4096,17 +4216,6 @@ app.post('/api/admin/invoices/:id/send-reminder', authenticateUser, async (req, 
   }
 });
 
-// Admin endpoint - Get invoices needing reminders
-app.get('/api/admin/invoices/needing-reminders', authenticateUser, async (req, res) => {
-  try {
-    const invoices = await invoiceDb.getInvoicesNeedingReminders();
-    res.json(invoices);
-  } catch (error) {
-    console.error('Error getting invoices needing reminders:', error);
-    res.status(500).json({ error: 'Failed to get invoices needing reminders' });
-  }
-});
-
 // Admin endpoint - Get reminder history for an invoice
 app.get('/api/admin/invoices/:id/reminder-history', authenticateUser, async (req, res) => {
   try {
@@ -4169,13 +4278,27 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
     const path = require('path');
     let logoBase64 = '';
     try {
-      const logoPath = path.join(__dirname, '..', 'kitchen-designer', 'public', 'O.png');
-      const logoBuffer = fs.readFileSync(logoPath);
-      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      // Try multiple possible logo paths
+      const possibleLogoPaths = [
+        path.join(__dirname, '..', 'kitchen-designer', 'public', 'O.png'),
+        path.join(__dirname, 'uploads', 'logo.png'),
+        path.join(__dirname, '..', 'kitchen-designer', 'public', 'logo.png')
+      ];
+
+      for (const logoPath of possibleLogoPaths) {
+        try {
+          const logoBuffer = fs.readFileSync(logoPath);
+          logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+          console.log(`Logo loaded from: ${logoPath}`);
+          break;
+        } catch (err) {
+          // Continue to next path
+        }
+      }
     } catch (error) {
       console.log('Logo file not found, PDF will generate without logo');
     }
-    
+
     // Generate HTML for PDF (same as admin version)
     const htmlContent = `
       <!DOCTYPE html>
@@ -4650,7 +4773,12 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
     
   } catch (error) {
     console.error('Error generating public PDF:', error);
-    res.status(500).json({ error: 'Failed to generate PDF' });
+    console.error('Error stack:', error.stack);
+    console.error('Token:', req.params.token);
+    res.status(500).json({
+      error: 'Failed to generate PDF',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -4990,11 +5118,25 @@ app.use((req, res) => {
 });
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
-  console.log(`\n=================================`);
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API: http://localhost:${PORT}/api/photos`);
-  console.log(`Static files: http://localhost:${PORT}/photos/`);
-  console.log(`Debug uploads: http://localhost:${PORT}/api/debug/uploads`);
-  console.log(`=================================\n`);
-});
+// Startup health check and auto-repair
+async function initializeServer() {
+  try {
+    // Run database health check on startup
+    await invoiceDb.performDatabaseHealthCheck();
+  } catch (error) {
+    console.error('❌ Startup health check failed:', error);
+    // Continue startup even if health check fails
+  }
+  
+  app.listen(PORT, () => {
+    console.log(`\n=================================`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`API: http://localhost:${PORT}/api/photos`);
+    console.log(`Static files: http://localhost:${PORT}/photos/`);
+    console.log(`Debug uploads: http://localhost:${PORT}/api/debug/uploads`);
+    console.log(`=================================\n`);
+  });
+}
+
+// Start the server with health check
+initializeServer();

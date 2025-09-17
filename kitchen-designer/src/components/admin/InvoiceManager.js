@@ -898,7 +898,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   };
 
   // Send email function
-  const sendInvoiceEmail = async () => {
+  const sendInvoiceEmail = async (language = 'english') => {
     setEmailSending(true);
     try {
       const response = await fetch(`${API_BASE}/api/admin/invoices/${emailInvoice.id}/send-email`, {
@@ -907,7 +907,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ message: emailMessage })
+        body: JSON.stringify({
+          message: emailMessage,
+          language: language
+        })
       });
 
       if (response.ok) {

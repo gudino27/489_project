@@ -335,22 +335,18 @@ case "$1" in
         docker-compose restart ${2:-}
         ;;
     rebuild)
-        # Try optimized build first, fallback to traditional
-        if ! fast_build; then
-            log_info "Using traditional rebuild method..."
             echo "Stopping all containers..."
             docker-compose down
             echo "Removing project containers..."
             docker-compose rm -f
             echo "Removing project images (preserving volumes)..."
             docker-compose down --rmi all --volumes=false
-            echo "Building project images (traditional method - ~30 minutes)..."
+            echo "Building project images"
             docker-compose build --no-cache
             echo "Creating data directories if they don't exist..."
             mkdir -p ./data/uploads ./data/database ./data/certbot/conf ./data/certbot/www
             echo "Starting containers..."
             docker-compose up -d
-        fi
         ;;
     status)
         echo "=== Container Status ==="

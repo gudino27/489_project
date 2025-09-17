@@ -2219,6 +2219,117 @@ const invoiceDb = {
     await db.close();
   },
 
+  // Database health check and auto-repair
+  async performDatabaseHealthCheck() {
+    const db = await getDb();
+    let fixes = [];
+    
+    try {
+      console.log('🔍 Running database health check...');
+      
+      // 1. Remove duplicate tax rates
+      const duplicateTaxRates = await db.get(`
+        SELECT COUNT(*) - COUNT(DISTINCT state_code, county, city, tax_rate) as duplicates
+        FROM tax_rates WHERE is_active = 1
+      `);
+      
+      if (duplicateTaxRates.duplicates > 0) {
+        // Keep only the first occurrence of each unique combination
+        await db.run(`
+          DELETE FROM tax_rates 
+          WHERE id NOT IN (
+            SELECT MIN(id) 
+            FROM tax_rates 
+            WHERE is_active = 1
+            GROUP BY state_code, county, city, tax_rate
+          )
+        `);
+        fixes.push(`Removed ${duplicateTaxRates.duplicates} duplicate tax rates`);
+      }
+      
+      // 2. Check for gaps in invoice IDs and reset if needed
+      const invoices = await db.all('SELECT id FROM invoices ORDER BY id');
+      if (invoices.length > 0) {
+        const firstId = invoices[0].id;
+        const lastId = invoices[invoices.length - 1].id;
+        const expectedCount = lastId - firstId + 1;
+        
+        // If there are gaps or IDs don't start from 1, renumber
+        if (invoices.length !== expectedCount || firstId !== 1) {
+          console.log(`   Renumbering ${invoices.length} invoices to start from 1...`);
+          
+          // Create a temporary mapping table
+          await db.run('CREATE TEMP TABLE id_mapping (old_id INTEGER, new_id INTEGER)');
+          
+          for (let i = 0; i < invoices.length; i++) {
+            const oldId = invoices[i].id;
+            const newId = i + 1;
+            await db.run('INSERT INTO id_mapping (old_id, new_id) VALUES (?, ?)', [oldId, newId]);
+          }
+          
+          // Update related tables using the mapping
+          await db.run(`
+            UPDATE invoice_line_items 
+            SET invoice_id = (SELECT new_id FROM id_mapping WHERE old_id = invoice_line_items.invoice_id)
+          `);
+          
+          await db.run(`
+            UPDATE invoice_payments 
+            SET invoice_id = (SELECT new_id FROM id_mapping WHERE old_id = invoice_payments.invoice_id)
+          `);
+          
+          await db.run(`
+            UPDATE invoice_tokens 
+            SET invoice_id = (SELECT new_id FROM id_mapping WHERE old_id = invoice_tokens.invoice_id)
+          `);
+          
+          await db.run(`
+            UPDATE invoice_reminders 
+            SET invoice_id = (SELECT new_id FROM id_mapping WHERE old_id = invoice_reminders.invoice_id)
+          `);
+          
+          await db.run(`
+            UPDATE invoice_reminder_settings 
+            SET invoice_id = (SELECT new_id FROM id_mapping WHERE old_id = invoice_reminder_settings.invoice_id)
+          `);
+          
+          // Update invoices table
+          await db.run(`
+            UPDATE invoices 
+            SET id = (SELECT new_id FROM id_mapping WHERE old_id = invoices.id)
+          `);
+          
+          // Reset auto-increment
+          await db.run('UPDATE sqlite_sequence SET seq = ? WHERE name = ?', [invoices.length, 'invoices']);
+          
+          fixes.push(`Renumbered invoices to start from 1 (was ${firstId}-${lastId})`);
+        }
+      }
+      
+      // 3. Reset other auto-increment sequences to proper values
+      const tables = ['clients', 'line_item_labels', 'tax_rates', 'designs', 'users'];
+      for (const table of tables) {
+        const result = await db.get(`SELECT MAX(id) as max_id FROM ${table}`);
+        const maxId = result.max_id || 0;
+        await db.run('UPDATE sqlite_sequence SET seq = ? WHERE name = ?', [maxId, table]);
+      }
+      
+      if (fixes.length > 0) {
+        console.log('✅ Database health check completed with fixes:');
+        fixes.forEach(fix => console.log(`   - ${fix}`));
+      } else {
+        console.log('✅ Database health check passed - no issues found');
+      }
+      
+    } catch (error) {
+      console.error('❌ Database health check failed:', error);
+    } finally {
+      await db.close();
+    }
+    
+    return fixes;
+  },
+
   // Tax rate operations
   async getTaxRates() {
     const db = await getDb();
