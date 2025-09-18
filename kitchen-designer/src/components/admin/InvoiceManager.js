@@ -31,6 +31,8 @@ import ClientModal from './invoices/modals/ClientModal';
 import SmsModal from './invoices/modals/SmsModal';
 import DeleteModal from './invoices/modals/DeleteModal';
 import PaymentModal from './invoices/modals/PaymentModal';
+import EditPaymentModal from './invoices/modals/EditPaymentModal';
+import DeletePaymentModal from './invoices/modals/DeletePaymentModal';
 import CreateInvoiceForm from './invoices/forms/CreateInvoiceForm';
 
 const InvoiceManager = ({ token, API_BASE, userRole }) => {
@@ -104,6 +106,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [allPayments, setAllPayments] = useState([]);
   const [editingPayment, setEditingPayment] = useState(null);
   const [deletingPayment, setDeletingPayment] = useState(null);
+  const [activeInvoiceTab, setActiveInvoiceTab] = useState('details');
   const [newLabel, setNewLabel] = useState({
     label: '',
     item_type: 'material',
@@ -786,7 +789,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     };
   };
 
-  // Add line item
+  // Add line item (works for both create and edit modes)
   const addLineItem = () => {
     const newLineItem = {
       description: '',
@@ -795,15 +798,28 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       total_price: 0,
       item_type: 'material'
     };
-    setNewInvoice(prev => ({
-      ...prev,
-      line_items: [...prev.line_items, newLineItem]
-    }));
+
+    // Determine which state to update based on current view
+    if (activeView === 'edit' && editingInvoice) {
+      setEditingInvoice(prev => ({
+        ...prev,
+        line_items: [...(prev.line_items || []), newLineItem]
+      }));
+    } else {
+      setNewInvoice(prev => ({
+        ...prev,
+        line_items: [...prev.line_items, newLineItem]
+      }));
+    }
   };
 
-  // Update line item
+  // Update line item (works for both create and edit modes)
   const updateLineItem = (index, field, value) => {
-    const updatedItems = [...newInvoice.line_items];
+    // Determine which invoice to work with
+    const currentInvoice = activeView === 'edit' && editingInvoice ? editingInvoice : newInvoice;
+    const setCurrentInvoice = activeView === 'edit' && editingInvoice ? setEditingInvoice : setNewInvoice;
+
+    const updatedItems = [...(currentInvoice.line_items || [])];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
 
     // Recalculate total price for this line item
@@ -814,12 +830,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     // Recalculate invoice totals
     const totals = calculateTotals(
       updatedItems,
-      newInvoice.tax_rate,
-      newInvoice.discount_amount,
-      newInvoice.markup_amount
+      currentInvoice.tax_rate,
+      currentInvoice.discount_amount,
+      currentInvoice.markup_amount
     );
 
-    setNewInvoice(prev => ({
+    setCurrentInvoice(prev => ({
       ...prev,
       line_items: updatedItems,
       subtotal: totals.subtotal,
@@ -828,17 +844,21 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }));
   };
 
-  // Remove line item
+  // Remove line item (works for both create and edit modes)
   const removeLineItem = (index) => {
-    const updatedItems = newInvoice.line_items.filter((_, i) => i !== index);
+    // Determine which invoice to work with
+    const currentInvoice = activeView === 'edit' && editingInvoice ? editingInvoice : newInvoice;
+    const setCurrentInvoice = activeView === 'edit' && editingInvoice ? setEditingInvoice : setNewInvoice;
+
+    const updatedItems = (currentInvoice.line_items || []).filter((_, i) => i !== index);
     const totals = calculateTotals(
       updatedItems,
-      newInvoice.tax_rate,
-      newInvoice.discount_amount,
-      newInvoice.markup_amount
+      currentInvoice.tax_rate,
+      currentInvoice.discount_amount,
+      currentInvoice.markup_amount
     );
 
-    setNewInvoice(prev => ({
+    setCurrentInvoice(prev => ({
       ...prev,
       line_items: updatedItems,
       subtotal: totals.subtotal,
@@ -1218,6 +1238,40 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  // Edit payment handler
+  const handleEditPayment = async (paymentData) => {
+    if (!editingPayment) return;
+
+    try {
+      const updatedPayment = await updatePayment(editingPayment.id, paymentData);
+      if (updatedPayment) {
+        setEditingPayment(null);
+        await fetchAllPayments(); // Refresh payments list
+        await fetchInvoices(); // Refresh invoices to update payment status
+        alert('Payment updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error editing payment:', error);
+      setError('Failed to update payment. Please try again.');
+    }
+  };
+
+  // Delete payment handler
+  const handleDeletePayment = async () => {
+    if (!deletingPayment) return;
+
+    try {
+      await deletePayment(deletingPayment.id);
+      setDeletingPayment(null);
+      await fetchAllPayments(); // Refresh payments list
+      await fetchInvoices(); // Refresh invoices to update payment status
+      alert('Payment deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      setError('Failed to delete payment. Please try again.');
+    }
+  };
+
   // Create label function
   const createLabel = async () => {
     setLoading(true);
@@ -1406,13 +1460,26 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
-  // Invoice detail view
+  // Invoice detail view with tabs
   const renderInvoiceView = () => {
     if (!selectedInvoice) return null;
 
     const clientName = selectedInvoice.is_business
       ? selectedInvoice.company_name
       : `${selectedInvoice.first_name} ${selectedInvoice.last_name}`;
+
+    // Tab definitions
+    const tabs = [
+      { id: 'details', label: 'Invoice Details', icon: '📄' },
+      { id: 'payments', label: 'Payments', icon: '💰' },
+      { id: 'edit', label: 'Edit', icon: '✏️' },
+      { id: 'send', label: 'Send', icon: '📧' },
+      { id: 'track', label: 'Track', icon: '👁️' },
+      { id: 'download', label: 'Download', icon: '⬇️' },
+      { id: 'reminder', label: 'Reminder', icon: '⏰' },
+      { id: 'delete', label: 'Delete', icon: '🗑️' },
+      { id: 'analytics', label: 'Analytics', icon: '📊' }
+    ];
 
     return (
       <div className="space-y-6">
@@ -1453,39 +1520,44 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               </h2>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                loadInvoiceDetails(selectedInvoice.id, true);
-                setActiveView('edit');
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-            >
-              <Edit size={16} />
-              Edit Invoice
-            </button>
-            <button
-              onClick={() => downloadInvoicePdf(selectedInvoice)}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 text-sm"
-            >
-              <Download size={16} />
-              Download PDF
-            </button>
-            <button
-              onClick={() => setActiveView('list')}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2 text-sm border border-gray-300"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Invoices
-            </button>
-          </div>
+
+          <button
+            onClick={() => setActiveView('list')}
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2 text-sm border border-gray-300"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Invoices
+          </button>
         </div>
 
-        {/* Invoice Details */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveInvoiceTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeInvoiceTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-white rounded-lg shadow">
+          {/* Invoice Details Tab */}
+          {activeInvoiceTab === 'details' && (
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Client Information */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1603,29 +1675,414 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={() => {
-                setEmailInvoice(selectedInvoice);
-                setShowEmailModal(true);
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-            >
-              <Send size={16} />
-              Send Email
-            </button>
-            <button
-              onClick={() => {
-                setSmsInvoice(selectedInvoice);
-                setShowSmsModal(true);
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <MessageCircle size={16} />
-              Send SMS
-            </button>
-          </div>
+              </div>
+            )}
+
+          {/* Payments Tab */}
+          {activeInvoiceTab === 'payments' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <DollarSign size={18} />
+                  Payment History
+                </h3>
+                <button
+                  onClick={() => {
+                    setPaymentInvoice(selectedInvoice);
+                    setShowPaymentModal(true);
+                  }}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Payment
+                </button>
+              </div>
+
+              {/* Payment Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-sm text-green-600 font-medium">Total Paid</div>
+                  <div className="text-xl font-bold text-green-700">
+                    ${((selectedInvoice.total_amount || 0) - (selectedInvoice.balance_due || 0)).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="text-sm text-orange-600 font-medium">Balance Due</div>
+                  <div className="text-xl font-bold text-orange-700">
+                    ${(selectedInvoice.balance_due || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="text-sm text-blue-600 font-medium">Total Amount</div>
+                  <div className="text-xl font-bold text-blue-700">
+                    ${(selectedInvoice.total_amount || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Payments Table */}
+              <div className="bg-gray-50 rounded-lg overflow-hidden">
+                {selectedInvoice.payments && selectedInvoice.payments.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Check #</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedInvoice.payments.map((payment) => (
+                          <tr key={payment.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 text-sm text-gray-900">
+                              {new Date(payment.payment_date).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-2 text-sm font-medium text-green-600">
+                              ${parseFloat(payment.payment_amount).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-900">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                payment.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                                payment.payment_method === 'check' ? 'bg-blue-100 text-blue-800' :
+                                payment.payment_method.includes('card') ? 'bg-purple-100 text-purple-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {payment.payment_method.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500">
+                              {payment.check_number || '-'}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500 max-w-xs truncate">
+                              {payment.notes || '-'}
+                            </td>
+                            <td className="px-4 py-2 text-sm">
+                              <button
+                                onClick={() => setEditingPayment(payment)}
+                                className="text-blue-600 hover:text-blue-900 mr-2 text-xs"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setDeletingPayment(payment)}
+                                className="text-red-600 hover:text-red-900 text-xs"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium">No payments recorded</p>
+                    <p className="text-sm">Click "Add Payment" to record the first payment for this invoice.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Edit Tab */}
+          {activeInvoiceTab === 'edit' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Edit className="text-blue-600" size={24} />
+                <h3 className="text-lg font-semibold">Edit Invoice</h3>
+              </div>
+              <p className="text-gray-600 mb-6">Modify invoice details, line items, and amounts. Changes will be saved automatically.</p>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => {
+                    loadInvoiceDetails(selectedInvoice.id, true);
+                    setActiveView('edit');
+                  }}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Edit size={18} />
+                  Start Editing Invoice
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Send Tab */}
+          {activeInvoiceTab === 'send' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Send className="text-green-600" size={24} />
+                <h3 className="text-lg font-semibold">Send Invoice</h3>
+              </div>
+              <p className="text-gray-600 mb-6">Send invoice notifications to your client via email or SMS.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Send Email */}
+                <div className="border border-green-200 rounded-lg p-6 bg-green-50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Send className="text-green-600" size={20} />
+                    <h4 className="font-medium">Email Invoice</h4>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">Send a professional email with the invoice attached as PDF</p>
+                  <button
+                    onClick={() => {
+                      setEmailInvoice(selectedInvoice);
+                      setShowEmailModal(true);
+                    }}
+                    className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  >
+                    Send Email
+                  </button>
+                </div>
+
+                {/* Send SMS */}
+                <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <MessageCircle className="text-blue-600" size={20} />
+                    <h4 className="font-medium">SMS Notification</h4>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">Send a quick SMS notification about the invoice</p>
+                  <button
+                    onClick={() => {
+                      setSmsInvoice(selectedInvoice);
+                      setShowSmsModal(true);
+                    }}
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Send SMS
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Track Tab */}
+          {activeInvoiceTab === 'track' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <h3 className="text-lg font-semibold">Track Invoice</h3>
+              </div>
+              <p className="text-gray-600 mb-6">Monitor invoice status, payment history, and client interactions.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Status Timeline */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Status Timeline
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium">Invoice Created</p>
+                        <p className="text-xs text-gray-500">{new Date(selectedInvoice.invoice_date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${selectedInvoice.status === 'paid' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <div>
+                        <p className="text-sm font-medium">Payment Status</p>
+                        <p className="text-xs text-gray-500 capitalize">{selectedInvoice.status}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-4">Quick Stats</h4>
+                  <div className="space-y-2">
+                    <p className="text-sm"><strong>Total Amount:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
+                    <p className="text-sm"><strong>Balance Due:</strong> ${(selectedInvoice.balance_due || 0).toFixed(2)}</p>
+                    <p className="text-sm"><strong>Days Outstanding:</strong> {Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Download Tab */}
+          {activeInvoiceTab === 'download' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Download className="text-gray-600" size={24} />
+                <h3 className="text-lg font-semibold">Download Invoice</h3>
+              </div>
+              <p className="text-gray-600 mb-6">Generate and download various formats of this invoice for your records.</p>
+
+              <div className="max-w-md mx-auto">
+                <div className="border border-gray-200 rounded-lg p-6 text-center">
+                  <Download className="text-gray-400 mx-auto mb-4" size={48} />
+                  <h4 className="font-medium mb-2">PDF Invoice</h4>
+                  <p className="text-sm text-gray-600 mb-4">Download a professionally formatted PDF copy of this invoice</p>
+                  <button
+                    onClick={() => downloadInvoicePdf(selectedInvoice)}
+                    className="w-full bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} />
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reminder Tab */}
+          {activeInvoiceTab === 'reminder' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-lg font-semibold">Payment Reminders</h3>
+              </div>
+              <p className="text-gray-600 mb-6">Schedule automated payment reminders for overdue invoices.</p>
+
+              <div className="max-w-md mx-auto">
+                <div className="border border-orange-200 rounded-lg p-6 bg-orange-50 text-center">
+                  <svg className="w-12 h-12 text-orange-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h4 className="font-medium mb-2">Automated Reminders</h4>
+                  <p className="text-sm text-gray-600 mb-4">Set up automatic payment reminder notifications</p>
+                  <button
+                    onClick={() => {
+                      alert('Set reminder feature coming soon!');
+                    }}
+                    className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Configure Reminders
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Tab */}
+          {activeInvoiceTab === 'delete' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <h3 className="text-lg font-semibold text-red-600">Delete Invoice</h3>
+              </div>
+
+              <div className="max-w-md mx-auto">
+                <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+                  <div className="text-center mb-6">
+                    <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <h4 className="font-medium text-red-700 mb-2">Permanent Deletion</h4>
+                    <p className="text-sm text-red-600 mb-4">This action cannot be undone. The invoice and all associated data will be permanently removed.</p>
+                  </div>
+
+                  <div className="bg-white border border-red-200 rounded p-3 mb-4">
+                    <p className="text-sm text-gray-700"><strong>Invoice:</strong> #{selectedInvoice.invoice_number}</p>
+                    <p className="text-sm text-gray-700"><strong>Amount:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
+                    <p className="text-sm text-gray-700"><strong>Client:</strong> {clientName}</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setDeleteInvoice(selectedInvoice);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Invoice Permanently
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Analytics Tab */}
+          {activeInvoiceTab === 'analytics' && (
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <h3 className="text-lg font-semibold">Invoice Analytics</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Performance Metrics */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Performance Metrics
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Days Outstanding</span>
+                      <span className="text-sm font-medium">{Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Payment Progress</span>
+                      <span className="text-sm font-medium">{Math.round(((selectedInvoice.total_amount - (selectedInvoice.balance_due || 0)) / selectedInvoice.total_amount) * 100)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Status</span>
+                      <span className={`text-sm font-medium ${selectedInvoice.status === 'paid' ? 'text-green-600' : selectedInvoice.status === 'overdue' ? 'text-red-600' : 'text-yellow-600'}`}>
+                        {selectedInvoice.status.charAt(0).toUpperCase() + selectedInvoice.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Breakdown */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Financial Summary
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Total Amount</span>
+                      <span className="text-sm font-medium">${selectedInvoice.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Amount Paid</span>
+                      <span className="text-sm font-medium text-green-600">${((selectedInvoice.total_amount || 0) - (selectedInvoice.balance_due || 0)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Balance Due</span>
+                      <span className="text-sm font-medium text-red-600">${(selectedInvoice.balance_due || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     );
@@ -1881,19 +2338,84 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     );
   };
 
-  // Placeholder render functions (to be implemented)
-  const renderEditInvoiceForm = () => (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Edit Invoice</h2>
-      <p>Edit invoice functionality coming soon...</p>
-      <button
-        onClick={() => setActiveView('list')}
-        className="mt-4 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-      >
-        Back to Invoices
-      </button>
-    </div>
-  );
+  // Edit invoice handler
+  const handleEditInvoice = async (invoiceData) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${editingInvoice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(invoiceData)
+      });
+
+      if (response.ok) {
+        const updatedInvoice = await response.json();
+        setEditingInvoice(null);
+
+        // Reload full invoice details to ensure we have complete data including payments
+        await loadInvoiceDetails(updatedInvoice.id);
+        setActiveView('view');
+        await fetchInvoices(); // Refresh the list
+        alert('Invoice updated successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to update invoice: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      setError('Failed to update invoice. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Edit invoice form renderer
+  const renderEditInvoiceForm = () => {
+    if (!editingInvoice) {
+      return (
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Edit Invoice</h2>
+          <p>No invoice selected for editing.</p>
+          <button
+            onClick={() => setActiveView('list')}
+            className="mt-4 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+          >
+            Back to Invoices
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <CreateInvoiceForm
+        error={error}
+        newInvoice={editingInvoice}
+        setNewInvoice={setEditingInvoice}
+        clientSearchTerm={clientSearchTerm}
+        setClientSearchTerm={setClientSearchTerm}
+        showClientDropdown={showClientDropdown}
+        setShowClientDropdown={setShowClientDropdown}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        setShowClientModal={setShowClientModal}
+        taxRates={taxRates}
+        calculateTotals={calculateTotals}
+        addLineItem={addLineItem}
+        updateLineItem={updateLineItem}
+        removeLineItem={removeLineItem}
+        createInvoice={handleEditInvoice}
+        loading={loading}
+        setActiveView={setActiveView}
+        isEditing={true}
+        editingInvoiceNumber={editingInvoice.invoice_number}
+      />
+    );
+  };
 
   const renderTaxRateManagement = () => (
     <div className="space-y-6">
@@ -2534,6 +3056,22 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         }}
         onSubmit={addPayment}
         isSubmitting={addingPayment}
+      />
+      <EditPaymentModal
+        show={!!editingPayment}
+        payment={editingPayment}
+        invoice={editingPayment ? invoices.find(inv => inv.id === editingPayment.invoice_id) : null}
+        onCancel={() => setEditingPayment(null)}
+        onSubmit={handleEditPayment}
+        isSubmitting={loading}
+      />
+      <DeletePaymentModal
+        show={!!deletingPayment}
+        payment={deletingPayment}
+        invoice={deletingPayment ? invoices.find(inv => inv.id === deletingPayment.invoice_id) : null}
+        onCancel={() => setDeletingPayment(null)}
+        onConfirm={handleDeletePayment}
+        isDeleting={loading}
       />
       <DeleteModal
         show={showDeleteModal}

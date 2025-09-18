@@ -9,6 +9,33 @@ const { photoDb, employeeDb, designDb, userDb, analyticsDb, testimonialDb, invoi
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const htmlPdf = require('html-pdf-node');
+
+// PDF generation helper with retry mechanism
+async function generatePdfWithRetry(htmlContent, options, maxRetries = 3) {
+  let pdfBuffer;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`PDF generation attempt ${attempt}/${maxRetries}...`);
+      const file = { content: htmlContent };
+      pdfBuffer = await htmlPdf.generatePdf(file, options);
+      console.log(`PDF generated successfully on attempt ${attempt}, size: ${pdfBuffer.length} bytes`);
+      return pdfBuffer;
+    } catch (error) {
+      lastError = error;
+      console.error(`PDF generation attempt ${attempt} failed:`, error.message);
+
+      if (attempt < maxRetries) {
+        const delay = attempt * 2000; // 2s, 4s delays
+        console.log(`Retrying in ${delay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(`PDF generation failed after ${maxRetries} attempts. Last error: ${lastError.message}`);
+}
 const app = express();
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gudinocustom.com', 'https://www.gudinocustom.com', 'https://api.gudinocustom.com'],
@@ -2822,9 +2849,8 @@ async function generateInvoicePdf(invoiceId) {
 
   // Generate PDF with error handling
   try {
-    const file = { content: htmlContent };
     console.log('Generating PDF for email attachment...');
-    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    const pdfBuffer = await generatePdfWithRetry(htmlContent, options);
 
     // Validate PDF buffer
     if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -4024,14 +4050,20 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-background-networking',
+        '--memory-pressure-off'
       ],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     };
 
     // Generate PDF
-    const file = { content: htmlContent };
-    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    const pdfBuffer = await generatePdfWithRetry(htmlContent, options);
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -4823,14 +4855,20 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
         '--no-first-run',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-background-networking',
+        '--memory-pressure-off'
       ],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     };
 
     // Generate PDF
-    const file = { content: htmlContent };
-    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    const pdfBuffer = await generatePdfWithRetry(htmlContent, options);
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');

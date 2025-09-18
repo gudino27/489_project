@@ -19,13 +19,17 @@ const CreateInvoiceForm = ({
   removeLineItem,
   createInvoice,
   loading,
-  setActiveView
+  setActiveView,
+  isEditing = false,
+  editingInvoiceNumber = null
 }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold">Create New Invoice</h2>
+        <h2 className="text-xl sm:text-2xl font-bold">
+          {isEditing ? `Edit Invoice ${editingInvoiceNumber}` : 'Create New Invoice'}
+        </h2>
         <button
           onClick={() => setActiveView('list')}
           className="text-gray-600 hover:text-gray-900 text-sm sm:text-base self-start sm:self-auto"
@@ -463,11 +467,11 @@ const CreateInvoiceForm = ({
             Cancel
           </button>
           <button
-            onClick={createInvoice}
+            onClick={() => createInvoice(newInvoice)}
             disabled={loading || !newInvoice.client_id || newInvoice.line_items.length === 0}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating...' : 'Create Invoice'}
+            {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Invoice' : 'Create Invoice')}
           </button>
         </div>
       </div>
