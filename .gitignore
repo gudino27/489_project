@@ -37,3 +37,5 @@ backups/*
 data/
 data/*
 CLAUDE.md
+cabinet-photo-server/database/cabinet_photos.db-wal
+cabinet-photo-server/database/cabinet_photos.db-shm
