@@ -17,8 +17,14 @@ COPY . .
 # Production stage
 FROM node:20-alpine
 
-# Install runtime dependencies
-RUN apk add --no-cache sqlite
+# Install runtime dependencies including Chromium for Puppeteer
+RUN apk add --no-cache sqlite chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
 
@@ -38,6 +44,10 @@ RUN chmod -R 755 /app
 
 # Change ownership to node user (uid 1000)
 RUN chown -R node:node /app
+
+# Tell Puppeteer to use system Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 USER node
 

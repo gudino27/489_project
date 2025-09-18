@@ -2401,6 +2401,39 @@ app.get('/api/admin/invoices/:id/payments', authenticateUser, async (req, res) =
   }
 });
 
+// Admin endpoint - Get all payments (for payment management)
+app.get('/api/admin/payments', authenticateUser, async (req, res) => {
+  try {
+    const payments = await invoiceDb.getAllPayments();
+    res.json(payments);
+  } catch (error) {
+    console.error('Error getting all payments:', error);
+    res.status(500).json({ error: 'Failed to get payments' });
+  }
+});
+
+// Admin endpoint - Update payment
+app.put('/api/admin/payments/:id', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.updatePayment(req.params.id, req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    res.status(500).json({ error: 'Failed to update payment' });
+  }
+});
+
+// Admin endpoint - Delete payment
+app.delete('/api/admin/payments/:id', authenticateUser, async (req, res) => {
+  try {
+    const result = await invoiceDb.deletePayment(req.params.id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting payment:', error);
+    res.status(500).json({ error: 'Failed to delete payment' });
+  }
+});
+
 // Admin endpoint - Send invoice via email
 // Helper function to generate invoice PDF buffer
 async function generateInvoicePdf(invoiceId) {
@@ -2759,7 +2792,7 @@ async function generateInvoicePdf(invoiceId) {
     </html>
   `;
 
-  // PDF generation options
+  // PDF generation options with Docker container support
   const options = {
     format: 'A4',
     border: {
@@ -2772,7 +2805,19 @@ async function generateInvoicePdf(invoiceId) {
     type: 'pdf',
     quality: '75',
     orientation: 'portrait',
-    timeout: 30000
+    timeout: 30000,
+    // Puppeteer options for Docker containers
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
   };
 
   // Generate PDF with error handling
@@ -3956,7 +4001,7 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
       </html>
     `;
 
-    // PDF generation options
+    // PDF generation options with Docker container support
     const options = {
       format: 'A4',
       border: {
@@ -3969,7 +4014,19 @@ app.get('/api/admin/invoices/:id/pdf', authenticateUser, async (req, res) => {
       type: 'pdf',
       quality: '75',
       orientation: 'portrait',
-      timeout: 30000
+      timeout: 30000,
+      // Puppeteer options for Docker containers
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     };
 
     // Generate PDF
@@ -4743,7 +4800,7 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
       </html>
     `;
 
-    // PDF generation options
+    // PDF generation options with Docker container support
     const options = {
       format: 'A4',
       border: {
@@ -4756,7 +4813,19 @@ app.get('/api/invoice/:token/pdf', async (req, res) => {
       type: 'pdf',
       quality: '75',
       orientation: 'portrait',
-      timeout: 30000
+      timeout: 30000,
+      // Puppeteer options for Docker containers
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     };
 
     // Generate PDF

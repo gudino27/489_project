@@ -2198,6 +2198,56 @@ const invoiceDb = {
     return lineItems;
   },
 
+  async getAllPayments() {
+    const db = await getDb();
+    const payments = await db.all(`
+      SELECT p.*, i.invoice_number, c.company_name, c.first_name, c.last_name, c.is_business
+      FROM invoice_payments p
+      JOIN invoices i ON p.invoice_id = i.id
+      JOIN clients c ON i.client_id = c.id
+      ORDER BY p.payment_date DESC
+    `);
+    await db.close();
+    return payments;
+  },
+
+  async updatePayment(paymentId, paymentData) {
+    const db = await getDb();
+    const result = await db.run(`
+      UPDATE invoice_payments
+      SET payment_amount = ?, payment_method = ?, check_number = ?, payment_date = ?, notes = ?
+      WHERE id = ?`,
+      [paymentData.payment_amount, paymentData.payment_method, paymentData.check_number,
+       paymentData.payment_date, paymentData.notes, paymentId]
+    );
+
+    // Update invoice status after payment update
+    const payment = await db.get('SELECT invoice_id FROM invoice_payments WHERE id = ?', [paymentId]);
+    if (payment) {
+      await this.updateInvoiceStatus(payment.invoice_id);
+    }
+
+    await db.close();
+    return { success: true };
+  },
+
+  async deletePayment(paymentId) {
+    const db = await getDb();
+
+    // Get invoice_id before deleting
+    const payment = await db.get('SELECT invoice_id FROM invoice_payments WHERE id = ?', [paymentId]);
+
+    const result = await db.run('DELETE FROM invoice_payments WHERE id = ?', [paymentId]);
+
+    // Update invoice status after payment deletion
+    if (payment) {
+      await this.updateInvoiceStatus(payment.invoice_id);
+    }
+
+    await db.close();
+    return { success: true };
+  },
+
   async updateInvoiceStatus(invoiceId) {
     const db = await getDb();
     
@@ -2239,7 +2289,7 @@ const invoiceDb = {
       
       // 1. Remove duplicate tax rates
       const duplicateTaxRates = await db.get(`
-        SELECT COUNT(*) - COUNT(DISTINCT state_code, county, city, tax_rate) as duplicates
+        SELECT COUNT(*) - COUNT(DISTINCT state_code || '|' || COALESCE(county, '') || '|' || COALESCE(city, '') || '|' || tax_rate) as duplicates
         FROM tax_rates WHERE is_active = 1
       `);
       

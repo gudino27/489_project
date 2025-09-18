@@ -798,19 +798,7 @@ async function addInvoiceTables(db) {
     );
   }
 
-  // Insert default tax rates for WA, OR, ID
-  const defaultTaxRates = [
-    ['WA', null, null, 0.065], // Washington base rate 6.5%
-    ['OR', null, null, 0.0],   // Oregon no sales tax
-    ['ID', null, null, 0.06]   // Idaho base rate 6%
-  ];
-
-  for (const [state, county, city, rate] of defaultTaxRates) {
-    await db.run(
-      'INSERT OR IGNORE INTO tax_rates (state_code, county, city, tax_rate) VALUES (?, ?, ?, ?)',
-      [state, county, city, rate]
-    );
-  }
+  // Note: No pre-populated tax rates - admin will add them manually through the interface
 
   console.log(' Created invoice system tables and default data');
 }

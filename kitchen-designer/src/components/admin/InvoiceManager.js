@@ -13,6 +13,7 @@ import {
   User,
   Check,
   Clock,
+  CreditCard,
   AlertCircle,
   Download,
   Send,
@@ -29,6 +30,7 @@ import EmailModal from './invoices/modals/EmailModal';
 import ClientModal from './invoices/modals/ClientModal';
 import SmsModal from './invoices/modals/SmsModal';
 import DeleteModal from './invoices/modals/DeleteModal';
+import PaymentModal from './invoices/modals/PaymentModal';
 import CreateInvoiceForm from './invoices/forms/CreateInvoiceForm';
 
 const InvoiceManager = ({ token, API_BASE, userRole }) => {
@@ -96,6 +98,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [reminderType, setReminderType] = useState('both');
   const [editingClient, setEditingClient] = useState(null);
   const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentInvoice, setPaymentInvoice] = useState(null);
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [allPayments, setAllPayments] = useState([]);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [deletingPayment, setDeletingPayment] = useState(null);
   const [newLabel, setNewLabel] = useState({
     label: '',
     item_type: 'material',
@@ -410,6 +418,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       startLiveTracking();
     } else {
       stopLiveTracking();
+    }
+
+    if (activeView === 'payments') {
+      fetchAllPayments();
     }
 
     return () => stopLiveTracking(); // Cleanup on unmount
@@ -1102,6 +1114,110 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  // Fetch all payments for payment management
+  const fetchAllPayments = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/payments`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllPayments(data);
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+  };
+
+  // Update payment
+  const updatePayment = async (paymentId, paymentData) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (response.ok) {
+        setEditingPayment(null);
+        await fetchAllPayments();
+        await fetchInvoices();
+        alert('Payment updated successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to update payment: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      setError('Failed to update payment. Please try again.');
+    }
+  };
+
+  // Delete payment
+  const deletePayment = async (paymentId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setDeletingPayment(null);
+        await fetchAllPayments();
+        await fetchInvoices();
+        alert('Payment deleted successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to delete payment: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      setError('Failed to delete payment. Please try again.');
+    }
+  };
+
+  // Add payment to invoice
+  const addPayment = async (paymentData) => {
+    setAddingPayment(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${paymentInvoice.id}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (response.ok) {
+        setShowPaymentModal(false);
+        setPaymentInvoice(null);
+        setAddingPayment(false);
+
+        // Refresh invoices to update payment status
+        await fetchInvoices();
+
+        // Show success message
+        alert('Payment added successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to add payment: ${errorData.error}`);
+        setAddingPayment(false);
+      }
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      setError('Failed to add payment. Please try again.');
+      setAddingPayment(false);
+    }
+  };
+
   // Create label function
   const createLabel = async () => {
     setLoading(true);
@@ -1400,8 +1516,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <p><strong>Due Date:</strong> {new Date(selectedInvoice.due_date).toLocaleDateString()}</p>
                 <p><strong>Status:</strong>
                   <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${selectedInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
+                    selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
                     }`}>
                     {selectedInvoice.status.charAt(0).toUpperCase() + selectedInvoice.status.slice(1)}
                   </span>
@@ -1565,10 +1681,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 py-1 text-xs rounded-full ${label.item_type === 'material'
-                      ? 'bg-blue-100 text-blue-800'
-                      : label.item_type === 'labor'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-purple-100 text-purple-800'
+                    ? 'bg-blue-100 text-blue-800'
+                    : label.item_type === 'labor'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-purple-100 text-purple-800'
                     }`}>
                     {label.item_type}
                   </span>
@@ -1584,276 +1700,198 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     </div>
   );
 
-  const renderPaymentManagement = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Payment Management</h2>
-        <button
-          onClick={() => setActiveView('list')}
-          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-        >
-          Back to Invoices
-        </button>
-      </div>
+  const renderPaymentManagement = () => {
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Payment Management</h2>
+          <button
+            onClick={() => setActiveView('list')}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+          >
+            Back to Invoices
+          </button>
         </div>
-      )}
 
-      {/* Payment Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Paid</p>
-              <p className="text-2xl font-bold text-gray-900">
-                ${invoices.reduce((sum, inv) => sum + (inv.total_paid || 0), 0).toFixed(2)}
-              </p>
-            </div>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
           </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Clock className="h-8 w-8 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Outstanding</p>
-              <p className="text-2xl font-bold text-gray-900">
-                ${invoices.reduce((sum, inv) => sum + ((inv.total_amount || 0) - (inv.total_paid || 0)), 0).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Check className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Paid Invoices</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {invoices.filter(inv => inv.status === 'paid').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-8 w-8 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Overdue</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {invoices.filter(inv => inv.status === 'overdue').length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Invoices with Payment Status */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Invoice Payment Status</h3>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="block md:hidden">
-          <div className="divide-y divide-gray-200">{invoices.map((invoice) => {
-            const totalPaid = invoice.total_paid || 0;
-            const balanceDue = (invoice.total_amount || 0) - totalPaid;
-            const clientName = invoice.is_business ? invoice.company_name : `${invoice.first_name} ${invoice.last_name}`;
-
-            return (
-              <div key={invoice.id} className="p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-semibold text-gray-900">{invoice.invoice_number}</div>
-                    <div className="text-sm text-gray-500">{new Date(invoice.invoice_date).toLocaleDateString()}</div>
-                  </div>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${balanceDue <= 0 ? 'bg-green-100 text-green-800' :
-                      balanceDue < (invoice.total_amount || 0) ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                    }`}>
-                    {balanceDue <= 0 ? 'Paid' : balanceDue < (invoice.total_amount || 0) ? 'Partial' : 'Unpaid'}
-                  </span>
-                </div>
-
-                <div className="text-sm font-medium text-gray-900">{clientName}</div>
-
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <div className="text-gray-500">Total</div>
-                    <div className="font-medium">${(invoice.total_amount || 0).toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500">Paid</div>
-                    <div className="font-medium">${totalPaid.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-500">Due</div>
-                    <div className="font-medium">${balanceDue.toFixed(2)}</div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <button
-                    onClick={() => {
-                      loadInvoiceDetails(invoice.id);
-                      setActiveView('view');
-                    }}
-                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
-                  >
-                    View
-                  </button>
-                  <button
-                    onClick={() => {
-                      loadInvoiceDetails(invoice.id, true);
-                      setActiveView('edit');
-                    }}
-                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => downloadInvoicePdf(invoice)}
-                    className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200"
-                  >
-                    PDF
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEmailInvoice(invoice);
-                      setShowEmailModal(true);
-                    }}
-                    className="px-3 py-1 text-xs bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200"
-                  >
-                    Send
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDeleteInvoice(invoice);
-                      setShowDeleteModal(true);
-                    }}
-                    className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200"
-                  >
-                    Delete
-                  </button>
-                </div>
+        {/* Payment Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <DollarSign className="h-8 w-8 text-green-600" />
               </div>
-            );
-          })}</div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Total Collected</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${allPayments.reduce((sum, payment) => sum + parseFloat(payment.payment_amount), 0).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <FileText className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Total Payments</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {allPayments.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CreditCard className="h-8 w-8 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Card Payments</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {allPayments.filter(p => p.payment_method.includes('card')).length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Cash Payments</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {allPayments.filter(p => p.payment_method === 'cash').length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Invoice
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount Paid
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Balance Due
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {invoices.map((invoice) => {
-                const totalPaid = invoice.total_paid || 0;
-                const balanceDue = (invoice.total_amount || 0) - totalPaid;
-                const clientName = invoice.is_business ? invoice.company_name : `${invoice.first_name} ${invoice.last_name}`;
+        {/* Payment Records Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b">
+            <h3 className="text-lg font-semibold text-gray-900">All Payment Records</h3>
+          </div>
 
-                return (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{invoice.invoice_number}</div>
-                      <div className="text-sm text-gray-500">{new Date(invoice.invoice_date).toLocaleDateString()}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{clientName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${(invoice.total_amount || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${totalPaid.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className={balanceDue > 0 ? 'text-red-600' : 'text-green-600'}>
-                        ${balanceDue.toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                          invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          setSelectedInvoice(invoice);
-                          setActiveView('view');
-                        }}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        View
-                      </button>
-                      {balanceDue > 0 && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Invoice
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Method
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Check #
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {allPayments.map((payment) => {
+                  const clientName = payment.is_business
+                    ? payment.company_name
+                    : `${payment.first_name} ${payment.last_name}`;
+
+                  return (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(payment.payment_date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                        {payment.invoice_number}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {clientName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                        ${parseFloat(payment.payment_amount).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full ${payment.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
+                          payment.payment_method === 'check' ? 'bg-blue-100 text-blue-800' :
+                            payment.payment_method.includes('card') ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
+                          {payment.payment_method.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {payment.check_number || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {payment.notes || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setActiveView('edit');
-                          }}
-                          className="text-green-600 hover:text-green-900"
+                          onClick={() => setEditingPayment(payment)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
                         >
-                          Add Payment
+                          Edit
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <button
+                          onClick={() => setDeletingPayment(payment)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-        {/* Mobile Floating Action Button */}
-        <button
-          onClick={() => setActiveView('create')}
-          className="md:hidden fixed bottom-6 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-blue-700 flex items-center justify-center z-50"
-        >
-          <Plus size={24} />
-        </button>
+            {allPayments.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No payment records found.</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+    );
+  };
+
+  // Placeholder render functions (to be implemented)
+  const renderEditInvoiceForm = () => (
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Edit Invoice</h2>
+      <p>Edit invoice functionality coming soon...</p>
+      <button
+        onClick={() => setActiveView('list')}
+        className="mt-4 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+      >
+        Back to Invoices
+      </button>
     </div>
   );
 
@@ -2120,885 +2158,6 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     </div>
   );
 
-  // Bulk Add Tax Rates Modal
-  const renderBulkAddModal = () => {
-    if (!showBulkAddModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold">Bulk Add Tax Rates</h3>
-              <button
-                onClick={() => {
-                  setShowBulkAddModal(false);
-                  setBulkTaxRates('');
-                  setError('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Enter tax rates in CSV format, one per line:
-                <br />
-                <strong>Format:</strong> state_code,city,tax_rate_percentage,description
-                <br />
-                <strong>Example:</strong>
-              </p>
-              <div className="bg-gray-100 p-3 rounded text-sm font-mono mb-4">
-                WA,Sunnyside,8.3,Sunnyside city tax<br />
-                WA,Seattle,10.25,Seattle combined rate<br />
-                OR,Portland,0,Oregon no sales tax
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tax Rates Data
-              </label>
-              <textarea
-                value={bulkTaxRates}
-                onChange={(e) => setBulkTaxRates(e.target.value)}
-                className="w-full h-40 p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="WA,Sunnyside,8.3,Sunnyside city tax&#10;WA,Seattle,10.25,Seattle combined rate"
-              />
-            </div>
-
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => {
-                  setShowBulkAddModal(false);
-                  setBulkTaxRates('');
-                  setError('');
-                }}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={bulkAddTaxRates}
-                disabled={bulkOperationLoading || !bulkTaxRates.trim()}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {bulkOperationLoading ? 'Adding...' : 'Add Tax Rates'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Reminder Management Modal
-  const renderReminderModal = () => {
-    if (!showReminderModal || !reminderInvoice) return null;
-
-    const clientName = reminderInvoice.is_business
-      ? reminderInvoice.company_name
-      : `${reminderInvoice.first_name} ${reminderInvoice.last_name}`;
-
-    const totalPaid = reminderInvoice.total_paid || 0;
-    const balanceDue = (reminderInvoice.total_amount || 0) - totalPaid;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold">Reminder Management - Invoice {reminderInvoice.invoice_number}</h3>
-              <button
-                onClick={() => {
-                  setShowReminderModal(false);
-                  setReminderInvoice(null);
-                  setReminderMessage('');
-                  setError('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Invoice Info */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3">Invoice Details</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Client:</strong> {clientName}</p>
-                  <p><strong>Total Amount:</strong> ${(reminderInvoice.total_amount || 0).toFixed(2)}</p>
-                  <p><strong>Amount Paid:</strong> ${totalPaid.toFixed(2)}</p>
-                  <p><strong>Balance Due:</strong> <span className={balanceDue > 0 ? 'text-red-600' : 'text-green-600'}>${balanceDue.toFixed(2)}</span></p>
-                  <p><strong>Due Date:</strong> {new Date(reminderInvoice.due_date).toLocaleDateString()}</p>
-                  <p><strong>Status:</strong>
-                    <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${reminderInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                        reminderInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                      }`}>
-                      {reminderInvoice.status}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Reminder Settings */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3">Reminder Settings</h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={reminderSettings.reminders_enabled}
-                        onChange={(e) => setReminderSettings(prev => ({ ...prev, reminders_enabled: e.target.checked }))}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="ml-2 text-sm font-medium">Enable Automatic Reminders</span>
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">Default is disabled - you must enable reminders per invoice</p>
-                  </div>
-
-                  {reminderSettings.reminders_enabled && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Send reminders after (days overdue)
-                      </label>
-                      <input
-                        type="text"
-                        value={reminderSettings.reminder_days}
-                        onChange={(e) => setReminderSettings(prev => ({ ...prev, reminder_days: e.target.value }))}
-                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                        placeholder="7,14,30"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Comma-separated days (e.g., 7,14,30)</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={updateReminderSettings}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  >
-                    Save Settings
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Send Manual Reminder */}
-            <div className="mt-6 border-t pt-6">
-              <h4 className="font-semibold text-gray-900 mb-4">Send Manual Reminder</h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reminder Type
-                  </label>
-                  <select
-                    value={reminderType}
-                    onChange={(e) => setReminderType(e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="both">Email + SMS</option>
-                    <option value="email">Email Only</option>
-                    <option value="sms">SMS Only</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Custom Message (Optional)
-                  </label>
-                  <textarea
-                    value={reminderMessage}
-                    onChange={(e) => setReminderMessage(e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Add a custom message or leave blank for default"
-                    rows="2"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={sendManualReminder}
-                disabled={sendingReminder}
-                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {sendingReminder ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Bell size={16} />
-                    Send Reminder Now
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Reminder History */}
-            {reminderHistory.length > 0 && (
-              <div className="mt-6 border-t pt-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Reminder History</h4>
-                <div className="space-y-3">
-                  {reminderHistory.map((reminder, index) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {reminder.reminder_type.toUpperCase()} Reminder
-                            {reminder.successful ?
-                              <span className="text-green-600 ml-2">✅ Sent</span> :
-                              <span className="text-red-600 ml-2">❌ Failed</span>
-                            }
-                          </p>
-                          <p className="text-sm text-gray-600">{reminder.message}</p>
-                          <p className="text-xs text-gray-500">
-                            Sent by: {reminder.sent_by_username || 'System'} •
-                            Days overdue: {reminder.days_overdue}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {new Date(reminder.sent_at).toLocaleDateString()} {new Date(reminder.sent_at).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
-
-  // Label Modal
-  const renderLabelModal = () => {
-    if (!showLabelModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold mb-4">Add New Label</h3>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Label *</label>
-              <input
-                type="text"
-                value={newLabel.label}
-                onChange={(e) => setNewLabel(prev => ({ ...prev, label: e.target.value }))}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="e.g., Custom Cabinets, Installation, etc."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Item Type *</label>
-              <select
-                value={newLabel.item_type}
-                onChange={(e) => setNewLabel(prev => ({ ...prev, item_type: e.target.value }))}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                required
-              >
-                <option value="material">Material</option>
-                <option value="labor">Labor</option>
-                <option value="service">Service</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <textarea
-                value={newLabel.description}
-                onChange={(e) => setNewLabel(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Optional description for this label type"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 mt-6">
-            <button
-              onClick={() => {
-                setShowLabelModal(false);
-                setNewLabel({
-                  label: '',
-                  item_type: 'material',
-                  description: ''
-                });
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={createLabel}
-              disabled={loading || !newLabel.label}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating...' : 'Create Label'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderEditClientModal = () => {
-    if (!showEditClientModal || !editingClient) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-4">Edit Client</h3>
-
-          <div className="space-y-4">
-            {/* Client Type Toggle */}
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  checked={!editingClient.is_business}
-                  onChange={() => setEditingClient(prev => ({ ...prev, is_business: false }))}
-                  className="mr-2"
-                />
-                Individual
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  checked={editingClient.is_business}
-                  onChange={() => setEditingClient(prev => ({ ...prev, is_business: true }))}
-                  className="mr-2"
-                />
-                Business
-              </label>
-            </div>
-
-            {editingClient.is_business ? (
-              <div>
-                <label className="block text-sm font-medium mb-2">Company Name *</label>
-                <input
-                  type="text"
-                  value={editingClient.company_name}
-                  onChange={(e) => setEditingClient(prev => ({ ...prev, company_name: e.target.value }))}
-                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-2">First Name *</label>
-                  <input
-                    type="text"
-                    value={editingClient.first_name}
-                    onChange={(e) => setEditingClient(prev => ({ ...prev, first_name: e.target.value }))}
-                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Last Name *</label>
-                  <input
-                    type="text"
-                    value={editingClient.last_name}
-                    onChange={(e) => setEditingClient(prev => ({ ...prev, last_name: e.target.value }))}
-                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-              </>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Email *</label>
-              <input
-                type="email"
-                value={editingClient.email}
-                onChange={(e) => setEditingClient(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Phone</label>
-              <input
-                type="tel"
-                value={editingClient.phone}
-                onChange={(e) => setEditingClient(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Address</label>
-              <textarea
-                value={editingClient.address}
-                onChange={(e) => setEditingClient(prev => ({ ...prev, address: e.target.value }))}
-                rows={3}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Full address including city, state, and ZIP"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Tax Exempt Number</label>
-              <input
-                type="text"
-                value={editingClient.tax_exempt_number}
-                onChange={(e) => setEditingClient(prev => ({ ...prev, tax_exempt_number: e.target.value }))}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                placeholder="Optional tax exempt number"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 mt-6">
-            <button
-              onClick={() => {
-                setShowEditClientModal(false);
-                setEditingClient(null);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => updateClient(editingClient.id, editingClient)}
-              disabled={loading ||
-                (editingClient.is_business ? !editingClient.company_name : !editingClient.first_name || !editingClient.last_name) ||
-                !editingClient.email}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Updating...' : 'Update Client'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
-
-
-
-  // Edit Invoice Form
-  const renderEditInvoiceForm = () => {
-    if (!editingInvoice) return null;
-
-    const updateEditingInvoice = (field, value) => {
-      setEditingInvoice(prev => ({ ...prev, [field]: value }));
-    };
-
-    const updateEditLineItem = (index, field, value) => {
-      setEditingInvoice(prev => ({
-        ...prev,
-        line_items: prev.line_items.map((item, i) =>
-          i === index ? { ...item, [field]: value } : item
-        )
-      }));
-    };
-
-    const addEditLineItem = () => {
-      setEditingInvoice(prev => ({
-        ...prev,
-        line_items: [...prev.line_items, {
-          description: '',
-          quantity: 1,
-          unit_price: 0,
-          notes: '',
-          label_id: null
-        }]
-      }));
-    };
-
-    const removeEditLineItem = (index) => {
-      setEditingInvoice(prev => ({
-        ...prev,
-        line_items: prev.line_items.filter((_, i) => i !== index)
-      }));
-    };
-
-    const saveInvoiceChanges = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`${API_BASE}/api/admin/invoices/${editingInvoice.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            client_id: editingInvoice.client_id,
-            invoice_date: editingInvoice.invoice_date,
-            due_date: editingInvoice.due_date,
-            line_items: editingInvoice.line_items,
-            discount_amount: editingInvoice.discount_amount || 0,
-            markup_amount: editingInvoice.markup_amount || 0,
-            tax_rate: editingInvoice.tax_rate || 0,
-            notes: editingInvoice.notes || '',
-            status: editingInvoice.status
-          })
-        });
-
-        if (response.ok) {
-          const updatedInvoice = await response.json();
-          setSelectedInvoice(updatedInvoice);
-          setEditingInvoice(null);
-          setActiveView('view');
-          fetchInvoices(); // Refresh the list
-          setError('');
-        } else {
-          const errorData = await response.json();
-          setError(errorData.error || 'Failed to update invoice');
-        }
-      } catch (error) {
-        console.error('Error updating invoice:', error);
-        setError('Failed to update invoice');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Calculate totals for editing invoice
-    const subtotal = editingInvoice.line_items?.reduce((sum, item) => {
-      return sum + (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0));
-    }, 0) || 0;
-
-    const discountAmount = parseFloat(editingInvoice.discount_amount || 0);
-    const markupAmount = parseFloat(editingInvoice.markup_amount || 0);
-    const taxRate = parseFloat(editingInvoice.tax_rate || 0);
-
-    const afterDiscount = subtotal - discountAmount;
-    const afterMarkup = afterDiscount + markupAmount;
-    const taxAmount = afterMarkup * (taxRate / 100);
-    const total = afterMarkup + taxAmount;
-
-    const clientName = editingInvoice.is_business
-      ? editingInvoice.company_name
-      : `${editingInvoice.first_name} ${editingInvoice.last_name}`;
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">Edit Invoice</h2>
-            <p className="text-gray-600 mt-1">Invoice #{editingInvoice.invoice_number}</p>
-            <p className="text-sm text-gray-500">Client: {clientName}</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setEditingInvoice(null);
-                setActiveView('view');
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveInvoiceChanges}
-              disabled={loading || editingInvoice.line_items?.length === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow p-6">
-          {/* Invoice Details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Invoice Date
-              </label>
-              <input
-                type="date"
-                value={editingInvoice.invoice_date}
-                onChange={(e) => updateEditingInvoice('invoice_date', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
-              </label>
-              <input
-                type="date"
-                value={editingInvoice.due_date}
-                onChange={(e) => updateEditingInvoice('due_date', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                value={editingInvoice.status}
-                onChange={(e) => updateEditingInvoice('status', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              >
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Line Items */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Line Items</h3>
-              <button
-                onClick={addEditLineItem}
-                className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-              >
-                <Plus size={16} />
-                Add Item
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {editingInvoice.line_items?.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 items-start p-4 border rounded-lg">
-                  <div className="col-span-1">
-                    <select
-                      value={item.label_id || ''}
-                      onChange={(e) => updateEditLineItem(index, 'label_id', e.target.value || null)}
-                      className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                    >
-                      <option value="">Select Label</option>
-                      {lineItemLabels.map(label => (
-                        <option key={label.id} value={label.id}>{label.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0"
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === null) {
-                          updateEditLineItem(index, 'quantity', '');
-                        } else {
-                          updateEditLineItem(index, 'quantity', value);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === null) {
-                          updateEditLineItem(index, 'quantity', 0);
-                        } else {
-                          const numValue = parseFloat(value);
-                          updateEditLineItem(index, 'quantity', isNaN(numValue) ? 0 : numValue);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.unit_price}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === null) {
-                          updateEditLineItem(index, 'unit_price', '');
-                        } else {
-                          updateEditLineItem(index, 'unit_price', value);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === null) {
-                          updateEditLineItem(index, 'unit_price', 0);
-                        } else {
-                          const numValue = parseFloat(value);
-                          updateEditLineItem(index, 'unit_price', isNaN(numValue) ? 0 : numValue);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <input
-                      type="text"
-                      placeholder="Item description"
-                      value={item.description}
-                      onChange={(e) => updateEditLineItem(index, 'description', e.target.value)}
-                      className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      placeholder="Notes (optional)"
-                      value={item.notes}
-                      onChange={(e) => updateEditLineItem(index, 'notes', e.target.value)}
-                      className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                    />
-                  </div>
-                  <div className="col-span-1 flex items-center justify-center">
-                    <span className="text-sm font-medium">
-                      ${((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="col-span-1">
-                    <button
-                      onClick={() => removeEditLineItem(index)}
-                      className="text-red-600 hover:text-red-900 p-2"
-                      title="Remove item"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Adjustments */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Discount Amount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={editingInvoice.discount_amount || ''}
-                onChange={(e) => updateEditingInvoice('discount_amount', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Markup Amount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={editingInvoice.markup_amount || ''}
-                onChange={(e) => updateEditingInvoice('markup_amount', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tax Rate (%)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={editingInvoice.tax_rate || ''}
-                onChange={(e) => updateEditingInvoice('tax_rate', e.target.value)}
-                className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="border-t pt-4">
-            <div className="flex justify-end">
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount:</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {markupAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Markup:</span>
-                    <span>${markupAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {taxAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Tax ({taxRate}%):</span>
-                    <span>${taxAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total:</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notes
-            </label>
-            <textarea
-              value={editingInvoice.notes || ''}
-              onChange={(e) => updateEditingInvoice('notes', e.target.value)}
-              rows={3}
-              className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              placeholder="Additional notes..."
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Live Tracking View
   const renderLiveTracking = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -3066,14 +2225,21 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     ${invoice.total_amount?.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={invoice.status} />
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
+                      invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {invoice.status}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.view_count > 0
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        invoice.view_count > 0
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
-                        }`}>
+                      }`}>
                         {invoice.view_count} view{invoice.view_count !== 1 ? 's' : ''}
                       </span>
                     </div>
@@ -3187,6 +2353,87 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     </div>
   );
 
+  const renderBulkAddModal = () => {
+    if (!showBulkAddModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">Bulk Add Tax Rates</h3>
+              <button
+                onClick={() => {
+                  setShowBulkAddModal(false);
+                  setBulkTaxRates('');
+                  setError('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Enter tax rates in CSV format, one per line:
+                <br />
+                <strong>Format:</strong> state_code,city,tax_rate_percentage,description
+                <br />
+                <strong>Example:</strong>
+              </p>
+              <div className="bg-gray-100 p-3 rounded text-sm font-mono mb-4">
+                WA,Sunnyside,8.3,Sunnyside city tax<br />
+                WA,Seattle,10.25,Seattle combined rate<br />
+                OR,Portland,0,Oregon no sales tax
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tax Rates Data
+              </label>
+              <textarea
+                value={bulkTaxRates}
+                onChange={(e) => setBulkTaxRates(e.target.value)}
+                className="w-full h-40 p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="WA,Sunnyside,8.3,Sunnyside city tax&#10;WA,Seattle,10.25,Seattle combined rate"
+              />
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowBulkAddModal(false);
+                  setBulkTaxRates('');
+                  setError('');
+                }}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={bulkAddTaxRates}
+                disabled={bulkOperationLoading || !bulkTaxRates.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {bulkOperationLoading ? 'Adding...' : 'Add Tax Rates'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const renderReminderModal = () => null;
+  const renderEditClientModal = () => null;
+  const renderLabelModal = () => null;
 
   // Main render
   return (
@@ -3277,6 +2524,17 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       {renderReminderModal()}
       {renderEditClientModal()}
       {renderLabelModal()}
+      <PaymentModal
+        show={showPaymentModal}
+        invoice={paymentInvoice}
+        onCancel={() => {
+          setShowPaymentModal(false);
+          setPaymentInvoice(null);
+          setAddingPayment(false);
+        }}
+        onSubmit={addPayment}
+        isSubmitting={addingPayment}
+      />
       <DeleteModal
         show={showDeleteModal}
         deleteInvoice={deleteInvoice}
