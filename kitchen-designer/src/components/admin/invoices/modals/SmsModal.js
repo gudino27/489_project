@@ -72,7 +72,7 @@ const SmsModal = ({
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-700">Send to different phone number</span>
-                  <p className="text-xs text-gray-500 mt-1">Override the client's phone number (Super Admin only)</p>
+                  <p className="text-xs text-gray-500 mt-1">Override the client's phone number</p>
                 </div>
               </label>
 

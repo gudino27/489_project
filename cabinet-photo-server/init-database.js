@@ -733,6 +733,31 @@ async function addInvoiceTables(db) {
     }
   }
 
+  // Add balance_due column to invoices table if it doesn't exist
+  try {
+    await db.exec(`ALTER TABLE invoices ADD COLUMN balance_due DECIMAL(10, 2) DEFAULT 0.00`);
+    console.log('✓ Added balance_due column to invoices table');
+
+    // Update existing invoices with correct balance_due values
+    const invoices = await db.all('SELECT id, total_amount FROM invoices WHERE balance_due IS NULL OR balance_due = 0');
+    for (const invoice of invoices) {
+      const paymentsResult = await db.get(
+        'SELECT SUM(payment_amount) as total_paid FROM invoice_payments WHERE invoice_id = ?',
+        [invoice.id]
+      );
+      const totalPaid = paymentsResult.total_paid || 0;
+      const balanceDue = Math.max(0, (invoice.total_amount || 0) - totalPaid);
+
+      await db.run('UPDATE invoices SET balance_due = ? WHERE id = ?', [balanceDue, invoice.id]);
+    }
+    console.log(`✓ Updated balance_due for ${invoices.length} existing invoices`);
+  } catch (error) {
+    // Column might already exist, ignore error
+    if (!error.message.includes('duplicate column name')) {
+      console.log('Note: balance_due column may already exist in invoices table');
+    }
+  }
+
   // Create indexes for invoice tables
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);

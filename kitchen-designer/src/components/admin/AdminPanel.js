@@ -1,3 +1,4 @@
+
 // --------------------------------------
 // import statements
 //---------------------------------------
@@ -64,7 +65,7 @@ const AdminPanel = () => {
 
   // Base API URL, can be set via environment variable
   // This allows flexibility for different environments (development, production, etc.)
-  const API_BASE = 'https://api.gudinocustom.com';
+  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
   //------------------------------------------------
   // useEffect hook to manage session initialization
   // and authentication

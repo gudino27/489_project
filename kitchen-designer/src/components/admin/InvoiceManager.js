@@ -109,9 +109,11 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [activeInvoiceTab, setActiveInvoiceTab] = useState('details');
   const [newLabel, setNewLabel] = useState({
     label: '',
-    item_type: 'material',
     description: ''
   });
+  const [showBulkLabelModal, setShowBulkLabelModal] = useState(false);
+  const [bulkLabels, setBulkLabels] = useState('');
+  const [bulkLabelOperationLoading, setBulkLabelOperationLoading] = useState(false);
   const [newClient, setNewClient] = useState({
     is_business: false,
     title: '',
@@ -243,7 +245,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     due_date: '',
     line_items: [],
     subtotal: 0,
-    tax_rate: 0.065, // Default WA rate
+    tax_rate: 0, // No default tax rate - user must select
     tax_amount: 0,
     discount_amount: 0,
     markup_amount: 0,
@@ -370,6 +372,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('💰 Tax Rates Loaded:', data.map(rate => ({
+          id: rate.id,
+          city: rate.city,
+          state_code: rate.state_code,
+          tax_rate: rate.tax_rate,
+          percentage: `${rate.tax_rate.toFixed(2)}%`
+        })));
         setTaxRates(data);
       }
     } catch (error) {
@@ -442,7 +451,17 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         body: JSON.stringify({
           city: newTaxRate.city.trim() || null,
           state_code: newTaxRate.state.trim().toUpperCase(),
-          tax_rate: parseFloat(newTaxRate.tax_rate) / 100,
+          tax_rate: (() => {
+            const inputRate = newTaxRate.tax_rate;
+            const parsedRate = parseFloat(inputRate);
+            // Store as percentage, NOT decimal
+            console.log('🔧 Tax Rate Creation Debug:', {
+              input: inputRate,
+              parsed: parsedRate,
+              stored_as_percentage: parsedRate
+            });
+            return parsedRate;
+          })(),
           description: newTaxRate.description.trim() || null
         })
       });
@@ -475,7 +494,17 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         body: JSON.stringify({
           city: updates.city?.trim() || null,
           state_code: (updates.state_code || updates.state)?.trim().toUpperCase(),
-          tax_rate: parseFloat(updates.tax_rate) / 100,
+          tax_rate: (() => {
+            const inputRate = updates.tax_rate;
+            const parsedRate = parseFloat(inputRate);
+            // Store as percentage, NOT decimal
+            console.log('🔧 Tax Rate Update Debug:', {
+              input: inputRate,
+              parsed: parsedRate,
+              stored_as_percentage: parsedRate
+            });
+            return parsedRate;
+          })(),
           description: updates.description?.trim() || null
         })
       });
@@ -581,7 +610,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         taxRatesArray.push({
           state_code: parts[0],
           city: parts[1] || '',
-          tax_rate: parseFloat(parts[2]) / 100, // Convert percentage to decimal
+          tax_rate: parseFloat(parts[2]), // Store as percentage
           description: parts[3] || ''
         });
       }
@@ -748,8 +777,48 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   };
 
   const updateClient = async (id, updates) => {
+    setLoading(true);
+    setClientError(null); // Clear previous errors
+
+    // Client-side validation
+    const validationErrors = [];
+
+    // Check if at least email or phone is provided
+    const hasEmail = updates.email && updates.email.trim();
+    const hasPhone = updates.phone && updates.phone.trim();
+
+    if (!hasEmail && !hasPhone) {
+      validationErrors.push('Either email address or phone number is required');
+    }
+
+    // Validate email format if provided
+    if (hasEmail && !/\S+@\S+\.\S+/.test(updates.email)) {
+      validationErrors.push('Please enter a valid email address');
+    }
+
+    if (updates.is_business) {
+      if (!updates.company_name || !updates.company_name.trim()) {
+        validationErrors.push('Company name is required for business clients');
+      }
+    } else {
+      if (!updates.first_name || !updates.first_name.trim()) {
+        validationErrors.push('First name is required');
+      }
+      if (!updates.last_name || !updates.last_name.trim()) {
+        validationErrors.push('Last name is required');
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      setClientError({
+        title: 'Missing Required Information',
+        messages: validationErrors
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
       const response = await fetch(`${API_BASE}/api/admin/clients/${id}`, {
         method: 'PUT',
         headers: {
@@ -779,8 +848,27 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   // Calculate totals
   const calculateTotals = (lineItems, taxRate = 0, discountAmount = 0, markupAmount = 0) => {
     const subtotal = lineItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
-    const taxAmount = subtotal * taxRate;
-    const total = subtotal + taxAmount - discountAmount + markupAmount;
+    // Round tax rate to avoid floating point precision issues
+    const roundedTaxRate = Math.round(taxRate * 10000) / 10000; // Round to 4 decimal places
+    const taxAmount = Math.round(subtotal * roundedTaxRate/10 ) / 10; // Round to 2 decimal places
+    const total = Math.round((subtotal + taxAmount - discountAmount + markupAmount) * 100) / 100;
+    
+    // Debug logging
+    console.log('🧮 Tax Calculation Debug:');
+    console.log('  Line Items:', lineItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price
+    })));
+    console.log('  Subtotal:', subtotal);
+    console.log('  Tax Rate (original):', taxRate, `(${(taxRate ).toFixed(2)}%)`);
+    console.log('  Tax Rate (rounded):', roundedTaxRate, `(${(roundedTaxRate).toFixed(2)}%)`);
+    console.log('  Tax Amount:', taxAmount);
+    console.log('  Discount Amount:', discountAmount);
+    console.log('  Markup Amount:', markupAmount);
+    console.log('  Final Total:', total);
+    console.log('  Calculation: ', `${subtotal} + ${taxAmount} - ${discountAmount} + ${markupAmount} = ${total}`);
 
     return {
       subtotal,
@@ -794,9 +882,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     const newLineItem = {
       description: '',
       quantity: 1,
+      unit: '',
       unit_price: 0,
       total_price: 0,
-      item_type: 'material'
+      item_type: ''
     };
 
     // Determine which state to update based on current view
@@ -824,7 +913,16 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
     // Recalculate total price for this line item
     if (field === 'quantity' || field === 'unit_price') {
-      updatedItems[index].total_price = updatedItems[index].quantity * updatedItems[index].unit_price;
+      updatedItems[index].total_price = Math.round(updatedItems[index].quantity * updatedItems[index].unit_price * 100) / 100;
+
+      console.log(`📋 Line Item Update Debug:`, {
+        index,
+        field,
+        value,
+        quantity: updatedItems[index].quantity,
+        unit_price: updatedItems[index].unit_price,
+        calculated_total: updatedItems[index].total_price
+      });
     }
 
     // Recalculate invoice totals
@@ -892,7 +990,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           due_date: '',
           line_items: [],
           subtotal: 0,
-          tax_rate: 0.065,
+          tax_rate: 0,
           tax_amount: 0,
           discount_amount: 0,
           markup_amount: 0,
@@ -971,12 +1069,21 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
     const clientToSubmit = clientData || newClient;
 
+    console.log('Debug - Client data being validated:', clientToSubmit);
+
     // Client-side validation
     const validationErrors = [];
 
-    if (!clientToSubmit.email || !clientToSubmit.email.trim()) {
-      validationErrors.push('Email address is required');
-    } else if (!/\S+@\S+\.\S+/.test(clientToSubmit.email)) {
+    // Check if at least email or phone is provided
+    const hasEmail = clientToSubmit.email && clientToSubmit.email.trim();
+    const hasPhone = clientToSubmit.phone && clientToSubmit.phone.trim();
+
+    if (!hasEmail && !hasPhone) {
+      validationErrors.push('Either email address or phone number is required');
+    }
+
+    // Validate email format if provided
+    if (hasEmail && !/\S+@\S+\.\S+/.test(clientToSubmit.email)) {
       validationErrors.push('Please enter a valid email address');
     }
 
@@ -1153,54 +1260,38 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
   // Update payment
   const updatePayment = async (paymentId, paymentData) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentData)
-      });
+    const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(paymentData)
+    });
 
-      if (response.ok) {
-        setEditingPayment(null);
-        await fetchAllPayments();
-        await fetchInvoices();
-        alert('Payment updated successfully!');
-      } else {
-        const errorData = await response.json();
-        setError(`Failed to update payment: ${errorData.error}`);
-      }
-    } catch (error) {
-      console.error('Error updating payment:', error);
-      setError('Failed to update payment. Please try again.');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update payment');
     }
+
+    return await response.json();
   };
 
   // Delete payment
   const deletePayment = async (paymentId) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        setDeletingPayment(null);
-        await fetchAllPayments();
-        await fetchInvoices();
-        alert('Payment deleted successfully!');
-      } else {
-        const errorData = await response.json();
-        setError(`Failed to delete payment: ${errorData.error}`);
+    const response = await fetch(`${API_BASE}/api/admin/payments/${paymentId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    } catch (error) {
-      console.error('Error deleting payment:', error);
-      setError('Failed to delete payment. Please try again.');
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete payment');
     }
+
+    return true;
   };
 
   // Add payment to invoice
@@ -1224,6 +1315,11 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         // Refresh invoices to update payment status
         await fetchInvoices();
 
+        // Refresh the selected invoice details if we're viewing this invoice
+        if (selectedInvoice && selectedInvoice.id === paymentInvoice.id) {
+          await loadInvoiceDetails(selectedInvoice.id);
+        }
+
         // Show success message
         alert('Payment added successfully!');
       } else {
@@ -1245,9 +1341,20 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     try {
       const updatedPayment = await updatePayment(editingPayment.id, paymentData);
       if (updatedPayment) {
+        const invoiceId = editingPayment.invoice_id;
         setEditingPayment(null);
-        await fetchAllPayments(); // Refresh payments list
-        await fetchInvoices(); // Refresh invoices to update payment status
+
+        // Add a small delay to ensure database transaction is complete
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Refresh invoices to update payment status
+        await fetchInvoices();
+
+        // Refresh the selected invoice details if we're viewing this invoice
+        if (selectedInvoice && selectedInvoice.id === invoiceId) {
+          await loadInvoiceDetails(selectedInvoice.id);
+        }
+
         alert('Payment updated successfully!');
       }
     } catch (error) {
@@ -1265,6 +1372,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       setDeletingPayment(null);
       await fetchAllPayments(); // Refresh payments list
       await fetchInvoices(); // Refresh invoices to update payment status
+
+      // Refresh the selected invoice details if we're viewing this invoice
+      if (selectedInvoice && selectedInvoice.id === deletingPayment.invoice_id) {
+        await loadInvoiceDetails(selectedInvoice.id);
+      }
+
       alert('Payment deleted successfully!');
     } catch (error) {
       console.error('Error deleting payment:', error);
@@ -1289,7 +1402,6 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         setShowLabelModal(false);
         setNewLabel({
           label: '',
-          item_type: 'material',
           description: ''
         });
         fetchLineItemLabels(); // Refresh labels
@@ -1343,6 +1455,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       isSearching={isSearching}
       setShowClientModal={setShowClientModal}
       taxRates={taxRates}
+      lineItemLabels={lineItemLabels}
+      token={token}
+      API_BASE={API_BASE}
       calculateTotals={calculateTotals}
       addLineItem={addLineItem}
       updateLineItem={updateLineItem}
@@ -1617,7 +1732,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <tr key={index} className="border-b">
                       <td className="px-4 py-2">
                         <div>
-                          <p className="font-medium">{item.description}</p>
+                          {item.title && (
+                            <p className="font-semibold text-gray-900 mb-1">{item.title}</p>
+                          )}
+                          <p className="text-gray-700">{item.description}</p>
                           {item.notes && (
                             <p className="text-sm text-gray-500">{item.notes}</p>
                           )}
@@ -1637,7 +1755,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               <div className="w-64">
                 <div className="flex justify-between py-1">
                   <span>Subtotal:</span>
-                  <span>${(selectedInvoice.subtotal_amount || 0).toFixed(2)}</span>
+                  <span>${(selectedInvoice.subtotal || 0).toFixed(2)}</span>
                 </div>
                 {(selectedInvoice.discount_amount || 0) > 0 && (
                   <div className="flex justify-between py-1 text-green-600">
@@ -1653,7 +1771,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 )}
                 {(selectedInvoice.tax_amount || 0) > 0 && (
                   <div className="flex justify-between py-1">
-                    <span>Tax ({((selectedInvoice.tax_rate || 0) * 100).toFixed(2)}%):</span>
+                    <span>Tax ({((selectedInvoice.tax_rate || 0)).toFixed(2)}%):</span>
                     <span>${(selectedInvoice.tax_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
@@ -2102,17 +2220,129 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   );
 
 
+  // Clear all labels function
+  const clearAllLabels = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL labels? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const deletePromises = lineItemLabels.map(label =>
+        fetch(`${API_BASE}/api/admin/line-item-labels/${label.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+      );
+
+      await Promise.all(deletePromises);
+      await fetchLineItemLabels(); // Refresh the list
+      alert('All labels have been deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting labels:', error);
+      alert('Failed to delete some labels. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Bulk create labels function
+  const bulkCreateLabels = async () => {
+    if (!bulkLabels.trim()) {
+      setError('Please enter labels to add');
+      return;
+    }
+
+    setBulkLabelOperationLoading(true);
+    try {
+      // Parse CSV format - comma-separated values on each line
+      const labelsArray = bulkLabels
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .flatMap(line => {
+          // Split by comma and create separate labels for each
+          return line.split(',').map(label => ({
+            label: label.trim()
+          }));
+        })
+        .filter(item => item.label.length > 0);
+
+      if (labelsArray.length === 0) {
+        setError('No valid labels found');
+        return;
+      }
+
+      // Create all labels
+      const createPromises = labelsArray.map(labelData =>
+        fetch(`${API_BASE}/api/admin/line-item-labels`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(labelData)
+        })
+      );
+
+      const responses = await Promise.all(createPromises);
+      const errors = [];
+
+      for (let i = 0; i < responses.length; i++) {
+        if (!responses[i].ok) {
+          const errorData = await responses[i].json();
+          errors.push(`Line ${i + 1}: ${errorData.error}`);
+        }
+      }
+
+      await fetchLineItemLabels(); // Refresh the list
+      setBulkLabels('');
+      setShowBulkLabelModal(false);
+      setError('');
+
+      const successCount = responses.filter(r => r.ok).length;
+      let message = `Successfully created ${successCount} labels!`;
+      if (errors.length > 0) {
+        message += `\n\nErrors:\n${errors.join('\n')}`;
+      }
+      alert(message);
+
+    } catch (error) {
+      console.error('Error bulk creating labels:', error);
+      setError('Failed to bulk create labels');
+    } finally {
+      setBulkLabelOperationLoading(false);
+    }
+  };
+
   // Label Management View
   const renderLabelManagement = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Line Item Labels</h2>
-        <button
-          onClick={() => setActiveView('list')}
-          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-        >
-          Back to Invoices
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowBulkLabelModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+          >
+            Bulk Add Labels
+          </button>
+          <button
+            onClick={clearAllLabels}
+            disabled={loading || lineItemLabels.length === 0}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Clearing...' : 'Clear All Labels'}
+          </button>
+          <button
+            onClick={() => setActiveView('list')}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+          >
+            Back to Invoices
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -2123,10 +2353,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 Label
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                Default Price
               </th>
             </tr>
           </thead>
@@ -2136,18 +2363,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                   {label.label}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${label.item_type === 'material'
-                    ? 'bg-blue-100 text-blue-800'
-                    : label.item_type === 'labor'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-purple-100 text-purple-800'
-                    }`}>
-                    {label.item_type}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {label.description}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  ${label.default_unit_price?.toFixed(2) || '0.00'}
                 </td>
               </tr>
             ))}
@@ -2404,6 +2621,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         isSearching={isSearching}
         setShowClientModal={setShowClientModal}
         taxRates={taxRates}
+        lineItemLabels={lineItemLabels}
+        token={token}
+        API_BASE={API_BASE}
         calculateTotals={calculateTotals}
         addLineItem={addLineItem}
         updateLineItem={updateLineItem}
@@ -2607,7 +2827,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none"
                     />
                   ) : (
-                    <span className="text-sm text-gray-900">{((rate.tax_rate || 0) * 100).toFixed(3)}%</span>
+                    <span className="text-sm text-gray-900">{(rate.tax_rate || 0).toFixed(3)}%</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -2646,7 +2866,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                           id: rate.id,
                           city: rate.city,
                           state: rate.state,
-                          tax_rate: rate.tax_rate
+                          tax_rate: rate.tax_rate // Already stored as percentage
                         })}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
@@ -2953,8 +3173,93 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       </div>
     );
   };
+
+  // Bulk Label Modal
+  const renderBulkLabelModal = () => (
+    showBulkLabelModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw] max-h-[80vh] overflow-y-auto">
+          <h3 className="text-lg font-bold mb-4">Bulk Add Labels</h3>
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Enter labels in CSV format. Use commas to separate multiple labels on the same line.
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              Examples:<br/>
+              • Kitchen Cabinets, Bathroom Vanities, Appliances<br/>
+              • Countertops, Hardware, Labor<br/>
+              • Flooring, Paint, Electrical
+            </p>
+          </div>
+
+          <textarea
+            value={bulkLabels}
+            onChange={(e) => setBulkLabels(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none h-48"
+            placeholder="Kitchen Cabinets, Bathroom Vanities, Appliances
+Countertops, Hardware, Labor
+Flooring, Paint, Electrical
+Plumbing, HVAC, Demolition"
+          />
+
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowBulkLabelModal(false);
+                setBulkLabels('');
+                setError('');
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              disabled={bulkLabelOperationLoading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={bulkCreateLabels}
+              disabled={bulkLabelOperationLoading || !bulkLabels.trim()}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkLabelOperationLoading ? 'Creating...' : 'Create Labels'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  );
+
   const renderReminderModal = () => null;
-  const renderEditClientModal = () => null;
+  const renderEditClientModal = () => (
+    <ClientModal
+      show={showEditClientModal}
+      newClient={editingClient || {}}
+      setNewClient={setEditingClient}
+      clientError={clientError}
+      setClientError={setClientError}
+      activeClientTab={activeClientTab}
+      setActiveClientTab={setActiveClientTab}
+      clientAddress={clientAddress}
+      setClientAddress={setClientAddress}
+      mapLoaded={mapLoaded}
+      autocomplete={autocomplete}
+      initAutocomplete={initAutocomplete}
+      loading={loading}
+      isEditing={true}
+      onClose={() => {
+        setShowEditClientModal(false);
+        setEditingClient(null);
+        setClientError(null);
+      }}
+      onSave={() => updateClient(editingClient.id, editingClient)}
+    />
+  );
   const renderLabelModal = () => null;
 
   // Main render
@@ -3043,6 +3348,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         onSave={createClient}
       />
       {renderBulkAddModal()}
+      {renderBulkLabelModal()}
       {renderReminderModal()}
       {renderEditClientModal()}
       {renderLabelModal()}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 const CreateInvoiceForm = ({
@@ -13,6 +13,9 @@ const CreateInvoiceForm = ({
   isSearching,
   setShowClientModal,
   taxRates,
+  lineItemLabels,
+  token,
+  API_BASE,
   calculateTotals,
   addLineItem,
   updateLineItem,
@@ -23,6 +26,42 @@ const CreateInvoiceForm = ({
   isEditing = false,
   editingInvoiceNumber = null
 }) => {
+  const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
+  const [newLabel, setNewLabel] = useState({ label: '' });
+  const [creatingLabel, setCreatingLabel] = useState(false);
+
+  const createLabel = async () => {
+    if (!newLabel.label.trim()) return;
+
+    setCreatingLabel(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/line-item-labels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          label: newLabel.label.trim()
+        })
+      });
+
+      if (response.ok) {
+        setShowCreateLabelModal(false);
+        setNewLabel({ label: '' });
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create label: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating label:', error);
+      alert('Failed to create label. Please try again.');
+    } finally {
+      setCreatingLabel(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -223,12 +262,24 @@ const CreateInvoiceForm = ({
               value={newInvoice.tax_rate}
               onChange={(e) => {
                 const taxRate = parseFloat(e.target.value);
+                console.log('📊 Tax Rate Selection Debug:');
+                console.log('  Selected value:', e.target.value);
+                console.log('  Parsed tax rate:', taxRate);
+                console.log('  Current invoice state:', {
+                  line_items: newInvoice.line_items,
+                  discount_amount: newInvoice.discount_amount,
+                  markup_amount: newInvoice.markup_amount
+                });
+
                 const totals = calculateTotals(
                   newInvoice.line_items,
                   taxRate,
                   newInvoice.discount_amount,
                   newInvoice.markup_amount
                 );
+
+                console.log('  New totals:', totals);
+
                 setNewInvoice(prev => ({
                   ...prev,
                   tax_rate: taxRate,
@@ -238,9 +289,10 @@ const CreateInvoiceForm = ({
               }}
               className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
             >
+              <option value="0">No Tax - 0.00%</option>
               {taxRates.map((rate) => (
                 <option key={rate.id} value={rate.tax_rate}>
-                  {rate.state_code} - {(rate.tax_rate * 100).toFixed(2)}%
+                  {rate.city ? `${rate.city} Tax` : `${rate.state_code} Tax`} - {rate.tax_rate.toFixed(2)}%
                 </option>
               ))}
             </select>
@@ -261,30 +313,38 @@ const CreateInvoiceForm = ({
             </button>
           </div>
 
+          {/* Header Row */}
+          <div className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
+            <div className="col-span-3">Item Details</div>
+            <div className="col-span-1">Qty</div>
+            <div className="col-span-1">Unit</div>
+            <div className="col-span-2">Type</div>
+            <div className="col-span-2">Rate ($)</div>
+            <div className="col-span-2">Amount</div>
+            <div className="col-span-1">Actions</div>
+          </div>
+
           <div className="space-y-3">
             {newInvoice.line_items.map((item, index) => (
               <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-lg">
-                <div className="col-span-4">
+                <div className="col-span-3 space-y-2">
                   <input
                     type="text"
-                    placeholder="Item description"
+                    placeholder="Title"
+                    value={item.title || ''}
+                    onChange={(e) => updateLineItem(index, 'title', e.target.value)}
+                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm font-medium"
+                  />
+                  <textarea
+                    placeholder="Description (use dashes: - Item 1 - Item 2)"
                     value={item.description}
                     onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm resize-none"
+                    rows="2"
                   />
                 </div>
-                <div className="col-span-2">
-                  <select
-                    value={item.item_type}
-                    onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                  >
-                    <option value="material">Material</option>
-                    <option value="labor">Labor</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
+
+                <div className="col-span-1">
                   <input
                     type="number"
                     step="0.01"
@@ -311,6 +371,40 @@ const CreateInvoiceForm = ({
                     onFocus={(e) => e.target.select()}
                     className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
                   />
+                </div>
+
+                <div className="col-span-1">
+                  <input
+                    type="text"
+                    placeholder="unit"
+                    value={item.unit || ''}
+                    onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
+                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <div className="flex gap-1">
+                    <select
+                      value={item.item_type}
+                      onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
+                      className="flex-1 p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                    >
+                      <option value="">Select Type</option>
+                      {lineItemLabels.map((label) => (
+                        <option key={label.id} value={label.label}>
+                          {label.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateLabelModal(true)}
+                      className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                      title="Create new label"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <input
@@ -340,7 +434,7 @@ const CreateInvoiceForm = ({
                     className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <span className="text-sm font-medium">${item.total_price?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="col-span-1">
@@ -377,6 +471,13 @@ const CreateInvoiceForm = ({
                       discountAmount = numValue;
                     }
                   }
+                  console.log('💸 Discount Change Debug:', {
+                    old_discount: newInvoice.discount_amount,
+                    new_discount: discountAmount,
+                    tax_rate: newInvoice.tax_rate,
+                    markup_amount: newInvoice.markup_amount
+                  });
+
                   const totals = calculateTotals(
                     newInvoice.line_items,
                     newInvoice.tax_rate,
@@ -410,6 +511,13 @@ const CreateInvoiceForm = ({
                       markupAmount = numValue;
                     }
                   }
+                  console.log('💰 Markup Change Debug:', {
+                    old_markup: newInvoice.markup_amount,
+                    new_markup: markupAmount,
+                    tax_rate: newInvoice.tax_rate,
+                    discount_amount: newInvoice.discount_amount
+                  });
+
                   const totals = calculateTotals(
                     newInvoice.line_items,
                     newInvoice.tax_rate,
@@ -475,6 +583,52 @@ const CreateInvoiceForm = ({
           </button>
         </div>
       </div>
+
+      {/* Create Label Modal */}
+      {showCreateLabelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
+            <h3 className="text-lg font-bold mb-4">Create New Label</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Label Name *
+                </label>
+                <input
+                  type="text"
+                  value={newLabel.label}
+                  onChange={(e) => setNewLabel(prev => ({ ...prev, label: e.target.value }))}
+                  className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="Enter label name..."
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateLabelModal(false);
+                  setNewLabel({ label: '' });
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={creatingLabel}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createLabel}
+                disabled={creatingLabel || !newLabel.label.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creatingLabel ? 'Creating...' : 'Create Label'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

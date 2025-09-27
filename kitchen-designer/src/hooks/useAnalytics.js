@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const API_BASE = "https://api.gudinocustom.com";
+  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
 
 
@@ -196,7 +196,6 @@ export const useEventTracking = () => {
         })
       });
 
-      // Track with Microsoft Clarity
       
     } catch (error) {
       console.error('Event tracking error:', error);

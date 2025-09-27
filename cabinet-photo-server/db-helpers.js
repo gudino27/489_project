@@ -9,6 +9,11 @@ async function getDb() {
     filename: path.join(__dirname, 'database', 'cabinet_photos.db'),
     driver: sqlite3.Database
   });
+
+  // Enable WAL mode for better concurrency
+  await db.exec('PRAGMA journal_mode = WAL;');
+  await db.exec('PRAGMA busy_timeout = 10000;'); // 10 second timeout
+
   return db;
 }
 var fullpath = path.join(__dirname, 'database', 'cabinet_photos.db');
@@ -713,12 +718,26 @@ const userDb = {
       `, [token]);
 
       if (session) {
-        // Extend session
-        const newExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
-        await db.run(
-          'UPDATE user_sessions SET expires_at = ? WHERE token = ?',
-          [newExpiresAt.toISOString(), token]
-        );
+        // Only extend session if it expires in the next 10 minutes (less aggressive)
+        const expiresAt = new Date(session.expires_at);
+        const tenMinutesFromNow = new Date(Date.now() + 10 * 60 * 1000);
+
+        if (expiresAt < tenMinutesFromNow) {
+          try {
+            const newExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+            await db.run(
+              'UPDATE user_sessions SET expires_at = ? WHERE token = ?',
+              [newExpiresAt.toISOString(), token]
+            );
+          } catch (updateError) {
+            // If session update fails due to locking, log but don't fail validation
+            if (updateError.code === 'SQLITE_BUSY') {
+              console.warn('Session extension skipped due to database lock');
+            } else {
+              throw updateError;
+            }
+          }
+        }
       }
 
       await db.close();
@@ -1505,27 +1524,15 @@ const invoiceDb = {
   // Line item label operations (admin configurable)
   async getLineItemLabels() {
     const db = await getDb();
-    
-    // Check if new columns exist, if not add them
-    try {
-      await db.exec(`
-        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
-        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
-      `);
-    } catch (error) {
-      // Columns might already exist, ignore error
-    }
-    
+
     const labels = await db.all(`
-      SELECT 
+      SELECT
         id,
         label_name as label,
-        COALESCE(item_type, 'material') as item_type,
-        COALESCE(description, '') as description,
         default_unit_price,
         created_at,
         updated_at
-      FROM line_item_labels 
+      FROM line_item_labels
       ORDER BY label_name
     `);
     await db.close();
@@ -1534,23 +1541,11 @@ const invoiceDb = {
 
   async createLineItemLabel(labelData) {
     const db = await getDb();
-    
-    // Ensure new columns exist
-    try {
-      await db.exec(`
-        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
-        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
-      `);
-    } catch (error) {
-      // Columns might already exist, ignore error
-    }
-    
+
     const result = await db.run(
-      'INSERT INTO line_item_labels (label_name, item_type, description, default_unit_price) VALUES (?, ?, ?, ?)',
+      'INSERT INTO line_item_labels (label_name, default_unit_price) VALUES (?, ?)',
       [
-        labelData.label || labelData.label_name, 
-        labelData.item_type || 'material', 
-        labelData.description || '', 
+        labelData.label || labelData.label_name,
         labelData.default_unit_price || 0
       ]
     );
@@ -1560,23 +1555,11 @@ const invoiceDb = {
 
   async updateLineItemLabel(id, labelData) {
     const db = await getDb();
-    
-    // Ensure new columns exist
-    try {
-      await db.exec(`
-        ALTER TABLE line_item_labels ADD COLUMN item_type TEXT DEFAULT 'material';
-        ALTER TABLE line_item_labels ADD COLUMN description TEXT DEFAULT '';
-      `);
-    } catch (error) {
-      // Columns might already exist, ignore error
-    }
-    
+
     await db.run(
-      'UPDATE line_item_labels SET label_name = ?, item_type = ?, description = ?, default_unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE line_item_labels SET label_name = ?, default_unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [
-        labelData.label || labelData.label_name, 
-        labelData.item_type || 'material',
-        labelData.description || '',
+        labelData.label || labelData.label_name,
         labelData.default_unit_price || 0,
         id
       ]
@@ -1590,12 +1573,128 @@ const invoiceDb = {
     await db.close();
   },
 
+  async migrateLineItemLabelsTable() {
+    const db = await getDb();
+    try {
+      // Check if we need to migrate (if description or item_type columns exist)
+      const tableInfo = await db.all("PRAGMA table_info(line_item_labels)");
+      const hasDescription = tableInfo.some(col => col.name === 'description');
+      const hasItemType = tableInfo.some(col => col.name === 'item_type');
+
+      if (hasDescription || hasItemType) {
+        console.log('Migrating line_item_labels table to remove description and item_type columns...');
+
+        // Create new table with only the columns we want
+        await db.exec(`
+          CREATE TABLE line_item_labels_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label_name TEXT NOT NULL UNIQUE,
+            default_unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Copy data from old table to new table
+        await db.exec(`
+          INSERT INTO line_item_labels_new (id, label_name, default_unit_price, created_at, updated_at)
+          SELECT id, label_name, default_unit_price, created_at, updated_at
+          FROM line_item_labels
+        `);
+
+        // Drop old table and rename new table
+        await db.exec(`DROP TABLE line_item_labels`);
+        await db.exec(`ALTER TABLE line_item_labels_new RENAME TO line_item_labels`);
+
+        console.log('Migration completed: removed description and item_type columns from line_item_labels');
+      }
+    } catch (error) {
+      console.error('Migration failed:', error);
+      throw error;
+    } finally {
+      await db.close();
+    }
+  },
+
+  async fixTaxRatePrecision() {
+    const db = await getDb();
+    try {
+      console.log('Fixing tax rate floating point precision issues...');
+
+      // Get all tax rates
+      const taxRates = await db.all('SELECT id, tax_rate, city, state_code FROM tax_rates');
+
+      let fixedCount = 0;
+      for (const rate of taxRates) {
+        const originalRate = rate.tax_rate;
+        const roundedRate = Math.round(originalRate * 10000) / 10000;
+
+        // Only update if there's a difference (precision issue)
+        if (Math.abs(originalRate - roundedRate) > 0.000001) {
+          await db.run('UPDATE tax_rates SET tax_rate = ? WHERE id = ?', [roundedRate, rate.id]);
+          console.log(`Fixed tax rate ID ${rate.id} (${rate.city || rate.state_code}): ${originalRate} → ${roundedRate}`);
+          fixedCount++;
+        }
+      }
+
+      // Special fix for known problematic rate (SUNNYSIDE should be exactly 0.097)
+      const sunnysideRate = taxRates.find(r => r.city && r.city.toLowerCase() === 'sunnyside');
+      if (sunnysideRate && Math.abs(sunnysideRate.tax_rate - 0.097) < 0.001) {
+        await db.run('UPDATE tax_rates SET tax_rate = ? WHERE id = ?', [0.097, sunnysideRate.id]);
+        console.log(`Special fix for SUNNYSIDE: ${sunnysideRate.tax_rate} → 0.097`);
+        fixedCount++;
+      }
+
+      if (fixedCount > 0) {
+        console.log(`Fixed ${fixedCount} tax rates with precision issues`);
+      } else {
+        console.log('No tax rate precision issues found');
+      }
+    } catch (error) {
+      console.error('Tax rate precision fix failed:', error);
+      throw error;
+    } finally {
+      await db.close();
+    }
+  },
+
+  async convertTaxRatesToPercentages() {
+    const db = await getDb();
+    try {
+      console.log('Converting tax rates from decimals to percentages...');
+
+      // Get all tax rates that look like decimals (less than 1)
+      const taxRates = await db.all('SELECT id, tax_rate, city, state_code FROM tax_rates WHERE tax_rate < 1');
+
+      let convertedCount = 0;
+      for (const rate of taxRates) {
+        const originalRate = rate.tax_rate;
+        const percentageRate = Math.round(originalRate * 100 * 100) / 100; // Convert to percentage and round to 2 decimals
+
+        await db.run('UPDATE tax_rates SET tax_rate = ? WHERE id = ?', [percentageRate, rate.id]);
+        console.log(`Converted tax rate ID ${rate.id} (${rate.city || rate.state_code}): ${originalRate} → ${percentageRate}%`);
+        convertedCount++;
+      }
+
+      if (convertedCount > 0) {
+        console.log(`Converted ${convertedCount} tax rates from decimals to percentages`);
+      } else {
+        console.log('No decimal tax rates found to convert');
+      }
+    } catch (error) {
+      console.error('Tax rate conversion failed:', error);
+      throw error;
+    } finally {
+      await db.close();
+    }
+  },
+
   // Invoice operations
   async getAllInvoices() {
     const db = await getDb();
     const invoices = await db.all(`
-      SELECT 
-        i.*, 
+      SELECT
+        i.*,
         c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email,
         COALESCE(p.total_paid, 0) as total_paid
       FROM invoices i
@@ -1607,13 +1706,16 @@ const invoiceDb = {
       ) p ON i.id = p.invoice_id
       ORDER BY i.created_at DESC
     `);
-    
-    // Calculate payment status for each invoice
+
+    // Calculate payment status for each invoice and ensure balance_due is accurate
     const invoicesWithStatus = invoices.map(invoice => {
       const totalPaid = parseFloat(invoice.total_paid || 0);
       const totalAmount = parseFloat(invoice.total_amount || 0);
-      const balanceDue = totalAmount - totalPaid;
-      
+      // Use database balance_due if available, otherwise calculate it
+      const balanceDue = invoice.balance_due !== null && invoice.balance_due !== undefined
+        ? parseFloat(invoice.balance_due)
+        : Math.max(0, totalAmount - totalPaid);
+
       let paymentStatus;
       if (totalPaid >= totalAmount) {
         paymentStatus = 'paid';
@@ -1622,11 +1724,11 @@ const invoiceDb = {
       } else {
         paymentStatus = 'unpaid';
       }
-      
+
       // Update status if needed based on payment status and due date
       const dueDate = new Date(invoice.due_date);
       const today = new Date();
-      
+
       if (paymentStatus !== 'paid' && dueDate < today) {
         invoice.status = 'overdue';
       } else if (paymentStatus === 'paid') {
@@ -1634,7 +1736,7 @@ const invoiceDb = {
       } else if (paymentStatus === 'partial' || paymentStatus === 'unpaid') {
         invoice.status = invoice.status || 'pending';
       }
-      
+
       return {
         ...invoice,
         payment_status: paymentStatus,
@@ -1649,7 +1751,8 @@ const invoiceDb = {
   async getInvoiceById(id) {
     const db = await getDb();
     const invoice = await db.get(`
-      SELECT i.*, c.* 
+      SELECT i.*,
+             c.company_name, c.first_name, c.last_name, c.email, c.phone, c.address, c.is_business, c.tax_exempt_number
       FROM invoices i
       JOIN clients c ON i.client_id = c.id
       WHERE i.id = ?
@@ -1703,9 +1806,9 @@ const invoiceDb = {
           const item = invoiceData.line_items[i];
           await db.run(`
             INSERT INTO invoice_line_items (
-              invoice_id, description, quantity, unit_price, total_price, item_type, line_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [invoiceId, item.description, item.quantity, item.unit_price, 
+              invoice_id, title, description, quantity, unit_price, total_price, item_type, line_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [invoiceId, item.title || null, item.description, item.quantity, item.unit_price,
              item.total_price, item.item_type || 'material', i]
           );
         }
@@ -1874,17 +1977,19 @@ const invoiceDb = {
         // Insert new line items
         for (let i = 0; i < updateData.line_items.length; i++) {
           const item = updateData.line_items[i];
+          const totalPrice = (item.quantity || 0) * (item.unit_price || 0);
           await db.run(`
             INSERT INTO invoice_line_items (
-              invoice_id, label_id, description, quantity, unit_price, notes, line_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              invoice_id, title, description, quantity, unit_price, total_price, item_type, line_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             invoiceId,
-            item.label_id || null,
+            item.title || null,
             item.description,
             item.quantity,
             item.unit_price,
-            item.notes || '',
+            totalPrice,
+            item.item_type || 'material',
             i + 1
           ]);
         }
@@ -1911,8 +2016,8 @@ const invoiceDb = {
 
       // Update calculated totals
       await db.run(`
-        UPDATE invoices 
-        SET subtotal_amount = ?, tax_amount = ?, total_amount = ?
+        UPDATE invoices
+        SET subtotal = ?, tax_amount = ?, total_amount = ?
         WHERE id = ?
       `, [subtotal, taxAmount, totalAmount, invoiceId]);
 
@@ -2078,9 +2183,9 @@ const invoiceDb = {
   async findTaxRate(stateCode, city) {
     const db = await getDb();
     const taxRate = await db.get(`
-      SELECT * FROM tax_rates 
-      WHERE state_code = ? AND 
-            COALESCE(city, '') = ? AND 
+      SELECT * FROM tax_rates
+      WHERE state_code = ? AND
+            COALESCE(city, '') = ? AND
             is_active = 1
     `, [stateCode.toUpperCase(), city || '']);
     await db.close();
@@ -2094,16 +2199,29 @@ const invoiceDb = {
     return taxRate;
   },
 
+  async getTaxRateByRate(rate) {
+    const db = await getDb();
+    // Find the closest matching tax rate (in case of slight floating point differences)
+    const taxRate = await db.get(`
+      SELECT * FROM tax_rates
+      WHERE ABS(tax_rate - ?) < 0.0001
+      AND is_active = 1
+      ORDER BY ABS(tax_rate - ?)
+      LIMIT 1
+    `, [rate, rate]);
+    await db.close();
+    return taxRate;
+  },
+
   async createTaxRate(taxRateData) {
     const db = await getDb();
     const result = await db.run(`
-      INSERT INTO tax_rates (state_code, city, tax_rate, description, updated_by) 
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO tax_rates (state_code, city, tax_rate, updated_by)
+      VALUES (?, ?, ?, ?)
     `, [
       taxRateData.state_code,
       taxRateData.city,
       taxRateData.tax_rate,
-      taxRateData.description,
       taxRateData.updated_by
     ]);
     await db.close();
@@ -2250,16 +2368,17 @@ const invoiceDb = {
 
   async updateInvoiceStatus(invoiceId) {
     const db = await getDb();
-    
+
     const invoice = await db.get('SELECT total_amount, status FROM invoices WHERE id = ?', [invoiceId]);
     const paymentsResult = await db.get(
       'SELECT SUM(payment_amount) as total_paid FROM invoice_payments WHERE invoice_id = ?',
       [invoiceId]
     );
-    
+
     const totalPaid = paymentsResult.total_paid || 0;
+    const balanceDue = Math.max(0, (invoice.total_amount || 0) - totalPaid);
     let status = invoice.status || 'draft';
-    
+
     if (totalPaid >= invoice.total_amount) {
       status = 'paid';
     } else if (totalPaid > 0) {
@@ -2268,8 +2387,8 @@ const invoiceDb = {
       // If invoice has been sent (not draft) and no payments, it's unpaid
       status = 'unpaid';
     }
-    
-    await db.run('UPDATE invoices SET status = ? WHERE id = ?', [status, invoiceId]);
+
+    await db.run('UPDATE invoices SET status = ?, balance_due = ? WHERE id = ?', [status, balanceDue, invoiceId]);
     await db.close();
   },
 
@@ -2393,7 +2512,7 @@ const invoiceDb = {
   // Tax rate operations
   async getTaxRates() {
     const db = await getDb();
-    const rates = await db.all('SELECT * FROM tax_rates WHERE is_active = 1 ORDER BY state_code, county, city');
+    const rates = await db.all('SELECT * FROM tax_rates WHERE is_active = 1 ORDER BY state_code, city');
     await db.close();
     return rates;
   },

@@ -16,17 +16,20 @@ const ClientModal = ({
   initAutocomplete,
   loading,
   onClose,
-  onSave
+  onSave,
+  isEditing = false
 }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       {/* Mobile: Full screen modal, Desktop: Fixed size modal */}
-      <div className="bg-white w-full h-full md:rounded-lg md:w-full md:max-w-2xl md:mx-4 md:max-h-[95vh] md:h-auto overflow-hidden">
+      <div className="bg-white w-full h-full md:rounded-lg md:w-full md:max-w-2xl md:mx-4 md:max-h-[90vh] md:h-auto overflow-hidden flex flex-col">
         {/* Header - sticky on mobile */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 md:px-6 md:py-6 flex justify-between items-center z-10">
-          <h3 className="text-lg md:text-xl font-semibold text-gray-800">Add New Client</h3>
+          <h3 className="text-lg md:text-xl font-semibold text-gray-800">
+            {isEditing ? 'Edit Client' : 'Add New Client'}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -36,7 +39,7 @@ const ClientModal = ({
         </div>
 
         {/* Content - scrollable */}
-        <div className="px-4 py-4 md:px-6 md:py-0 overflow-y-auto" style={{height: 'calc(100vh - 140px)'}}>
+        <div className="flex-1 px-4 py-4 md:px-6 md:py-0 overflow-y-auto">
           {/* Error Alert */}
           {clientError && (
             <div className="mb-4 md:mb-6 bg-red-50 border border-red-200 rounded-lg p-3 md:p-4">
@@ -197,7 +200,10 @@ const ClientModal = ({
 
               {/* Phone Number - Mobile optimized */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Phone Number
+                  <span className="text-xs text-gray-500 ml-1">(email or phone required)</span>
+                </label>
                 <div className="space-y-3 md:space-y-0 md:flex md:items-center md:space-x-2">
                   <div className="flex items-center justify-between md:justify-start md:space-x-2">
                     <button
@@ -235,7 +241,10 @@ const ClientModal = ({
 
               {/* Email - Mobile optimized */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                  <span className="text-xs text-gray-500 ml-1">(email or phone required)</span>
+                </label>
                 <div className="space-y-3 md:space-y-0 md:flex md:items-center md:space-x-2">
                   <div className="flex items-center justify-between md:justify-start md:space-x-2">
                     <button
@@ -364,8 +373,8 @@ const ClientModal = ({
           )}
         </div>
 
-        {/* Footer - sticky on mobile */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-4 md:px-6">
+        {/* Footer - sticky */}
+        <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4 md:px-6">
           <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3 md:justify-end">
             <button
               type="button"
@@ -376,17 +385,20 @@ const ClientModal = ({
               Cancel
             </button>
             <button
-              onClick={onSave}
+              onClick={(e) => {
+                e.preventDefault();
+                onSave();
+              }}
               disabled={loading}
               className="w-full md:w-auto px-6 py-3 md:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center text-base md:text-sm"
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Adding...
+                  {isEditing ? 'Updating...' : 'Adding...'}
                 </>
               ) : (
-                'Add Client'
+                isEditing ? 'Update Client' : 'Add Client'
               )}
             </button>
           </div>

@@ -19,9 +19,7 @@ const About = () => {
     const [error, setError] = useState(null);
 
     // API base URL
-    const API_BASE = window.location.hostname === "localhost"
-        ? "http://localhost:3001"
-        : "https://api.gudinocustom.com";
+     const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
     const icons = {
         user: (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
