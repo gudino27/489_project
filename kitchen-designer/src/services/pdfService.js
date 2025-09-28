@@ -3,7 +3,7 @@ import { elementTypes } from '../constants/elementTypes';
 
 //  constants 
 const COMPANY_NAME = process.env.REACT_APP_COMPANY_NAME || 'Gudino Custom';
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://api.gudinocustom.com';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 const originalWalls = [1, 2, 3, 4];
 
 export const generatePDF = async ({

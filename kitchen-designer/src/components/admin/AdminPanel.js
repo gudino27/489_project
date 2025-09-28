@@ -16,6 +16,7 @@ import {
   Shield,
   BarChart3,
   MessageSquare,
+  MessageCircle,
   Receipt
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -34,8 +35,10 @@ import UserManagement from './UserManagement';
 import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
+import SmsRoutingManager from './SmsRoutingManager';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
+import InvoiceIcon from './invoices/components/InvoiceIcon';
 // ----------------------------------------------------
 // Admin Panel Component
 // This component handles the admin panel functionality
@@ -217,7 +220,7 @@ const AdminPanel = () => {
   const getAvailableTabs = () => {
     const baseTabs = ['prices', 'photos', 'employees', 'designs', 'invoices', 'testimonials'];
     if (user?.role === 'super_admin') {
-      return [...baseTabs, 'users', 'analytics'];
+      return [...baseTabs, 'users', 'analytics', 'sms-routing'];
     }
     return baseTabs;
   };
@@ -391,10 +394,11 @@ const AdminPanel = () => {
                   {tab === 'photos' && <Image size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'employees' && <IdCardLanyard size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'designs' && <FileText size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'invoices' && <Receipt size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'invoices' && <InvoiceIcon size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'testimonials' && <MessageSquare size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'users' && <Users size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'analytics' && <BarChart3 size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'sms-routing' && <MessageCircle size={16} className="md:w-[18px] md:h-[18px]" />}
                   <span className="hidden sm:inline">{t(`admin.tabs.${tab}`)}</span>
                 </div>
               </button>
@@ -450,6 +454,10 @@ const AdminPanel = () => {
         */}
         {activeTab === 'analytics' && user?.role === 'super_admin' && (
           <Analytics token={token} API_BASE={API_BASE} />
+        )}
+
+        {activeTab === 'sms-routing' && user?.role === 'super_admin' && (
+          <SmsRoutingManager token={token} API_BASE={API_BASE} />
         )}
 
       </div>

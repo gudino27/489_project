@@ -1148,7 +1148,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                   />
                   <div>
                     <div className="font-medium">SMS Only</div>
-                    <div className="text-sm text-gray-500">Send to: {notificationSettings.adminPhone}</div>
+                    <div className="text-sm text-gray-500">Send to: Configured SMS recipients</div>
                   </div>
                 </label>
                 
@@ -1163,7 +1163,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                   />
                   <div>
                     <div className="font-medium">Both Email & SMS</div>
-                    <div className="text-sm text-gray-500">Maximum notifications</div>
+                    <div className="text-sm text-gray-500">Email + configured SMS recipients</div>
                   </div>
                 </label>
               </div>

@@ -53,7 +53,7 @@ const KitchenDesigner = () => {
   // Business Configuration
   // In production, these would come from environment variables or database
   // -----------------------------
-  const COMPANY_NAME = 'Gudino Custom';
+  const COMPANY_NAME = 'Gudino Custom woodworking';
   // -----------------------------
   // Application State Management
   // Controls the current step and active room being designed

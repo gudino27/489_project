@@ -114,6 +114,127 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   }
 }
 
+// SMS routing helper functions
+async function getSmsRoutingRecipients(messageType) {
+  const db = await getDb();
+  try {
+    const recipients = await db.all(
+      `SELECT phone_number, name FROM sms_routing_recipients
+       WHERE message_type = ? AND is_active = 1
+       ORDER BY priority_order ASC`,
+      [messageType]
+    );
+    return recipients;
+  } catch (error) {
+    console.error('Error getting SMS routing recipients:', error);
+    return [];
+  }
+}
+
+async function getSmsRoutingSettings(messageType) {
+  const db = await getDb();
+  try {
+    const settings = await db.get(
+      'SELECT * FROM sms_routing_settings WHERE message_type = ?',
+      [messageType]
+    );
+    return settings || { is_enabled: true, routing_mode: 'single' };
+  } catch (error) {
+    console.error('Error getting SMS routing settings:', error);
+    return { is_enabled: true, routing_mode: 'single' };
+  }
+}
+
+async function sendSmsWithRouting(messageType, messageBody, options = {}) {
+  if (!twilioClient) {
+    console.warn('⚠️  Twilio client not available for SMS routing');
+    return { success: false, error: 'SMS service not configured' };
+  }
+
+  try {
+    const settings = await getSmsRoutingSettings(messageType);
+
+    if (!settings.is_enabled) {
+      console.log(`📱 SMS routing disabled for ${messageType}`);
+      return { success: true, message: 'SMS routing disabled' };
+    }
+
+    const recipients = await getSmsRoutingRecipients(messageType);
+
+    if (recipients.length === 0) {
+      console.warn(`⚠️  No SMS recipients configured for ${messageType}`);
+      return { success: false, error: 'No recipients configured' };
+    }
+
+    const results = [];
+    const targetRecipients = settings.routing_mode === 'single'
+      ? [recipients[0]]
+      : recipients;
+
+    for (const recipient of targetRecipients) {
+      try {
+        const smsOptions = {
+          body: messageBody,
+          to: recipient.phone_number,
+        };
+
+        if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+          smsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+        } else if (process.env.TWILIO_PHONE_NUMBER) {
+          smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+        }
+
+        const result = await twilioClient.messages.create(smsOptions);
+
+        // Log to SMS routing history
+        const db = await getDb();
+        await db.run(
+          `INSERT INTO sms_routing_history
+           (message_type, recipient_phone, recipient_name, message_content, twilio_sid, delivery_status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [messageType, recipient.phone_number, recipient.name, messageBody, result.sid, 'sent']
+        );
+
+        results.push({
+          success: true,
+          recipient: recipient.name,
+          phone: recipient.phone_number,
+          sid: result.sid
+        });
+
+        console.log(`📱 SMS sent to ${recipient.name} (${recipient.phone_number}) - SID: ${result.sid}`);
+      } catch (error) {
+        const db = await getDb();
+        await db.run(
+          `INSERT INTO sms_routing_history
+           (message_type, recipient_phone, recipient_name, message_content, delivery_status, error_message)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [messageType, recipient.phone_number, recipient.name, messageBody, 'failed', error.message]
+        );
+
+        results.push({
+          success: false,
+          recipient: recipient.name,
+          phone: recipient.phone_number,
+          error: error.message
+        });
+
+        console.error(`⚠️  SMS failed to ${recipient.name}: ${error.message}`);
+      }
+    }
+
+    return {
+      success: results.some(r => r.success),
+      results,
+      totalSent: results.filter(r => r.success).length,
+      totalFailed: results.filter(r => !r.success).length
+    };
+  } catch (error) {
+    console.error('SMS routing error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Middleware for authentication
 const authenticateUser = async (req, res, next) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
@@ -1705,57 +1826,9 @@ app.post("/api/designs", uploadMemory.single("pdf"), async (req, res) => {
       }
     }
 
-    // Check for existing client invoices and payment status
-    let clientPaymentStatus = "";
-    try {
-      const clientEmail = designData.client_email;
-      const clientPhone = designData.client_phone;
 
-      if (clientEmail || clientPhone) {
-        const existingClient = await invoiceDb.findClientByEmailOrPhone(
-          clientEmail,
-          clientPhone
-        );
-        if (existingClient) {
-          const clientInvoices = await invoiceDb.getInvoicesByClientId(
-            existingClient.id
-          );
-          if (clientInvoices.length > 0) {
-            const unpaidInvoices = clientInvoices.filter((inv) => {
-              const totalPaid = inv.total_paid || 0;
-              const balanceDue = (inv.total_amount || 0) - totalPaid;
-              return balanceDue > 0.01; // Consider small amounts as paid due to rounding
-            });
-
-            if (unpaidInvoices.length > 0) {
-              const totalUnpaid = unpaidInvoices.reduce(
-                (sum, inv) =>
-                  sum + ((inv.total_amount || 0) - (inv.total_paid || 0)),
-                0
-              );
-              clientPaymentStatus = `\n⚠️  OUTSTANDING BALANCE: $${totalUnpaid.toFixed(
-                2
-              )} (${unpaidInvoices.length} unpaid invoice${
-                unpaidInvoices.length > 1 ? "s" : ""
-              })`;
-            } else {
-              clientPaymentStatus = "\n✅ All invoices paid";
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error checking client payment status:", error);
-      // Continue without payment status if there's an error
-    }
-
-    // SMS notification for design submissions
-    if (
-      (notificationType === "sms" || notificationType === "both") &&
-      twilioClient &&
-      (process.env.TWILIO_MESSAGING_SERVICE_SID ||
-        process.env.TWILIO_PHONE_NUMBER)
-    ) {
+    // SMS notification for design submissions using routing system
+    if (notificationType === "sms" || notificationType === "both") {
       try {
         const smsBody = `New cabinet design from ${
           designData.client_name
@@ -1763,26 +1836,17 @@ app.post("/api/designs", uploadMemory.single("pdf"), async (req, res) => {
           designData.contact_preference === "email"
             ? designData.client_email
             : designData.client_phone
-        }${clientPaymentStatus}`;
+        }`;
 
-        const designSmsOptions = {
-          body: smsBody,
-          to: process.env.ADMIN_PHONE || "+15097903516", // Default to your number if not set
-        };
+        const smsResult = await sendSmsWithRouting('design_submission', smsBody);
 
-        // Use messaging service if available, otherwise fallback to phone number
-        if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
-          designSmsOptions.messagingServiceSid =
-            process.env.TWILIO_MESSAGING_SERVICE_SID;
-        } else if (process.env.TWILIO_PHONE_NUMBER) {
-          designSmsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+        if (smsResult.success) {
+          console.log(`📱 Design SMS notification sent to ${smsResult.totalSent} recipient(s)`);
+        } else {
+          console.error("⚠️  Design SMS routing failed:", smsResult.error);
         }
-
-        await twilioClient.messages.create(designSmsOptions);
-
-        console.log("📱 Design SMS notification sent");
       } catch (smsError) {
-        console.error("⚠️  SMS failed:", smsError.message);
+        console.error("⚠️  SMS routing error:", smsError.message);
       }
     }
 
@@ -2609,6 +2673,20 @@ app.post("/api/admin/clients", authenticateUser, async (req, res) => {
   }
 });
 
+// Admin endpoint - Get single client by ID
+app.get("/api/admin/clients/:id", authenticateUser, async (req, res) => {
+  try {
+    const client = await invoiceDb.getClientById(req.params.id);
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+    res.json(client);
+  } catch (error) {
+    console.error("Error getting client:", error);
+    res.status(500).json({ error: "Failed to get client" });
+  }
+});
+
 // Admin endpoint - Update client
 app.put("/api/admin/clients/:id", authenticateUser, async (req, res) => {
   try {
@@ -2815,7 +2893,10 @@ app.delete("/api/admin/payments/:id", authenticateUser, async (req, res) => {
 
 // Admin endpoint - Send invoice via email
 // Helper function to generate invoice PDF buffer
-async function generateInvoicePdf(invoiceId) {
+async function generateInvoicePdf(invoiceId, language = "english") {
+  // Get translations for the specified language
+  const t = getInvoiceTranslations(language);
+
   // Get invoice details with client info and line items
   const invoice = await invoiceDb.getInvoiceById(invoiceId);
   if (!invoice) {
@@ -2827,387 +2908,288 @@ async function generateInvoicePdf(invoiceId) {
     throw new Error("Client not found");
   }
 
+  // Get tax rate information to display city name
+  const taxRateInfo = await invoiceDb.getTaxRateByRate(invoice.tax_rate);
+
   const lineItems = await invoiceDb.getInvoiceLineItems(invoiceId);
 
   const clientName = client.is_business
     ? client.company_name
     : `${client.first_name} ${client.last_name}`;
 
-  const clientAddress = [
-    client.address_line_1,
-    client.address_line_2,
-    client.city,
-    client.state,
-    client.zip_code,
-  ]
-    .filter(Boolean)
-    .join(", ");
+    const clientAddress = client.address || "";
+    const payments = await invoiceDb.getInvoicePayments(invoiceId);
+    const totalPaid = payments.reduce(
+      (sum, payment) => sum + parseFloat(payment.payment_amount),
+      0
+    );
+    const balanceDue = invoice.total_amount - totalPaid;
 
-  // Load logo as base64
-  const fs = require("fs");
-  const path = require("path");
-  let logoBase64 = "";
+  // Create Google Maps link for company address
+  const companyAddress = "70 Ray Rd, Sunnyside, WA 98944";
+  const googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(companyAddress)}`;
+      // Read logo file and convert to base64
+    const fs = require("fs");
+    const path = require("path");
+    let logoBase64 = "";
+    let logoError = "";
+    try {
+      const logoPath = path.join(__dirname, "uploads", "logo.jpeg");
+      console.log("Looking for logo at:", logoPath);
+      console.log("Logo file exists:", fs.existsSync(logoPath));
 
-  try {
-    // Try multiple possible logo paths
-    const possibleLogoPaths = [
-      path.join(__dirname, "uploads", "logo.png"),
-      path.join(__dirname, "..", "kitchen-designer", "public", "O.png"),
-      path.join(__dirname, "..", "kitchen-designer", "public", "logo.png"),
-    ];
-
-    for (const logoPath of possibleLogoPaths) {
-      try {
+      if (fs.existsSync(logoPath)) {
         const logoBuffer = fs.readFileSync(logoPath);
         logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-        console.log(`Logo loaded from: ${logoPath}`);
-        break;
-      } catch (err) {
-        // Continue to next path
+        console.log(
+          "Logo loaded successfully, size:",
+          logoBuffer.length,
+          "bytes"
+        );
+      } else {
+        logoError = "Logo file not found at path";
       }
+    } catch (error) {
+      console.log("Logo file error:", error.message);
+      logoError = error.message;
     }
-  } catch (error) {
-    console.log("Logo not found, proceeding without logo");
-  }
 
-  // Generate HTML content (reusing the existing template)
+  // Generate HTML content using professional template with language support
   const htmlContent = `
     <!DOCTYPE html>
-    <html>
+    <html lang="${language === 'spanish' ? 'es' : 'en'}">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${clientName} - ${invoice.invoice_number.split("-").pop()}</title>
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          background: white;
-        }
-        
-        .invoice-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: start;
-          margin-bottom: 40px;
-          border-bottom: 3px solid #1e3a8a;
-          padding-bottom: 20px;
-        }
-        
-        .logo-section {
-          display: flex;
-          align-items: center;
-          margin-bottom: 10px;
-        }
-        
-        .company-logo {
-          height: 60px;
-          width: auto;
-          margin-right: 15px;
-          border-radius: 8px;
-        }
-        
-        .company-info h1 {
-          color: #1e3a8a;
-          font-size: 32px;
-          font-weight: bold;
-          margin: 0;
-        }
-        
-        .company-info p {
-          margin: 2px 0;
-          color: #666;
-        }
-        
-        .invoice-title {
-          text-align: right;
-        }
-        
-        .invoice-title h2 {
-          color: #1e3a8a;
-          font-size: 36px;
-          margin: 0;
-          font-weight: 300;
-        }
-        
-        .invoice-meta {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 40px;
-        }
-        
-        .client-info, .invoice-details {
-          width: 48%;
-        }
-        
-        .client-info h3, .invoice-details h3 {
-          color: #1e3a8a;
-          font-size: 16px;
-          font-weight: 600;
-          margin-bottom: 15px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        
-        .client-info p, .invoice-details p {
-          margin: 8px 0;
-          color: #444;
-        }
-        
-        .items-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 30px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .items-table th {
-          background: #1e3a8a;
-          color: white;
-          padding: 15px 10px;
-          text-align: left;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          font-size: 12px;
-        }
-        
-        .items-table td {
-          padding: 15px 10px;
-          border-bottom: 1px solid #e2e8f0;
-          vertical-align: top;
-        }
-        
-        .items-table tbody tr:nth-child(even) {
-          background: #f8fafc;
-        }
-        
-        .items-table tbody tr:hover {
-          background: #e2e8f0;
-        }
-        
-        .item-description {
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 5px;
-        }
-        
-        .item-details {
-          font-size: 12px;
-          color: #666;
-        }
-        
-        .text-right {
-          text-align: right;
-        }
-        
-        .text-center {
-          text-align: center;
-        }
-        
-        .totals-section {
-          float: right;
-          width: 300px;
-          margin-top: 20px;
-        }
-        
-        .totals-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        
-        .totals-table td {
-          padding: 10px 15px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        .totals-table .label {
-          font-weight: 500;
-          color: #374151;
-        }
-        
-        .totals-table .amount {
-          text-align: right;
-          color: #666;
-        }
-        
-        .total-row {
-          background: #1e3a8a;
-          color: white;
-          font-weight: bold;
-          font-size: 16px;
-        }
-        
-        .notes-section {
-          clear: both;
-          margin-top: 60px;
-          padding-top: 30px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        .notes-section h4 {
-          color: #1e3a8a;
-          margin-bottom: 15px;
-        }
-        
-        .footer {
-          margin-top: 50px;
-          text-align: center;
-          color: #666;
-          font-size: 12px;
-          border-top: 1px solid #e2e8f0;
-          padding-top: 20px;
-        }
-        
-        .status-badge {
-          display: inline-block;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        
-        @page {
-          margin: 0.5in;
-          size: A4;
-        }
-      </style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: rgba(110, 110, 110, 0.1); }
+          .invoice-container { max-width: 800px; margin: 0 auto; padding: 40px; background: rgba(110, 110, 110, 0.1); }
+          .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid rgba(110, 110, 110, 1); padding-bottom: 30px; }
+          .company-info { flex: 1; display: flex; align-items: flex-start; gap: 20px; }
+          .company-logo { width: 300px;  object-fit: contain; flex-shrink: 0; }
+          .company-text { flex: 1; }
+          .company-name { font-size: 28px; font-weight: bold; color: rgba(0, 0, 0, 1); margin-bottom: 10px; }
+          .company-details { font-size: 14px; color: rgba(0, 0, 0, 1); line-height: 1.5; }
+          .invoice-title { font-size: 48px; font-weight: bold; color: rgba(0, 0, 0, 1); text-align: right; margin-bottom: 20px; }
+          .invoice-meta { text-align: right; font-size: 14px; color: rgba(0, 0, 0, 1); }
+          .billing-info { display: flex; justify-content: space-between; margin-bottom: 40px; gap: 40px; }
+          .bill-to, .invoice-details { flex: 1; }
+          .section-title { font-size: 18px; font-weight: bold; color: rgba(0, 0, 0, 1); margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px; }
+          .bill-to-content, .invoice-details-content { font-size: 14px; line-height: 1.6; color: rgba(0, 0, 0, 1); }
+          .line-items { margin-bottom: 20px; }
+          .line-items table { width: 100%; border-collapse: collapse; font-size: 14px; }
+          .line-items th { background-color: rgba(110, 110, 110, 1); color: #000000ff; font-weight: bold; padding: 12px; border: 0.25px solid #000000ff; text-align: left; }
+          .line-items td { background-color: rgba(110,110,110,0.15);padding: 12px; border: 0.5px solid #000000ff; vertical-align: top; }
+          .line-items .text-center { text-align: center; }
+          .line-items .text-right { text-align: right; }
+          .item-title { font-weight: 600; margin-bottom: 5px; color: #1f2937; }
+          .item-description { color: #4b5563; }
+          .totals { margin-left: auto; width: 300px; margin-bottom: 40px; }
+          .totals table { width: 100%; font-size: 14px; border-collapse: collapse; }
+          .totals td {
+            padding: 12px 15px;
+            background-color: rgba(110, 110, 110, 0.15);
+            border: 1px solid #000000ff;
+            border-collapse: collapse;
+          }
+          .totals .total-row {
+            font-weight: bold;
+            font-size: 16px;
+            background-color: rgba(110, 110, 110, 0.75) !important;
+            border-top: 2px solid #000000ff;
+            border-bottom: 2px solid #000000ff;
+          }
+          .totals .text-right { text-align: right; }
+          .notes { margin-bottom: 20px; }
+          .notes-content { background-color: #f9fafb; padding: 20px; border-left: 4px solid rgba(110, 110, 110, 1); font-size: 14px; line-height: 1.6; }
+          .footer { text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        </style>
     </head>
     <body>
-      <div class="invoice-header">
-        <div class="company-info">
-          <div class="logo-section">
-            ${
-              logoBase64
-                ? `<img src="${logoBase64}" alt="Gudino Custom Cabinets Logo" class="company-logo" />`
-                : ""
-            }
-            <h1>Gudino Custom Cabinets</h1>
+      <div class="invoice-container">
+        <div class="invoice-header">
+          <div class="company-info">
+            <div class="company-text">
+               ${
+                 logoBase64
+                   ? `<img src="${logoBase64}" alt="Company Logo" class="company-logo">`
+                   : `<div style="width: 100px; height: 100px; color: white; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">NO LOGO</div>`
+               }
+              <div class="company-details">
+                Phone: (509) 515-4090<br>
+                Email: admin@gudinocustom.com<br>
+                <a href="${googleMapsLink}" target="_blank">${companyAddress}</a>
+              </div>
+            </div>
           </div>
-          <p><strong>Email:</strong> ${
-            process.env.ADMIN_EMAIL || "admin@gudinocustom.com"
-          }</p>
-          <p><strong>Phone:</strong> ${
-            process.env.ADMIN_PHONE || "+1 (509) 790-3516"
-          }</p>
+          <div style="text-align: right;">
+            <div class="invoice-title">${t.invoiceTitle.toUpperCase()}</div>
+            <div class="invoice-meta">
+              <strong>${t.invoiceTitle} #:</strong> ${
+                invoice.invoice_number.split("2025-")[1]
+              }<br>
+              <strong>${t.invoiceDate}:</strong> ${new Date(
+                invoice.invoice_date
+              ).toLocaleDateString()}<br>
+              <strong>${t.dueDate}:</strong> ${new Date(
+                invoice.due_date
+              ).toLocaleDateString()}
+            </div>
+          </div>
         </div>
-        <div class="invoice-title">
-          <h2>INVOICE</h2>
-        </div>
-      </div>
 
-      <div class="invoice-meta">
-        <div class="client-info">
-          <h3>Bill To:</h3>
-          <p><strong>${clientName}</strong></p>
-          ${client.email ? `<p>Email: ${client.email}</p>` : ""}
-          ${client.phone ? `<p>Phone: ${client.phone}</p>` : ""}
-          ${clientAddress ? `<p>Address: ${clientAddress}</p>` : ""}
-        </div>
-      </div>
-
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th style="width: 50%;">Description</th>
-            <th style="width: 15%; text-align: center;">Qty</th>
-            <th style="width: 17.5%; text-align: right;">Unit Price</th>
-            <th style="width: 17.5%; text-align: right;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${lineItems
-            .map((item) => {
-              // Format description as a list if it contains dashes
-              let formattedDescription = item.description || "";
-              if (formattedDescription.includes("-")) {
-                // Split by dashes and create HTML list
-                const listItems = formattedDescription
-                  .split("-")
-                  .map((text) => text.trim())
-                  .filter((text) => text.length > 0)
-                  .map((text) => `<li>${text}</li>`)
-                  .join("");
-                formattedDescription = `<ul style="margin: 5px 0; padding-left: 20px;">${listItems}</ul>`;
+        <div class="billing-info">
+          <div class="bill-to">
+            <div class="section-title">${t.billTo}</div>
+            <div class="bill-to-content">
+              <strong>${clientName}</strong><br>
+              ${client.email ? `${client.email}<br>` : ""}
+              ${client.phone ? `${client.phone}<br>` : ""}
+              ${
+                client.tax_exempt_number
+                  ? `<br><em>Tax Exempt #: ${client.tax_exempt_number}</em>`
+                  : ""
               }
+            </div>
+          </div>
+          <div class="invoice-details">
+            <div class="section-title">${t.invoiceTitle} Details</div>
+            <div class="invoice-details-content">
+              <strong>Status:</strong> ${
+                invoice.status.charAt(0).toUpperCase() +
+                invoice.status.slice(1)
+              }<br>
+              <strong>Project Type:</strong> ${
+                client.is_business ? "Commercial" : "Residential"
+              }<br>
+              <strong>Service address:</strong>
+              ${clientAddress ? `${clientAddress}<br>` : ""}
+            </div>
+          </div>
+        </div>
 
-              return `
+        <div class="line-items">
+          <table>
+            <thead>
+              <tr>
+                <th>Item(s)</th>
+                <th class="text-center">${t.quantity}</th>
+                <th class="text-right">Rate</th>
+                <th class="text-right">${t.total}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lineItems
+                .map((item) => {
+                  let formattedDescription = item.description || "";
+                  if (formattedDescription.includes("-")) {
+                    const listItems = formattedDescription
+                      .split("-")
+                      .map((text) => text.trim())
+                      .filter((text) => text.length > 0)
+                      .map((text) => `<li>${text}</li>`)
+                      .join("");
+                    formattedDescription = `<ul style="margin: 5px 0; padding-left: 20px;">${listItems}</ul>`;
+                  }
+                  return `
+                <tr>
+                  <td>
+                    ${
+                      item.title
+                        ? `<div class="item-title">${item.title}</div>`
+                        : ""
+                    }
+                    <div class="item-description">${formattedDescription}</div>
+                  </td>
+                  <td class="text-center">${item.quantity}</td>
+                  <td class="text-right">$${(item.unit_price || 0).toFixed(
+                    2
+                  )}</td>
+                  <td class="text-right">$${(
+                    (item.quantity || 0) * (item.unit_price || 0)
+                  ).toFixed(2)}</td>
+                </tr>
+                `;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <table>
             <tr>
-              <td>
-                ${
-                  item.title
-                    ? `<div class="item-title" style="font-weight: 600; margin-bottom: 5px;">${item.title}</div>`
-                    : ""
-                }
-                <div class="item-description">${formattedDescription}</div>
-                ${
-                  item.details
-                    ? `<div class="item-details">${item.details}</div>`
-                    : ""
-                }
-              </td>
-              <td class="text-center">${item.quantity}</td>
-              <td class="text-right">$${(item.unit_price || 0).toFixed(2)}</td>
-              <td class="text-right">$${(
-                (item.quantity || 0) * (item.unit_price || 0)
+              <td>${t.subtotal}:</td>
+              <td class="text-right">$${(invoice.subtotal || 0).toFixed(
+                2
+              )}</td>
+            </tr>
+            ${
+              (invoice.discount_amount || 0) > 0
+                ? `
+            <tr>
+              <td>${t.discount}:</td>
+              <td class="text-right">-$${(
+                invoice.discount_amount || 0
               ).toFixed(2)}</td>
             </tr>
-            `;
-            })
-            .join("")}
-        </tbody>
-      </table>
+            `
+                : ""
+            }
+            ${
+              (invoice.markup_amount || 0) > 0
+                ? `
+            <tr>
+              <td>${t.markup}:</td>
+              <td class="text-right">$${(invoice.markup_amount || 0).toFixed(
+                2
+              )}</td>
+            </tr>
+            `
+                : ""
+            }
+            <tr>
+              <td>${t.tax}${
+                taxRateInfo?.city
+                  ? `: ${
+                      taxRateInfo.city.charAt(0).toUpperCase() +
+                      taxRateInfo.city.slice(1)
+                    }`
+                  : ""
+              } (${(invoice.tax_rate || 0).toFixed(2)}%):</td>
+              <td class="text-right">$${(invoice.tax_amount || 0).toFixed(
+                2
+              )}</td>
+            </tr>
+            <tr class="total-row">
+              <td><strong>${t.grandTotal}:</strong></td>
+              <td class="text-right"><strong>$${(
+                invoice.total_amount || 0
+              ).toFixed(2)}</strong></td>
+            </tr>
+          </table>
+        </div>
 
-      <div class="totals-section">
-        <table class="totals-table">
-          <tr>
-            <td class="label">Subtotal:</td>
-            <td class="amount">$${(invoice.subtotal || 0).toFixed(2)}</td>
-          </tr>
-          ${
-            invoice.tax_rate && invoice.tax_rate > 0
-              ? `
-          <tr>
-            <td class="label">Tax (${(invoice.tax_rate > 1
-              ? invoice.tax_rate
-              : invoice.tax_rate * 100
-            ).toFixed(2)}%):</td>
-            <td class="amount">$${(
-              (invoice.subtotal || 0) * (invoice.tax_rate || 0)
-            ).toFixed(2)}</td>
-          </tr>
-          `
-              : ""
-          }
-          <tr class="total-row">
-            <td class="label">Total:</td>
-            <td class="amount">$${(invoice.total_amount || 0).toFixed(2)}</td>
-          </tr>
-        </table>
-      </div>
+        ${
+          invoice.notes
+            ? `
+        <div class="notes">
+          <div class="section-title">${t.notes}</div>
+          <div class="notes-content">${invoice.notes}</div>
+        </div>
+        `
+            : ""
+        }
 
-      ${
-        invoice.notes
-          ? `
-      <div class="notes-section">
-        <h4>Notes:</h4>
-        <p>${invoice.notes}</p>
-      </div>
-      `
-          : ""
-      }
-
-      <div class="footer">
-        <p>Thank you for your business!</p>
-        <p>This invoice was generated on ${new Date().toLocaleDateString()}</p>
+        <div class="footer">
+          ${t.thankYou}<br>
+          ${t.questions} admin@gudinocustom.com ${language === 'spanish' ? 'o' : 'or'} (509) 515-4090
+        </div>
       </div>
     </body>
-    </html>
-  `;
+    </html>`;
 
   // PDF generation options with Docker container support
   const options = {
@@ -3318,13 +3300,10 @@ function getInvoiceTranslations(language = "english") {
   return translations[language] || translations.english;
 }
 
-app.post(
-  "/api/admin/invoices/:id/send-email",
-  authenticateUser,
-  async (req, res) => {
-    try {
-      const invoiceId = req.params.id;
-      const { message, language = "english" } = req.body;
+app.post("/api/admin/invoices/:id/send-email", authenticateUser, async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    const { message, language = "english" } = req.body;
 
       // Get invoice details with client info
       const invoice = await invoiceDb.getInvoiceById(invoiceId);
@@ -3360,7 +3339,7 @@ app.post(
       // Generate PDF for attachment
       let pdfBuffer;
       try {
-        pdfBuffer = await generateInvoicePdf(invoiceId);
+        pdfBuffer = await generateInvoicePdf(invoiceId, language);
       } catch (pdfError) {
         console.error("Failed to generate PDF for email:", pdfError);
         return res.status(500).json({
@@ -3378,7 +3357,7 @@ app.post(
         subject: `${t.subject} ${invoice.invoice_number.split("-").pop()}`,
         html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #1e3a8a; color: white; padding: 20px; text-align: center;">
+          <div style="background: rgba(109, 109, 109, 1); color: white; padding: 20px; text-align: center;">
             <h1 style="margin: 0;">${t.companyName}</h1>
           </div>
 
@@ -3551,6 +3530,235 @@ app.post(
       res
         .status(500)
         .json({ error: `Failed to send test SMS: ${error.message}` });
+    }
+  }
+);
+
+// SMS Routing Management Endpoints
+
+// Get SMS routing settings
+app.get(
+  "/api/admin/sms-routing/settings",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const settings = await db.all('SELECT * FROM sms_routing_settings ORDER BY message_type');
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching SMS routing settings:', error);
+      res.status(500).json({ error: 'Failed to fetch SMS routing settings' });
+    }
+  }
+);
+
+// Update SMS routing settings
+app.put(
+  "/api/admin/sms-routing/settings/:messageType",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { messageType } = req.params;
+      const { is_enabled, routing_mode } = req.body;
+
+      const result = await db.run(
+        `UPDATE sms_routing_settings
+         SET is_enabled = ?, routing_mode = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE message_type = ?`,
+        [is_enabled, routing_mode, messageType]
+      );
+
+      if (result.changes === 0) {
+        await db.run(
+          `INSERT INTO sms_routing_settings (message_type, is_enabled, routing_mode)
+           VALUES (?, ?, ?)`,
+          [messageType, is_enabled, routing_mode]
+        );
+      }
+
+      res.json({ success: true, message: 'SMS routing settings updated successfully' });
+    } catch (error) {
+      console.error('Error updating SMS routing settings:', error);
+      res.status(500).json({ error: 'Failed to update SMS routing settings' });
+    }
+  }
+);
+
+// Get SMS routing recipients
+app.get(
+  "/api/admin/sms-routing/recipients",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { messageType } = req.query;
+
+      let query = `
+        SELECT r.*, e.name as employee_name, e.position
+        FROM sms_routing_recipients r
+        LEFT JOIN employees e ON r.employee_id = e.id
+      `;
+
+      const params = [];
+      if (messageType) {
+        query += ' WHERE r.message_type = ?';
+        params.push(messageType);
+      }
+
+      query += ' ORDER BY r.message_type, r.priority_order ASC';
+
+      const recipients = await db.all(query, params);
+      res.json(recipients);
+    } catch (error) {
+      console.error('Error fetching SMS routing recipients:', error);
+      res.status(500).json({ error: 'Failed to fetch SMS routing recipients' });
+    }
+  }
+);
+
+// Add SMS routing recipient
+app.post(
+  "/api/admin/sms-routing/recipients",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { message_type, employee_id, phone_number, name, priority_order = 0 } = req.body;
+
+      if (!message_type || !phone_number || !name) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const result = await db.run(
+        `INSERT INTO sms_routing_recipients
+         (message_type, employee_id, phone_number, name, priority_order)
+         VALUES (?, ?, ?, ?, ?)`,
+        [message_type, employee_id || null, phone_number, name, priority_order]
+      );
+
+      res.json({
+        success: true,
+        id: result.lastID,
+        message: 'SMS routing recipient added successfully'
+      });
+    } catch (error) {
+      console.error('Error adding SMS routing recipient:', error);
+      res.status(500).json({ error: 'Failed to add SMS routing recipient' });
+    }
+  }
+);
+
+// Update SMS routing recipient
+app.put(
+  "/api/admin/sms-routing/recipients/:id",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { id } = req.params;
+      const { employee_id, phone_number, name, is_active, priority_order } = req.body;
+
+      const result = await db.run(
+        `UPDATE sms_routing_recipients
+         SET employee_id = ?, phone_number = ?, name = ?, is_active = ?, priority_order = ?
+         WHERE id = ?`,
+        [employee_id || null, phone_number, name, is_active, priority_order, id]
+      );
+
+      if (result.changes === 0) {
+        return res.status(404).json({ error: 'SMS routing recipient not found' });
+      }
+
+      res.json({ success: true, message: 'SMS routing recipient updated successfully' });
+    } catch (error) {
+      console.error('Error updating SMS routing recipient:', error);
+      res.status(500).json({ error: 'Failed to update SMS routing recipient' });
+    }
+  }
+);
+
+// Delete SMS routing recipient
+app.delete(
+  "/api/admin/sms-routing/recipients/:id",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { id } = req.params;
+
+      const result = await db.run('DELETE FROM sms_routing_recipients WHERE id = ?', [id]);
+
+      if (result.changes === 0) {
+        return res.status(404).json({ error: 'SMS routing recipient not found' });
+      }
+
+      res.json({ success: true, message: 'SMS routing recipient deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting SMS routing recipient:', error);
+      res.status(500).json({ error: 'Failed to delete SMS routing recipient' });
+    }
+  }
+);
+
+// Get SMS routing history
+app.get(
+  "/api/admin/sms-routing/history",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const db = await getDb();
+      const { messageType, limit = 50, offset = 0 } = req.query;
+
+      let query = 'SELECT * FROM sms_routing_history';
+      const params = [];
+
+      if (messageType) {
+        query += ' WHERE message_type = ?';
+        params.push(messageType);
+      }
+
+      query += ' ORDER BY sent_at DESC LIMIT ? OFFSET ?';
+      params.push(parseInt(limit), parseInt(offset));
+
+      const history = await db.all(query, params);
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching SMS routing history:', error);
+      res.status(500).json({ error: 'Failed to fetch SMS routing history' });
+    }
+  }
+);
+
+// Test SMS routing for a specific message type
+app.post(
+  "/api/admin/sms-routing/test/:messageType",
+  authenticateUser,
+  requireRole(["super_admin"]),
+  async (req, res) => {
+    try {
+      const { messageType } = req.params;
+      const { message } = req.body;
+
+      const testMessage = message || `Test message for ${messageType} routing from Gudino Custom Cabinets! 🧪`;
+
+      const result = await sendSmsWithRouting(messageType, testMessage);
+
+      res.json({
+        success: result.success,
+        message: result.success ? 'Test SMS routing completed' : 'Test SMS routing failed',
+        details: result
+      });
+    } catch (error) {
+      console.error('Error testing SMS routing:', error);
+      res.status(500).json({ error: 'Failed to test SMS routing' });
     }
   }
 );
@@ -4197,7 +4405,7 @@ app.get("/api/admin/invoices/:id/pdf", authenticateUser, async (req, res) => {
                 <div class="company-details">
                   Phone: (509) 515-4090<br>
                   Email: admin@gudinocustom.com<br>
-                  SunnySide, WA 98944
+                  Sunnyside, WA 98944
                 </div>
               </div>
             </div>
@@ -5143,10 +5351,11 @@ app.get("/api/invoice/:id/html-preview", async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    const lineItems = await invoiceDb.getInvoiceLineItems(invoiceId);
 
     // Get tax rate information to display city name
     const taxRateInfo = await invoiceDb.getTaxRateByRate(invoice.tax_rate);
+
+    const lineItems = await invoiceDb.getInvoiceLineItems(invoiceId);
 
     const clientName = client.is_business
       ? client.company_name
@@ -5258,7 +5467,7 @@ app.get("/api/invoice/:id/html-preview", async (req, res) => {
                 <div class="company-details">
                   Phone: (509) 515-4090<br>
                   Email: admin@gudinocustom.com<br>
-                  SunnySide, WA 98944
+                  Sunnyside, WA 98944
                 </div>
               </div>
             </div>
@@ -5890,6 +6099,152 @@ app.use((req, res) => {
 });
 const PORT = process.env.PORT || 3001;
 
+// =========================
+// Automatic Invoice Reminder System
+// =========================
+
+async function checkAndSendAutomaticReminders() {
+  try {
+    console.log('🔍 Checking for invoices needing automatic reminders...');
+
+    // Get all invoices that need reminders
+    const invoices = await invoiceDb.getInvoicesNeedingReminders();
+
+    if (invoices.length === 0) {
+      console.log('✅ No invoices need reminders at this time');
+      return;
+    }
+
+    console.log(`📋 Found ${invoices.length} invoice(s) that may need reminders`);
+
+    for (const invoice of invoices) {
+      try {
+        // Skip if reminders are disabled for this invoice
+        if (!invoice.reminders_enabled) {
+          continue;
+        }
+
+        // Parse reminder days (e.g., "7,14,30" -> [7, 14, 30])
+        const reminderDays = invoice.reminder_days
+          ? invoice.reminder_days.split(',').map(d => parseInt(d.trim()))
+          : [7, 14, 30]; // Default reminder schedule
+
+        // Calculate days overdue
+        const dueDate = new Date(invoice.due_date);
+        const today = new Date();
+        const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+
+        // Check if we should send a reminder today
+        const shouldSendReminder = reminderDays.includes(daysOverdue);
+
+        if (!shouldSendReminder) {
+          continue;
+        }
+
+        // Check if we already sent a reminder today for this number of days
+        const lastReminderDate = invoice.last_reminder_sent_at ? new Date(invoice.last_reminder_sent_at) : null;
+        const todayString = today.toDateString();
+
+        if (lastReminderDate && lastReminderDate.toDateString() === todayString) {
+          console.log(`⏭️  Reminder already sent today for invoice ${invoice.invoice_number}`);
+          continue;
+        }
+
+        // Get client information
+        const client = await invoiceDb.getClientById(invoice.client_id);
+        if (!client) {
+          console.warn(`⚠️  No client found for invoice ${invoice.invoice_number}`);
+          continue;
+        }
+
+        // Calculate balance due
+        const totalPaid = invoice.total_paid || 0;
+        const balanceDue = invoice.total_amount - totalPaid;
+
+        if (balanceDue <= 0.01) {
+          console.log(`✅ Invoice ${invoice.invoice_number} is already paid, skipping reminder`);
+          continue;
+        }
+
+        // Generate view link
+        const viewLink = `${process.env.FRONTEND_URL || 'https://gudinocustom.com'}/invoice/${invoice.public_token}`;
+
+        // Send SMS reminder directly to client (not using routing system)
+        const smsMessage = `Payment reminder: Invoice ${invoice.invoice_number.split('-').pop()} is ${
+          daysOverdue > 0
+            ? `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue`
+            : 'due'
+        } - $${balanceDue.toFixed(2)}. View: ${viewLink}`;
+
+        let smsResult = { success: false, error: 'No phone number or SMS service unavailable' };
+
+        if (client.phone && twilioClient) {
+          try {
+            const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+            const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+            const smsOptions = {
+              body: smsMessage,
+              to: client.phone
+            };
+
+            if (messagingServiceSid) {
+              smsOptions.messagingServiceSid = messagingServiceSid;
+            } else if (fromNumber) {
+              smsOptions.from = fromNumber;
+            } else {
+              throw new Error('No Twilio messaging service or phone number configured');
+            }
+
+            await twilioClient.messages.create(smsOptions);
+            smsResult = { success: true, totalSent: 1 };
+            console.log(`📱 SMS reminder sent to client ${client.name} (${client.phone})`);
+
+          } catch (smsError) {
+            console.error(`❌ Failed to send SMS reminder to client:`, smsError);
+            smsResult = { success: false, error: smsError.message };
+          }
+        }
+
+        // Log the reminder in database
+        await invoiceDb.logReminder({
+          invoice_id: invoice.id,
+          reminder_type: 'sms',
+          days_overdue: daysOverdue,
+          sent_by: 'system',
+          message: smsMessage,
+          successful: smsResult.success
+        });
+
+        if (smsResult.success) {
+          console.log(`📱 Automatic reminder sent for invoice ${invoice.invoice_number} (${daysOverdue} days overdue) to ${smsResult.totalSent} recipient(s)`);
+        } else {
+          console.error(`❌ Failed to send automatic reminder for invoice ${invoice.invoice_number}:`, smsResult.error);
+        }
+
+      } catch (error) {
+        console.error(`❌ Error processing reminder for invoice ${invoice.invoice_number}:`, error);
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Error in automatic reminder system:', error);
+  }
+}
+
+// Start automatic reminder checker (runs every hour)
+function startAutomaticReminderSystem() {
+  console.log('🚀 Starting automatic invoice reminder system...');
+
+  // Run immediately on startup
+  setTimeout(checkAndSendAutomaticReminders, 5000); // Wait 5 seconds after startup
+
+  // Then run every hour
+  setInterval(checkAndSendAutomaticReminders, 60 * 60 * 1000); // 1 hour = 60 * 60 * 1000 ms
+
+  console.log('⏰ Automatic reminders will check every hour for overdue invoices');
+}
+
 // Startup health check and auto-repair
 async function initializeServer() {
   try {
@@ -5916,6 +6271,9 @@ async function initializeServer() {
     console.log(`Static files: http://localhost:${PORT}/photos/`);
     console.log(`Debug uploads: http://localhost:${PORT}/api/debug/uploads`);
     console.log(`=================================\n`);
+
+    // Start the automatic reminder system
+    startAutomaticReminderSystem();
   });
 }
 

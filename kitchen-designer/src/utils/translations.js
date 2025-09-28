@@ -201,6 +201,7 @@ const translations = {
     'admin.tabs.testimonials': 'Testimonials',
     'admin.tabs.users': 'Users',
     'admin.tabs.analytics': 'Analytics',
+    'admin.tabs.sms-routing': 'SMS Routing',
 
     // Photo Manager
     'photoManager.title': 'Portfolio Photo Manager',
@@ -435,6 +436,7 @@ const translations = {
     'admin.tabs.testimonials': 'Testimonios',
     'admin.tabs.users': 'Usuarios',
     'admin.tabs.analytics': 'Analíticas',
+    'admin.tabs.sms-routing': 'Enrutamiento SMS',
 
     // Photo Manager
     'photoManager.title': 'Gestor de Fotos del Portafolio',

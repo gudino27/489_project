@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 
 const CreateInvoiceForm = ({
@@ -29,6 +29,14 @@ const CreateInvoiceForm = ({
   const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({ label: '' });
   const [creatingLabel, setCreatingLabel] = useState(false);
+  const [newLineItem, setNewLineItem] = useState({
+    title: '',
+    description: '',
+    quantity: 1,
+    unit_price: 75,
+    item_type: ''
+  });
+  const [selectedClientName, setSelectedClientName] = useState('');
 
   const createLabel = async () => {
     if (!newLabel.label.trim()) return;
@@ -61,6 +69,83 @@ const CreateInvoiceForm = ({
       setCreatingLabel(false);
     }
   };
+
+  const addLineItemFromForm = () => {
+    if (!newLineItem.title.trim()) {
+      alert('Please enter a title for the line item.');
+      return;
+    }
+
+    // Create the new line item with all data
+    const quantity = parseFloat(newLineItem.quantity) || 1;
+    const unitPrice = parseFloat(newLineItem.unit_price) || 75;
+    const totalPrice = quantity * unitPrice;
+
+    const newItem = {
+      title: newLineItem.title,
+      description: newLineItem.description,
+      quantity: quantity,
+      unit_price: unitPrice,
+      item_type: newLineItem.item_type,
+      total_price: totalPrice
+    };
+
+    // Add the complete item to the invoice
+    setNewInvoice(prev => {
+      const updatedLineItems = [...prev.line_items, newItem];
+      const totals = calculateTotals(
+        updatedLineItems,
+        prev.tax_rate,
+        prev.discount_amount,
+        prev.markup_amount
+      );
+
+      return {
+        ...prev,
+        line_items: updatedLineItems,
+        subtotal: totals.subtotal,
+        tax_amount: totals.taxAmount,
+        total_amount: totals.total
+      };
+    });
+
+    // Clear the form
+    setNewLineItem({
+      title: '',
+      description: '',
+      quantity: 1,
+      unit_price: 75,
+      item_type: ''
+    });
+  };
+
+  // Fetch client name when editing an existing invoice
+  useEffect(() => {
+    const fetchClientName = async () => {
+      if (isEditing && newInvoice.client_id && !clientSearchTerm) {
+        try {
+          const response = await fetch(`${API_BASE}/api/admin/clients/${newInvoice.client_id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const client = await response.json();
+            const clientName = client.is_business
+              ? client.company_name
+              : `${client.first_name} ${client.last_name}`;
+            setSelectedClientName(clientName);
+            setClientSearchTerm(clientName);
+          }
+        } catch (error) {
+          console.error('Error fetching client details:', error);
+        }
+      }
+    };
+
+    fetchClientName();
+  }, [isEditing, newInvoice.client_id, token, API_BASE, clientSearchTerm, setClientSearchTerm]);
 
   return (
     <div className="space-y-6">
@@ -219,7 +304,7 @@ const CreateInvoiceForm = ({
               {/* Selected client display */}
               {newInvoice.client_id && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
-                  ✓ Selected: {clientSearchTerm}
+                  ✓ Selected: {clientSearchTerm || selectedClientName || `Client ID: ${newInvoice.client_id}`}
                 </div>
               )}
             </div>
@@ -301,149 +386,175 @@ const CreateInvoiceForm = ({
 
         {/* Line Items */}
         <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
+          <div className="mb-4">
             <h3 className="text-lg font-medium">Line Items</h3>
-            <button
-              type="button"
-              onClick={addLineItem}
-              className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Add Line
-            </button>
           </div>
 
           {/* Header Row */}
-          <div className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
-            <div className="col-span-3">Item Details</div>
+          <div className="grid grid-cols-11 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
+            <div className="col-span-4">Item Details</div>
             <div className="col-span-1">Qty</div>
-            <div className="col-span-1">Unit</div>
-            <div className="col-span-2">Type</div>
+            <div className="col-span-2">Unit</div>
             <div className="col-span-2">Rate ($)</div>
             <div className="col-span-2">Amount</div>
-            <div className="col-span-1">Actions</div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Top input form for creating new items */}
+            <div className="grid grid-cols-11 gap-2 items-start p-3 bg-gray-50 rounded-lg">
+              <div className="col-span-4 space-y-2">
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={newLineItem?.title || ''}
+                  onChange={(e) => setNewLineItem(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm font-medium"
+                />
+                <textarea
+                  placeholder="Description"
+                  value={newLineItem?.description || ''}
+                  onChange={(e) => setNewLineItem(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm resize-none"
+                  rows="2"
+                />
+                <button
+                  type="button"
+                  onClick={addLineItemFromForm}
+                  className="text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                  style={{backgroundColor: 'rgb(110, 110, 110)'}}
+                >
+                  + Add Item
+                </button>
+              </div>
+
+              <div className="col-span-1">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="1"
+                  value={newLineItem?.quantity || 1}
+                  onChange={(e) => setNewLineItem(prev => ({ ...prev, quantity: e.target.value }))}
+                  className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <div className="flex gap-2">
+                  <select
+                    value={newLineItem?.item_type || ''}
+                    onChange={(e) => setNewLineItem(prev => ({ ...prev, item_type: e.target.value }))}
+                    className="flex-1 p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                  >
+                    <option value="">Unit</option>
+                    {lineItemLabels.map((label) => (
+                      <option key={label.id} value={label.label}>
+                        {label.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateLabelModal(true)}
+                    className="px-2 py-1 text-white rounded hover:opacity-80 text-xs flex items-center justify-center"
+                    style={{backgroundColor: 'rgb(110, 110, 110)'}}
+                    title="Create new label"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="75"
+                  value={newLineItem?.unit_price || 75}
+                  onChange={(e) => setNewLineItem(prev => ({ ...prev, unit_price: e.target.value }))}
+                  className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <span className="text-lg font-bold" style={{color: 'rgb(110, 110, 110)'}}>
+                  ${((newLineItem?.quantity || 1) * (newLineItem?.unit_price || 75)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Display added line items with inline editing */}
             {newInvoice.line_items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-lg">
-                <div className="col-span-3 space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Title"
-                    value={item.title || ''}
-                    onChange={(e) => updateLineItem(index, 'title', e.target.value)}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm font-medium"
-                  />
-                  <textarea
-                    placeholder="Description (use dashes: - Item 1 - Item 2)"
-                    value={item.description}
-                    onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm resize-none"
-                    rows="2"
-                  />
-                </div>
-
-                <div className="col-span-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0"
-                    value={item.quantity}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || value === null) {
-                        updateLineItem(index, 'quantity', '');
-                      } else {
-                        updateLineItem(index, 'quantity', value);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // Convert to number on blur for validation
-                      const value = e.target.value;
-                      if (value === '' || value === null) {
-                        updateLineItem(index, 'quantity', 0);
-                      } else {
-                        const numValue = parseFloat(value);
-                        updateLineItem(index, 'quantity', isNaN(numValue) ? 0 : numValue);
-                      }
-                    }}
-                    onFocus={(e) => e.target.select()}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                </div>
-
-                <div className="col-span-1">
-                  <input
-                    type="text"
-                    placeholder="unit"
-                    value={item.unit || ''}
-                    onChange={(e) => updateLineItem(index, 'unit', e.target.value)}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <div className="flex gap-1">
+              <div key={index} className="space-y-3">
+                <div className="grid grid-cols-11 gap-2 items-center p-3 bg-white border rounded-lg">
+                  <div className="col-span-4 space-y-2">
+                    <input
+                      type="text"
+                      value={item.title || ''}
+                      onChange={(e) => updateLineItem(index, 'title', e.target.value)}
+                      className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none font-medium text-sm"
+                      placeholder="Item title"
+                    />
+                    <textarea
+                      value={item.description || ''}
+                      onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                      className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none text-sm text-gray-600 resize-none"
+                      placeholder="Description"
+                      rows="2"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity || 1}
+                      onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                      className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none text-center text-sm"
+                    />
+                  </div>
+                  <div className="col-span-2">
                     <select
-                      value={item.item_type}
+                      value={item.item_type || 'Unit'}
                       onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
-                      className="flex-1 p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
+                      className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none text-center text-sm"
                     >
-                      <option value="">Select Type</option>
-                      {lineItemLabels.map((label) => (
-                        <option key={label.id} value={label.label}>
-                          {label.label}
-                        </option>
-                      ))}
+                      <option value="Unit">Unit</option>
+                      <option value="Hour">Hour</option>
+                      <option value="Day">Day</option>
+                      <option value="Week">Week</option>
+                      <option value="Month">Month</option>
+                      <option value="Year">Year</option>
+                      <option value="Linear Foot">Linear Foot</option>
+                      <option value="Square Foot">Square Foot</option>
+                      <option value="Cubic Foot">Cubic Foot</option>
                     </select>
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateLabelModal(true)}
-                      className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-                      title="Create new label"
-                    >
-                      +
-                    </button>
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={item.unit_price || ''}
+                      onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                      className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none text-center text-sm"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="col-span-2 text-center">
+                    <span className="text-lg font-bold" style={{color: 'rgb(110, 110, 110)'}}>
+                      ${item.total_price?.toFixed(2) || '0.00'}
+                    </span>
                   </div>
                 </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={item.unit_price}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || value === null) {
-                        updateLineItem(index, 'unit_price', '');
-                      } else {
-                        updateLineItem(index, 'unit_price', value);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // Convert to number on blur for validation
-                      const value = e.target.value;
-                      if (value === '' || value === null) {
-                        updateLineItem(index, 'unit_price', 0);
-                      } else {
-                        const numValue = parseFloat(value);
-                        updateLineItem(index, 'unit_price', isNaN(numValue) ? 0 : numValue);
-                      }
-                    }}
-                    onFocus={(e) => e.target.select()}
-                    className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <span className="text-sm font-medium">${item.total_price?.toFixed(2) || '0.00'}</span>
-                </div>
-                <div className="col-span-1">
+
+                {/* Delete button below each item */}
+                <div className="pl-3">
                   <button
                     type="button"
                     onClick={() => removeLineItem(index)}
-                    className="text-red-600 hover:text-red-800"
+                    className=" text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                    style={{backgroundColor: 'rgb(110, 110, 110)'}}
                   >
-                    ×
+                    Delete Item
                   </button>
                 </div>
               </div>

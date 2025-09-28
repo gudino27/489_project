@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// GOOGLE MAPS CONFIGURATION:
-// Google Maps address autocomplete is configured with API key: AIzaSyC-CkhQ7yM-ZCLP-kxarII_J3putM9Poo4
-// Using traditional Google Maps JavaScript API with Places library for maximum compatibility.
-// The script loads dynamically when the client modal is opened.
+
 import {
   Plus,
   Edit,
@@ -149,7 +146,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       }
 
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC-CkhQ7yM-ZCLP-kxarII_J3putM9Poo4&libraries=places&callback=initGoogleMaps`;
+      script.src = process.env.REACT_APP_GOOGLE_MAPS_API_LINK;
       script.async = true;
       script.defer = true;
       script.onerror = () => console.error('Failed to load Google Maps API');
@@ -690,7 +687,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
   const updateReminderSettings = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/invoices/${reminderInvoice.id}/reminder-settings`, {
+      const invoiceId = reminderInvoice?.id || selectedInvoice?.id;
+      if (!invoiceId) {
+        setError('No invoice selected');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${invoiceId}/reminder-settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -715,7 +718,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const sendManualReminder = async () => {
     try {
       setSendingReminder(true);
-      const response = await fetch(`${API_BASE}/api/admin/invoices/${reminderInvoice.id}/send-reminder`, {
+      const invoiceId = reminderInvoice?.id || selectedInvoice?.id;
+      if (!invoiceId) {
+        setError('No invoice selected');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${invoiceId}/send-reminder`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -734,13 +743,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         setReminderMessage('');
 
         // Refresh reminder history
-        const historyResponse = await fetch(`${API_BASE}/api/admin/invoices/${reminderInvoice.id}/reminder-history`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (historyResponse.ok) {
-          const history = await historyResponse.json();
-          setReminderHistory(history);
-        }
+        await loadReminderHistory(invoiceId);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to send reminder');
@@ -750,6 +753,34 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       setError('Failed to send reminder');
     } finally {
       setSendingReminder(false);
+    }
+  };
+
+  const loadReminderSettings = async (invoiceId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${invoiceId}/reminder-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const settings = await response.json();
+        setReminderSettings(settings);
+      }
+    } catch (error) {
+      console.error('Error loading reminder settings:', error);
+    }
+  };
+
+  const loadReminderHistory = async (invoiceId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/invoices/${invoiceId}/reminder-history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const history = await response.json();
+        setReminderHistory(history);
+      }
+    } catch (error) {
+      console.error('Error loading reminder history:', error);
     }
   };
 
@@ -1485,6 +1516,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             ...invoice,
             line_items: invoice.line_items?.map(item => ({ ...item })) || []
           });
+          // Reset tab state to prevent interference with direct edit mode
+          setActiveInvoiceTab('details');
         }
       } else {
         setError('Failed to load invoice details');
@@ -1653,7 +1686,19 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveInvoiceTab(tab.id)}
+                data-tab={tab.id}
+                onClick={() => {
+                  setActiveInvoiceTab(tab.id);
+                  // Auto-initialize editing when Edit tab is clicked
+                  if (tab.id === 'edit' && selectedInvoice && !editingInvoice) {
+                    loadInvoiceDetails(selectedInvoice.id, true);
+                  }
+                  // Auto-load reminder data when Reminder tab is clicked
+                  if (tab.id === 'reminder' && selectedInvoice) {
+                    loadReminderSettings(selectedInvoice.id);
+                    loadReminderHistory(selectedInvoice.id);
+                  }
+                }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
                   activeInvoiceTab === tab.id
                     ? 'border-blue-500 text-blue-600'
@@ -1917,19 +1962,47 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <Edit className="text-blue-600" size={24} />
                 <h3 className="text-lg font-semibold">Edit Invoice</h3>
               </div>
-              <p className="text-gray-600 mb-6">Modify invoice details, line items, and amounts. Changes will be saved automatically.</p>
-              <div className="flex justify-center">
-                <button
-                  onClick={() => {
-                    loadInvoiceDetails(selectedInvoice.id, true);
-                    setActiveView('edit');
-                  }}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Edit size={18} />
-                  Start Editing Invoice
-                </button>
-              </div>
+              {editingInvoice ? (
+                // Show the actual edit form
+                <CreateInvoiceForm
+                  error={error}
+                  newInvoice={editingInvoice}
+                  setNewInvoice={setEditingInvoice}
+                  clientSearchTerm={clientSearchTerm}
+                  setClientSearchTerm={setClientSearchTerm}
+                  showClientDropdown={showClientDropdown}
+                  setShowClientDropdown={setShowClientDropdown}
+                  searchResults={searchResults}
+                  isSearching={isSearching}
+                  setShowClientModal={setShowClientModal}
+                  taxRates={taxRates}
+                  lineItemLabels={lineItemLabels}
+                  token={token}
+                  API_BASE={API_BASE}
+                  calculateTotals={calculateTotals}
+                  addLineItem={addLineItem}
+                  updateLineItem={updateLineItem}
+                  removeLineItem={removeLineItem}
+                  createInvoice={handleEditInvoice}
+                  loading={loading}
+                  setActiveView={setActiveView}
+                  isEditing={true}
+                />
+              ) : (
+                // Show button to initialize editing if not already initialized
+                <div className="text-center">
+                  <p className="text-gray-600 mb-6">Initialize editing mode to modify invoice details, line items, and amounts.</p>
+                  <button
+                    onClick={() => {
+                      loadInvoiceDetails(selectedInvoice.id, true);
+                    }}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                  >
+                    <Edit size={18} />
+                    Start Editing Invoice
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -2062,33 +2135,173 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
           {/* Reminder Tab */}
           {activeInvoiceTab === 'reminder' && (
-            <div className="p-6">
+            <div className="p-6 overflow-hidden max-h-[200px]">
               <div className="flex items-center gap-3 mb-6">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <h3 className="text-lg font-semibold">Payment Reminders</h3>
               </div>
-              <p className="text-gray-600 mb-6">Schedule automated payment reminders for overdue invoices.</p>
 
-              <div className="max-w-md mx-auto">
-                <div className="border border-orange-200 rounded-lg p-6 bg-orange-50 text-center">
-                  <svg className="w-12 h-12 text-orange-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h4 className="font-medium mb-2">Automated Reminders</h4>
-                  <p className="text-sm text-gray-600 mb-4">Set up automatic payment reminder notifications</p>
-                  <button
-                    onClick={() => {
-                      alert('Set reminder feature coming soon!');
-                    }}
-                    className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="space-y-6">
+                {/* Reminder Settings Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Reminder Settings
+                  </h4>
+
+                  <div className="space-y-4 ">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={reminderSettings.reminders_enabled}
+                          onChange={(e) => setReminderSettings(prev => ({ ...prev, reminders_enabled: e.target.checked }))}
+                          className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Enable Automatic Reminders</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reminder Days (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={reminderSettings.reminder_days}
+                        onChange={(e) => setReminderSettings(prev => ({ ...prev, reminder_days: e.target.value }))}
+                        placeholder="7,14,30"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Days after due date to send reminders</p>
+                    </div>
+
+                    <button
+                      onClick={updateReminderSettings}
+                      className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Settings
+                    </button>
+                  </div>
+                </div>
+
+                {/* Send Manual Reminder Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Send Manual Reminder
+                  </h4>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reminder Type
+                      </label>
+                      <select
+                        value={reminderType}
+                        onChange={(e) => setReminderType(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      >
+                        <option value="both">Email & SMS</option>
+                        <option value="email">Email Only</option>
+                        <option value="sms">SMS Only</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Message (Optional)
+                      </label>
+                      <textarea
+                        value={reminderMessage}
+                        onChange={(e) => setReminderMessage(e.target.value)}
+                        placeholder="Add a custom message to include with the reminder..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <button
+                      onClick={sendManualReminder}
+                      disabled={sendingReminder}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center gap-2"
+                    >
+                      {sendingReminder ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
+                      {sendingReminder ? 'Sending...' : 'Send Reminder'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reminder History Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Configure Reminders
-                  </button>
+                    Reminder History
+                  </h4>
+
+                  {reminderHistory.length > 0 ? (
+                    <div className="space-y-3">
+                      {reminderHistory.map((reminder, index) => (
+                        <div key={index} className="border-l-4 border-purple-400 pl-4 py-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {reminder.reminder_type === 'both' ? 'Email & SMS' :
+                                 reminder.reminder_type === 'email' ? 'Email' : 'SMS'} Reminder
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(reminder.sent_date).toLocaleString()}
+                              </p>
+                              {reminder.custom_message && (
+                                <p className="text-xs text-gray-600 mt-1 italic">
+                                  "{reminder.custom_message}"
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {reminder.email_sent && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                  📧 Sent
+                                </span>
+                              )}
+                              {reminder.sms_sent && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                  📱 Sent
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-gray-500 text-sm">No reminders sent yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -3235,7 +3448,209 @@ Plumbing, HVAC, Demolition"
     )
   );
 
-  const renderReminderModal = () => null;
+  const renderReminderModal = () => (
+    showReminderModal && reminderInvoice && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-90 p-4 top-20">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Payment Reminders - {reminderInvoice.invoice_number}
+            </h3>
+            <button
+              onClick={() => {
+                setShowReminderModal(false);
+                setReminderInvoice(null);
+                setReminderMessage('');
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-7 space-y-7" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+            {/* Reminder Settings Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-1">
+              <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Reminder Settings
+              </h4>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={reminderSettings.reminders_enabled}
+                      onChange={(e) => setReminderSettings(prev => ({ ...prev, reminders_enabled: e.target.checked }))}
+                      className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Enable Automatic Reminders</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reminder Days (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={reminderSettings.reminder_days}
+                    onChange={(e) => setReminderSettings(prev => ({ ...prev, reminder_days: e.target.value }))}
+                    placeholder="7,14,30"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Days after due date to send reminders</p>
+                </div>
+
+                <button
+                  onClick={updateReminderSettings}
+                  className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Settings
+                </button>
+              </div>
+            </div>
+
+            {/* Send Manual Reminder Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Send Manual Reminder
+              </h4>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reminder Type
+                  </label>
+                  <select
+                    value={reminderType}
+                    onChange={(e) => setReminderType(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="both">Email & SMS</option>
+                    <option value="email">Email Only</option>
+                    <option value="sms">SMS Only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custom Message (Optional)
+                  </label>
+                  <textarea
+                    value={reminderMessage}
+                    onChange={(e) => setReminderMessage(e.target.value)}
+                    placeholder="Add a custom message to include with the reminder..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <button
+                  onClick={sendManualReminder}
+                  disabled={sendingReminder}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center gap-2"
+                >
+                  {sendingReminder ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  )}
+                  {sendingReminder ? 'Sending...' : 'Send Reminder'}
+                </button>
+              </div>
+            </div>
+
+            {/* Reminder History Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Reminder History
+              </h4>
+
+              {reminderHistory.length > 0 ? (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {reminderHistory.map((reminder, index) => (
+                    <div key={index} className="border-l-4 border-purple-400 pl-4 py-2 bg-white rounded">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {reminder.reminder_type === 'both' ? 'Email & SMS' :
+                             reminder.reminder_type === 'email' ? 'Email' : 'SMS'} Reminder
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(reminder.sent_date).toLocaleString()}
+                          </p>
+                          {reminder.custom_message && (
+                            <p className="text-xs text-gray-600 mt-1 italic">
+                              "{reminder.custom_message}"
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {reminder.email_sent && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                              📧 Sent
+                            </span>
+                          )}
+                          {reminder.sms_sent && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                              📱 Sent
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-gray-500 text-sm">No reminders sent yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+            <button
+              onClick={() => {
+                setShowReminderModal(false);
+                setReminderInvoice(null);
+                setReminderMessage('');
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
   const renderEditClientModal = () => (
     <ClientModal
       show={showEditClientModal}

@@ -21,9 +21,7 @@ const TestimonialForm = () => {
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
 
-    const API_BASE = window.location.hostname === "localhost"
-        ? "http://localhost:3001"
-        : "https://api.gudinocustom.com";
+    const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
     const projectTypes = [
         'Kitchen Remodeling',

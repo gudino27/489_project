@@ -38,6 +38,9 @@ async function initializeDatabase() {
     console.log(' Adding invoice tables...');
     await addInvoiceTables(db);
 
+    console.log(' Adding SMS routing settings...');
+    await addSmsRoutingTables(db);
+
     console.log('\n Database initialization completed successfully!');
 
   } catch (error) {
@@ -636,6 +639,7 @@ async function addInvoiceTables(db) {
     CREATE TABLE IF NOT EXISTS invoice_line_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       invoice_id INTEGER NOT NULL,
+      title TEXT,
       description TEXT NOT NULL,
       quantity DECIMAL(10, 2) NOT NULL DEFAULT 1.00,
       unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
@@ -646,6 +650,17 @@ async function addInvoiceTables(db) {
       FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
     )
   `);
+
+  // Add title column to invoice_line_items if it doesn't exist (migration)
+  try {
+    await db.exec(`ALTER TABLE invoice_line_items ADD COLUMN title TEXT`);
+    console.log(' Added title column to invoice_line_items table');
+  } catch (error) {
+    // Column already exists or other error - this is expected for new databases
+    if (!error.message.includes('duplicate column name')) {
+      console.log(' Title column already exists or other error:', error.message);
+    }
+  }
 
   // Invoice tokens for persistent client access
   await db.exec(`
@@ -826,6 +841,89 @@ async function addInvoiceTables(db) {
   // Note: No pre-populated tax rates - admin will add them manually through the interface
 
   console.log(' Created invoice system tables and default data');
+}
+
+async function addSmsRoutingTables(db) {
+  // SMS routing settings for different message types
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sms_routing_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_type TEXT NOT NULL UNIQUE, -- 'design_submission', 'invoice_reminder', 'test_sms'
+      is_enabled BOOLEAN DEFAULT 1,
+      routing_mode TEXT DEFAULT 'single', -- 'single', 'all', 'rotation'
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // SMS routing recipients for each message type
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sms_routing_recipients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_type TEXT NOT NULL,
+      employee_id INTEGER,
+      phone_number TEXT NOT NULL,
+      name TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT 1,
+      priority_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
+    )
+  `);
+
+  // SMS routing history for tracking message delivery
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS sms_routing_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_type TEXT NOT NULL,
+      recipient_phone TEXT NOT NULL,
+      recipient_name TEXT,
+      message_content TEXT,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      delivery_status TEXT DEFAULT 'sent', -- 'sent', 'delivered', 'failed'
+      twilio_sid TEXT,
+      error_message TEXT
+    )
+  `);
+
+  // Create indexes for SMS routing tables
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sms_routing_message_type ON sms_routing_settings(message_type);
+    CREATE INDEX IF NOT EXISTS idx_sms_recipients_message_type ON sms_routing_recipients(message_type);
+    CREATE INDEX IF NOT EXISTS idx_sms_recipients_active ON sms_routing_recipients(is_active);
+    CREATE INDEX IF NOT EXISTS idx_sms_recipients_priority ON sms_routing_recipients(priority_order);
+    CREATE INDEX IF NOT EXISTS idx_sms_history_message_type ON sms_routing_history(message_type);
+    CREATE INDEX IF NOT EXISTS idx_sms_history_sent_at ON sms_routing_history(sent_at);
+  `);
+
+  // Insert default SMS routing settings
+  const defaultSmsSettings = [
+    ['design_submission', 1, 'all'],
+    ['test_sms', 1, 'single']
+  ];
+
+  for (const [messageType, isEnabled, routingMode] of defaultSmsSettings) {
+    await db.run(
+      'INSERT OR IGNORE INTO sms_routing_settings (message_type, is_enabled, routing_mode) VALUES (?, ?, ?)',
+      [messageType, isEnabled, routingMode]
+    );
+  }
+
+  // Add default admin phone number as fallback recipient
+  const adminPhone = process.env.ADMIN_PHONE || '+15551234567';
+  const defaultRecipients = [
+    ['design_submission', null, adminPhone, 'Admin'],
+    ['test_sms', null, adminPhone, 'Admin']
+  ];
+
+  for (const [messageType, employeeId, phone, name] of defaultRecipients) {
+    await db.run(
+      'INSERT OR IGNORE INTO sms_routing_recipients (message_type, employee_id, phone_number, name, priority_order) VALUES (?, ?, ?, ?, 1)',
+      [messageType, employeeId, phone, name]
+    );
+  }
+
+  console.log(' Created SMS routing tables and default settings');
 }
 
 // Only run if this file is executed directly

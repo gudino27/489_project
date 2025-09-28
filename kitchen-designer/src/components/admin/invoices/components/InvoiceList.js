@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Plus,
   Edit,
@@ -10,9 +10,13 @@ import {
   MessageCircle,
   Trash2,
   Download,
-  Bell
+  Bell,
+  X,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import InvoiceIcon from './InvoiceIcon';
 
 const InvoiceList = ({
   filteredInvoices,
@@ -32,61 +36,117 @@ const InvoiceList = ({
   setShowClientModal,
   setShowLabelModal
 }) => {
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+
+  const openSidePanel = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowSidePanel(true);
+  };
+
+  const closeSidePanel = () => {
+    setShowSidePanel(false);
+    setSelectedInvoice(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h2 className="text-xl sm:text-2xl font-bold">Invoice Management</h2>
         <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
-          <button
-            onClick={() => setActiveView('clients')}
-            className="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 text-sm"
-          >
-            <User size={16} />
-            Clients
-          </button>
-          <button
-            onClick={() => setActiveView('tax-rates')}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-          >
-            <DollarSign size={16} />
-            Tax Rates
-          </button>
-          <button
-            onClick={() => setActiveView('payments')}
-            className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
-          >
-            <DollarSign size={16} />
-            Payments
-          </button>
-          <button
-            onClick={() => setActiveView('tracking')}
-            className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
-          >
-            <Eye size={16} />
-            Live Tracking
-          </button>
-          <button
-            onClick={() => setShowClientModal(true)}
-            className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
-          >
-            <Plus size={16} />
-            Add Client
-          </button>
-          <button
-            onClick={() => setActiveView('labels')}
-            className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
-          >
-            <FileText size={16} />
-            Labels
-          </button>
-          <button
-            onClick={() => setShowLabelModal(true)}
-            className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 flex items-center gap-2 text-sm"
-          >
-            <Plus size={16} />
-            Add Label
-          </button>
+          {/* Settings Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+              className="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 text-sm"
+            >
+              <Settings size={16} />
+              Settings
+              <ChevronDown size={14} />
+            </button>
+
+            {showSettingsDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="py-2">
+                  <button
+                    onClick={() => {
+                      setActiveView('clients');
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <User size={16} />
+                    Clients
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('tax-rates');
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <DollarSign size={16} />
+                    Tax Rates
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('payments');
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <DollarSign size={16} />
+                    Payments
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('tracking');
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Eye size={16} />
+                    Live Tracking
+                  </button>
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <button
+                    onClick={() => {
+                      setShowClientModal(true);
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add Client
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('labels');
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <FileText size={16} />
+                    Labels
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLabelModal(true);
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add Label
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Create Invoice Button */}
           <button
             onClick={() => setActiveView('create')}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -161,10 +221,10 @@ const InvoiceList = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredInvoices.map((invoice) => (
-              <tr key={invoice.id} className="hover:bg-gray-50">
+              <tr key={invoice.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openSidePanel(invoice)}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <FileText className="text-gray-400 mr-2" size={16} />
+                    <InvoiceIcon className="text-gray-400 mr-2" size={16} />
                     <span className="font-medium">{invoice.invoice_number}</span>
                   </div>
                 </td>
@@ -186,7 +246,9 @@ const InvoiceList = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
                       loadInvoiceDetails(invoice.id);
                       setActiveView('view');
                     }}
@@ -196,58 +258,21 @@ const InvoiceList = ({
                     <Eye size={16} />
                   </button>
                   <button
-                    onClick={() => {
-                      loadInvoiceDetails(invoice.id, true);
-                      setActiveView('edit');
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      await loadInvoiceDetails(invoice.id, true);
+                      setActiveView('view');
+                      // Set the tab to edit after a brief delay to ensure view is rendered
+                      setTimeout(() => {
+                        const editTab = document.querySelector('[data-tab="edit"]');
+                        if (editTab) editTab.click();
+                      }, 100);
                     }}
                     className="text-purple-600 hover:text-purple-900"
                     title="Edit Invoice"
                   >
                     <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setEmailInvoice(invoice);
-                      setShowEmailModal(true);
-                    }}
-                    className="text-green-600 hover:text-green-900"
-                    title="Send Email"
-                  >
-                    <Send size={16} />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setSmsInvoice(invoice);
-                      setShowSmsModal(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="Send SMS"
-                  >
-                    <MessageCircle size={16} />
-                  </button>
-                  <button 
-                    onClick={() => downloadInvoicePdf(invoice)}
-                    className="text-gray-600 hover:text-gray-900" 
-                    title="Download PDF"
-                  >
-                    <Download size={16} />
-                  </button>
-                  <button 
-                    onClick={() => openReminderModal(invoice)}
-                    className="text-orange-600 hover:text-orange-900" 
-                    title="Manage Reminders"
-                  >
-                    <Bell size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDeleteInvoice(invoice);
-                      setShowDeleteModal(true);
-                    }}
-                    className="text-red-600 hover:text-red-900"
-                    title="Delete Invoice"
-                  >
-                    <Trash2 size={16} />
                   </button>
                 </td>
               </tr>
@@ -288,7 +313,7 @@ const InvoiceList = ({
           <div key={invoice.id} className="bg-white rounded-lg shadow p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center">
-                <FileText className="text-gray-400 mr-2" size={16} />
+                <InvoiceIcon className="text-gray-400 mr-2" size={16} />
                 <span className="font-medium text-sm">{invoice.invoice_number}</span>
               </div>
               <StatusBadge status={invoice.status} />
@@ -323,9 +348,14 @@ const InvoiceList = ({
                 <span className="text-xs mt-1">View</span>
               </button>
               <button
-                onClick={() => {
-                  loadInvoiceDetails(invoice.id, true);
-                  setActiveView('edit');
+                onClick={async () => {
+                  await loadInvoiceDetails(invoice.id, true);
+                  setActiveView('view');
+                  // Set the tab to edit after a brief delay to ensure view is rendered
+                  setTimeout(() => {
+                    const editTab = document.querySelector('[data-tab="edit"]');
+                    if (editTab) editTab.click();
+                  }, 100);
                 }}
                 className="flex flex-col items-center justify-center p-2 text-purple-600 hover:bg-purple-50 rounded-md"
                 title="Edit"
@@ -411,6 +441,146 @@ const InvoiceList = ({
           </div>
         )}
       </div>
+      {/* Side Panel */}
+        {showSidePanel && selectedInvoice && (
+          <div className="fixed inset-0 z-50 overflow-hidden" style={{ top: '60px' }}>
+            {/* Backdrop */}
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={closeSidePanel}></div>
+
+          {/* Side Panel */}
+          <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-xl">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">Invoice Actions</h2>
+                  <button
+                    onClick={closeSidePanel}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">{selectedInvoice.invoice_number}</p>
+                  <p className="text-sm text-gray-500">
+                    {selectedInvoice.is_business ? selectedInvoice.company_name : `${selectedInvoice.first_name} ${selectedInvoice.last_name}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex-1 px-6 py-4 space-y-3">
+                <button
+                  onClick={() => {
+                    loadInvoiceDetails(selectedInvoice.id);
+                    setActiveView('view');
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Eye size={18} className="mr-3" />
+                  <span>View Invoice</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const invoiceId = selectedInvoice.id;
+                    closeSidePanel();
+                    await loadInvoiceDetails(invoiceId, true);
+                    setActiveView('view');
+                    // Set the tab to edit after a brief delay to ensure view is rendered
+                    setTimeout(() => {
+                      const editTab = document.querySelector('[data-tab="edit"]');
+                      if (editTab) editTab.click();
+                    }, 100);
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                >
+                  <Edit size={18} className="mr-3" />
+                  <span>Edit Invoice</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setEmailInvoice(selectedInvoice);
+                    setShowEmailModal(true);
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                >
+                  <Send size={18} className="mr-3" />
+                  <span>Send Email</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSmsInvoice(selectedInvoice);
+                    setShowSmsModal(true);
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <MessageCircle size={18} className="mr-3" />
+                  <span>Send SMS</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    downloadInvoicePdf(selectedInvoice);
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Download size={18} className="mr-3" />
+                  <span>Download PDF</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    openReminderModal(selectedInvoice);
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                >
+                  <Bell size={18} className="mr-3" />
+                  <span>Manage Reminders</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setDeleteInvoice(selectedInvoice);
+                    setShowDeleteModal(true);
+                    closeSidePanel();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 size={18} className="mr-3" />
+                  <span>Delete Invoice</span>
+                </button>
+              </div>
+
+              {/* Footer with invoice details */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Amount:</span>
+                    <span className="font-medium">${selectedInvoice.total_amount?.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status:</span>
+                    <StatusBadge status={selectedInvoice.status} />
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Date:</span>
+                    <span>{new Date(selectedInvoice.invoice_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
