@@ -126,7 +126,7 @@ async function getSmsRoutingRecipients(messageType) {
     );
     return recipients;
   } catch (error) {
-    console.error('Error getting SMS routing recipients:', error);
+    console.error("Error getting SMS routing recipients:", error);
     return [];
   }
 }
@@ -135,20 +135,20 @@ async function getSmsRoutingSettings(messageType) {
   const db = await getDb();
   try {
     const settings = await db.get(
-      'SELECT * FROM sms_routing_settings WHERE message_type = ?',
+      "SELECT * FROM sms_routing_settings WHERE message_type = ?",
       [messageType]
     );
-    return settings || { is_enabled: true, routing_mode: 'single' };
+    return settings || { is_enabled: true, routing_mode: "single" };
   } catch (error) {
-    console.error('Error getting SMS routing settings:', error);
-    return { is_enabled: true, routing_mode: 'single' };
+    console.error("Error getting SMS routing settings:", error);
+    return { is_enabled: true, routing_mode: "single" };
   }
 }
 
 async function sendSmsWithRouting(messageType, messageBody, options = {}) {
   if (!twilioClient) {
-    console.warn('⚠️  Twilio client not available for SMS routing');
-    return { success: false, error: 'SMS service not configured' };
+    console.warn("⚠️  Twilio client not available for SMS routing");
+    return { success: false, error: "SMS service not configured" };
   }
 
   try {
@@ -156,20 +156,19 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
 
     if (!settings.is_enabled) {
       console.log(`📱 SMS routing disabled for ${messageType}`);
-      return { success: true, message: 'SMS routing disabled' };
+      return { success: true, message: "SMS routing disabled" };
     }
 
     const recipients = await getSmsRoutingRecipients(messageType);
 
     if (recipients.length === 0) {
       console.warn(`⚠️  No SMS recipients configured for ${messageType}`);
-      return { success: false, error: 'No recipients configured' };
+      return { success: false, error: "No recipients configured" };
     }
 
     const results = [];
-    const targetRecipients = settings.routing_mode === 'single'
-      ? [recipients[0]]
-      : recipients;
+    const targetRecipients =
+      settings.routing_mode === "single" ? [recipients[0]] : recipients;
 
     for (const recipient of targetRecipients) {
       try {
@@ -179,7 +178,8 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
         };
 
         if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
-          smsOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+          smsOptions.messagingServiceSid =
+            process.env.TWILIO_MESSAGING_SERVICE_SID;
         } else if (process.env.TWILIO_PHONE_NUMBER) {
           smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
         }
@@ -192,31 +192,47 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
           `INSERT INTO sms_routing_history
            (message_type, recipient_phone, recipient_name, message_content, twilio_sid, delivery_status)
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [messageType, recipient.phone_number, recipient.name, messageBody, result.sid, 'sent']
+          [
+            messageType,
+            recipient.phone_number,
+            recipient.name,
+            messageBody,
+            result.sid,
+            "sent",
+          ]
         );
 
         results.push({
           success: true,
           recipient: recipient.name,
           phone: recipient.phone_number,
-          sid: result.sid
+          sid: result.sid,
         });
 
-        console.log(`📱 SMS sent to ${recipient.name} (${recipient.phone_number}) - SID: ${result.sid}`);
+        console.log(
+          `📱 SMS sent to ${recipient.name} (${recipient.phone_number}) - SID: ${result.sid}`
+        );
       } catch (error) {
         const db = await getDb();
         await db.run(
           `INSERT INTO sms_routing_history
            (message_type, recipient_phone, recipient_name, message_content, delivery_status, error_message)
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [messageType, recipient.phone_number, recipient.name, messageBody, 'failed', error.message]
+          [
+            messageType,
+            recipient.phone_number,
+            recipient.name,
+            messageBody,
+            "failed",
+            error.message,
+          ]
         );
 
         results.push({
           success: false,
           recipient: recipient.name,
           phone: recipient.phone_number,
-          error: error.message
+          error: error.message,
         });
 
         console.error(`⚠️  SMS failed to ${recipient.name}: ${error.message}`);
@@ -224,13 +240,13 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
     }
 
     return {
-      success: results.some(r => r.success),
+      success: results.some((r) => r.success),
       results,
-      totalSent: results.filter(r => r.success).length,
-      totalFailed: results.filter(r => !r.success).length
+      totalSent: results.filter((r) => r.success).length,
+      totalFailed: results.filter((r) => !r.success).length,
     };
   } catch (error) {
-    console.error('SMS routing error:', error);
+    console.error("SMS routing error:", error);
     return { success: false, error: error.message };
   }
 }
@@ -1826,7 +1842,6 @@ app.post("/api/designs", uploadMemory.single("pdf"), async (req, res) => {
       }
     }
 
-
     // SMS notification for design submissions using routing system
     if (notificationType === "sms" || notificationType === "both") {
       try {
@@ -1838,10 +1853,15 @@ app.post("/api/designs", uploadMemory.single("pdf"), async (req, res) => {
             : designData.client_phone
         }`;
 
-        const smsResult = await sendSmsWithRouting('design_submission', smsBody);
+        const smsResult = await sendSmsWithRouting(
+          "design_submission",
+          smsBody
+        );
 
         if (smsResult.success) {
-          console.log(`📱 Design SMS notification sent to ${smsResult.totalSent} recipient(s)`);
+          console.log(
+            `📱 Design SMS notification sent to ${smsResult.totalSent} recipient(s)`
+          );
         } else {
           console.error("⚠️  Design SMS routing failed:", smsResult.error);
         }
@@ -2917,47 +2937,49 @@ async function generateInvoicePdf(invoiceId, language = "english") {
     ? client.company_name
     : `${client.first_name} ${client.last_name}`;
 
-    const clientAddress = client.address || "";
-    const payments = await invoiceDb.getInvoicePayments(invoiceId);
-    const totalPaid = payments.reduce(
-      (sum, payment) => sum + parseFloat(payment.payment_amount),
-      0
-    );
-    const balanceDue = invoice.total_amount - totalPaid;
+  const clientAddress = client.address || "";
+  const payments = await invoiceDb.getInvoicePayments(invoiceId);
+  const totalPaid = payments.reduce(
+    (sum, payment) => sum + parseFloat(payment.payment_amount),
+    0
+  );
+  const balanceDue = invoice.total_amount - totalPaid;
 
   // Create Google Maps link for company address
   const companyAddress = "70 Ray Rd, Sunnyside, WA 98944";
-  const googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(companyAddress)}`;
-      // Read logo file and convert to base64
-    const fs = require("fs");
-    const path = require("path");
-    let logoBase64 = "";
-    let logoError = "";
-    try {
-      const logoPath = path.join(__dirname, "uploads", "logo.jpeg");
-      console.log("Looking for logo at:", logoPath);
-      console.log("Logo file exists:", fs.existsSync(logoPath));
+  const googleMapsLink = `https://maps.google.com/?q=${encodeURIComponent(
+    companyAddress
+  )}`;
+  // Read logo file and convert to base64
+  const fs = require("fs");
+  const path = require("path");
+  let logoBase64 = "";
+  let logoError = "";
+  try {
+    const logoPath = path.join(__dirname, "uploads", "logo.jpeg");
+    console.log("Looking for logo at:", logoPath);
+    console.log("Logo file exists:", fs.existsSync(logoPath));
 
-      if (fs.existsSync(logoPath)) {
-        const logoBuffer = fs.readFileSync(logoPath);
-        logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-        console.log(
-          "Logo loaded successfully, size:",
-          logoBuffer.length,
-          "bytes"
-        );
-      } else {
-        logoError = "Logo file not found at path";
-      }
-    } catch (error) {
-      console.log("Logo file error:", error.message);
-      logoError = error.message;
+    if (fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+      console.log(
+        "Logo loaded successfully, size:",
+        logoBuffer.length,
+        "bytes"
+      );
+    } else {
+      logoError = "Logo file not found at path";
     }
+  } catch (error) {
+    console.log("Logo file error:", error.message);
+    logoError = error.message;
+  }
 
   // Generate HTML content using professional template with language support
   const htmlContent = `
     <!DOCTYPE html>
-    <html lang="${language === 'spanish' ? 'es' : 'en'}">
+    <html lang="${language === "spanish" ? "es" : "en"}">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3028,14 +3050,14 @@ async function generateInvoicePdf(invoiceId, language = "english") {
             <div class="invoice-title">${t.invoiceTitle.toUpperCase()}</div>
             <div class="invoice-meta">
               <strong>${t.invoiceTitle} #:</strong> ${
-                invoice.invoice_number.split("2025-")[1]
-              }<br>
+    invoice.invoice_number.split("2025-")[1]
+  }<br>
               <strong>${t.invoiceDate}:</strong> ${new Date(
-                invoice.invoice_date
-              ).toLocaleDateString()}<br>
+    invoice.invoice_date
+  ).toLocaleDateString()}<br>
               <strong>${t.dueDate}:</strong> ${new Date(
-                invoice.due_date
-              ).toLocaleDateString()}
+    invoice.due_date
+  ).toLocaleDateString()}
             </div>
           </div>
         </div>
@@ -3058,8 +3080,7 @@ async function generateInvoicePdf(invoiceId, language = "english") {
             <div class="section-title">${t.invoiceTitle} Details</div>
             <div class="invoice-details-content">
               <strong>Status:</strong> ${
-                invoice.status.charAt(0).toUpperCase() +
-                invoice.status.slice(1)
+                invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)
               }<br>
               <strong>Project Type:</strong> ${
                 client.is_business ? "Commercial" : "Residential"
@@ -3122,18 +3143,16 @@ async function generateInvoicePdf(invoiceId, language = "english") {
           <table>
             <tr>
               <td>${t.subtotal}:</td>
-              <td class="text-right">$${(invoice.subtotal || 0).toFixed(
-                2
-              )}</td>
+              <td class="text-right">$${(invoice.subtotal || 0).toFixed(2)}</td>
             </tr>
             ${
               (invoice.discount_amount || 0) > 0
                 ? `
             <tr>
               <td>${t.discount}:</td>
-              <td class="text-right">-$${(
-                invoice.discount_amount || 0
-              ).toFixed(2)}</td>
+              <td class="text-right">-$${(invoice.discount_amount || 0).toFixed(
+                2
+              )}</td>
             </tr>
             `
                 : ""
@@ -3152,13 +3171,12 @@ async function generateInvoicePdf(invoiceId, language = "english") {
             }
             <tr>
               <td>${t.tax}${
-                taxRateInfo?.city
-                  ? `: ${
-                      taxRateInfo.city.charAt(0).toUpperCase() +
-                      taxRateInfo.city.slice(1)
-                    }`
-                  : ""
-              } (${(invoice.tax_rate || 0).toFixed(2)}%):</td>
+    taxRateInfo?.city
+      ? `: ${
+          taxRateInfo.city.charAt(0).toUpperCase() + taxRateInfo.city.slice(1)
+        }`
+      : ""
+  } (${(invoice.tax_rate || 0).toFixed(2)}%):</td>
               <td class="text-right">$${(invoice.tax_amount || 0).toFixed(
                 2
               )}</td>
@@ -3185,7 +3203,9 @@ async function generateInvoicePdf(invoiceId, language = "english") {
 
         <div class="footer">
           ${t.thankYou}<br>
-          ${t.questions} admin@gudinocustom.com ${language === 'spanish' ? 'o' : 'or'} (509) 515-4090
+          ${t.questions} admin@gudinocustom.com ${
+    language === "spanish" ? "o" : "or"
+  } (509) 515-4090
         </div>
       </div>
     </body>
@@ -3300,10 +3320,21 @@ function getInvoiceTranslations(language = "english") {
   return translations[language] || translations.english;
 }
 
-app.post("/api/admin/invoices/:id/send-email", authenticateUser, async (req, res) => {
-  try {
-    const invoiceId = req.params.id;
-    const { message, language = "english" } = req.body;
+app.post(
+  "/api/admin/invoices/:id/send-email",
+  authenticateUser,
+  async (req, res) => {
+    try {
+      const invoiceId = req.params.id;
+      const {
+        message,
+        language = "english",
+        sendToSelf = false,
+        selfEmail = '',
+        additionalEmails = [],
+        useCustomClientEmail = false,
+        customClientEmail = ''
+      } = req.body;
 
       // Get invoice details with client info
       const invoice = await invoiceDb.getInvoiceById(invoiceId);
@@ -3312,9 +3343,42 @@ app.post("/api/admin/invoices/:id/send-email", authenticateUser, async (req, res
       }
 
       const client = await invoiceDb.getClientById(invoice.client_id);
-      if (!client || !client.email) {
-        return res.status(400).json({ error: "Client email not found" });
+
+      // Determine primary client email
+      let primaryClientEmail;
+      if (useCustomClientEmail) {
+        if (!customClientEmail || !customClientEmail.trim()) {
+          return res.status(400).json({ error: "Custom client email is required when using custom client email option" });
+        }
+        primaryClientEmail = customClientEmail.trim();
+      } else {
+        if (!client || !client.email) {
+          return res.status(400).json({ error: "Client email not found" });
+        }
+        primaryClientEmail = client.email;
       }
+
+      // Start with primary client email as first recipient
+      let recipients = [primaryClientEmail];
+
+      // Add self email if requested
+      if (sendToSelf) {
+        if (!selfEmail || !selfEmail.trim()) {
+          return res.status(400).json({ error: "Self email address is required when also sending to self" });
+        }
+        recipients.push(selfEmail.trim());
+      }
+
+      // Add valid additional emails
+      if (additionalEmails && additionalEmails.length > 0) {
+        const validAdditionalEmails = additionalEmails
+          .filter(email => email && email.trim() && email.includes('@'))
+          .map(email => email.trim());
+        recipients = [...recipients, ...validAdditionalEmails];
+      }
+
+      // Remove duplicates
+      recipients = [...new Set(recipients)];
 
       // Update invoice status from draft to unpaid when sending
       if (invoice.status === "draft") {
@@ -3353,7 +3417,7 @@ app.post("/api/admin/invoices/:id/send-email", authenticateUser, async (req, res
 
       const mailOptions = {
         from: process.env.EMAIL_FROM,
-        to: client.email,
+        to: recipients.join(', '),
         subject: `${t.subject} ${invoice.invoice_number.split("-").pop()}`,
         html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -3447,12 +3511,13 @@ app.post("/api/admin/invoices/:id/send-email", authenticateUser, async (req, res
 
       try {
         await emailTransporter.sendMail(mailOptions);
-        console.log(`Invoice email sent successfully to: ${client.email}`);
+        console.log(`Invoice email sent successfully to: ${recipients.join(', ')}`);
 
         res.json({
           success: true,
           message: "Invoice email sent successfully with PDF attachment",
-          sentTo: client.email,
+          sentTo: recipients,
+          recipientCount: recipients.length,
         });
       } catch (emailError) {
         console.error("Failed to send email:", emailError);
@@ -3544,11 +3609,13 @@ app.get(
   async (req, res) => {
     try {
       const db = await getDb();
-      const settings = await db.all('SELECT * FROM sms_routing_settings ORDER BY message_type');
+      const settings = await db.all(
+        "SELECT * FROM sms_routing_settings ORDER BY message_type"
+      );
       res.json(settings);
     } catch (error) {
-      console.error('Error fetching SMS routing settings:', error);
-      res.status(500).json({ error: 'Failed to fetch SMS routing settings' });
+      console.error("Error fetching SMS routing settings:", error);
+      res.status(500).json({ error: "Failed to fetch SMS routing settings" });
     }
   }
 );
@@ -3579,10 +3646,13 @@ app.put(
         );
       }
 
-      res.json({ success: true, message: 'SMS routing settings updated successfully' });
+      res.json({
+        success: true,
+        message: "SMS routing settings updated successfully",
+      });
     } catch (error) {
-      console.error('Error updating SMS routing settings:', error);
-      res.status(500).json({ error: 'Failed to update SMS routing settings' });
+      console.error("Error updating SMS routing settings:", error);
+      res.status(500).json({ error: "Failed to update SMS routing settings" });
     }
   }
 );
@@ -3605,17 +3675,17 @@ app.get(
 
       const params = [];
       if (messageType) {
-        query += ' WHERE r.message_type = ?';
+        query += " WHERE r.message_type = ?";
         params.push(messageType);
       }
 
-      query += ' ORDER BY r.message_type, r.priority_order ASC';
+      query += " ORDER BY r.message_type, r.priority_order ASC";
 
       const recipients = await db.all(query, params);
       res.json(recipients);
     } catch (error) {
-      console.error('Error fetching SMS routing recipients:', error);
-      res.status(500).json({ error: 'Failed to fetch SMS routing recipients' });
+      console.error("Error fetching SMS routing recipients:", error);
+      res.status(500).json({ error: "Failed to fetch SMS routing recipients" });
     }
   }
 );
@@ -3628,10 +3698,16 @@ app.post(
   async (req, res) => {
     try {
       const db = await getDb();
-      const { message_type, employee_id, phone_number, name, priority_order = 0 } = req.body;
+      const {
+        message_type,
+        employee_id,
+        phone_number,
+        name,
+        priority_order = 0,
+      } = req.body;
 
       if (!message_type || !phone_number || !name) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
       const result = await db.run(
@@ -3644,11 +3720,11 @@ app.post(
       res.json({
         success: true,
         id: result.lastID,
-        message: 'SMS routing recipient added successfully'
+        message: "SMS routing recipient added successfully",
       });
     } catch (error) {
-      console.error('Error adding SMS routing recipient:', error);
-      res.status(500).json({ error: 'Failed to add SMS routing recipient' });
+      console.error("Error adding SMS routing recipient:", error);
+      res.status(500).json({ error: "Failed to add SMS routing recipient" });
     }
   }
 );
@@ -3662,7 +3738,8 @@ app.put(
     try {
       const db = await getDb();
       const { id } = req.params;
-      const { employee_id, phone_number, name, is_active, priority_order } = req.body;
+      const { employee_id, phone_number, name, is_active, priority_order } =
+        req.body;
 
       const result = await db.run(
         `UPDATE sms_routing_recipients
@@ -3672,13 +3749,18 @@ app.put(
       );
 
       if (result.changes === 0) {
-        return res.status(404).json({ error: 'SMS routing recipient not found' });
+        return res
+          .status(404)
+          .json({ error: "SMS routing recipient not found" });
       }
 
-      res.json({ success: true, message: 'SMS routing recipient updated successfully' });
+      res.json({
+        success: true,
+        message: "SMS routing recipient updated successfully",
+      });
     } catch (error) {
-      console.error('Error updating SMS routing recipient:', error);
-      res.status(500).json({ error: 'Failed to update SMS routing recipient' });
+      console.error("Error updating SMS routing recipient:", error);
+      res.status(500).json({ error: "Failed to update SMS routing recipient" });
     }
   }
 );
@@ -3693,16 +3775,24 @@ app.delete(
       const db = await getDb();
       const { id } = req.params;
 
-      const result = await db.run('DELETE FROM sms_routing_recipients WHERE id = ?', [id]);
+      const result = await db.run(
+        "DELETE FROM sms_routing_recipients WHERE id = ?",
+        [id]
+      );
 
       if (result.changes === 0) {
-        return res.status(404).json({ error: 'SMS routing recipient not found' });
+        return res
+          .status(404)
+          .json({ error: "SMS routing recipient not found" });
       }
 
-      res.json({ success: true, message: 'SMS routing recipient deleted successfully' });
+      res.json({
+        success: true,
+        message: "SMS routing recipient deleted successfully",
+      });
     } catch (error) {
-      console.error('Error deleting SMS routing recipient:', error);
-      res.status(500).json({ error: 'Failed to delete SMS routing recipient' });
+      console.error("Error deleting SMS routing recipient:", error);
+      res.status(500).json({ error: "Failed to delete SMS routing recipient" });
     }
   }
 );
@@ -3717,22 +3807,22 @@ app.get(
       const db = await getDb();
       const { messageType, limit = 50, offset = 0 } = req.query;
 
-      let query = 'SELECT * FROM sms_routing_history';
+      let query = "SELECT * FROM sms_routing_history";
       const params = [];
 
       if (messageType) {
-        query += ' WHERE message_type = ?';
+        query += " WHERE message_type = ?";
         params.push(messageType);
       }
 
-      query += ' ORDER BY sent_at DESC LIMIT ? OFFSET ?';
+      query += " ORDER BY sent_at DESC LIMIT ? OFFSET ?";
       params.push(parseInt(limit), parseInt(offset));
 
       const history = await db.all(query, params);
       res.json(history);
     } catch (error) {
-      console.error('Error fetching SMS routing history:', error);
-      res.status(500).json({ error: 'Failed to fetch SMS routing history' });
+      console.error("Error fetching SMS routing history:", error);
+      res.status(500).json({ error: "Failed to fetch SMS routing history" });
     }
   }
 );
@@ -3747,18 +3837,22 @@ app.post(
       const { messageType } = req.params;
       const { message } = req.body;
 
-      const testMessage = message || `Test message for ${messageType} routing from Gudino Custom Cabinets! 🧪`;
+      const testMessage =
+        message ||
+        `Test message for ${messageType} routing from Gudino Custom Cabinets! 🧪`;
 
       const result = await sendSmsWithRouting(messageType, testMessage);
 
       res.json({
         success: result.success,
-        message: result.success ? 'Test SMS routing completed' : 'Test SMS routing failed',
-        details: result
+        message: result.success
+          ? "Test SMS routing completed"
+          : "Test SMS routing failed",
+        details: result,
       });
     } catch (error) {
-      console.error('Error testing SMS routing:', error);
-      res.status(500).json({ error: 'Failed to test SMS routing' });
+      console.error("Error testing SMS routing:", error);
+      res.status(500).json({ error: "Failed to test SMS routing" });
     }
   }
 );
@@ -5351,7 +5445,6 @@ app.get("/api/invoice/:id/html-preview", async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-
     // Get tax rate information to display city name
     const taxRateInfo = await invoiceDb.getTaxRateByRate(invoice.tax_rate);
 
@@ -6105,17 +6198,19 @@ const PORT = process.env.PORT || 3001;
 
 async function checkAndSendAutomaticReminders() {
   try {
-    console.log('🔍 Checking for invoices needing automatic reminders...');
+    console.log("🔍 Checking for invoices needing automatic reminders...");
 
     // Get all invoices that need reminders
     const invoices = await invoiceDb.getInvoicesNeedingReminders();
 
     if (invoices.length === 0) {
-      console.log('✅ No invoices need reminders at this time');
+      console.log("✅ No invoices need reminders at this time");
       return;
     }
 
-    console.log(`📋 Found ${invoices.length} invoice(s) that may need reminders`);
+    console.log(
+      `📋 Found ${invoices.length} invoice(s) that may need reminders`
+    );
 
     for (const invoice of invoices) {
       try {
@@ -6126,13 +6221,15 @@ async function checkAndSendAutomaticReminders() {
 
         // Parse reminder days (e.g., "7,14,30" -> [7, 14, 30])
         const reminderDays = invoice.reminder_days
-          ? invoice.reminder_days.split(',').map(d => parseInt(d.trim()))
+          ? invoice.reminder_days.split(",").map((d) => parseInt(d.trim()))
           : [7, 14, 30]; // Default reminder schedule
 
         // Calculate days overdue
         const dueDate = new Date(invoice.due_date);
         const today = new Date();
-        const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+        const daysOverdue = Math.ceil(
+          (today - dueDate) / (1000 * 60 * 60 * 24)
+        );
 
         // Check if we should send a reminder today
         const shouldSendReminder = reminderDays.includes(daysOverdue);
@@ -6142,18 +6239,27 @@ async function checkAndSendAutomaticReminders() {
         }
 
         // Check if we already sent a reminder today for this number of days
-        const lastReminderDate = invoice.last_reminder_sent_at ? new Date(invoice.last_reminder_sent_at) : null;
+        const lastReminderDate = invoice.last_reminder_sent_at
+          ? new Date(invoice.last_reminder_sent_at)
+          : null;
         const todayString = today.toDateString();
 
-        if (lastReminderDate && lastReminderDate.toDateString() === todayString) {
-          console.log(`⏭️  Reminder already sent today for invoice ${invoice.invoice_number}`);
+        if (
+          lastReminderDate &&
+          lastReminderDate.toDateString() === todayString
+        ) {
+          console.log(
+            `⏭️  Reminder already sent today for invoice ${invoice.invoice_number}`
+          );
           continue;
         }
 
         // Get client information
         const client = await invoiceDb.getClientById(invoice.client_id);
         if (!client) {
-          console.warn(`⚠️  No client found for invoice ${invoice.invoice_number}`);
+          console.warn(
+            `⚠️  No client found for invoice ${invoice.invoice_number}`
+          );
           continue;
         }
 
@@ -6162,30 +6268,40 @@ async function checkAndSendAutomaticReminders() {
         const balanceDue = invoice.total_amount - totalPaid;
 
         if (balanceDue <= 0.01) {
-          console.log(`✅ Invoice ${invoice.invoice_number} is already paid, skipping reminder`);
+          console.log(
+            `✅ Invoice ${invoice.invoice_number} is already paid, skipping reminder`
+          );
           continue;
         }
 
         // Generate view link
-        const viewLink = `${process.env.FRONTEND_URL || 'https://gudinocustom.com'}/invoice/${invoice.public_token}`;
+        const viewLink = `${
+          process.env.FRONTEND_URL || "https://gudinocustom.com"
+        }/invoice/${invoice.public_token}`;
 
         // Send SMS reminder directly to client (not using routing system)
-        const smsMessage = `Payment reminder: Invoice ${invoice.invoice_number.split('-').pop()} is ${
+        const smsMessage = `Payment reminder: Invoice ${invoice.invoice_number
+          .split("-")
+          .pop()} is ${
           daysOverdue > 0
-            ? `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue`
-            : 'due'
+            ? `${daysOverdue} day${daysOverdue > 1 ? "s" : ""} overdue`
+            : "due"
         } - $${balanceDue.toFixed(2)}. View: ${viewLink}`;
 
-        let smsResult = { success: false, error: 'No phone number or SMS service unavailable' };
+        let smsResult = {
+          success: false,
+          error: "No phone number or SMS service unavailable",
+        };
 
         if (client.phone && twilioClient) {
           try {
-            const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+            const messagingServiceSid =
+              process.env.TWILIO_MESSAGING_SERVICE_SID;
             const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
             const smsOptions = {
               body: smsMessage,
-              to: client.phone
+              to: client.phone,
             };
 
             if (messagingServiceSid) {
@@ -6193,15 +6309,21 @@ async function checkAndSendAutomaticReminders() {
             } else if (fromNumber) {
               smsOptions.from = fromNumber;
             } else {
-              throw new Error('No Twilio messaging service or phone number configured');
+              throw new Error(
+                "No Twilio messaging service or phone number configured"
+              );
             }
 
             await twilioClient.messages.create(smsOptions);
             smsResult = { success: true, totalSent: 1 };
-            console.log(`📱 SMS reminder sent to client ${client.name} (${client.phone})`);
-
+            console.log(
+              `📱 SMS reminder sent to client ${client.name} (${client.phone})`
+            );
           } catch (smsError) {
-            console.error(`❌ Failed to send SMS reminder to client:`, smsError);
+            console.error(
+              `❌ Failed to send SMS reminder to client:`,
+              smsError
+            );
             smsResult = { success: false, error: smsError.message };
           }
         }
@@ -6209,32 +6331,38 @@ async function checkAndSendAutomaticReminders() {
         // Log the reminder in database
         await invoiceDb.logReminder({
           invoice_id: invoice.id,
-          reminder_type: 'sms',
+          reminder_type: "sms",
           days_overdue: daysOverdue,
-          sent_by: 'system',
+          sent_by: "system",
           message: smsMessage,
-          successful: smsResult.success
+          successful: smsResult.success,
         });
 
         if (smsResult.success) {
-          console.log(`📱 Automatic reminder sent for invoice ${invoice.invoice_number} (${daysOverdue} days overdue) to ${smsResult.totalSent} recipient(s)`);
+          console.log(
+            `📱 Automatic reminder sent for invoice ${invoice.invoice_number} (${daysOverdue} days overdue) to ${smsResult.totalSent} recipient(s)`
+          );
         } else {
-          console.error(`❌ Failed to send automatic reminder for invoice ${invoice.invoice_number}:`, smsResult.error);
+          console.error(
+            `❌ Failed to send automatic reminder for invoice ${invoice.invoice_number}:`,
+            smsResult.error
+          );
         }
-
       } catch (error) {
-        console.error(`❌ Error processing reminder for invoice ${invoice.invoice_number}:`, error);
+        console.error(
+          `❌ Error processing reminder for invoice ${invoice.invoice_number}:`,
+          error
+        );
       }
     }
-
   } catch (error) {
-    console.error('❌ Error in automatic reminder system:', error);
+    console.error("❌ Error in automatic reminder system:", error);
   }
 }
 
 // Start automatic reminder checker (runs every hour)
 function startAutomaticReminderSystem() {
-  console.log('🚀 Starting automatic invoice reminder system...');
+  console.log("🚀 Starting automatic invoice reminder system...");
 
   // Run immediately on startup
   setTimeout(checkAndSendAutomaticReminders, 5000); // Wait 5 seconds after startup
@@ -6242,7 +6370,9 @@ function startAutomaticReminderSystem() {
   // Then run every hour
   setInterval(checkAndSendAutomaticReminders, 60 * 60 * 1000); // 1 hour = 60 * 60 * 1000 ms
 
-  console.log('⏰ Automatic reminders will check every hour for overdue invoices');
+  console.log(
+    "⏰ Automatic reminders will check every hour for overdue invoices"
+  );
 }
 
 // Startup health check and auto-repair

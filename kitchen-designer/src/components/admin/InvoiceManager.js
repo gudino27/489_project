@@ -1059,7 +1059,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   };
 
   // Send email function
-  const sendInvoiceEmail = async (language = 'english') => {
+  const sendInvoiceEmail = async (emailData) => {
+    // Handle backwards compatibility for old function signature
+    const data = typeof emailData === 'string'
+      ? { language: emailData, sendToSelf: false, selfEmail: '', additionalEmails: [] }
+      : emailData;
+
     setEmailSending(true);
     try {
       const response = await fetch(`${API_BASE}/api/admin/invoices/${emailInvoice.id}/send-email`, {
@@ -1070,17 +1075,25 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         },
         body: JSON.stringify({
           message: emailMessage,
-          language: language
+          language: data.language || 'english',
+          sendToSelf: data.sendToSelf,
+          selfEmail: data.sendToSelf ? data.selfEmail : '',
+          additionalEmails: data.additionalEmails || [],
+          useCustomClientEmail: data.useCustomClientEmail || false,
+          customClientEmail: data.useCustomClientEmail ? data.customClientEmail : ''
         })
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const responseData = await response.json();
         setShowEmailModal(false);
         setEmailMessage('');
         setEmailInvoice(null);
         // Show success message
-        alert(`Invoice email sent successfully to ${data.sentTo}`);
+        const recipients = Array.isArray(responseData.sentTo)
+          ? responseData.sentTo.join(', ')
+          : responseData.sentTo;
+        alert(`Invoice email sent successfully to ${recipients}`);
       } else {
         const errorData = await response.json();
         alert(`Failed to send email: ${errorData.error}`);
