@@ -210,7 +210,7 @@ const EmployeeManager = () => {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Team Management</h2>
+        <h2 className="text-xl font-bold">Team Management</h2>
         <div className="flex gap-2">
           {isReordering ? (
             <>
@@ -235,14 +235,14 @@ const EmployeeManager = () => {
             <>
               <button
                 onClick={() => setIsReordering(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                className="flex items-center gap-2 px-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
                 <GripVertical size={16} />
                 Reorder
               </button>
               <button
                 onClick={() => setIsAddingNew(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center gap-2 px-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus size={20} />
                 Add Employee
@@ -329,11 +329,11 @@ const EmployeeManager = () => {
                 placeholder="Brief description about the employee..."
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
               <button
                 onClick={handleAddEmployee}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-center min-h-[44px] sm:min-h-auto"
               >
                 {loading ? 'Adding...' : 'Add Employee'}
               </button>
@@ -344,7 +344,7 @@ const EmployeeManager = () => {
                     name: '', position: '', bio: '', email: '', phone: '', joined_date: '', photo: null
                   });
                 }}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                className="px-4 py-3 sm:py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-center min-h-[44px] sm:min-h-auto"
               >
                 Cancel
               </button>
@@ -521,16 +521,18 @@ const EmployeeManager = () => {
                           </div>
                         </div>
                         {!isReordering && (
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <button
                               onClick={() => setEditingId(employee.id)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                              className="p-3 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="Edit employee"
                             >
                               <Edit2 size={18} />
                             </button>
                             <button
                               onClick={() => handleDeleteEmployee(employee.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              className="p-3 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              title="Delete employee"
                             >
                               <Trash2 size={18} />
                             </button>

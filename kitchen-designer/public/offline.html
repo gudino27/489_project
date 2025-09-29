@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/offline.css">
+    <title>Offline - Gudino Admin</title>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📱</div>
+        <h1>You're Offline</h1>
+        <p>It looks like you've lost your internet connection. Check your network and try again, or browse cached content.</p>
+
+        <div>
+            <button class="retry-btn" onclick="retryConnection()">Retry Connection</button>
+            <a href="/admin" class="home-btn">Go to Admin</a>
+        </div>
+
+        <div class="status" id="status">
+            Checking connection...
+        </div>
+    </div>
+<script src="/offline.js"></script>
+
+</body>
+</html>

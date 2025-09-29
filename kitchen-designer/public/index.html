@@ -3,13 +3,24 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1f2937" />
   <meta name="description"
     content="Expert carpenters specializing in kitchen remodeling, bathroom renovations, custom cabinet installation, and home remodeling throughout Washington. Professional carpentry services by Gudino Custom Woodworking." />
   <meta name="keywords"
     content="carpenter, carpentry, kitchen remodeling, bathroom renovation, custom cabinets, cabinet installation, home remodeling, Washington, custom woodworking, kitchen renovation, bathroom remodel" />
   <meta name="author" content="Gudino Custom Woodworking" />
+
+  <!-- PWA Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gudino Admin">
+  <meta name="application-name" content="Gudino Admin">
+  <meta name="msapplication-TileColor" content="#1f2937">
+  <meta name="msapplication-config" content="/browserconfig.xml">
+
+  <!-- Open Graph Meta Tags -->
   <meta property="og:title" content="Gudino Custom Woodworking - Expert Carpenters & Cabinet Makers in Washington" />
   <meta property="og:description"
     content="Professional carpentry services including kitchen remodeling, bathroom renovations, and custom cabinet installation throughout Washington." />
@@ -19,6 +30,8 @@
   <meta name="twitter:title" content="Gudino Custom Woodworking - Expert Carpenters & Cabinet Makers" />
   <meta name="twitter:description"
     content="Professional carpentry services including kitchen remodeling, bathroom renovations, and custom cabinet installation." />
+
+  <!-- Icons -->
   <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
@@ -111,6 +124,66 @@
 
 <body>
   <div id="root"></div>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content is available, show update notification
+                    console.log('New content is available; please refresh.');
+
+                    // Optional: Show user notification about update
+                    if (window.confirm('New version available! Refresh to update?')) {
+                      window.location.reload();
+                    }
+                  }
+                });
+              }
+            });
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('Message from SW:', event.data);
+
+        if (event.data.type === 'CACHE_UPDATED') {
+          console.log('Cache has been updated');
+        }
+      });
+    }
+
+    // PWA Install Prompt (will be enhanced in admin panel)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      console.log('PWA install prompt available');
+
+      // Store in global scope for admin panel to access
+      window.deferredPrompt = deferredPrompt;
+    });
+
+    // Track app install
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('PWA was installed');
+    });
+  </script>
 </body>
 
 </html>

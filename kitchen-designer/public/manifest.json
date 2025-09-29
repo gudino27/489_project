@@ -1,6 +1,7 @@
 {
-  "short_name": "Kitchen Designer",
-  "name": "Gudino Custom Kitchen Designer",
+  "short_name": "Gudino Admin",
+  "name": "Gudino Custom Admin Panel",
+  "description": "Admin panel for Gudino Custom Woodworking - manage invoices, clients, portfolio, and business operations",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +9,62 @@
       "type": "image/x-icon"
     },
     {
+      "src": "apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any maskable"
+    },
+    {
       "src": "android-chrome-192x192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "android-chrome-512x512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/admin",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait-primary",
+  "theme_color": "#1f2937",
+  "background_color": "#f9fafb",
+  "categories": ["business", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "minimal-ui"],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "shortcuts": [
+    {
+      "name": "Invoices",
+      "short_name": "Invoices",
+      "description": "Manage client invoices and billing",
+      "url": "/admin/invoices",
+      "icons": [
+        {
+          "src": "android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Portfolio",
+      "short_name": "Portfolio",
+      "description": "Manage project portfolio and photos",
+      "url": "/admin/portfolio",
+      "icons": [
+        {
+          "src": "android-chrome-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }

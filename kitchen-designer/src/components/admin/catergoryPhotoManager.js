@@ -406,7 +406,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       )}
 
       {/* Current Category Photos */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h3 className="text-lg font-semibold mb-3">
           {categories.find(c => c.id === selectedCategory)?.name} Photos ({currentPhotos.length})
         </h3>
@@ -452,9 +452,9 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                   }}
                 />
 
-                <div className="p-3">
+                <div className="p-2">
                   {editingPhoto === photo.id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="items-center gap-1">
                       <input
                         type="text"
                         value={photo.title}
@@ -464,18 +464,22 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                           );
                           setPhotos(updated);
                         }}
-                        className="flex-1 px-2 py-1 border rounded text-sm"
+                        className="rounded text-sm"
                         autoFocus
                       />
                       <button
                         onClick={() => updatePhotoTitle(photo.id, photo.title)}
-                        className="text-green-600 hover:text-green-700"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                        style={{ minHeight: '44px', minWidth: '44px' }}
+                        title={t('photoManager.saveChanges') || 'Save changes'}
                       >
                         <Save size={16} />
                       </button>
                       <button
                         onClick={() => setEditingPhoto(null)}
-                        className="text-red-600 hover:text-red-700"
+                        className=" text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        style={{ minHeight: '44px', minWidth: '44px' }}
+                        title={t('photoManager.cancel') || 'Cancel'}
                       >
                         <X size={16} />
                       </button>
@@ -486,9 +490,11 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                       {!isReordering && (
                         <button
                           onClick={() => setEditingPhoto(photo.id)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          style={{ minHeight: '44px', minWidth: '44px' }}
+                          title={t('photoManager.editPhoto') || 'Edit photo'}
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={16} />
                         </button>
                       )}
                     </div>
@@ -500,7 +506,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                       <select
                         value={photo.category}
                         onChange={(e) => updatePhotoCategory(photo.id, e.target.value)}
-                        className="text-xs px-2 py-1 border rounded"
+                        className="text-xs px-1 py-1 border rounded"
                       >
                         {categories.map(cat => (
                           <option key={cat.id} value={cat.id}>
@@ -510,9 +516,11 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                       </select>
                       <button
                         onClick={() => deletePhoto(photo.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        style={{ minHeight: '44px', minWidth: '44px' }}
+                        title={t('photoManager.deletePhoto') || 'Delete photo'}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   )}

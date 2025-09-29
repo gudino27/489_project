@@ -4091,10 +4091,10 @@ app.post("/api/admin/tax-rates", authenticateUser, async (req, res) => {
   try {
     const { state_code, city, tax_rate, description } = req.body;
 
-    if (!state_code || !tax_rate) {
+    if (!city || !tax_rate) {
       return res
         .status(400)
-        .json({ error: "State code and tax rate are required" });
+        .json({ error: "city and tax rate are required" });
     }
 
     // Validate tax rate is a valid number (now stored as percentage)
@@ -4106,7 +4106,7 @@ app.post("/api/admin/tax-rates", authenticateUser, async (req, res) => {
     }
 
     // Check for duplicate
-    const existing = await invoiceDb.findTaxRate(state_code, city || "");
+    const existing = await invoiceDb.findTaxRate(city,state_code || "");
     if (existing) {
       return res
         .status(400)
@@ -4114,8 +4114,8 @@ app.post("/api/admin/tax-rates", authenticateUser, async (req, res) => {
     }
 
     const result = await invoiceDb.createTaxRate({
-      state_code: state_code.toUpperCase(),
-      city: city || null,
+      state_code: state_code.toUpperCase() || '',
+      city: city,
       tax_rate: numericTaxRate, // Store as percentage
       updated_by: req.user.id,
     });

@@ -16,7 +16,14 @@ import {
   Send,
   MessageCircle,
   Trash2,
-  Bell
+  Bell,
+  Menu,
+  X,
+  Users,
+  Receipt,
+  Percent,
+  Tag,
+  BarChart3
 } from 'lucide-react';
 
 // Import extracted components
@@ -40,6 +47,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeView, setActiveView] = useState('list'); // 'list', 'create', 'edit', 'view', 'clients', 'tax-rates'
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState(null);
@@ -1525,6 +1533,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
         if (forEdit) {
           // Set up editing state - deep clone the invoice for editing
+          console.log('🔍 Setting up editingInvoice:', {
+            invoice_id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            has_invoice_number: !!invoice.invoice_number,
+            full_invoice: invoice
+          });
           setEditingInvoice({
             ...invoice,
             line_items: invoice.line_items?.map(item => ({ ...item })) || []
@@ -1677,7 +1691,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 }}
                 title="Click to edit invoice number"
               >
-                Invoice {selectedInvoice.invoice_number}
+                Invoice {selectedInvoice.invoice_number.split('-')[2]}
               </h2>
             )}
           </div>
@@ -1695,7 +1709,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto scrollbar-hide pb-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -1712,14 +1726,15 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     loadReminderHistory(selectedInvoice.id);
                   }
                 }}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                className={`py-3 px-3 sm:py-2 sm:px-1 border-b-2 font-medium text-sm flex items-center gap-2 min-h-[44px] sm:min-h-auto flex-shrink-0 whitespace-nowrap transition-colors ${
                   activeInvoiceTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <span>{tab.icon}</span>
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
               </button>
             ))}
           </nav>
@@ -2000,6 +2015,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   loading={loading}
                   setActiveView={setActiveView}
                   isEditing={true}
+                  editingInvoiceNumber={editingInvoice?.invoice_number || selectedInvoice?.invoice_number || 'Unknown'}
                 />
               ) : (
                 // Show button to initialize editing if not already initialized
@@ -2858,7 +2874,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         loading={loading}
         setActiveView={setActiveView}
         isEditing={true}
-        editingInvoiceNumber={editingInvoice.invoice_number}
+        editingInvoiceNumber={editingInvoice?.invoice_number || selectedInvoice?.invoice_number || 'Unknown'}
       />
     );
   };
@@ -2896,7 +2912,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
               placeholder="WA"
               maxLength="2"
-              required
+              
             />
           </div>
           <div>
@@ -2909,6 +2925,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               onChange={(e) => setNewTaxRate(prev => ({ ...prev, city: e.target.value }))}
               className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
               placeholder="Sunnyside"
+              required
             />
           </div>
           <div>
@@ -2941,7 +2958,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         <div className="flex justify-end">
           <button
             onClick={createTaxRate}
-            disabled={loading || !newTaxRate.state || !newTaxRate.tax_rate}
+            disabled={loading || !newTaxRate.city || !newTaxRate.tax_rate}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? 'Adding...' : 'Add Tax Rate'}
@@ -3100,7 +3117,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete the tax rate for ${rate.city}, ${rate.state}?`)) {
+                          if (window.confirm(`Are you sure you want to delete the tax rate for ${rate.city}, ${rate.state_code}?`)) {
                             deleteTaxRate(rate.id);
                           }
                         }}
@@ -3691,17 +3708,104 @@ Plumbing, HVAC, Demolition"
   const renderLabelModal = () => null;
 
   // Main render
+  // Invoice navigation items
+  const navigationItems = [
+    { id: 'list', label: 'Invoices', icon: FileText },
+    { id: 'create', label: 'Create', icon: Plus },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'payments', label: 'Payments', icon: DollarSign },
+    { id: 'tax-rates', label: 'Tax Rates', icon: Percent },
+    { id: 'labels', label: 'Labels', icon: Tag },
+    { id: 'tracking', label: 'Tracking', icon: BarChart3 }
+  ];
+
+  const getViewTitle = () => {
+    const item = navigationItems.find(item => item.id === activeView);
+    return item ? item.label : 'Invoice Manager';
+  };
+
   return (
-    <div className="p-6">
-      {activeView === 'list' && renderInvoiceList()}
-      {activeView === 'create' && renderCreateInvoiceForm()}
-      {activeView === 'view' && renderInvoiceView()}
-      {activeView === 'edit' && renderEditInvoiceForm()}
-      {activeView === 'clients' && renderClientManagement()}
-      {activeView === 'payments' && renderPaymentManagement()}
-      {activeView === 'tax-rates' && renderTaxRateManagement()}
-      {activeView === 'labels' && renderLabelManagement()}
-      {activeView === 'tracking' && renderLiveTracking()}
+    <>
+      {/* Mobile Navigation */}
+      <div className="lg:hidden">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Mobile Sidebar */}
+        <div className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Invoice Manager</h2>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <nav className="mt-4 px-2">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveView(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`
+                    w-full flex items-center px-4 py-3 mb-1 text-left rounded-lg transition-colors duration-200
+                    ${activeView === item.id
+                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                  `}
+                  style={{ minHeight: '44px' }}
+                >
+                  <Icon size={20} className="mr-3" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Mobile Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              style={{ minHeight: '44px', minWidth: '44px' }}
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">{getViewTitle()}</h1>
+            <div className="w-11"></div> {/* Spacer for centering */}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="p-4 lg:p-6">
+        {activeView === 'list' && renderInvoiceList()}
+        {activeView === 'create' && renderCreateInvoiceForm()}
+        {activeView === 'view' && renderInvoiceView()}
+        {activeView === 'edit' && renderEditInvoiceForm()}
+        {activeView === 'clients' && renderClientManagement()}
+        {activeView === 'payments' && renderPaymentManagement()}
+        {activeView === 'tax-rates' && renderTaxRateManagement()}
+        {activeView === 'labels' && renderLabelManagement()}
+        {activeView === 'tracking' && renderLiveTracking()}
+      </div>
       <EmailModal
         show={showEmailModal}
         emailInvoice={emailInvoice}
@@ -3817,7 +3921,7 @@ Plumbing, HVAC, Demolition"
         }}
         onConfirm={handleDeleteInvoice}
       />
-    </div>
+    </>
   );
 };
 

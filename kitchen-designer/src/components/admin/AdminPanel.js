@@ -36,6 +36,7 @@ import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
+import PWAInstallPrompt from './PWAInstallPrompt';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 import InvoiceIcon from './invoices/components/InvoiceIcon';
@@ -68,7 +69,7 @@ const AdminPanel = () => {
 
   // Base API URL, can be set via environment variable
   // This allows flexibility for different environments (development, production, etc.)
-  const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
+  const API_BASE =  process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
   //------------------------------------------------
   // useEffect hook to manage session initialization
   // and authentication
@@ -409,6 +410,11 @@ const AdminPanel = () => {
 
       {/* Content Area */}
       <div className="flex-1">
+        {/* PWA Install Prompt - Shows on all tabs */}
+        <div className="p-4 md:p-6 pb-0">
+          <PWAInstallPrompt />
+        </div>
+
         {activeTab === 'prices' && (
           <div className="p-6">
             {/*

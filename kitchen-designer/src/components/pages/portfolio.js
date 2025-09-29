@@ -214,28 +214,61 @@ const Portfolio = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [rotateCarousel, changePage, currentPage, resetToBeginning, isTransitioning]);
-  // Touch/swipe support
+  // Touch/swipe support - limited to carousel area to avoid conflicts with iPhone navigation
   useEffect(() => {
+    const carouselContainer = document.getElementById('carousel3dContainer');
+    if (!carouselContainer) return;
+
     let touchStartX = 0;
     let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
+
+    const EDGE_THRESHOLD = 50; // Pixels from screen edge to ignore swipes
+    const MIN_SWIPE_DISTANCE = 50; // Minimum swipe distance
+    const MAX_VERTICAL_DISTANCE = 100; // Max vertical movement for horizontal swipe
 
     const handleTouchStart = (e) => {
-      touchStartX = e.changedTouches[0].screenX;
+      const touch = e.changedTouches[0];
+      touchStartX = touch.screenX;
+      touchStartY = touch.screenY;
+
+      // Don't capture swipes that start near the screen edges (iPhone navigation)
+      if (touchStartX < EDGE_THRESHOLD || touchStartX > window.innerWidth - EDGE_THRESHOLD) {
+        return;
+      }
     };
+
     const handleTouchEnd = (e) => {
-      touchEndX = e.changedTouches[0].screenX;
-      if (touchEndX < touchStartX - 50) {
-        rotateCarousel(1); // Swipe left
+      const touch = e.changedTouches[0];
+      touchEndX = touch.screenX;
+      touchEndY = touch.screenY;
+
+      // Don't process swipes that start or end near edges
+      if (touchStartX < EDGE_THRESHOLD || touchStartX > window.innerWidth - EDGE_THRESHOLD ||
+          touchEndX < EDGE_THRESHOLD || touchEndX > window.innerWidth - EDGE_THRESHOLD) {
+        return;
       }
-      if (touchEndX > touchStartX + 50) {
-        rotateCarousel(-1); // Swipe right
+
+      const horizontalDistance = Math.abs(touchEndX - touchStartX);
+      const verticalDistance = Math.abs(touchEndY - touchStartY);
+
+      // Only process horizontal swipes (not scrolling)
+      if (horizontalDistance > MIN_SWIPE_DISTANCE && verticalDistance < MAX_VERTICAL_DISTANCE) {
+        if (touchEndX < touchStartX - MIN_SWIPE_DISTANCE) {
+          rotateCarousel(1); // Swipe left
+        } else if (touchEndX > touchStartX + MIN_SWIPE_DISTANCE) {
+          rotateCarousel(-1); // Swipe right
+        }
       }
     };
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchend', handleTouchEnd);
+
+    carouselContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+    carouselContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchend', handleTouchEnd);
+      carouselContainer.removeEventListener('touchstart', handleTouchStart);
+      carouselContainer.removeEventListener('touchend', handleTouchEnd);
     };
   }, [rotateCarousel]);
   // Load photos on mount

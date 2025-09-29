@@ -2187,7 +2187,7 @@ const invoiceDb = {
       WHERE state_code = ? AND
             COALESCE(city, '') = ? AND
             is_active = 1
-    `, [stateCode.toUpperCase(), city || '']);
+    `, [stateCode.toUpperCase()|| '', city]);
     await db.close();
     return taxRate;
   },

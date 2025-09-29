@@ -24,7 +24,7 @@ const CreateInvoiceForm = ({
   loading,
   setActiveView,
   isEditing = false,
-  editingInvoiceNumber = null
+  editingInvoiceNumber
 }) => {
   const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({ label: '' });
@@ -152,7 +152,7 @@ const CreateInvoiceForm = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold">
-          {isEditing ? `Edit Invoice ${editingInvoiceNumber}` : 'Create New Invoice'}
+          {isEditing ? `Edit Invoice ${editingInvoiceNumber.split('-')[2] || newInvoice?.invoice_number || 'Unknown'}` : 'Create New Invoice'}
         </h2>
         <button
           onClick={() => setActiveView('list')}
@@ -390,8 +390,8 @@ const CreateInvoiceForm = ({
             <h3 className="text-lg font-medium">Line Items</h3>
           </div>
 
-          {/* Header Row */}
-          <div className="grid grid-cols-11 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
+          {/* Header Row - Desktop Only */}
+          <div className="hidden lg:grid grid-cols-11 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
             <div className="col-span-4">Item Details</div>
             <div className="col-span-1">Qty</div>
             <div className="col-span-2">Unit</div>
@@ -399,9 +399,14 @@ const CreateInvoiceForm = ({
             <div className="col-span-2">Amount</div>
           </div>
 
+          {/* Mobile Header */}
+          <div className="lg:hidden p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm text-center">
+            Line Items
+          </div>
+
           <div className="space-y-4">
-            {/* Top input form for creating new items */}
-            <div className="grid grid-cols-11 gap-2 items-start p-3 bg-gray-50 rounded-lg">
+            {/* Top input form for creating new items - Desktop */}
+            <div className="hidden lg:grid grid-cols-11 gap-2 items-start p-3 bg-gray-50 rounded-lg">
               <div className="col-span-4 space-y-2">
                 <input
                   type="text"
@@ -482,10 +487,103 @@ const CreateInvoiceForm = ({
               </div>
             </div>
 
+            {/* Top input form for creating new items - Mobile */}
+            <div className="lg:hidden p-1 bg-gray-50 rounded-lg space-y-2">
+              <div className="space-y-1">
+                <div >
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    placeholder="Enter item title"
+                    value={newLineItem?.title || ''}
+                    onChange={(e) => setNewLineItem(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    placeholder="Enter item description"
+                    value={newLineItem?.description || ''}
+                    onChange={(e) => setNewLineItem(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
+                    rows="3"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="1"
+                      value={newLineItem?.quantity || 1}
+                      onChange={(e) => setNewLineItem(prev => ({ ...prev, quantity: e.target.value }))}
+                      className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="75"
+                      value={newLineItem?.unit_price || 75}
+                      onChange={(e) => setNewLineItem(prev => ({ ...prev, unit_price: e.target.value }))}
+                      className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Unit Type</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={newLineItem?.item_type || ''}
+                      onChange={(e) => setNewLineItem(prev => ({ ...prev, item_type: e.target.value }))}
+                      className="flex-1 p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                    >
+                      <option value="">Select unit type</option>
+                      {lineItemLabels.map((label) => (
+                        <option key={label.id} value={label.label}>
+                          {label.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateLabelModal(true)}
+                      className="w-12 h-12 text-white rounded-lg hover:opacity-80 flex items-center justify-center"
+                      style={{backgroundColor: 'rgb(110, 110, 110)'}}
+                      title="Create new label"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Total Amount</div>
+                    <div className="text-xl font-bold" style={{color: 'rgb(110, 110, 110)'}}>
+                      ${((newLineItem?.quantity || 1) * (newLineItem?.unit_price || 75)).toFixed(2)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addLineItemFromForm}
+                    className="text-white px-6 py-3 rounded-lg text-sm font-medium"
+                    style={{backgroundColor: 'rgb(110, 110, 110)'}}
+                  >
+                    + Add Item
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Display added line items with inline editing */}
             {newInvoice.line_items.map((item, index) => (
               <div key={index} className="space-y-3">
-                <div className="grid grid-cols-11 gap-2 items-center p-3 bg-white border rounded-lg">
+                {/* Desktop Layout */}
+                <div className="hidden lg:grid grid-cols-11 gap-2 items-center p-3 bg-white border rounded-lg">
                   <div className="col-span-4 space-y-2">
                     <input
                       type="text"
@@ -546,12 +644,101 @@ const CreateInvoiceForm = ({
                   </div>
                 </div>
 
-                {/* Delete button below each item */}
-                <div className="pl-3">
+                {/* Mobile Layout */}
+                <div className="lg:hidden p-4 bg-white border rounded-lg space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900 mb-1">Item #{index + 1}</div>
+                      <div className="text-lg font-bold" style={{color: 'rgb(110, 110, 110)'}}>
+                        ${item.total_price?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeLineItem(index)}
+                      className="text-white px-4 py-2 rounded-lg hover:opacity-80 text-sm font-medium"
+                      style={{backgroundColor: 'rgb(110, 110, 110)', minHeight: '44px'}}
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                      <input
+                        type="text"
+                        value={item.title || ''}
+                        onChange={(e) => updateLineItem(index, 'title', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none font-medium text-sm"
+                        placeholder="Item title"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                      <textarea
+                        value={item.description || ''}
+                        onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm text-gray-600 resize-none"
+                        placeholder="Description"
+                        rows="3"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity || 1}
+                          onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unit_price || ''}
+                          onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Unit Type</label>
+                      <select
+                        value={item.item_type || 'Unit'}
+                        onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
+                        className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                      >
+                        <option value="Unit">Unit</option>
+                        <option value="Hour">Hour</option>
+                        <option value="Day">Day</option>
+                        <option value="Week">Week</option>
+                        <option value="Month">Month</option>
+                        <option value="Year">Year</option>
+                        <option value="Linear Foot">Linear Foot</option>
+                        <option value="Square Foot">Square Foot</option>
+                        <option value="Cubic Foot">Cubic Foot</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delete button below each item - Desktop Only */}
+                <div className="hidden lg:block pl-3">
                   <button
                     type="button"
                     onClick={() => removeLineItem(index)}
-                    className=" text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                    className="text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
                     style={{backgroundColor: 'rgb(110, 110, 110)'}}
                   >
                     Delete Item
