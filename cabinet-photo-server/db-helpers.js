@@ -1696,7 +1696,8 @@ const invoiceDb = {
       SELECT
         i.*,
         c.company_name, c.first_name, c.last_name, c.is_business, c.phone, c.email,
-        COALESCE(p.total_paid, 0) as total_paid
+        COALESCE(p.total_paid, 0) as total_paid,
+        t.token as access_token
       FROM invoices i
       JOIN clients c ON i.client_id = c.id
       LEFT JOIN (
@@ -1704,6 +1705,7 @@ const invoiceDb = {
         FROM invoice_payments
         GROUP BY invoice_id
       ) p ON i.id = p.invoice_id
+      LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
       ORDER BY i.created_at DESC
     `);
 
@@ -1743,7 +1745,7 @@ const invoiceDb = {
         balance_due: balanceDue.toFixed(2)
       };
     });
-    
+
     await db.close();
     return invoicesWithStatus;
   },
@@ -1752,9 +1754,11 @@ const invoiceDb = {
     const db = await getDb();
     const invoice = await db.get(`
       SELECT i.*,
-             c.company_name, c.first_name, c.last_name, c.email, c.phone, c.address, c.is_business, c.tax_exempt_number
+             c.company_name, c.first_name, c.last_name, c.email, c.phone, c.address, c.is_business, c.tax_exempt_number,
+             t.token as access_token
       FROM invoices i
       JOIN clients c ON i.client_id = c.id
+      LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
       WHERE i.id = ?
     `, [id]);
 
@@ -1850,9 +1854,16 @@ const invoiceDb = {
   // Token operations for client access
   async getInvoiceByToken(token) {
     const db = await getDb();
-    
+
     const tokenData = await db.get(`
-      SELECT t.*, i.*, c.*
+      SELECT
+        i.id as invoice_id,
+        i.invoice_number, i.invoice_date, i.due_date, i.status, i.subtotal, i.tax_rate,
+        i.tax_amount, i.discount_amount, i.markup_amount, i.total_amount, i.logo_url,
+        i.notes, i.created_at as invoice_created_at, i.updated_at, i.balance_due,
+        c.id as client_id,
+        c.company_name, c.first_name, c.last_name, c.email, c.phone, c.address, c.is_business, c.tax_exempt_number,
+        t.token, t.viewed_at as token_viewed_at, t.view_count, t.created_at as token_created_at
       FROM invoice_tokens t
       JOIN invoices i ON t.invoice_id = i.id
       JOIN clients c ON i.client_id = c.id
@@ -2121,15 +2132,38 @@ const invoiceDb = {
     }
   },
 
-  async trackInvoiceView(invoiceId, token, clientIp = null, userAgent = null) {
+  async trackInvoiceView(invoiceId, token, clientIp = null, userAgent = null, locationData = {}) {
+    console.log('💾 trackInvoiceView called with:', {
+      invoiceId,
+      token,
+      clientIp,
+      userAgent: userAgent ? userAgent.substring(0, 50) + '...' : null,
+      locationData
+    });
+
     const db = await getDb();
     try {
+      const params = [
+        invoiceId,
+        token,
+        clientIp,
+        userAgent,
+        locationData.country || null,
+        locationData.region || null,
+        locationData.city || null,
+        locationData.timezone || null
+      ];
+
+      console.log('💾 Inserting with params:', params);
+
       await db.run(`
-        INSERT INTO invoice_views (invoice_id, token, client_ip, user_agent)
-        VALUES (?, ?, ?, ?)
-      `, [invoiceId, token, clientIp, userAgent]);
+        INSERT INTO invoice_views (invoice_id, token, client_ip, user_agent, country, region, city, timezone)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, params);
+
+      console.log('💾 Invoice view successfully inserted into database');
     } catch (error) {
-      console.error('Error tracking invoice view:', error);
+      console.error('❌ Error tracking invoice view:', error);
     } finally {
       await db.close();
     }
@@ -2173,6 +2207,33 @@ const invoiceDb = {
       
       await db.close();
       return stats;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getInvoiceTracking(invoiceId) {
+    const db = await getDb();
+    try {
+      const tracking = await db.all(`
+        SELECT
+          id,
+          invoice_id,
+          client_ip,
+          user_agent,
+          country,
+          region,
+          city,
+          timezone,
+          viewed_at
+        FROM invoice_views
+        WHERE invoice_id = ?
+        ORDER BY viewed_at DESC
+      `, [invoiceId]);
+
+      await db.close();
+      return tracking;
     } catch (error) {
       await db.close();
       throw error;

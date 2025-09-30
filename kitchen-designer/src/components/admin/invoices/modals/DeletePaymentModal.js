@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, AlertTriangle } from 'lucide-react';
+import { formatDatePacific } from '../../../../utils/dateUtils';
 
 const DeletePaymentModal = ({
   show,
@@ -54,7 +55,7 @@ const DeletePaymentModal = ({
             <div className="flex justify-between">
               <span className="text-sm font-medium text-gray-700">Date:</span>
               <span className="text-sm text-gray-900">
-                {new Date(payment.payment_date).toLocaleDateString()}
+                {formatDatePacific(payment.payment_date)}
               </span>
             </div>
             {payment.check_number && (

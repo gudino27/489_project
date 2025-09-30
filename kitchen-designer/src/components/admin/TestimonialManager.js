@@ -12,6 +12,7 @@ import {
   User,
   X
 } from 'lucide-react';
+import { formatDateTimePacific } from '../../utils/dateUtils';
 
 const TestimonialManager = ({ token, API_BASE, userRole }) => {
   const [testimonials, setTestimonials] = useState([]);
@@ -220,15 +221,13 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   };
 
   const formatDate = (dateString) => {
-    // Convert UTC timestamp to PST/PDT
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    // Convert UTC timestamp to PST/PDT using shared utility
+    return formatDateTimePacific(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Los_Angeles',
       timeZoneName: 'short'
     });
   };

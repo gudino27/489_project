@@ -9,6 +9,7 @@ import {
   Check,
   AlertCircle
 } from 'lucide-react';
+import { formatDatePacific, formatDateTimePacific } from '../../utils/dateUtils';
 
 const UserManagement = ({ token, API_BASE }) => {
   const [users, setUsers] = useState([]);
@@ -142,12 +143,15 @@ const UserManagement = ({ token, API_BASE }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const result = formatDateTimePacific(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      timeZone: 'America/Los_Angeles'
+      hour: '2-digit',
+      minute: '2-digit'
     });
+    console.log('🕐 Formatting date:', dateString, '→', result);
+    return result;
   };
   if (loading) {
     return (

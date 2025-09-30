@@ -2530,9 +2530,9 @@ app.get("/api/admin/invoices/tracking", authenticateUser, async (req, res) => {
     const { getDb } = require("./db-helpers");
     const db = await getDb();
 
-    // Get invoice tracking data with view counts and last viewed times
+    // Get invoice tracking data with view counts, last viewed times, and location data
     const trackingData = await db.all(`
-      SELECT 
+      SELECT
         i.id,
         i.invoice_number,
         i.client_id,
@@ -2548,7 +2548,12 @@ app.get("/api/admin/invoices/tracking", authenticateUser, async (req, res) => {
         t.token,
         t.viewed_at,
         t.view_count,
-        t.created_at as token_created_at
+        t.created_at as token_created_at,
+        (SELECT client_ip FROM invoice_views WHERE invoice_id = i.id ORDER BY viewed_at DESC LIMIT 1) as client_ip,
+        (SELECT country FROM invoice_views WHERE invoice_id = i.id ORDER BY viewed_at DESC LIMIT 1) as country,
+        (SELECT region FROM invoice_views WHERE invoice_id = i.id ORDER BY viewed_at DESC LIMIT 1) as region,
+        (SELECT city FROM invoice_views WHERE invoice_id = i.id ORDER BY viewed_at DESC LIMIT 1) as city,
+        (SELECT timezone FROM invoice_views WHERE invoice_id = i.id ORDER BY viewed_at DESC LIMIT 1) as timezone
       FROM invoices i
       LEFT JOIN clients c ON i.client_id = c.id
       LEFT JOIN invoice_tokens t ON i.id = t.invoice_id AND t.is_active = 1
@@ -5034,6 +5039,52 @@ app.get(
   }
 );
 
+// Helper function to get location from IP address
+async function getLocationFromIP(ip) {
+  console.log('🔍 getLocationFromIP called with IP:', ip);
+
+  // Don't lookup localhost or private IPs, but provide useful dev data
+  if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+    console.log('📍 Using local/development location data for IP:', ip);
+    const localData = {
+      country: 'United States',
+      region: 'Washington',
+      city: 'Sunnyside',
+      timezone: 'America/Los_Angeles'
+    };
+    console.log('📍 Returning local data:', localData);
+    return localData;
+  }
+
+  try {
+    // Clean IP address - remove IPv4-mapped IPv6 prefix if present
+    const cleanIP = ip.replace(/^::ffff:/, '');
+
+    // Use ip-api.com (free, no key required, 1000 requests/hour)
+    const response = await fetch(`http://ip-api.com/json/${cleanIP}?fields=status,country,regionName,city,timezone`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      return {
+        country: data.country || 'Unknown',
+        region: data.regionName || 'Unknown',
+        city: data.city || 'Unknown',
+        timezone: data.timezone || 'UTC'
+      };
+    }
+  } catch (error) {
+    console.error('Error getting location from IP:', error);
+  }
+
+  // Fallback for any errors
+  return {
+    country: 'Unknown',
+    region: 'Unknown',
+    city: 'Unknown',
+    timezone: 'UTC'
+  };
+}
+
 // Public endpoint - Get invoice by token (for client viewing)
 app.get("/api/invoice/:token", async (req, res) => {
   try {
@@ -5043,11 +5094,22 @@ app.get("/api/invoice/:token", async (req, res) => {
       return res.status(404).json({ error: "Invoice not found or expired" });
     }
 
-    // Track the view
+    // Track the view with location data
     const clientIp =
       req.ip || req.connection.remoteAddress || req.headers["x-forwarded-for"];
     const userAgent = req.headers["user-agent"];
-    await invoiceDb.trackInvoiceView(invoice.id, token, clientIp, userAgent);
+
+    const invoiceId = invoice.invoice_id;
+    console.log('🌐 Invoice view tracking - Invoice ID:', invoiceId);
+    console.log('🌐 Client IP:', clientIp);
+    console.log('🌐 User Agent:', userAgent);
+
+    // Get location data from IP (non-blocking)
+    const locationData = await getLocationFromIP(clientIp);
+    console.log('🌐 Location data received:', locationData);
+
+    await invoiceDb.trackInvoiceView(invoiceId, token, clientIp, userAgent, locationData);
+    console.log('✅ Invoice view tracked successfully');
 
     res.json(invoice);
   } catch (error) {
@@ -5426,6 +5488,43 @@ app.get("/api/invoice/:token/pdf", async (req, res) => {
       details:
         process.env.NODE_ENV === "development" ? error.message : undefined,
     });
+  }
+});
+
+// Public endpoint - Get tracking data for invoice by token
+app.get("/api/invoice/:token/tracking", async (req, res) => {
+  try {
+    const token = req.params.token;
+
+    // First verify the token is valid and get invoice
+    const invoice = await invoiceDb.getInvoiceByToken(token);
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found or expired" });
+    }
+
+    // Get tracking data for this invoice using the invoice ID
+    const invoiceId = invoice.invoice_id || invoice.id;
+
+    // Get view tracking data
+    const trackingData = await invoiceDb.getInvoiceTracking(invoiceId);
+
+    res.json({
+      totalViews: trackingData.length,
+      uniqueIPs: [...new Set(trackingData.map(view => view.client_ip))].length,
+      firstViewed: trackingData.length > 0 ? trackingData[trackingData.length - 1].viewed_at : null,
+      lastViewed: trackingData.length > 0 ? trackingData[0].viewed_at : null,
+      recentViews: trackingData.slice(0, 10), // Last 10 views
+      locationSummary: trackingData.reduce((acc, view) => {
+        const location = view.city && view.country
+          ? `${view.city}, ${view.country}`
+          : view.country || 'Unknown';
+        acc[location] = (acc[location] || 0) + 1;
+        return acc;
+      }, {})
+    });
+  } catch (error) {
+    console.error("Error getting invoice tracking:", error);
+    res.status(500).json({ error: "Failed to get tracking data" });
   }
 });
 

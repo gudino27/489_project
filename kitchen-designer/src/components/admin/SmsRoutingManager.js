@@ -15,6 +15,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
+import { formatDateTimePacific, formatTimePacific } from '../../utils/dateUtils';
 
 const SmsRoutingManager = ({ token, API_BASE }) => {
   const [activeView, setActiveView] = useState('settings');
@@ -223,7 +224,7 @@ const SmsRoutingManager = ({ token, API_BASE }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: `Test SMS routing for ${messageType} - sent at ${new Date().toLocaleTimeString()}`
+          message: `Test SMS routing for ${messageType} - sent at ${formatTimePacific(new Date())}`
         })
       });
 
@@ -247,7 +248,7 @@ const SmsRoutingManager = ({ token, API_BASE }) => {
   ];
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+    return formatDateTimePacific(dateString);
   };
 
   const clearMessages = () => {

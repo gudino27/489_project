@@ -803,6 +803,10 @@ async function addInvoiceTables(db) {
       token TEXT NOT NULL,
       client_ip TEXT,
       user_agent TEXT,
+      country TEXT,
+      region TEXT,
+      city TEXT,
+      timezone TEXT,
       viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
     );
@@ -811,6 +815,19 @@ async function addInvoiceTables(db) {
     CREATE INDEX IF NOT EXISTS idx_invoice_views_token ON invoice_views(token);
     CREATE INDEX IF NOT EXISTS idx_invoice_views_viewed_at ON invoice_views(viewed_at);
   `);
+
+  // Add location columns to existing invoice_views table if they don't exist
+  try {
+    await db.exec(`
+      ALTER TABLE invoice_views ADD COLUMN country TEXT;
+      ALTER TABLE invoice_views ADD COLUMN region TEXT;
+      ALTER TABLE invoice_views ADD COLUMN city TEXT;
+      ALTER TABLE invoice_views ADD COLUMN timezone TEXT;
+    `);
+  } catch (error) {
+    // Columns already exist, ignore error
+    console.log('Location columns already exist in invoice_views table');
+  }
 
   // Insert default line item labels
   const defaultLabels = [

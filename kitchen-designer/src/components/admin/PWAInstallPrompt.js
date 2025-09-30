@@ -105,17 +105,7 @@ const PWAInstallPrompt = () => {
     return (
       <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
         <div className="flex items-center gap-3">
-          {isInstalled ? (
-            <>
-              <CheckCircle className="text-green-600" size={20} />
-              <div>
-                <h3 className="text-sm font-medium text-green-800">App Installed</h3>
-                <p className="text-sm text-green-600">
-                  You're using the installed PWA! Enjoy faster performance and improved mobile experience.
-                </p>
-              </div>
-            </>
-          ) : (
+          {isInstalled ? (<></> ) : (
             <>
               <Smartphone className="text-gray-600" size={20} />
               <div className="flex-1">

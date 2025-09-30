@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Trash2, Edit2, Save, Plus, GripVertical, Mail, Phone, Calendar } from 'lucide-react';
+import { formatDatePacific } from '../../utils/dateUtils';
 
 const EmployeeManager = () => {
   const [employees, setEmployees] = useState([]);
@@ -515,7 +516,7 @@ const EmployeeManager = () => {
                             {employee.joined_date && (
                               <div className="flex items-center gap-1">
                                 <Calendar size={14} />
-                                <span>Joined {new Date(employee.joined_date).toLocaleDateString()}</span>
+                                <span>Joined {formatDatePacific(employee.joined_date)}</span>
                               </div>
                             )}
                           </div>

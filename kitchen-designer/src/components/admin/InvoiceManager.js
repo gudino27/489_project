@@ -23,10 +23,10 @@ import {
   Receipt,
   Percent,
   Tag,
-  BarChart3
+  BarChart3,
+  MapPin
 } from 'lucide-react';
 
-// Import extracted components
 import InvoiceList from './invoices/components/InvoiceList';
 import ClientManagement from './invoices/components/ClientManagement';
 import StatusBadge from './invoices/components/StatusBadge';
@@ -38,6 +38,7 @@ import PaymentModal from './invoices/modals/PaymentModal';
 import EditPaymentModal from './invoices/modals/EditPaymentModal';
 import DeletePaymentModal from './invoices/modals/DeletePaymentModal';
 import CreateInvoiceForm from './invoices/forms/CreateInvoiceForm';
+import { formatDatePacific, formatDateTimePacific, formatTimePacific } from '../../utils/dateUtils';
 
 const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [invoices, setInvoices] = useState([]);
@@ -63,6 +64,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [liveTrackingData, setLiveTrackingData] = useState(null);
   const [trackingInterval, setTrackingInterval] = useState(null);
+  const [selectedInvoiceTracking, setSelectedInvoiceTracking] = useState(null);
   const [activeClientTab, setActiveClientTab] = useState('details');
   const [clientAddress, setClientAddress] = useState({
     street: '',
@@ -443,6 +445,35 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
     return () => stopLiveTracking(); // Cleanup on unmount
   }, [activeView]);
+
+  // Fetch tracking data for individual invoice
+  const fetchInvoiceTracking = async (invoice) => {
+    if (!invoice || !invoice.access_token) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/invoice/${invoice.access_token}/tracking`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedInvoiceTracking(data);
+      } else {
+        setSelectedInvoiceTracking(null);
+      }
+    } catch (error) {
+      console.error('Error fetching invoice tracking:', error);
+      setSelectedInvoiceTracking(null);
+    }
+  };
+
+  // Fetch tracking data when invoice is selected for viewing
+  useEffect(() => {
+    if (activeView === 'view' && selectedInvoice) {
+      fetchInvoiceTracking(selectedInvoice);
+    } else {
+      setSelectedInvoiceTracking(null);
+    }
+  }, [activeView, selectedInvoice]);
 
   const createTaxRate = async () => {
     try {
@@ -1772,8 +1803,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 Invoice Details
               </h3>
               <div className="space-y-2">
-                <p><strong>Invoice Date:</strong> {new Date(selectedInvoice.invoice_date).toLocaleDateString()}</p>
-                <p><strong>Due Date:</strong> {new Date(selectedInvoice.due_date).toLocaleDateString()}</p>
+                <p><strong>Invoice Date:</strong> {formatDatePacific(selectedInvoice.invoice_date)}</p>
+                <p><strong>Due Date:</strong> {formatDatePacific(selectedInvoice.due_date)}</p>
                 <p><strong>Status:</strong>
                   <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${selectedInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
                     selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
@@ -1932,7 +1963,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         {selectedInvoice.payments.map((payment) => (
                           <tr key={payment.id} className="hover:bg-gray-50">
                             <td className="px-4 py-2 text-sm text-gray-900">
-                              {new Date(payment.payment_date).toLocaleDateString()}
+                              {formatDatePacific(payment.payment_date)}
                             </td>
                             <td className="px-4 py-2 text-sm font-medium text-green-600">
                               ${parseFloat(payment.payment_amount).toFixed(2)}
@@ -2096,7 +2127,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               </div>
               <p className="text-gray-600 mb-6">Monitor invoice status, payment history, and client interactions.</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Status Timeline */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium mb-4 flex items-center gap-2">
@@ -2110,7 +2141,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <div>
                         <p className="text-sm font-medium">Invoice Created</p>
-                        <p className="text-xs text-gray-500">{new Date(selectedInvoice.invoice_date).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500">{formatDatePacific(selectedInvoice.invoice_date)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -2120,6 +2151,52 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         <p className="text-xs text-gray-500 capitalize">{selectedInvoice.status}</p>
                       </div>
                     </div>
+                    {selectedInvoiceTracking && selectedInvoiceTracking.totalViews > 0 && (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          <div>
+                            <p className="text-sm font-medium">First Viewed</p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTimePacific(selectedInvoiceTracking.firstViewed)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <div>
+                            <p className="text-sm font-medium">Last Viewed</p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTimePacific(selectedInvoiceTracking.lastViewed)}
+                            </p>
+                            {selectedInvoiceTracking.recentViews && selectedInvoiceTracking.recentViews.length > 0 && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                IP: {selectedInvoiceTracking.recentViews[0].client_ip}
+                                {selectedInvoiceTracking.recentViews[0].city &&
+                                  ` • ${selectedInvoiceTracking.recentViews[0].city}, ${selectedInvoiceTracking.recentViews[0].country}`
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                          <div>
+                            <p className="text-sm font-medium">View Statistics</p>
+                            <p className="text-xs text-gray-500">
+                              {selectedInvoiceTracking.totalViews} total views • {selectedInvoiceTracking.uniqueIPs} unique IPs
+                            </p>
+                            {Object.keys(selectedInvoiceTracking.locationSummary).length > 0 && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                Locations: {Object.entries(selectedInvoiceTracking.locationSummary).slice(0, 2).map(([location, count]) =>
+                                  `${location} (${count})`
+                                ).join(', ')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -2131,6 +2208,42 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <p className="text-sm"><strong>Balance Due:</strong> ${(selectedInvoice.balance_due || 0).toFixed(2)}</p>
                     <p className="text-sm"><strong>Days Outstanding:</strong> {Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))}</p>
                   </div>
+                </div>
+
+                {/* View Tracking */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-4 flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-green-600" />
+                    View Tracking
+                  </h4>
+                  {selectedInvoiceTracking ? (
+                    <div className="space-y-2">
+                      <p className="text-sm"><strong>Total Views:</strong> {selectedInvoiceTracking.totalViews}</p>
+                      <p className="text-sm"><strong>Unique IPs:</strong> {selectedInvoiceTracking.uniqueIPs}</p>
+                      {selectedInvoiceTracking.lastViewed && (
+                        <p className="text-sm"><strong>Last Viewed:</strong> {formatDateTimePacific(selectedInvoiceTracking.lastViewed)}</p>
+                      )}
+                      {Object.keys(selectedInvoiceTracking.locationSummary).length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-1 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            Locations:
+                          </p>
+                          <div className="space-y-1">
+                            {Object.entries(selectedInvoiceTracking.locationSummary).slice(0, 3).map(([location, count]) => (
+                              <p key={location} className="text-xs text-gray-600">
+                                {location}: {count} view{count > 1 ? 's' : ''}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">Loading tracking data...</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2299,7 +2412,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                                  reminder.reminder_type === 'email' ? 'Email' : 'SMS'} Reminder
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(reminder.sent_date).toLocaleString()}
+                                {formatDateTimePacific(reminder.sent_date)}
                               </p>
                               {reminder.custom_message && (
                                 <p className="text-xs text-gray-600 mt-1 italic">
@@ -2490,6 +2603,36 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  // Delete individual label function
+  const deleteLabel = async (labelId) => {
+    if (!window.confirm('Are you sure you want to delete this label?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/api/admin/line-item-labels/${labelId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Remove the label from the local state
+        setLineItemLabels(prev => prev.filter(label => label.id !== labelId));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to delete label');
+      }
+    } catch (error) {
+      console.error('Error deleting label:', error);
+      alert('Failed to delete label. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Bulk create labels function
   const bulkCreateLabels = async () => {
     if (!bulkLabels.trim()) {
@@ -2562,7 +2705,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   // Label Management View
   const renderLabelManagement = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className=" justify-between items-center">
         <h2 className="text-2xl font-bold">Line Item Labels</h2>
         <div className="flex gap-3">
           <button
@@ -2595,7 +2738,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 Label
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Default Price
+                Actions
               </th>
             </tr>
           </thead>
@@ -2606,7 +2749,15 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   {label.label}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${label.default_unit_price?.toFixed(2) || '0.00'}
+                  <button
+                    onClick={() => deleteLabel(label.id)}
+                    disabled={loading}
+                    className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ minHeight: '44px', minWidth: '44px' }}
+                    title="Delete label"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -2740,7 +2891,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   return (
                     <tr key={payment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(payment.payment_date).toLocaleDateString()}
+                        {formatDatePacific(payment.payment_date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                         {payment.invoice_number}
@@ -2995,7 +3146,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       </div>
 
       {/* Tax Rates Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -3147,10 +3298,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">Live Invoice Tracking</h2>
+          <h2 className="text-xl font-bold">Live Invoice Tracking</h2>
           <div className="flex items-center gap-2 text-sm text-green-600">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Live - Updates every 30s</span>
+            <span>Live-Updates every 30s</span>
           </div>
         </div>
         <button
@@ -3162,8 +3313,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       </div>
 
       {liveTrackingData ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full overflow-x-auto">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -3183,6 +3334,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Viewed
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Link Status
@@ -3232,13 +3386,32 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {invoice.last_viewed ? (
                       <div>
-                        <div>{new Date(invoice.last_viewed).toLocaleDateString()}</div>
+                        <div>{formatDatePacific(invoice.last_viewed)}</div>
                         <div className="text-xs text-gray-400">
-                          {new Date(invoice.last_viewed).toLocaleTimeString()}
+                          {formatTimePacific(invoice.last_viewed)}
                         </div>
                       </div>
                     ) : (
                       <span className="text-gray-400">Never</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {invoice.city || invoice.country ? (
+                      <div>
+                        <div className="text-sm text-gray-900">
+                          {invoice.city && invoice.region ? `${invoice.city}, ${invoice.region}` : invoice.city || invoice.region || ''}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {invoice.country || 'Unknown'}
+                        </div>
+                        {invoice.client_ip && (
+                          <div className="text-xs text-gray-400">
+                            IP: {invoice.client_ip}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No location data</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -3630,7 +3803,7 @@ Plumbing, HVAC, Demolition"
                              reminder.reminder_type === 'email' ? 'Email' : 'SMS'} Reminder
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(reminder.sent_date).toLocaleString()}
+                            {formatDateTimePacific(reminder.sent_date)}
                           </p>
                           {reminder.custom_message && (
                             <p className="text-xs text-gray-600 mt-1 italic">
@@ -3790,6 +3963,40 @@ Plumbing, HVAC, Demolition"
             </button>
             <h1 className="text-lg font-semibold text-gray-900">{getViewTitle()}</h1>
             <div className="w-11"></div> {/* Spacer for centering */}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Navigation - Hidden on mobile */}
+      <div className="hidden lg:block">
+        <div className="bg-white border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">Invoice Manager</h1>
+            </div>
+
+            {/* Desktop Navigation Tabs */}
+            <nav className="flex space-x-1 overflow-x-auto">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`
+                      flex items-center px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-200
+                      ${activeView === item.id
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <Icon size={18} className="mr-2" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
       </div>

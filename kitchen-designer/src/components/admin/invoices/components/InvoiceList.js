@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import InvoiceIcon from './InvoiceIcon';
+import { formatDatePacific } from '../../../../utils/dateUtils';
 
 const InvoiceList = ({
   filteredInvoices,
@@ -242,7 +243,7 @@ const InvoiceList = ({
                   <StatusBadge status={invoice.status} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(invoice.invoice_date).toLocaleDateString()}
+                  {formatDatePacific(invoice.invoice_date)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button
@@ -324,7 +325,7 @@ const InvoiceList = ({
                 {invoice.is_business ? invoice.company_name : `${invoice.first_name} ${invoice.last_name}`}
               </div>
               <div className="text-sm text-gray-500">
-                {new Date(invoice.invoice_date).toLocaleDateString()}
+                {formatDatePacific(invoice.invoice_date)}
               </div>
             </div>
             
@@ -573,7 +574,7 @@ const InvoiceList = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Date:</span>
-                    <span>{new Date(selectedInvoice.invoice_date).toLocaleDateString()}</span>
+                    <span>{formatDatePacific(selectedInvoice.invoice_date)}</span>
                   </div>
                 </div>
               </div>
