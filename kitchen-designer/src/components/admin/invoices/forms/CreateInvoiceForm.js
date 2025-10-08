@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-
+import { useLanguage } from '../../../../contexts/LanguageContext';
 const CreateInvoiceForm = ({
   error,
   newInvoice,
@@ -26,6 +26,7 @@ const CreateInvoiceForm = ({
   isEditing = false,
   editingInvoiceNumber
 }) => {
+  const { t } = useLanguage();
   const [showCreateLabelModal, setShowCreateLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({ label: '' });
   const [creatingLabel, setCreatingLabel] = useState(false);
@@ -72,7 +73,7 @@ const CreateInvoiceForm = ({
 
   const addLineItemFromForm = () => {
     if (!newLineItem.title.trim()) {
-      alert('Please enter a title for the line item.');
+      alert(t('invoiceManager.pleaseEnterTitle'));
       return;
     }
 
@@ -152,13 +153,13 @@ const CreateInvoiceForm = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold">
-          {isEditing ? `Edit Invoice ${editingInvoiceNumber.split('-')[2] || newInvoice?.invoice_number || 'Unknown'}` : 'Create New Invoice'}
+          {isEditing ? `${t('invoiceManager.editInvoice')} ${editingInvoiceNumber.split('-')[2] || newInvoice?.invoice_number || t('invoiceManager.unknown')}` : t('invoiceManager.createNewInvoice')}
         </h2>
         <button
           onClick={() => setActiveView('list')}
           className="text-gray-600 hover:text-gray-900 text-sm sm:text-base self-start sm:self-auto"
         >
-          ← Back to List
+          ← {t('invoiceManager.backToList')}
         </button>
       </div>
 
@@ -173,7 +174,7 @@ const CreateInvoiceForm = ({
           {/* Client Selection */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Client *
+              {t('invoiceManager.client')} *
             </label>
             <div className="relative client-dropdown-container">
               <div className="relative">
@@ -199,7 +200,7 @@ const CreateInvoiceForm = ({
                     }
                   }}
                   className="w-full p-3 pr-20 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Click to select client or type to search..."
+                  placeholder={t('invoiceManager.clickToSelectClient')}
                   required={!newInvoice.client_id}
                 />
                 {/* Clear button */}
@@ -245,13 +246,13 @@ const CreateInvoiceForm = ({
                     className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 flex items-center gap-2 text-blue-600 font-medium"
                   >
                     <Plus size={16} />
-                    Add New Client
+                    {t('invoiceManager.addNewClient')}
                   </button>
 
                   {/* Show message when no search term */}
                   {clientSearchTerm.length === 0 && (
                     <div className="px-4 py-3 text-gray-500 text-center text-sm">
-                      Type to search existing clients
+                      {t('invoiceManager.typeToSearch')}
                     </div>
                   )}
 
@@ -287,7 +288,7 @@ const CreateInvoiceForm = ({
                   {/* No results message */}
                   {clientSearchTerm.length >= 2 && searchResults.length === 0 && !isSearching && (
                     <div className="px-4 py-3 text-gray-500 text-center text-sm">
-                      No clients found matching "{clientSearchTerm}"
+                      {t('invoiceManager.noClientsFound')} "{clientSearchTerm}"
                     </div>
                   )}
 
@@ -295,7 +296,7 @@ const CreateInvoiceForm = ({
                   {isSearching && clientSearchTerm.length >= 2 && (
                     <div className="px-4 py-3 text-gray-500 text-center text-sm flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      Searching...
+                      {t('invoiceManager.searching')}
                     </div>
                   )}
                 </div>
@@ -304,7 +305,7 @@ const CreateInvoiceForm = ({
               {/* Selected client display */}
               {newInvoice.client_id && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
-                  ✓ Selected: {clientSearchTerm || selectedClientName || `Client ID: ${newInvoice.client_id}`}
+                  ✓ {t('invoiceManager.selected')}: {clientSearchTerm || selectedClientName || `${t('invoiceManager.clientID')}: ${newInvoice.client_id}`}
                 </div>
               )}
             </div>
@@ -313,7 +314,7 @@ const CreateInvoiceForm = ({
           {/* Invoice Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Invoice Date *
+              {t('invoiceManager.invoiceDate')} *
             </label>
             <input
               type="date"
@@ -327,7 +328,7 @@ const CreateInvoiceForm = ({
           {/* Due Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Due Date *
+              {t('invoiceManager.dueDate')} *
             </label>
             <input
               type="date"
@@ -341,7 +342,7 @@ const CreateInvoiceForm = ({
           {/* Tax Rate */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tax Rate
+              {t('invoiceManager.taxRate')}
             </label>
             <select
               value={newInvoice.tax_rate}
@@ -374,10 +375,10 @@ const CreateInvoiceForm = ({
               }}
               className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
             >
-              <option value="0">No Tax - 0.00%</option>
+              <option value="0">{t('invoiceManager.noTax')}</option>
               {taxRates.map((rate) => (
                 <option key={rate.id} value={rate.tax_rate}>
-                  {rate.city ? `${rate.city} Tax` : `${rate.state_code} Tax`} - {rate.tax_rate.toFixed(2)}%
+                  {rate.city ? `${rate.city} ${t('invoiceManager.tax')}` : `${rate.state_code} ${t('invoiceManager.tax')}`} - {rate.tax_rate.toFixed(2)}%
                 </option>
               ))}
             </select>
@@ -387,21 +388,21 @@ const CreateInvoiceForm = ({
         {/* Line Items */}
         <div className="mt-8">
           <div className="mb-4">
-            <h3 className="text-lg font-medium">Line Items</h3>
+            <h3 className="text-lg font-medium">{t('invoiceManager.lineItems')}</h3>
           </div>
 
           {/* Header Row - Desktop Only */}
           <div className="hidden lg:grid grid-cols-11 gap-2 items-center p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm">
-            <div className="col-span-4">Item Details</div>
-            <div className="col-span-1">Qty</div>
-            <div className="col-span-2">Unit</div>
-            <div className="col-span-2">Rate ($)</div>
-            <div className="col-span-2">Amount</div>
+            <div className="col-span-4">{t('invoiceManager.itemDetails')}</div>
+            <div className="col-span-1">{t('invoiceManager.qty')}</div>
+            <div className="col-span-2">{t('invoiceManager.unit')}</div>
+            <div className="col-span-2">{t('invoiceManager.rate')}</div>
+            <div className="col-span-2">{t('invoiceManager.amount')}</div>
           </div>
 
           {/* Mobile Header */}
           <div className="lg:hidden p-3 bg-gray-800 text-white rounded-lg mb-3 font-medium text-sm text-center">
-            Line Items
+            {t('invoiceManager.lineItems')}
           </div>
 
           <div className="space-y-4">
@@ -410,13 +411,13 @@ const CreateInvoiceForm = ({
               <div className="col-span-4 space-y-2">
                 <input
                   type="text"
-                  placeholder="Title"
+                  placeholder={t('invoiceManager.title')}
                   value={newLineItem?.title || ''}
                   onChange={(e) => setNewLineItem(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm font-medium"
                 />
                 <textarea
-                  placeholder="Description"
+                  placeholder={t('invoiceManager.description')}
                   value={newLineItem?.description || ''}
                   onChange={(e) => setNewLineItem(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full p-2 border rounded focus:border-blue-500 focus:outline-none text-sm resize-none"
@@ -428,7 +429,7 @@ const CreateInvoiceForm = ({
                   className="text-white px-3 py-1 rounded text-sm flex items-center gap-1"
                   style={{backgroundColor: 'rgb(110, 110, 110)'}}
                 >
-                  + Add Item
+                  + {t('invoiceManager.addItem')}
                 </button>
               </div>
 
@@ -450,7 +451,7 @@ const CreateInvoiceForm = ({
                     onChange={(e) => setNewLineItem(prev => ({ ...prev, item_type: e.target.value }))}
                     className="flex-1 p-2 border rounded focus:border-blue-500 focus:outline-none text-sm"
                   >
-                    <option value="">Unit</option>
+                    <option value="">{t('invoiceManager.unitType')}</option>
                     {lineItemLabels.map((label) => (
                       <option key={label.id} value={label.label}>
                         {label.label}
@@ -462,7 +463,7 @@ const CreateInvoiceForm = ({
                     onClick={() => setShowCreateLabelModal(true)}
                     className="px-2 py-1 text-white rounded hover:opacity-80 text-xs flex items-center justify-center"
                     style={{backgroundColor: 'rgb(110, 110, 110)'}}
-                    title="Create new label"
+                    title={t('invoiceManager.createNewLabel')}
                   >
                     +
                   </button>
@@ -491,19 +492,19 @@ const CreateInvoiceForm = ({
             <div className="lg:hidden p-1 bg-gray-50 rounded-lg space-y-2">
               <div className="space-y-1">
                 <div >
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.title')} *</label>
                   <input
                     type="text"
-                    placeholder="Enter item title"
+                    placeholder={t('invoiceManager.enterItemTitle')}
                     value={newLineItem?.title || ''}
                     onChange={(e) => setNewLineItem(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.description')}</label>
                   <textarea
-                    placeholder="Enter item description"
+                    placeholder={t('invoiceManager.enterItemDescription')}
                     value={newLineItem?.description || ''}
                     onChange={(e) => setNewLineItem(prev => ({ ...prev, description: e.target.value }))}
                     className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
@@ -512,7 +513,7 @@ const CreateInvoiceForm = ({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.quantity')}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -523,7 +524,7 @@ const CreateInvoiceForm = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($)</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.rate')}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -535,14 +536,14 @@ const CreateInvoiceForm = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Unit Type</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.unitType')}</label>
                   <div className="flex gap-2">
                     <select
                       value={newLineItem?.item_type || ''}
                       onChange={(e) => setNewLineItem(prev => ({ ...prev, item_type: e.target.value }))}
                       className="flex-1 p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
                     >
-                      <option value="">Select unit type</option>
+                      <option value="">{t('invoiceManager.selectUnitType')}</option>
                       {lineItemLabels.map((label) => (
                         <option key={label.id} value={label.label}>
                           {label.label}
@@ -554,7 +555,7 @@ const CreateInvoiceForm = ({
                       onClick={() => setShowCreateLabelModal(true)}
                       className="w-12 h-12 text-white rounded-lg hover:opacity-80 flex items-center justify-center"
                       style={{backgroundColor: 'rgb(110, 110, 110)'}}
-                      title="Create new label"
+                      title={t('invoiceManager.createNewLabel')}
                     >
                       +
                     </button>
@@ -562,7 +563,7 @@ const CreateInvoiceForm = ({
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="text-right">
-                    <div className="text-xs text-gray-500">Total Amount</div>
+                    <div className="text-xs text-gray-500">{t('invoiceManager.totalAmount')}</div>
                     <div className="text-xl font-bold" style={{color: 'rgb(110, 110, 110)'}}>
                       ${((newLineItem?.quantity || 1) * (newLineItem?.unit_price || 75)).toFixed(2)}
                     </div>
@@ -573,7 +574,7 @@ const CreateInvoiceForm = ({
                     className="text-white px-6 py-3 rounded-lg text-sm font-medium"
                     style={{backgroundColor: 'rgb(110, 110, 110)'}}
                   >
-                    + Add Item
+                    + {t('invoiceManager.addItem')}
                   </button>
                 </div>
               </div>
@@ -590,13 +591,13 @@ const CreateInvoiceForm = ({
                       value={item.title || ''}
                       onChange={(e) => updateLineItem(index, 'title', e.target.value)}
                       className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none font-medium text-sm"
-                      placeholder="Item title"
+                      placeholder={t('invoiceManager.itemTitle')}
                     />
                     <textarea
                       value={item.description || ''}
                       onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                       className="w-full p-1 border rounded focus:border-blue-500 focus:outline-none text-sm text-gray-600 resize-none"
-                      placeholder="Description"
+                      placeholder={t('invoiceManager.description')}
                       rows="2"
                     />
                   </div>
@@ -648,7 +649,7 @@ const CreateInvoiceForm = ({
                 <div className="lg:hidden p-4 bg-white border rounded-lg space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900 mb-1">Item #{index + 1}</div>
+                      <div className="text-sm font-medium text-gray-900 mb-1">{t('invoiceManager.item')} #{index + 1}</div>
                       <div className="text-lg font-bold" style={{color: 'rgb(110, 110, 110)'}}>
                         ${item.total_price?.toFixed(2) || '0.00'}
                       </div>
@@ -659,36 +660,36 @@ const CreateInvoiceForm = ({
                       className="text-white px-4 py-2 rounded-lg hover:opacity-80 text-sm font-medium"
                       style={{backgroundColor: 'rgb(110, 110, 110)', minHeight: '44px'}}
                     >
-                      Delete
+                      {t('invoiceManager.delete')}
                     </button>
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.title')}</label>
                       <input
                         type="text"
                         value={item.title || ''}
                         onChange={(e) => updateLineItem(index, 'title', e.target.value)}
                         className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none font-medium text-sm"
-                        placeholder="Item title"
+                        placeholder={t('invoiceManager.itemTitle')}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.description')}</label>
                       <textarea
                         value={item.description || ''}
                         onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                         className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none text-sm text-gray-600 resize-none"
-                        placeholder="Description"
+                        placeholder={t('invoiceManager.description')}
                         rows="3"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.quantity')}</label>
                         <input
                           type="number"
                           min="1"
@@ -699,7 +700,7 @@ const CreateInvoiceForm = ({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($)</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.rate')}</label>
                         <input
                           type="number"
                           step="0.01"
@@ -713,7 +714,7 @@ const CreateInvoiceForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Unit Type</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('invoiceManager.unitType')}</label>
                       <select
                         value={item.item_type || 'Unit'}
                         onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
@@ -741,7 +742,7 @@ const CreateInvoiceForm = ({
                     className="text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
                     style={{backgroundColor: 'rgb(110, 110, 110)'}}
                   >
-                    Delete Item
+                    {t('invoiceManager.deleteItem')}
                   </button>
                 </div>
               </div>
@@ -754,7 +755,7 @@ const CreateInvoiceForm = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Discount Amount
+                {t('invoiceManager.discountAmount')}
               </label>
               <input
                 type="number"
@@ -794,7 +795,7 @@ const CreateInvoiceForm = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Markup Amount
+                {t('invoiceManager.markupAmount')}
               </label>
               <input
                 type="number"
@@ -834,15 +835,15 @@ const CreateInvoiceForm = ({
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Subtotal:</span>
+                <span>{t('invoiceManager.subtotal')}:</span>
                 <span>${newInvoice.subtotal?.toFixed(2) || '0.00'}</span>
               </div>
               <div className="flex justify-between">
-                <span>Tax:</span>
+                <span>{t('invoiceManager.tax')}:</span>
                 <span>${newInvoice.tax_amount?.toFixed(2) || '0.00'}</span>
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>Total:</span>
+                <span>{t('invoiceManager.total')}:</span>
                 <span>${newInvoice.total_amount?.toFixed(2) || '0.00'}</span>
               </div>
             </div>
@@ -852,14 +853,14 @@ const CreateInvoiceForm = ({
         {/* Notes */}
         <div className="mt-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notes
+            {t('invoiceManager.notes')}
           </label>
           <textarea
             value={newInvoice.notes}
             onChange={(e) => setNewInvoice(prev => ({ ...prev, notes: e.target.value }))}
             rows={3}
             className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-            placeholder="Additional notes..."
+            placeholder={t('invoiceManager.additionalNotes')}
           />
         </div>
 
@@ -870,14 +871,14 @@ const CreateInvoiceForm = ({
             onClick={() => setActiveView('list')}
             className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            {t('invoiceManager.cancel')}
           </button>
           <button
             onClick={() => createInvoice(newInvoice)}
             disabled={loading || !newInvoice.client_id || newInvoice.line_items.length === 0}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Invoice' : 'Create Invoice')}
+            {loading ? (isEditing ? t('invoiceManager.updating') : t('invoiceManager.creating')) : (isEditing ? t('invoiceManager.updateInvoice') : t('invoiceManager.createInvoiceButton'))}
           </button>
         </div>
       </div>
@@ -886,19 +887,19 @@ const CreateInvoiceForm = ({
       {showCreateLabelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
-            <h3 className="text-lg font-bold mb-4">Create New Label</h3>
+            <h3 className="text-lg font-bold mb-4">{t('invoiceManager.createNewLabel')}</h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Label Name *
+                  {t('invoiceManager.labelName')} *
                 </label>
                 <input
                   type="text"
                   value={newLabel.label}
                   onChange={(e) => setNewLabel(prev => ({ ...prev, label: e.target.value }))}
                   className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Enter label name..."
+                  placeholder={t('invoiceManager.enterLabelName')}
                   autoFocus
                 />
               </div>
@@ -914,14 +915,14 @@ const CreateInvoiceForm = ({
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                 disabled={creatingLabel}
               >
-                Cancel
+                {t('invoiceManager.cancel')}
               </button>
               <button
                 onClick={createLabel}
                 disabled={creatingLabel || !newLabel.label.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creatingLabel ? 'Creating...' : 'Create Label'}
+                {creatingLabel ? t('invoiceManager.creating') : t('invoiceManager.createLabel')}
               </button>
             </div>
           </div>

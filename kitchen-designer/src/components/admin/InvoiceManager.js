@@ -37,10 +37,13 @@ import DeleteModal from './invoices/modals/DeleteModal';
 import PaymentModal from './invoices/modals/PaymentModal';
 import EditPaymentModal from './invoices/modals/EditPaymentModal';
 import DeletePaymentModal from './invoices/modals/DeletePaymentModal';
+import SendReceiptModal from './invoices/forms/SendReceiptModal';
 import CreateInvoiceForm from './invoices/forms/CreateInvoiceForm';
 import { formatDatePacific, formatDateTimePacific, formatTimePacific } from '../../utils/dateUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const InvoiceManager = ({ token, API_BASE, userRole }) => {
+  const { t } = useLanguage();
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
   const [lineItemLabels, setLineItemLabels] = useState([]);
@@ -113,6 +116,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const [allPayments, setAllPayments] = useState([]);
   const [editingPayment, setEditingPayment] = useState(null);
   const [deletingPayment, setDeletingPayment] = useState(null);
+  const [receiptPayment, setReceiptPayment] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [activeInvoiceTab, setActiveInvoiceTab] = useState('details');
   const [newLabel, setNewLabel] = useState({
     label: '',
@@ -439,9 +444,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
       stopLiveTracking();
     }
 
-    if (activeView === 'payments') {
-      fetchAllPayments();
-    }
+    
 
     return () => stopLiveTracking(); // Cleanup on unmount
   }, [activeView]);
@@ -1468,6 +1471,72 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  // Download receipt PDF
+  const downloadReceiptPdf = async (payment, invoiceId, language = 'en') => {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/invoices/${invoiceId}/payments/${payment.id}/receipt/pdf?lang=${language}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to generate receipt');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${payment.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      alert('Failed to download receipt');
+    }
+  };
+
+  // Open receipt modal
+  const openReceiptModal = (payment) => {
+    setReceiptPayment(payment);
+    setShowReceiptModal(true);
+  };
+
+  // Send receipt
+  const handleSendReceipt = async (formData) => {
+    if (!receiptPayment || !selectedInvoice) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/invoices/${selectedInvoice.id}/payments/${receiptPayment.id}/receipt/send`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert('Receipt sent successfully!');
+        setShowReceiptModal(false);
+        setReceiptPayment(null);
+      } else {
+        throw new Error(result.error || 'Failed to send receipt');
+      }
+    } catch (error) {
+      console.error('Error sending receipt:', error);
+      alert(`Failed to send receipt: ${error.message}`);
+      throw error;
+    }
+  };
+
   // Create label function
   const createLabel = async () => {
     setLoading(true);
@@ -1676,15 +1745,15 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
     // Tab definitions
     const tabs = [
-      { id: 'details', label: 'Invoice Details', icon: '📄' },
-      { id: 'payments', label: 'Payments', icon: '💰' },
-      { id: 'edit', label: 'Edit', icon: '✏️' },
-      { id: 'send', label: 'Send', icon: '📧' },
-      { id: 'track', label: 'Track', icon: '👁️' },
-      { id: 'download', label: 'Download', icon: '⬇️' },
-      { id: 'reminder', label: 'Reminder', icon: '⏰' },
-      { id: 'delete', label: 'Delete', icon: '🗑️' },
-      { id: 'analytics', label: 'Analytics', icon: '📊' }
+      { id: 'details', label: t('invoiceManager.invoiceDetails'), icon: '📄' },
+      { id: 'payments', label: t('invoiceManager.payments'), icon: '💰' },
+      { id: 'edit', label: t('invoiceManager.edit'), icon: '✏️' },
+      { id: 'send', label: t('invoiceManager.send'), icon: '📧' },
+      { id: 'track', label: t('invoiceManager.track'), icon: '👁️' },
+      { id: 'download', label: t('invoiceManager.download'), icon: '⬇️' },
+      { id: 'reminder', label: t('invoiceManager.reminder'), icon: '⏰' },
+      { id: 'delete', label: t('invoiceManager.delete'), icon: '🗑️' },
+      { id: 'analytics', label: t('invoiceManager.analytics'), icon: '📊' }
     ];
 
     return (
@@ -1694,7 +1763,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           <div className="flex items-center gap-3">
             {editingInvoiceNumber ? (
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">Invoice</span>
+                <span className="text-2xl font-bold">{t('invoiceManager.invoice')}</span>
                 <input
                   type="text"
                   value={tempInvoiceNumber}
@@ -1720,9 +1789,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   setEditingInvoiceNumber(true);
                   setTempInvoiceNumber(selectedInvoice.invoice_number);
                 }}
-                title="Click to edit invoice number"
+                title={t('invoiceManager.clickToEditNumber')}
               >
-                Invoice {selectedInvoice.invoice_number.split('-')[2]}
+                {t('invoiceManager.invoice')} {selectedInvoice.invoice_number.split('-')[2]}
               </h2>
             )}
           </div>
@@ -1734,7 +1803,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Invoices
+            {t('invoiceManager.backToInvoices')}
           </button>
         </div>
 
@@ -1781,17 +1850,17 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <User size={18} />
-                Client Information
+                {t('invoiceManager.clientInfo')}
               </h3>
               <div className="space-y-2">
-                <p><strong>Name:</strong> {clientName}</p>
-                <p><strong>Email:</strong> {selectedInvoice.email}</p>
-                <p><strong>Phone:</strong> {selectedInvoice.phone}</p>
+                <p><strong>{t('invoiceManager.name')}:</strong> {clientName}</p>
+                <p><strong>{t('invoiceManager.email')}:</strong> {selectedInvoice.email}</p>
+                <p><strong>{t('invoiceManager.phone')}:</strong> {selectedInvoice.phone}</p>
                 {selectedInvoice.address && (
-                  <p><strong>Address:</strong> {selectedInvoice.address}</p>
+                  <p><strong>{t('invoiceManager.address')}:</strong> {selectedInvoice.address}</p>
                 )}
                 {selectedInvoice.tax_exempt_number && (
-                  <p><strong>Tax Exempt:</strong> {selectedInvoice.tax_exempt_number}</p>
+                  <p><strong>{t('invoiceManager.taxExempt')}:</strong> {selectedInvoice.tax_exempt_number}</p>
                 )}
               </div>
             </div>
@@ -1800,12 +1869,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <FileText size={18} />
-                Invoice Details
+                {t('invoiceManager.invoiceDetails')}
               </h3>
               <div className="space-y-2">
-                <p><strong>Invoice Date:</strong> {formatDatePacific(selectedInvoice.invoice_date)}</p>
-                <p><strong>Due Date:</strong> {formatDatePacific(selectedInvoice.due_date)}</p>
-                <p><strong>Status:</strong>
+                <p><strong>{t('invoiceManager.invoiceDate')}:</strong> {formatDatePacific(selectedInvoice.invoice_date)}</p>
+                <p><strong>{t('invoiceManager.dueDate')}:</strong> {formatDatePacific(selectedInvoice.due_date)}</p>
+                <p><strong>{t('invoiceManager.status')}:</strong>
                   <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${selectedInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
                     selectedInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
                       'bg-yellow-100 text-yellow-800'
@@ -1813,22 +1882,22 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     {selectedInvoice.status.charAt(0).toUpperCase() + selectedInvoice.status.slice(1)}
                   </span>
                 </p>
-                <p><strong>Total Amount:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
+                <p><strong>{t('invoiceManager.totalAmount')}:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
               </div>
             </div>
           </div>
 
           {/* Line Items */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-4">Line Items</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('invoiceManager.lineItems')}</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-2 text-left">Description</th>
-                    <th className="px-4 py-2 text-center">Quantity</th>
-                    <th className="px-4 py-2 text-right">Unit Price</th>
-                    <th className="px-4 py-2 text-right">Total</th>
+                    <th className="px-4 py-2 text-left">{t('invoiceManager.description')}</th>
+                    <th className="px-4 py-2 text-center">{t('invoiceManager.quantity')}</th>
+                    <th className="px-4 py-2 text-right">{t('invoiceManager.unitPrice')}</th>
+                    <th className="px-4 py-2 text-right">{t('invoiceManager.total')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1858,29 +1927,29 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div className="mt-4 flex justify-end">
               <div className="w-64">
                 <div className="flex justify-between py-1">
-                  <span>Subtotal:</span>
+                  <span>{t('invoiceManager.subtotal')}:</span>
                   <span>${(selectedInvoice.subtotal || 0).toFixed(2)}</span>
                 </div>
                 {(selectedInvoice.discount_amount || 0) > 0 && (
                   <div className="flex justify-between py-1 text-green-600">
-                    <span>Discount:</span>
+                    <span>{t('invoiceManager.discount')}:</span>
                     <span>-${(selectedInvoice.discount_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 {(selectedInvoice.markup_amount || 0) > 0 && (
                   <div className="flex justify-between py-1">
-                    <span>Markup:</span>
+                    <span>{t('invoiceManager.markup')}:</span>
                     <span>${(selectedInvoice.markup_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 {(selectedInvoice.tax_amount || 0) > 0 && (
                   <div className="flex justify-between py-1">
-                    <span>Tax ({((selectedInvoice.tax_rate || 0)).toFixed(2)}%):</span>
+                    <span>{t('invoiceManager.tax')} ({((selectedInvoice.tax_rate || 0)).toFixed(2)}%):</span>
                     <span>${(selectedInvoice.tax_amount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between py-2 border-t border-gray-300 font-bold text-lg">
-                  <span>Total:</span>
+                  <span>{t('invoiceManager.total')}:</span>
                   <span>${(selectedInvoice.total_amount || 0).toFixed(2)}</span>
                 </div>
               </div>
@@ -1890,7 +1959,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           {/* Notes */}
           {selectedInvoice.notes && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">Notes</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('invoiceManager.notes')}</h3>
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
                 <p className="text-gray-700">{selectedInvoice.notes}</p>
               </div>
@@ -1906,7 +1975,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <DollarSign size={18} />
-                  Payment History
+                  {t('invoiceManager.paymentHistory')}
                 </h3>
                 <button
                   onClick={() => {
@@ -1918,26 +1987,26 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  Add Payment
+                  {t('invoiceManager.addPayment')}
                 </button>
               </div>
 
               {/* Payment Summary */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="text-sm text-green-600 font-medium">Total Paid</div>
+                  <div className="text-sm text-green-600 font-medium">{t('invoiceManager.totalPaid')}</div>
                   <div className="text-xl font-bold text-green-700">
                     ${((selectedInvoice.total_amount || 0) - (selectedInvoice.balance_due || 0)).toFixed(2)}
                   </div>
                 </div>
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="text-sm text-orange-600 font-medium">Balance Due</div>
+                  <div className="text-sm text-orange-600 font-medium">{t('invoiceManager.balanceDue')}</div>
                   <div className="text-xl font-bold text-orange-700">
                     ${(selectedInvoice.balance_due || 0).toFixed(2)}
                   </div>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="text-sm text-blue-600 font-medium">Total Amount</div>
+                  <div className="text-sm text-blue-600 font-medium">{t('invoiceManager.totalAmount')}</div>
                   <div className="text-xl font-bold text-blue-700">
                     ${(selectedInvoice.total_amount || 0).toFixed(2)}
                   </div>
@@ -1951,12 +2020,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <table className="min-w-full">
                       <thead className="bg-gray-100">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Check #</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.date')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.amount')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.method')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.checkNumber')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.notes')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoiceManager.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1985,18 +2054,36 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                               {payment.notes || '-'}
                             </td>
                             <td className="px-4 py-2 text-sm">
-                              <button
-                                onClick={() => setEditingPayment(payment)}
-                                className="text-blue-600 hover:text-blue-900 mr-2 text-xs"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setDeletingPayment(payment)}
-                                className="text-red-600 hover:text-red-900 text-xs"
-                              >
-                                Delete
-                              </button>
+                              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                                <button
+                                  onClick={() => downloadReceiptPdf(payment, selectedInvoice.id)}
+                                  className="text-green-600 hover:text-green-900 text-xs flex items-center gap-1"
+                                  title="Download Receipt"
+                                >
+                                  <Receipt size={14} />
+                                  <span className="hidden sm:inline">{t('invoiceManager.receipt')}</span>
+                                </button>
+                                <button
+                                  onClick={() => openReceiptModal(payment)}
+                                  className="text-purple-600 hover:text-purple-900 text-xs flex items-center gap-1"
+                                  title="Send Receipt"
+                                >
+                                  <Send size={14} />
+                                  <span className="hidden sm:inline">{t('invoiceManager.send')}</span>
+                                </button>
+                                <button
+                                  onClick={() => setEditingPayment(payment)}
+                                  className="text-blue-600 hover:text-blue-900 text-xs"
+                                >
+                                  {t('invoiceManager.edit')}
+                                </button>
+                                <button
+                                  onClick={() => setDeletingPayment(payment)}
+                                  className="text-red-600 hover:text-red-900 text-xs"
+                                >
+                                  {t('invoiceManager.delete')}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -2006,8 +2093,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <DollarSign size={48} className="mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium">No payments recorded</p>
-                    <p className="text-sm">Click "Add Payment" to record the first payment for this invoice.</p>
+                    <p className="text-lg font-medium">{t('invoiceManager.noPayments')}</p>
+                    <p className="text-sm">{t('invoiceManager.clickAddPayment')}</p>
                   </div>
                 )}
               </div>
@@ -2019,7 +2106,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Edit className="text-blue-600" size={24} />
-                <h3 className="text-lg font-semibold">Edit Invoice</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.editInvoice')}</h3>
               </div>
               {editingInvoice ? (
                 // Show the actual edit form
@@ -2051,7 +2138,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
               ) : (
                 // Show button to initialize editing if not already initialized
                 <div className="text-center">
-                  <p className="text-gray-600 mb-6">Initialize editing mode to modify invoice details, line items, and amounts.</p>
+                  <p className="text-gray-600 mb-6">{t('invoiceManager.initializeEditing')}</p>
                   <button
                     onClick={() => {
                       loadInvoiceDetails(selectedInvoice.id, true);
@@ -2059,7 +2146,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
                   >
                     <Edit size={18} />
-                    Start Editing Invoice
+                    {t('invoiceManager.startEditing')}
                   </button>
                 </div>
               )}
@@ -2071,18 +2158,18 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Send className="text-green-600" size={24} />
-                <h3 className="text-lg font-semibold">Send Invoice</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.sendInvoice')}</h3>
               </div>
-              <p className="text-gray-600 mb-6">Send invoice notifications to your client via email or SMS.</p>
+              <p className="text-gray-600 mb-6">{t('invoiceManager.sendInvoiceDesc')}</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Send Email */}
                 <div className="border border-green-200 rounded-lg p-6 bg-green-50">
                   <div className="flex items-center gap-3 mb-4">
                     <Send className="text-green-600" size={20} />
-                    <h4 className="font-medium">Email Invoice</h4>
+                    <h4 className="font-medium">{t('invoiceManager.emailInvoice')}</h4>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">Send a professional email with the invoice attached as PDF</p>
+                  <p className="text-sm text-gray-600 mb-4">{t('invoiceManager.emailInvoiceDesc')}</p>
                   <button
                     onClick={() => {
                       setEmailInvoice(selectedInvoice);
@@ -2090,7 +2177,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     }}
                     className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                   >
-                    Send Email
+                    {t('invoiceManager.sendEmail')}
                   </button>
                 </div>
 
@@ -2098,9 +2185,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <div className="border border-blue-200 rounded-lg p-6 bg-blue-50">
                   <div className="flex items-center gap-3 mb-4">
                     <MessageCircle className="text-blue-600" size={20} />
-                    <h4 className="font-medium">SMS Notification</h4>
+                    <h4 className="font-medium">{t('invoiceManager.smsNotification')}</h4>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">Send a quick SMS notification about the invoice</p>
+                  <p className="text-sm text-gray-600 mb-4">{t('invoiceManager.smsNotificationDesc')}</p>
                   <button
                     onClick={() => {
                       setSmsInvoice(selectedInvoice);
@@ -2108,7 +2195,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     }}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                   >
-                    Send SMS
+                    {t('invoiceManager.sendSMS')}
                   </button>
                 </div>
               </div>
@@ -2123,9 +2210,9 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                <h3 className="text-lg font-semibold">Track Invoice</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.trackInvoice')}</h3>
               </div>
-              <p className="text-gray-600 mb-6">Monitor invoice status, payment history, and client interactions.</p>
+              <p className="text-gray-600 mb-6">{t('invoiceManager.trackInvoiceDesc')}</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Status Timeline */}
@@ -2134,20 +2221,20 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Status Timeline
+                    {t('invoiceManager.statusTimeline')}
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <div>
-                        <p className="text-sm font-medium">Invoice Created</p>
+                        <p className="text-sm font-medium">{t('invoiceManager.invoiceCreated')}</p>
                         <p className="text-xs text-gray-500">{formatDatePacific(selectedInvoice.invoice_date)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className={`w-3 h-3 rounded-full ${selectedInvoice.status === 'paid' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                       <div>
-                        <p className="text-sm font-medium">Payment Status</p>
+                        <p className="text-sm font-medium">{t('invoiceManager.paymentStatus')}</p>
                         <p className="text-xs text-gray-500 capitalize">{selectedInvoice.status}</p>
                       </div>
                     </div>
@@ -2156,7 +2243,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                           <div>
-                            <p className="text-sm font-medium">First Viewed</p>
+                            <p className="text-sm font-medium">{t('invoiceManager.firstViewed')}</p>
                             <p className="text-xs text-gray-500">
                               {formatDateTimePacific(selectedInvoiceTracking.firstViewed)}
                             </p>
@@ -2165,7 +2252,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                           <div>
-                            <p className="text-sm font-medium">Last Viewed</p>
+                            <p className="text-sm font-medium">{t('invoiceManager.lastViewed')}</p>
                             <p className="text-xs text-gray-500">
                               {formatDateTimePacific(selectedInvoiceTracking.lastViewed)}
                             </p>
@@ -2182,13 +2269,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                           <div>
-                            <p className="text-sm font-medium">View Statistics</p>
+                            <p className="text-sm font-medium">{t('invoiceManager.viewStatistics')}</p>
                             <p className="text-xs text-gray-500">
-                              {selectedInvoiceTracking.totalViews} total views • {selectedInvoiceTracking.uniqueIPs} unique IPs
+                              {selectedInvoiceTracking.totalViews} {t('invoiceManager.totalViews')} • {selectedInvoiceTracking.uniqueIPs} {t('invoiceManager.uniqueIPs')}
                             </p>
                             {Object.keys(selectedInvoiceTracking.locationSummary).length > 0 && (
                               <p className="text-xs text-gray-400 mt-1">
-                                Locations: {Object.entries(selectedInvoiceTracking.locationSummary).slice(0, 2).map(([location, count]) =>
+                                {t('invoiceManager.locations')}: {Object.entries(selectedInvoiceTracking.locationSummary).slice(0, 2).map(([location, count]) =>
                                   `${location} (${count})`
                                 ).join(', ')}
                               </p>
@@ -2202,11 +2289,11 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
                 {/* Quick Stats */}
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium mb-4">Quick Stats</h4>
+                  <h4 className="font-medium mb-4">{t('invoiceManager.quickStats')}</h4>
                   <div className="space-y-2">
-                    <p className="text-sm"><strong>Total Amount:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
-                    <p className="text-sm"><strong>Balance Due:</strong> ${(selectedInvoice.balance_due || 0).toFixed(2)}</p>
-                    <p className="text-sm"><strong>Days Outstanding:</strong> {Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))}</p>
+                    <p className="text-sm"><strong>{t('invoiceManager.totalAmount')}:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
+                    <p className="text-sm"><strong>{t('invoiceManager.balanceDue')}:</strong> ${(selectedInvoice.balance_due || 0).toFixed(2)}</p>
+                    <p className="text-sm"><strong>{t('invoiceManager.daysOutstanding')}:</strong> {Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))}</p>
                   </div>
                 </div>
 
@@ -2214,25 +2301,25 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium mb-4 flex items-center gap-2">
                     <Eye className="w-5 h-5 text-green-600" />
-                    View Tracking
+                    {t('invoiceManager.viewTracking')}
                   </h4>
                   {selectedInvoiceTracking ? (
                     <div className="space-y-2">
-                      <p className="text-sm"><strong>Total Views:</strong> {selectedInvoiceTracking.totalViews}</p>
-                      <p className="text-sm"><strong>Unique IPs:</strong> {selectedInvoiceTracking.uniqueIPs}</p>
+                      <p className="text-sm"><strong>{t('invoiceManager.totalViews')}:</strong> {selectedInvoiceTracking.totalViews}</p>
+                      <p className="text-sm"><strong>{t('invoiceManager.uniqueIPs')}:</strong> {selectedInvoiceTracking.uniqueIPs}</p>
                       {selectedInvoiceTracking.lastViewed && (
-                        <p className="text-sm"><strong>Last Viewed:</strong> {formatDateTimePacific(selectedInvoiceTracking.lastViewed)}</p>
+                        <p className="text-sm"><strong>{t('invoiceManager.lastViewed')}:</strong> {formatDateTimePacific(selectedInvoiceTracking.lastViewed)}</p>
                       )}
                       {Object.keys(selectedInvoiceTracking.locationSummary).length > 0 && (
                         <div className="mt-3">
                           <p className="text-sm font-medium mb-1 flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
-                            Locations:
+                            {t('invoiceManager.locations')}:
                           </p>
                           <div className="space-y-1">
                             {Object.entries(selectedInvoiceTracking.locationSummary).slice(0, 3).map(([location, count]) => (
                               <p key={location} className="text-xs text-gray-600">
-                                {location}: {count} view{count > 1 ? 's' : ''}
+                                {location}: {count} {count > 1 ? t('invoiceManager.views') : t('invoiceManager.view')}
                               </p>
                             ))}
                           </div>
@@ -2241,7 +2328,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     </div>
                   ) : (
                     <div className="text-center py-4">
-                      <p className="text-sm text-gray-500">Loading tracking data...</p>
+                      <p className="text-sm text-gray-500">{t('invoiceManager.loadingTrackingData')}</p>
                     </div>
                   )}
                 </div>
@@ -2254,21 +2341,21 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Download className="text-gray-600" size={24} />
-                <h3 className="text-lg font-semibold">Download Invoice</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.downloadInvoice')}</h3>
               </div>
-              <p className="text-gray-600 mb-6">Generate and download various formats of this invoice for your records.</p>
+              <p className="text-gray-600 mb-6">{t('invoiceManager.downloadInvoiceDesc')}</p>
 
               <div className="max-w-md mx-auto">
                 <div className="border border-gray-200 rounded-lg p-6 text-center">
                   <Download className="text-gray-400 mx-auto mb-4" size={48} />
-                  <h4 className="font-medium mb-2">PDF Invoice</h4>
-                  <p className="text-sm text-gray-600 mb-4">Download a professionally formatted PDF copy of this invoice</p>
+                  <h4 className="font-medium mb-2">{t('invoiceManager.pdfInvoice')}</h4>
+                  <p className="text-sm text-gray-600 mb-4">{t('invoiceManager.pdfInvoiceDesc')}</p>
                   <button
                     onClick={() => downloadInvoicePdf(selectedInvoice)}
                     className="w-full bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center justify-center gap-2"
                   >
                     <Download size={16} />
-                    Download PDF
+                    {t('invoiceManager.downloadPDF')}
                   </button>
                 </div>
               </div>
@@ -2282,7 +2369,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h3 className="text-lg font-semibold">Payment Reminders</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.paymentReminders')}</h3>
               </div>
 
               <div className="space-y-6">
@@ -2293,7 +2380,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Reminder Settings
+                    {t('invoiceManager.reminderSettings')}
                   </h4>
 
                   <div className="space-y-4 ">
@@ -2305,13 +2392,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                           onChange={(e) => setReminderSettings(prev => ({ ...prev, reminders_enabled: e.target.checked }))}
                           className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                         />
-                        <span className="text-sm font-medium text-gray-700">Enable Automatic Reminders</span>
+                        <span className="text-sm font-medium text-gray-700">{t('invoiceManager.enableAutomaticReminders')}</span>
                       </label>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Reminder Days (comma-separated)
+                        {t('invoiceManager.reminderDays')}
                       </label>
                       <input
                         type="text"
@@ -2320,7 +2407,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         placeholder="7,14,30"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Days after due date to send reminders</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('invoiceManager.reminderDaysDesc')}</p>
                     </div>
 
                     <button
@@ -2330,7 +2417,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Save Settings
+                      {t('invoiceManager.saveSettings')}
                     </button>
                   </div>
                 </div>
@@ -2341,33 +2428,33 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                    Send Manual Reminder
+                    {t('invoiceManager.sendManualReminder')}
                   </h4>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Reminder Type
+                        {t('invoiceManager.reminderType')}
                       </label>
                       <select
                         value={reminderType}
                         onChange={(e) => setReminderType(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       >
-                        <option value="both">Email & SMS</option>
-                        <option value="email">Email Only</option>
-                        <option value="sms">SMS Only</option>
+                        <option value="both">{t('invoiceManager.emailAndSMS')}</option>
+                        <option value="email">{t('invoiceManager.emailOnly')}</option>
+                        <option value="sms">{t('invoiceManager.smsOnly')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Custom Message (Optional)
+                        {t('invoiceManager.customMessage')}
                       </label>
                       <textarea
                         value={reminderMessage}
                         onChange={(e) => setReminderMessage(e.target.value)}
-                        placeholder="Add a custom message to include with the reminder..."
+                        placeholder={t('invoiceManager.customMessagePlaceholder')}
                         rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
@@ -2387,7 +2474,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                       )}
-                      {sendingReminder ? 'Sending...' : 'Send Reminder'}
+                      {sendingReminder ? t('invoiceManager.sending') : t('invoiceManager.sendReminder')}
                     </button>
                   </div>
                 </div>
@@ -2398,7 +2485,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Reminder History
+                    {t('invoiceManager.reminderHistory')}
                   </h4>
 
                   {reminderHistory.length > 0 ? (
@@ -2408,8 +2495,8 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm font-medium text-gray-900">
-                                {reminder.reminder_type === 'both' ? 'Email & SMS' :
-                                 reminder.reminder_type === 'email' ? 'Email' : 'SMS'} Reminder
+                                {reminder.reminder_type === 'both' ? t('invoiceManager.emailAndSMS') :
+                                 reminder.reminder_type === 'email' ? t('invoiceManager.email') : t('invoiceManager.sms')} {t('invoiceManager.reminder')}
                               </p>
                               <p className="text-xs text-gray-500">
                                 {formatDateTimePacific(reminder.sent_date)}
@@ -2423,12 +2510,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                             <div className="flex items-center gap-2">
                               {reminder.email_sent && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                  📧 Sent
+                                  📧 {t('invoiceManager.sent')}
                                 </span>
                               )}
                               {reminder.sms_sent && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                  📱 Sent
+                                  📱 {t('invoiceManager.sent')}
                                 </span>
                               )}
                             </div>
@@ -2441,7 +2528,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p className="text-gray-500 text-sm">No reminders sent yet</p>
+                      <p className="text-gray-500 text-sm">{t('invoiceManager.noRemindersSent')}</p>
                     </div>
                   )}
                 </div>
@@ -2456,7 +2543,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <h3 className="text-lg font-semibold text-red-600">Delete Invoice</h3>
+                <h3 className="text-lg font-semibold text-red-600">{t('invoiceManager.deleteInvoice')}</h3>
               </div>
 
               <div className="max-w-md mx-auto">
@@ -2465,14 +2552,14 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
-                    <h4 className="font-medium text-red-700 mb-2">Permanent Deletion</h4>
-                    <p className="text-sm text-red-600 mb-4">This action cannot be undone. The invoice and all associated data will be permanently removed.</p>
+                    <h4 className="font-medium text-red-700 mb-2">{t('invoiceManager.permanentDeletion')}</h4>
+                    <p className="text-sm text-red-600 mb-4">{t('invoiceManager.permanentDeletionDesc')}</p>
                   </div>
 
                   <div className="bg-white border border-red-200 rounded p-3 mb-4">
-                    <p className="text-sm text-gray-700"><strong>Invoice:</strong> #{selectedInvoice.invoice_number}</p>
-                    <p className="text-sm text-gray-700"><strong>Amount:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-700"><strong>Client:</strong> {clientName}</p>
+                    <p className="text-sm text-gray-700"><strong>{t('invoiceManager.invoice')}:</strong> #{selectedInvoice.invoice_number}</p>
+                    <p className="text-sm text-gray-700"><strong>{t('invoiceManager.amount')}:</strong> ${selectedInvoice.total_amount.toFixed(2)}</p>
+                    <p className="text-sm text-gray-700"><strong>{t('invoiceManager.client')}:</strong> {clientName}</p>
                   </div>
 
                   <button
@@ -2485,7 +2572,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    Delete Invoice Permanently
+                    {t('invoiceManager.deleteInvoicePermanently')}
                   </button>
                 </div>
               </div>
@@ -2499,7 +2586,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                <h3 className="text-lg font-semibold">Invoice Analytics</h3>
+                <h3 className="text-lg font-semibold">{t('invoiceManager.invoiceAnalytics')}</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2509,19 +2596,19 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
-                    Performance Metrics
+                    {t('invoiceManager.performanceMetrics')}
                   </h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Days Outstanding</span>
-                      <span className="text-sm font-medium">{Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))} days</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.daysOutstanding')}</span>
+                      <span className="text-sm font-medium">{Math.floor((new Date() - new Date(selectedInvoice.invoice_date)) / (1000 * 60 * 60 * 24))} {t('invoiceManager.days')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Payment Progress</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.paymentProgress')}</span>
                       <span className="text-sm font-medium">{Math.round(((selectedInvoice.total_amount - (selectedInvoice.balance_due || 0)) / selectedInvoice.total_amount) * 100)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Status</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.status')}</span>
                       <span className={`text-sm font-medium ${selectedInvoice.status === 'paid' ? 'text-green-600' : selectedInvoice.status === 'overdue' ? 'text-red-600' : 'text-yellow-600'}`}>
                         {selectedInvoice.status.charAt(0).toUpperCase() + selectedInvoice.status.slice(1)}
                       </span>
@@ -2535,19 +2622,19 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
-                    Financial Summary
+                    {t('invoiceManager.financialSummary')}
                   </h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Amount</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.totalAmount')}</span>
                       <span className="text-sm font-medium">${selectedInvoice.total_amount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Amount Paid</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.amountPaid')}</span>
                       <span className="text-sm font-medium text-green-600">${((selectedInvoice.total_amount || 0) - (selectedInvoice.balance_due || 0)).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Balance Due</span>
+                      <span className="text-sm text-gray-600">{t('invoiceManager.balanceDue')}</span>
                       <span className="text-sm font-medium text-red-600">${(selectedInvoice.balance_due || 0).toFixed(2)}</span>
                     </div>
                   </div>
@@ -2577,7 +2664,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
   // Clear all labels function
   const clearAllLabels = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL labels? This action cannot be undone.')) {
+    if (!window.confirm(t('invoiceManager.confirmDeleteAllLabels'))) {
       return;
     }
 
@@ -2594,10 +2681,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
       await Promise.all(deletePromises);
       await fetchLineItemLabels(); // Refresh the list
-      alert('All labels have been deleted successfully!');
+      alert(t('invoiceManager.allLabelsDeleted'));
     } catch (error) {
       console.error('Error deleting labels:', error);
-      alert('Failed to delete some labels. Please try again.');
+      alert(t('invoiceManager.failedDeleteLabels'));
     } finally {
       setLoading(false);
     }
@@ -2605,7 +2692,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
   // Delete individual label function
   const deleteLabel = async (labelId) => {
-    if (!window.confirm('Are you sure you want to delete this label?')) {
+    if (!window.confirm(t('invoiceManager.confirmDeleteLabel'))) {
       return;
     }
 
@@ -2705,21 +2792,21 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   // Label Management View
   const renderLabelManagement = () => (
     <div className="space-y-6">
-      <div className=" justify-between items-center">
-        <h2 className="text-2xl font-bold">Line Item Labels</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">{t('invoiceManager.lineItemLabels')}</h2>
         <div className="flex gap-3">
           <button
             onClick={() => setShowBulkLabelModal(true)}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
-            Bulk Add Labels
+            {t('invoiceManager.bulkAddLabels')}
           </button>
           <button
             onClick={clearAllLabels}
             disabled={loading || lineItemLabels.length === 0}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Clearing...' : 'Clear All Labels'}
+            {loading ? t('invoiceManager.clearing') : t('invoiceManager.clearAllLabels')}
           </button>
           <button
             onClick={() => setActiveView('list')}
@@ -2730,7 +2817,40 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         </div>
       </div>
 
+      {/* Add Single Label Form */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Add New Label</h3>
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Label Name *
+            </label>
+            <input
+              type="text"
+              value={newLabel.label}
+              onChange={(e) => setNewLabel({ ...newLabel, label: e.target.value })}
+              placeholder="e.g., Labor, Materials, Installation"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
+            />
+          </div>
+          <button
+            onClick={createLabel}
+            disabled={loading || !newLabel.label.trim()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Add Label
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Existing Labels ({lineItemLabels.length})
+          </h3>
+        </div>
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -2743,210 +2863,39 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {lineItemLabels.map((label) => (
-              <tr key={label.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                  {label.label}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <button
-                    onClick={() => deleteLabel(label.id)}
-                    disabled={loading}
-                    className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ minHeight: '44px', minWidth: '44px' }}
-                    title="Delete label"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+            {lineItemLabels.length === 0 ? (
+              <tr>
+                <td colSpan="2" className="px-6 py-8 text-center text-gray-500">
+                  No labels found. Add your first label above.
                 </td>
               </tr>
-            ))}
+            ) : (
+              lineItemLabels.map((label) => (
+                <tr key={label.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                    {label.label}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <button
+                      onClick={() => deleteLabel(label.id)}
+                      disabled={loading}
+                      className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ minHeight: '44px', minWidth: '44px' }}
+                      title="Delete label"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 
-  const renderPaymentManagement = () => {
-
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Payment Management</h2>
-          <button
-            onClick={() => setActiveView('list')}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-          >
-            Back to Invoices
-          </button>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Payment Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Collected</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ${allPayments.reduce((sum, payment) => sum + parseFloat(payment.payment_amount), 0).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <FileText className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Payments</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allPayments.length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CreditCard className="h-8 w-8 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Card Payments</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allPayments.filter(p => p.payment_method.includes('card')).length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Check className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Cash Payments</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {allPayments.filter(p => p.payment_method === 'cash').length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Payment Records Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">All Payment Records</h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Invoice
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Method
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Check #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Notes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {allPayments.map((payment) => {
-                  const clientName = payment.is_business
-                    ? payment.company_name
-                    : `${payment.first_name} ${payment.last_name}`;
-
-                  return (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDatePacific(payment.payment_date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        {payment.invoice_number}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {clientName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ${parseFloat(payment.payment_amount).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${payment.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
-                          payment.payment_method === 'check' ? 'bg-blue-100 text-blue-800' :
-                            payment.payment_method.includes('card') ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                          }`}>
-                          {payment.payment_method.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {payment.check_number || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                        {payment.notes || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => setEditingPayment(payment)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeletingPayment(payment)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {allPayments.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No payment records found.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
+ 
 
   // Edit invoice handler
   const handleEditInvoice = async (invoiceData) => {
@@ -3033,12 +2982,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
   const renderTaxRateManagement = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Tax Rate Management</h2>
+        <h2 className="text-2xl font-bold">{t('invoiceManager.taxRateManagement')}</h2>
         <button
           onClick={() => setActiveView('list')}
           className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
         >
-          Back to Invoices
+          {t('invoiceManager.backToInvoices')}
         </button>
       </div>
 
@@ -3050,11 +2999,11 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
       {/* Add New Tax Rate Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Add New Tax Rate</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('invoiceManager.addNewTaxRate')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              State <span className="text-red-500">*</span>
+              {t('invoiceManager.state')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -3068,7 +3017,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              City
+              {t('invoiceManager.city')}
             </label>
             <input
               type="text"
@@ -3081,7 +3030,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tax Rate (%) <span className="text-red-500">*</span>
+              {t('invoiceManager.taxRate')} (%) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -3095,14 +3044,14 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              {t('invoiceManager.description')}
             </label>
             <input
               type="text"
               value={newTaxRate.description}
               onChange={(e) => setNewTaxRate(prev => ({ ...prev, description: e.target.value }))}
               className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-              placeholder="Optional description"
+              placeholder={t('invoiceManager.descriptionPlaceholder')}
             />
           </div>
         </div>
@@ -3112,7 +3061,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             disabled={loading || !newTaxRate.city || !newTaxRate.tax_rate}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {loading ? 'Adding...' : 'Add Tax Rate'}
+            {loading ? 'Adding...' : t('invoiceManager.addTaxRate')}
           </button>
         </div>
       </div>
@@ -3122,7 +3071,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700">
-              {selectedTaxRates.length} selected
+              {selectedTaxRates.length} {t('invoiceManager.selected')}
             </span>
             {selectedTaxRates.length > 0 && (
               <button
@@ -3140,7 +3089,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
           >
             <Plus size={16} />
-            Bulk Add Tax Rates
+            {t('invoiceManager.bulkAddTaxRates')}
           </button>
         </div>
       </div>
@@ -3159,19 +3108,19 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                State
+                {t('invoiceManager.state')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                City
+                {t('invoiceManager.city')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tax Rate
+                {t('invoiceManager.taxRate')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                {t('invoiceManager.description')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('invoiceManager.actions')}
               </th>
             </tr>
           </thead>
@@ -3268,7 +3217,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete the tax rate for ${rate.city}, ${rate.state_code}?`)) {
+                          if (window.confirm(t('invoiceManager.confirmDeleteTaxRate', { city: rate.city, state: rate.state_code }))) {
                             deleteTaxRate(rate.id);
                           }
                         }}
@@ -3298,10 +3247,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold">Live Invoice Tracking</h2>
+          <h2 className="text-xl font-bold">{t('invoiceManager.liveInvoiceTracking')}</h2>
           <div className="flex items-center gap-2 text-sm text-green-600">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Live-Updates every 30s</span>
+            <span>{t('invoiceManager.liveUpdates')}</span>
           </div>
         </div>
         <button
@@ -3519,7 +3468,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold">Bulk Add Tax Rates</h3>
+              <h3 className="text-lg font-semibold">{t('invoiceManager.bulkAddTaxRates')}</h3>
               <button
                 onClick={() => {
                   setShowBulkAddModal(false);
@@ -3595,7 +3544,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     showBulkLabelModal && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw] max-h-[80vh] overflow-y-auto">
-          <h3 className="text-lg font-bold mb-4">Bulk Add Labels</h3>
+          <h3 className="text-lg font-bold mb-4">{t('invoiceManager.bulkAddLabels')}</h3>
 
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-2">
@@ -3883,18 +3832,17 @@ Plumbing, HVAC, Demolition"
   // Main render
   // Invoice navigation items
   const navigationItems = [
-    { id: 'list', label: 'Invoices', icon: FileText },
-    { id: 'create', label: 'Create', icon: Plus },
-    { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'payments', label: 'Payments', icon: DollarSign },
-    { id: 'tax-rates', label: 'Tax Rates', icon: Percent },
-    { id: 'labels', label: 'Labels', icon: Tag },
-    { id: 'tracking', label: 'Tracking', icon: BarChart3 }
+    { id: 'list', label: t('invoiceManager.list'), icon: FileText },
+    { id: 'create', label: t('invoiceManager.create'), icon: Plus },
+    { id: 'clients', label: t('invoiceManager.clients'), icon: Users },
+    { id: 'tax-rates', label: t('taxRates.title'), icon: Percent },
+    { id: 'labels', label: t('lineItemLabels.title'), icon: Tag },
+    { id: 'tracking', label: t('invoiceManager.tracking'), icon: BarChart3 }
   ];
 
   const getViewTitle = () => {
     const item = navigationItems.find(item => item.id === activeView);
-    return item ? item.label : 'Invoice Manager';
+    return item ? item.label : t('invoiceManager.title');
   };
 
   return (
@@ -3915,7 +3863,7 @@ Plumbing, HVAC, Demolition"
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Invoice Manager</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('invoiceManager.title')}</h2>
             <button
               onClick={() => setSidebarOpen(false)}
               className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -3972,7 +3920,7 @@ Plumbing, HVAC, Demolition"
         <div className="bg-white border-b border-gray-200">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-900">Invoice Manager</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('invoiceManager.title')}</h1>
             </div>
 
             {/* Desktop Navigation Tabs */}
@@ -4008,7 +3956,6 @@ Plumbing, HVAC, Demolition"
         {activeView === 'view' && renderInvoiceView()}
         {activeView === 'edit' && renderEditInvoiceForm()}
         {activeView === 'clients' && renderClientManagement()}
-        {activeView === 'payments' && renderPaymentManagement()}
         {activeView === 'tax-rates' && renderTaxRateManagement()}
         {activeView === 'labels' && renderLabelManagement()}
         {activeView === 'tracking' && renderLiveTracking()}
@@ -4118,6 +4065,19 @@ Plumbing, HVAC, Demolition"
         onConfirm={handleDeletePayment}
         isDeleting={loading}
       />
+      {showReceiptModal && receiptPayment && selectedInvoice && (
+        <SendReceiptModal
+          payment={receiptPayment}
+          invoice={selectedInvoice}
+          clientEmail={selectedInvoice.email}
+          clientPhone={selectedInvoice.phone}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setReceiptPayment(null);
+          }}
+          onSend={handleSendReceipt}
+        />
+      )}
       <DeleteModal
         show={showDeleteModal}
         deleteInvoice={deleteInvoice}

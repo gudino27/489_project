@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { 
-  Download, 
-  FileText, 
-  Building, 
-  User, 
-  Calendar, 
-  DollarSign, 
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Download,
+  FileText,
+  Building,
+  User,
+  Calendar,
+  DollarSign,
   Clock,
   CheckCircle,
   AlertCircle,
   XCircle,
   Phone,
-  Mail
+  Mail,
+  Receipt,
+  ChevronRight
 } from 'lucide-react';
 
 const InvoiceViewer = () => {
   const { token } = useParams();
+  const navigate = useNavigate();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,7 +32,7 @@ const InvoiceViewer = () => {
 
   const fetchInvoice = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/invoice/${token}`);
+      const response = await fetch(`${API_BASE}/invoice/${token}`);
       if (response.ok) {
         const data = await response.json();
         setInvoice(data);
@@ -46,7 +49,7 @@ const InvoiceViewer = () => {
 
   const downloadPDF = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/invoice/${token}/pdf`);
+      const response = await fetch(`${API_BASE}/invoice/${token}/pdf`);
 
       if (response.ok) {
         const pdfBlob = await response.blob();
@@ -121,15 +124,14 @@ const InvoiceViewer = () => {
   return (
     <div className="min-h-screen" style={{backgroundColor: 'rgba(110, 110, 110, 0.1)'}}>
       {/* Header */}
-      <div className="bg-white shadow-sm" style={{borderBottom: '2px solid rgba(110, 110, 110, 0.3)'}}>
+      <div className="bg-gradient-to-r from-gray-600 to-gray-800  shadow-sm" style={{borderBottom: '2px solid rgba(110, 110, 110, 0.3)'}}>
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold" style={{color: 'rgba(0, 0, 0, 1)'}}>
+              <h1 className="text-2xl md:text-3xl font-bold" style={{color: 'rgba(255, 255, 255, 1)'}}>
                 Invoice {invoice.invoice_number}
               </h1>
-              <p className="flex items-center gap-2 mt-1" style={{color: 'rgba(0, 0, 0, 0.8)'}}>
-                <Building className="w-4 h-4" />
+              <p className="flex items-center gap-2 mt-1 " style={{fontWeight:'bold',color: 'rgba(255, 255, 255, 1)'}}>
                 Gudino Custom Cabinets
               </p>
             </div>
@@ -345,7 +347,24 @@ const InvoiceViewer = () => {
                 <h3 className="text-lg font-semibold mb-4" style={{color: 'rgba(0, 0, 0, 1)', borderBottom: '2px solid rgba(110, 110, 110, 0.3)', paddingBottom: '8px'}}>Payment History</h3>
                 <div className="space-y-3">
                   {invoice.payments.map((payment, index) => (
-                    <div key={index} className="rounded-lg p-3" style={{backgroundColor: 'rgba(110, 110, 110, 0.1)', border: '1px solid rgba(110, 110, 110, 0.3)'}}>
+                    <button
+                      key={index}
+                      onClick={() => navigate(`/invoice/${token}/payment/${payment.id}`)}
+                      className="w-full rounded-lg p-3 text-left transition-all hover:shadow-md"
+                      style={{
+                        backgroundColor: 'rgba(110, 110, 110, 0.1)',
+                        border: '1px solid rgba(110, 110, 110, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(110, 110, 110, 0.15)';
+                        e.currentTarget.style.borderColor = 'rgba(110, 110, 110, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(110, 110, 110, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(110, 110, 110, 0.3)';
+                      }}
+                    >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium" style={{color: 'rgba(0, 0, 0, 1)'}}>
@@ -363,7 +382,7 @@ const InvoiceViewer = () => {
                           {new Date(payment.payment_date).toLocaleDateString()}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>

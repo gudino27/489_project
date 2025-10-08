@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit, Trash2 } from 'lucide-react';
-
+import { useLanguage } from '../../../../contexts/LanguageContext';
 const ClientManagement = ({
   clients,
   loading,
@@ -9,15 +9,16 @@ const ClientManagement = ({
   setShowEditClientModal,
   deleteClient
 }) => {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold">Client Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold">{t('clientManagement.title')}</h2>
         <button
           onClick={() => setActiveView('list')}
           className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm sm:text-base"
         >
-          Back to Invoices
+          {t('clientManagement.backToInvoices')}
         </button>
       </div>
 
@@ -27,19 +28,19 @@ const ClientManagement = ({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name/Company
+                {t('clientManagement.name')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
+                {t('clientManagement.email')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Phone
+                {t('clientManagement.phone')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                {t('clientManagement.type')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('clientManagement.actions')}
               </th>
             </tr>
           </thead>

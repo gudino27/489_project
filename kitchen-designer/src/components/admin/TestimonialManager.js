@@ -13,14 +13,19 @@ import {
   X
 } from 'lucide-react';
 import { formatDateTimePacific } from '../../utils/dateUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const TestimonialManager = ({ token, API_BASE, userRole }) => {
+  const { t } = useLanguage();
   const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendLinkForm, setSendLinkForm] = useState({
     client_name: '',
     client_email: '',
-    project_type: ''
+    client_phone: '',
+    project_type: '',
+    custom_project_type: '',
+    send_via: 'email'
   });
   const [sendingLink, setSendingLink] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
@@ -29,13 +34,13 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   const [generatedTokens, setGeneratedTokens] = useState([]);
 
   const projectTypes = [
-    'Kitchen Remodeling',
-    'Bathroom Renovation',
-    'Custom Carpentry',
-    'Cabinet Installation',
-    'Home Remodeling',
-    'Commercial Project',
-    'Other'
+    t('testimonialManager.kitchenRemodeling'),
+    t('testimonialManager.bathroomRenovation'),
+    t('testimonialManager.customCarpentry'),
+    t('testimonialManager.cabinetInstallation'),
+    t('testimonialManager.homeRemodeling'),
+    t('testimonialManager.commercialProject'),
+    t('testimonialManager.other')
   ];
 
   useEffect(() => {
@@ -86,22 +91,41 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
     setSendingLink(true);
 
     try {
+      // Use custom project type if "Other" is selected
+      const formData = {
+        ...sendLinkForm,
+        project_type: sendLinkForm.project_type === 'Other' ? sendLinkForm.custom_project_type : sendLinkForm.project_type
+      };
+
       const response = await fetch(`${API_BASE}/api/admin/send-testimonial-link`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(sendLinkForm)
+        body: JSON.stringify(formData)
       });
 
       if (response.ok) {
+        const data = await response.json();
         setLinkSent(true);
-        setSendLinkForm({ client_name: '', client_email: '', project_type: '' });
-        loadGeneratedTokens(); // Refresh tokens list
+        setSendLinkForm({ client_name: '', client_email: '', client_phone: '', project_type: '', custom_project_type: '', send_via: 'email' });
+        loadGeneratedTokens();
+
+        // Show results if both were sent
+        if (data.results && (data.results.email || data.results.sms)) {
+          let message = 'Testimonial link sent successfully!\n';
+          if (data.results.email?.success) message += '✓ Email sent\n';
+          if (data.results.sms?.success) message += '✓ SMS sent\n';
+          if (data.results.email?.success === false) message += '✗ Email failed\n';
+          if (data.results.sms?.success === false) message += '✗ SMS failed\n';
+          alert(message);
+        }
+
         setTimeout(() => setLinkSent(false), 5000);
       } else {
-        alert('Failed to send testimonial link');
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to send testimonial link');
       }
     } catch (error) {
       console.error('Error sending link:', error);
@@ -123,7 +147,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   };
 
   const deleteTestimonialToken = async (tokenValue) => {
-    if (!window.confirm('Are you sure you want to delete this testimonial link? This action cannot be undone.')) {
+    if (!window.confirm(t('testimonialManager.deleteLinkConfirm'))) {
       return;
     }
 
@@ -148,7 +172,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   };
 
   const deleteTestimonial = async (testimonialId) => {
-    if (!window.confirm('Are you sure you want to delete this testimonial?')) {
+    if (!window.confirm(t('testimonialManager.deleteTestimonialConfirm'))) {
       return;
     }
 
@@ -196,7 +220,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   const bulkDeleteTestimonials = async () => {
     if (selectedTestimonials.size === 0) return;
 
-    if (!window.confirm(`Delete ${selectedTestimonials.size} testimonial(s)?`)) {
+    if (!window.confirm(`${t('testimonialManager.delete')} ${selectedTestimonials.size} ${t('testimonialManager.selectedCount')}?`)) {
       return;
     }
 
@@ -244,64 +268,137 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Testimonial Management</h2>
-        <p className="text-gray-600">Send testimonial links to clients and manage received testimonials</p>
+        <h2 className="text-2xl font-bold mb-2">{t('testimonialManager.title')}</h2>
+        <p className="text-gray-600">{t('testimonialManager.description')}</p>
       </div>
 
       {/* Send Testimonial Link Form */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Send className="w-5 h-5" />
-          Send Testimonial Link
+          {t('testimonialManager.sendLink')}
         </h3>
 
-        <form onSubmit={sendTestimonialLink} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form onSubmit={sendTestimonialLink} className="space-y-3">
+          {/* Row 1: Name and Project Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                {t('testimonialManager.clientName')} *
+              </label>
+              <input
+                type="text"
+                value={sendLinkForm.client_name}
+                onChange={(e) => setSendLinkForm({ ...sendLinkForm, client_name: e.target.value })}
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder={t('testimonialManager.enterName')}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                {t('testimonialManager.projectType')} *
+              </label>
+              <select
+                value={sendLinkForm.project_type}
+                onChange={(e) => setSendLinkForm({ ...sendLinkForm, project_type: e.target.value, custom_project_type: '' })}
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="">{t('testimonialManager.selectType')}</option>
+                {projectTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Custom Project Type (if Other selected) */}
+          {sendLinkForm.project_type === t('testimonialManager.other') && (
+            <div>
+              <input
+                type="text"
+                value={sendLinkForm.custom_project_type}
+                onChange={(e) => setSendLinkForm({ ...sendLinkForm, custom_project_type: e.target.value })}
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder={t('testimonialManager.enterCustomType')}
+                required
+              />
+            </div>
+          )}
+
+          {/* Row 2: Email and Phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                {t('testimonialManager.email')} {sendLinkForm.send_via === 'email' || sendLinkForm.send_via === 'both' ? '*' : ''}
+              </label>
+              <input
+                type="email"
+                value={sendLinkForm.client_email}
+                onChange={(e) => setSendLinkForm({ ...sendLinkForm, client_email: e.target.value })}
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder={t('testimonialManager.enterEmail')}
+                required={sendLinkForm.send_via === 'email' || sendLinkForm.send_via === 'both'}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                {t('testimonialManager.phone')} {sendLinkForm.send_via === 'sms' || sendLinkForm.send_via === 'both' ? '*' : ''}
+              </label>
+              <input
+                type="tel"
+                value={sendLinkForm.client_phone}
+                onChange={(e) => setSendLinkForm({ ...sendLinkForm, client_phone: e.target.value })}
+                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder={t('testimonialManager.enterPhone')}
+                required={sendLinkForm.send_via === 'sms' || sendLinkForm.send_via === 'both'}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Send Via Options */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Client Name
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+              {t('testimonialManager.sendVia')} *
             </label>
-            <input
-              type="text"
-              value={sendLinkForm.client_name}
-              onChange={(e) => setSendLinkForm({ ...sendLinkForm, client_name: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter client name"
-              required
-            />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  value="email"
+                  checked={sendLinkForm.send_via === 'email'}
+                  onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
+                  className="mr-2"
+                />
+                <span className="text-sm">Email Only</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  value="sms"
+                  checked={sendLinkForm.send_via === 'sms'}
+                  onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
+                  className="mr-2"
+                />
+                <span className="text-sm">SMS Only</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  value="both"
+                  checked={sendLinkForm.send_via === 'both'}
+                  onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
+                  className="mr-2"
+                />
+                <span className="text-sm">Both</span>
+              </label>
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Client Email
-            </label>
-            <input
-              type="email"
-              value={sendLinkForm.client_email}
-              onChange={(e) => setSendLinkForm({ ...sendLinkForm, client_email: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter client email"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project Type
-            </label>
-            <select
-              value={sendLinkForm.project_type}
-              onChange={(e) => setSendLinkForm({ ...sendLinkForm, project_type: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              <option value="">Select project type</option>
-              {projectTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="md:col-span-3">
             <button
               type="submit"
               disabled={sendingLink}

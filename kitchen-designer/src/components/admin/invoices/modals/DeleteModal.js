@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { formatDatePacific } from '../../../../utils/dateUtils';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 const DeleteModal = ({
   show,
@@ -9,6 +10,7 @@ const DeleteModal = ({
   onCancel,
   onConfirm
 }) => {
+  const { t } = useLanguage();
   if (!show || !deleteInvoice) return null;
   
   const clientName = deleteInvoice.is_business 
@@ -23,7 +25,7 @@ const DeleteModal = ({
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
           <div className="flex items-center">
             <AlertTriangle className="text-red-600 mr-3" size={24} />
-            <h3 className="text-lg font-semibold text-red-800">Delete Invoice</h3>
+            <h3 className="text-lg font-semibold text-red-800">{t('invoiceManager.delete')}</h3>
           </div>
           <button
             onClick={onCancel}
@@ -38,26 +40,26 @@ const DeleteModal = ({
         <div className="p-4 md:p-6 overflow-y-auto">
           <div className="mb-4 md:mb-6">
             <p className="text-gray-700 mb-4 text-base">
-              Are you sure you want to delete this invoice? This action cannot be undone.
+              {t('invoiceManager.deleteConfirm')}
             </p>
 
             {/* Invoice Details */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-medium text-red-800">Invoice:</span>
+                  <span className="font-medium text-red-800">{t('invoiceManager.invoiceNumber')}:</span>
                   <span className="text-red-900">{deleteInvoice.invoice_number}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-red-800">Client:</span>
+                  <span className="font-medium text-red-800">{t('invoiceManager.client')}:</span>
                   <span className="text-red-900">{clientName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-red-800">Amount:</span>
+                  <span className="font-medium text-red-800">{t('invoiceManager.amount')}:</span>
                   <span className="text-red-900">${(deleteInvoice.total_amount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-red-800">Date:</span>
+                  <span className="font-medium text-red-800">{t('invoiceManager.date')}:</span>
                   <span className="text-red-900">{formatDatePacific(deleteInvoice.invoice_date)}</span>
                 </div>
               </div>
@@ -67,14 +69,8 @@ const DeleteModal = ({
             <div className="p-3 md:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-yellow-800 text-sm font-medium flex items-center">
                 <AlertTriangle size={16} className="mr-2" />
-                This will permanently delete:
+                {t('invoiceManager.deleteConfirm')}
               </p>
-              <ul className="text-yellow-700 text-sm mt-2 ml-6 list-disc space-y-1">
-                <li>Invoice and all line items</li>
-                <li>Payment records</li>
-                <li>Client access tokens</li>
-                <li>All related data</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -88,7 +84,7 @@ const DeleteModal = ({
               className="flex-1 px-4 py-3 md:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 text-base md:text-sm disabled:opacity-50"
               disabled={deleting}
             >
-              Cancel
+              {t('invoiceManager.cancel')}
             </button>
             <button
               onClick={onConfirm}
@@ -98,12 +94,12 @@ const DeleteModal = ({
               {deleting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Deleting...
+                  {t('invoiceManager.deleting')}
                 </>
               ) : (
                 <>
                   <Trash2 size={16} className="mr-2" />
-                  Delete Invoice
+                  {t('invoiceManager.delete')}
                 </>
               )}
             </button>

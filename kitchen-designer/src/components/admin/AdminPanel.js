@@ -6,7 +6,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  DollarSign,
   Image,
   LogOut,
   Lock,
@@ -17,7 +16,8 @@ import {
   BarChart3,
   MessageSquare,
   MessageCircle,
-  Receipt
+  Receipt,
+  DollarSign
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
@@ -36,7 +36,6 @@ import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
-import PWAInstallPrompt from './PWAInstallPrompt';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 import InvoiceIcon from './invoices/components/InvoiceIcon';
@@ -410,11 +409,6 @@ const AdminPanel = () => {
 
       {/* Content Area */}
       <div className="flex-1">
-        {/* PWA Install Prompt - Shows on all tabs */}
-        <div className="p-4 md:p-6 pb-0">
-          <PWAInstallPrompt />
-        </div>
-
         {activeTab === 'prices' && (
           <div className="p-6">
             {/*
@@ -461,7 +455,9 @@ const AdminPanel = () => {
         {activeTab === 'analytics' && user?.role === 'super_admin' && (
           <Analytics token={token} API_BASE={API_BASE} />
         )}
-
+        {/*
+         SMS Routing Tab
+        */}
         {activeTab === 'sms-routing' && user?.role === 'super_admin' && (
           <SmsRoutingManager token={token} API_BASE={API_BASE} />
         )}

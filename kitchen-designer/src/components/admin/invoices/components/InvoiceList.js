@@ -18,6 +18,7 @@ import {
 import StatusBadge from './StatusBadge';
 import InvoiceIcon from './InvoiceIcon';
 import { formatDatePacific } from '../../../../utils/dateUtils';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 const InvoiceList = ({
   filteredInvoices,
@@ -37,6 +38,7 @@ const InvoiceList = ({
   setShowClientModal,
   setShowLabelModal
 }) => {
+  const { t } = useLanguage();
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
@@ -55,7 +57,7 @@ const InvoiceList = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold">Invoice Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold">{t('invoiceManager.invoiceManagement')}</h2>
         <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
           {/* Settings Dropdown */}
           <div className="relative">
@@ -64,7 +66,7 @@ const InvoiceList = ({
               className="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2 text-sm"
             >
               <Settings size={16} />
-              Settings
+              {t('invoiceManager.settings')}
               <ChevronDown size={14} />
             </button>
 
@@ -79,7 +81,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <User size={16} />
-                    Clients
+                    {t('invoiceManager.clients')}
                   </button>
                   <button
                     onClick={() => {
@@ -89,17 +91,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <DollarSign size={16} />
-                    Tax Rates
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveView('payments');
-                      setShowSettingsDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    <DollarSign size={16} />
-                    Payments
+                    {t('invoiceManager.taxRates')}
                   </button>
                   <button
                     onClick={() => {
@@ -109,7 +101,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <Eye size={16} />
-                    Live Tracking
+                    {t('invoiceManager.liveTrackingMenu')}
                   </button>
                   <div className="border-t border-gray-200 my-1"></div>
                   <button
@@ -120,7 +112,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <Plus size={16} />
-                    Add Client
+                    {t('invoiceManager.addClient')}
                   </button>
                   <button
                     onClick={() => {
@@ -130,7 +122,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <FileText size={16} />
-                    Labels
+                    {t('invoiceManager.labels')}
                   </button>
                   <button
                     onClick={() => {
@@ -140,7 +132,7 @@ const InvoiceList = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     <Plus size={16} />
-                    Add Label
+                    {t('invoiceManager.addLabel')}
                   </button>
                 </div>
               </div>
@@ -153,7 +145,7 @@ const InvoiceList = ({
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <Plus size={20} />
-            Create Invoice
+            {t('invoiceManager.createInvoice')}
           </button>
         </div>
       </div>
@@ -173,7 +165,7 @@ const InvoiceList = ({
                 value={invoiceSearchTerm}
                 onChange={(e) => setInvoiceSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Search invoices by number, client name, email, amount, or status..."
+                placeholder={t('invoiceManager.searchPlaceholder')}
               />
               {invoiceSearchTerm && (
                 <button
@@ -189,7 +181,7 @@ const InvoiceList = ({
           </div>
           {invoiceSearchTerm && (
             <div className="text-sm text-gray-500">
-              {filteredInvoices.length} of {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+              {filteredInvoices.length} {t('invoiceManager.of')} {invoices.length} {t('invoiceManager.invoicesPlural')}{invoices.length !== 1 ? t('invoiceManager.invoicesCount') : ''}
             </div>
           )}
         </div>
@@ -201,22 +193,22 @@ const InvoiceList = ({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Invoice
+                {t('invoiceManager.invoice')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Client
+                {t('invoiceManager.client')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
+                {t('invoiceManager.amount')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                {t('invoiceManager.status')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                {t('invoiceManager.date')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('invoiceManager.actions')}
               </th>
             </tr>
           </thead>
@@ -254,7 +246,7 @@ const InvoiceList = ({
                       setActiveView('view');
                     }}
                     className="text-blue-600 hover:text-blue-900"
-                    title="View Invoice"
+                    title={t('invoiceManager.viewInvoice')}
                   >
                     <Eye size={16} />
                   </button>
@@ -271,7 +263,7 @@ const InvoiceList = ({
                       }, 100);
                     }}
                     className="text-purple-600 hover:text-purple-900"
-                    title="Edit Invoice"
+                    title={t('invoiceManager.editInvoiceAction')}
                   >
                     <Edit size={16} />
                   </button>
@@ -285,8 +277,8 @@ const InvoiceList = ({
                     <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <p className="text-sm">No invoices found matching "{invoiceSearchTerm}"</p>
-                    <p className="text-xs text-gray-400 mt-1">Try adjusting your search terms</p>
+                    <p className="text-sm">{t('invoiceManager.noInvoicesFound')} "{invoiceSearchTerm}"</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('invoiceManager.tryAdjusting')}</p>
                   </div>
                 </td>
               </tr>
@@ -298,8 +290,8 @@ const InvoiceList = ({
                     <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <p className="text-sm">No invoices created yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Create your first invoice to get started</p>
+                    <p className="text-sm">{t('invoiceManager.noInvoicesCreated')}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('invoiceManager.createFirstInvoice')}</p>
                   </div>
                 </td>
               </tr>
@@ -343,10 +335,10 @@ const InvoiceList = ({
                   setActiveView('view');
                 }}
                 className="flex flex-col items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded-md"
-                title="View"
+                title={t('invoiceManager.view')}
               >
                 <Eye size={18} />
-                <span className="text-xs mt-1">View</span>
+                <span className="text-xs mt-1">{t('invoiceManager.view')}</span>
               </button>
               <button
                 onClick={async () => {
@@ -359,52 +351,52 @@ const InvoiceList = ({
                   }, 100);
                 }}
                 className="flex flex-col items-center justify-center p-2 text-purple-600 hover:bg-purple-50 rounded-md"
-                title="Edit"
+                title={t('invoiceManager.edit')}
               >
                 <Edit size={18} />
-                <span className="text-xs mt-1">Edit</span>
+                <span className="text-xs mt-1">{t('invoiceManager.edit')}</span>
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setEmailInvoice(invoice);
                   setShowEmailModal(true);
                 }}
                 className="flex flex-col items-center justify-center p-2 text-green-600 hover:bg-green-50 rounded-md"
-                title="Email"
+                title={t('invoiceManager.emailInvoiceAction')}
               >
                 <Send size={18} />
-                <span className="text-xs mt-1">Email</span>
+                <span className="text-xs mt-1">{t('invoiceManager.emailInvoiceAction')}</span>
               </button>
-              <button 
+              <button
                 onClick={() => downloadInvoicePdf(invoice)}
                 className="flex flex-col items-center justify-center p-2 text-gray-600 hover:bg-gray-50 rounded-md"
-                title="Download"
+                title={t('invoiceManager.downloadPDFAction')}
               >
                 <Download size={18} />
-                <span className="text-xs mt-1">PDF</span>
+                <span className="text-xs mt-1">{t('invoiceManager.downloadPDFAction')}</span>
               </button>
             </div>
             
             {/* Secondary actions row */}
             <div className="grid grid-cols-3 gap-2 mt-2">
-              <button 
+              <button
                 onClick={() => {
                   setSmsInvoice(invoice);
                   setShowSmsModal(true);
                 }}
                 className="flex flex-col items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded-md"
-                title="SMS"
+                title={t('invoiceManager.smsAction')}
               >
                 <MessageCircle size={16} />
-                <span className="text-xs mt-1">SMS</span>
+                <span className="text-xs mt-1">{t('invoiceManager.smsAction')}</span>
               </button>
-              <button 
+              <button
                 onClick={() => openReminderModal(invoice)}
                 className="flex flex-col items-center justify-center p-2 text-orange-600 hover:bg-orange-50 rounded-md"
-                title="Reminders"
+                title={t('invoiceManager.remindAction')}
               >
                 <Bell size={16} />
-                <span className="text-xs mt-1">Remind</span>
+                <span className="text-xs mt-1">{t('invoiceManager.remindAction')}</span>
               </button>
               <button
                 onClick={() => {
@@ -412,10 +404,10 @@ const InvoiceList = ({
                   setShowDeleteModal(true);
                 }}
                 className="flex flex-col items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded-md"
-                title="Delete"
+                title={t('invoiceManager.deleteAction')}
               >
                 <Trash2 size={16} />
-                <span className="text-xs mt-1">Delete</span>
+                <span className="text-xs mt-1">{t('invoiceManager.deleteAction')}</span>
               </button>
             </div>
           </div>
@@ -427,18 +419,18 @@ const InvoiceList = ({
             <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-sm text-gray-500">No invoices found matching "{invoiceSearchTerm}"</p>
-            <p className="text-xs text-gray-400 mt-1">Try adjusting your search terms</p>
+            <p className="text-sm text-gray-500">{t('invoiceManager.noInvoicesFound')} "{invoiceSearchTerm}"</p>
+            <p className="text-xs text-gray-400 mt-1">{t('invoiceManager.tryAdjusting')}</p>
           </div>
         )}
-        
+
         {invoices.length === 0 && !invoiceSearchTerm && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-sm text-gray-500">No invoices created yet</p>
-            <p className="text-xs text-gray-400 mt-1">Create your first invoice to get started</p>
+            <p className="text-sm text-gray-500">{t('invoiceManager.noInvoicesCreated')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('invoiceManager.createFirstInvoice')}</p>
           </div>
         )}
       </div>
@@ -454,7 +446,7 @@ const InvoiceList = ({
               {/* Header */}
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900">Invoice Actions</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('invoiceManager.invoiceActions')}</h2>
                   <button
                     onClick={closeSidePanel}
                     className="text-gray-400 hover:text-gray-600"
@@ -481,7 +473,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <Eye size={18} className="mr-3" />
-                  <span>View Invoice</span>
+                  <span>{t('invoiceManager.viewInvoice')}</span>
                 </button>
 
                 <button
@@ -499,7 +491,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                 >
                   <Edit size={18} className="mr-3" />
-                  <span>Edit Invoice</span>
+                  <span>{t('invoiceManager.editInvoiceAction')}</span>
                 </button>
 
                 <button
@@ -511,7 +503,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                 >
                   <Send size={18} className="mr-3" />
-                  <span>Send Email</span>
+                  <span>{t('invoiceManager.sendEmailAction')}</span>
                 </button>
 
                 <button
@@ -523,7 +515,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <MessageCircle size={18} className="mr-3" />
-                  <span>Send SMS</span>
+                  <span>{t('invoiceManager.sendSMSAction')}</span>
                 </button>
 
                 <button
@@ -534,7 +526,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <Download size={18} className="mr-3" />
-                  <span>Download PDF</span>
+                  <span>{t('invoiceManager.downloadPDFFull')}</span>
                 </button>
 
                 <button
@@ -545,7 +537,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                 >
                   <Bell size={18} className="mr-3" />
-                  <span>Manage Reminders</span>
+                  <span>{t('invoiceManager.manageReminders')}</span>
                 </button>
 
                 <button
@@ -557,7 +549,7 @@ const InvoiceList = ({
                   className="w-full flex items-center px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <Trash2 size={18} className="mr-3" />
-                  <span>Delete Invoice</span>
+                  <span>{t('invoiceManager.deleteInvoiceAction')}</span>
                 </button>
               </div>
 
@@ -565,15 +557,15 @@ const InvoiceList = ({
               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Amount:</span>
+                    <span className="text-gray-500">{t('invoiceManager.amount')}:</span>
                     <span className="font-medium">${selectedInvoice.total_amount?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Status:</span>
+                    <span className="text-gray-500">{t('invoiceManager.status')}:</span>
                     <StatusBadge status={selectedInvoice.status} />
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Date:</span>
+                    <span className="text-gray-500">{t('invoiceManager.date')}:</span>
                     <span>{formatDatePacific(selectedInvoice.invoice_date)}</span>
                   </div>
                 </div>

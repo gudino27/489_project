@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Send, MessageCircle } from 'lucide-react';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 const SmsModal = ({
   show,
@@ -15,6 +16,7 @@ const SmsModal = ({
   onCancel,
   onSend
 }) => {
+  const { t } = useLanguage();
   if (!show || !smsInvoice) return null;
   
   const clientName = smsInvoice.is_business 
@@ -29,7 +31,7 @@ const SmsModal = ({
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <MessageCircle size={20} className="text-blue-600" />
-            Send Invoice SMS
+            {t('smsModal.title')}
           </h3>
           <button
             onClick={onCancel}
@@ -46,15 +48,15 @@ const SmsModal = ({
           <div className="mb-4 md:mb-6 p-3 bg-gray-50 rounded-lg">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Invoice:</span>
+                <span className="font-medium text-gray-700">{t('invoiceManager.invoiceNumber')}:</span>
                 <span className="text-gray-900">{smsInvoice.invoice_number}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Client:</span>
+                <span className="font-medium text-gray-700">{t('invoiceManager.client')}:</span>
                 <span className="text-gray-900">{clientName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Phone:</span>
+                <span className="font-medium text-gray-700">{t('clientManagement.phone')}:</span>
                 <span className="text-gray-900">{smsInvoice.phone || 'Not provided'}</span>
               </div>
             </div>
@@ -71,15 +73,15 @@ const SmsModal = ({
                   className="mt-1 mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Send to different phone number</span>
-                  <p className="text-xs text-gray-500 mt-1">Override the client's phone number</p>
+                  <span className="text-sm font-medium text-gray-700">{t('smsModal.useCustomPhone')}</span>
+                  <p className="text-xs text-gray-500 mt-1">{t('clientManagement.phone')}</p>
                 </div>
               </label>
 
               {useCustomPhone && (
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-700">
-                    Custom Phone Number
+                    {t('smsModal.customPhone')}
                   </label>
                   <input
                     type="tel"
@@ -88,9 +90,6 @@ const SmsModal = ({
                     className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-sm"
                     placeholder="e.g., (509) 790-3516"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter the phone number in any format. System will clean it up.
-                  </p>
                 </div>
               )}
             </div>
@@ -99,7 +98,7 @@ const SmsModal = ({
           {/* Message Input */}
           <div className="mb-4 md:mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              SMS Message (Optional)
+              {t('smsModal.message')}
             </label>
             <textarea
               value={smsMessage}
@@ -107,14 +106,14 @@ const SmsModal = ({
               rows={4}
               maxLength={160}
               className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-sm resize-none"
-              placeholder="Add a personal message to include with the invoice link..."
+              placeholder={t('emailModal.defaultMessage')}
             />
             <div className="flex justify-between items-center mt-2">
               <p className="text-xs text-gray-500">
-                A link to view the invoice will be automatically included.
+                {t('smsModal.message')}
               </p>
               <span className={`text-xs ${smsMessage.length > 140 ? 'text-red-500' : 'text-gray-400'}`}>
-                {smsMessage.length}/160
+                {smsMessage.length}/{t('smsModal.characterCount')}
               </span>
             </div>
           </div>
@@ -122,7 +121,7 @@ const SmsModal = ({
           {/* Preview */}
           {smsMessage.trim() && (
             <div className="mb-4 md:mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">Message Preview:</h4>
+              <h4 className="text-sm font-medium text-blue-800 mb-2">{t('smsRouting.messagePreview')}:</h4>
               <div className="text-sm text-blue-700">
                 <p>{smsMessage}</p>
                 <p className="mt-2 font-medium">View invoice: [Link will be inserted]</p>
@@ -140,7 +139,7 @@ const SmsModal = ({
               className="flex-1 px-4 py-3 md:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-sm disabled:opacity-50"
               disabled={smsSending}
             >
-              Cancel
+              {t('smsModal.cancel')}
             </button>
             <button
               onClick={onSend}
@@ -150,12 +149,12 @@ const SmsModal = ({
               {smsSending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Sending...
+                  {t('smsModal.sending')}
                 </>
               ) : (
                 <>
                   <Send size={16} className="mr-2" />
-                  Send SMS
+                  {t('smsModal.send')}
                 </>
               )}
             </button>

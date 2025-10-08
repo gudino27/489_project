@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, Trash2, Edit2, Save, Plus, GripVertical, Mail, Phone, Calendar } from 'lucide-react';
 import { formatDatePacific } from '../../utils/dateUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const EmployeeManager = () => {
+  const { t } = useLanguage();
   const [employees, setEmployees] = useState([]);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -46,7 +48,7 @@ const EmployeeManager = () => {
 
   const handleAddEmployee = async () => {
     if (!newEmployee.name || !newEmployee.position) {
-      showNotification('Name and position are required', 'error');
+      showNotification(t('employeeManager.nameRequired'), 'error');
       return;
     }
 
@@ -121,9 +123,9 @@ const EmployeeManager = () => {
           emp.id === id ? result.employee : emp
         ));
         setEditingId(null);
-        showNotification('Employee updated successfully!');
+        showNotification(t('employeeManager.updated'));
       } else {
-        showNotification('Failed to update employee', 'error');
+        showNotification(t('employeeManager.updated'), 'error');
       }
     } catch (error) {
       console.error('Error updating employee:', error);
@@ -134,7 +136,7 @@ const EmployeeManager = () => {
   };
 
   const handleDeleteEmployee = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+    if (!window.confirm(t('employeeManager.deleteConfirm'))) return;
 
     try {
       const response = await fetch(`${API_BASE}/api/employees/${id}`, {
@@ -143,9 +145,9 @@ const EmployeeManager = () => {
 
       if (response.ok) {
         setEmployees(employees.filter(emp => emp.id !== id));
-        showNotification('Employee deleted successfully!');
+        showNotification(t('employeeManager.deleted'));
       } else {
-        showNotification('Failed to delete employee', 'error');
+        showNotification(t('employeeManager.deleted'), 'error');
       }
     } catch (error) {
       console.error('Error deleting employee:', error);
@@ -189,10 +191,10 @@ const EmployeeManager = () => {
       });
 
       if (response.ok) {
-        showNotification('Employee order saved successfully!');
+        showNotification(t('employeeManager.saveOrder'));
         setIsReordering(false);
       } else {
-        showNotification('Failed to save order', 'error');
+        showNotification(t('employeeManager.saveOrder'), 'error');
       }
     } catch (error) {
       console.error('Save order error:', error);
@@ -211,7 +213,7 @@ const EmployeeManager = () => {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Team Management</h2>
+        <h2 className="text-xl font-bold">{t('employeeManager.title')}</h2>
         <div className="flex gap-2">
           {isReordering ? (
             <>
@@ -220,7 +222,7 @@ const EmployeeManager = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 <Save size={16} />
-                Save Order
+                {t('employeeManager.saveOrder')}
               </button>
               <button
                 onClick={() => {
@@ -229,7 +231,7 @@ const EmployeeManager = () => {
                 }}
                 className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
               >
-                Cancel
+                {t('employeeManager.cancel')}
               </button>
             </>
           ) : (
@@ -239,14 +241,14 @@ const EmployeeManager = () => {
                 className="flex items-center gap-2 px-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
                 <GripVertical size={16} />
-                Reorder
+                {t('employeeManager.reorder')}
               </button>
               <button
                 onClick={() => setIsAddingNew(true)}
                 className="flex items-center gap-2 px-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus size={20} />
-                Add Employee
+                {t('employeeManager.addEmployee')}
               </button>
             </>
           )}
@@ -256,11 +258,11 @@ const EmployeeManager = () => {
       {/* Add New Employee Form */}
       {isAddingNew && (
         <div className="mb-6 p-6 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Add New Team Member</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('employeeManager.addNewMember')}</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name *</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.name')} *</label>
                 <input
                   type="text"
                   required
@@ -271,7 +273,7 @@ const EmployeeManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Position *</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.position')} *</label>
                 <input
                   type="text"
                   required
@@ -282,7 +284,7 @@ const EmployeeManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.email')}</label>
                 <input
                   type="email"
                   value={newEmployee.email}
@@ -292,7 +294,7 @@ const EmployeeManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.phone')}</label>
                 <input
                   type="tel"
                   value={newEmployee.phone}
@@ -302,7 +304,7 @@ const EmployeeManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Joined Date</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.joinedDate')}</label>
                 <input
                   type="date"
                   value={newEmployee.joined_date}
@@ -311,7 +313,7 @@ const EmployeeManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Photo</label>
+                <label className="block text-sm font-medium mb-1">{t('employeeManager.photo')}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -321,7 +323,7 @@ const EmployeeManager = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Bio</label>
+              <label className="block text-sm font-medium mb-1">{t('employeeManager.bio')}</label>
               <textarea
                 value={newEmployee.bio}
                 onChange={(e) => setNewEmployee({ ...newEmployee, bio: e.target.value })}
@@ -336,7 +338,7 @@ const EmployeeManager = () => {
                 disabled={loading}
                 className="px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-center min-h-[44px] sm:min-h-auto"
               >
-                {loading ? 'Adding...' : 'Add Employee'}
+                {loading ? t('employeeManager.adding') : t('employeeManager.addEmployee')}
               </button>
               <button
                 onClick={() => {
@@ -347,7 +349,7 @@ const EmployeeManager = () => {
                 }}
                 className="px-4 py-3 sm:py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-center min-h-[44px] sm:min-h-auto"
               >
-                Cancel
+                {t('employeeManager.cancel')}
               </button>
             </div>
           </div>
@@ -359,12 +361,12 @@ const EmployeeManager = () => {
         {employees.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <User size={48} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500">No team members added yet.</p>
+            <p className="text-gray-500">{t('employeeManager.noEmployees')}</p>
             <button
               onClick={() => setIsAddingNew(true)}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Add First Employee
+              {t('employeeManager.addFirst')}
             </button>
           </div>
         ) : (
@@ -477,7 +479,7 @@ const EmployeeManager = () => {
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                           disabled={loading}
                         >
-                          Save
+                          {t('employeeManager.save')}
                         </button>
                         <button
                           onClick={() => {
@@ -486,7 +488,7 @@ const EmployeeManager = () => {
                           }}
                           className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
                         >
-                          Cancel
+                          {t('employeeManager.cancel')}
                         </button>
                       </div>
                     </div>
@@ -516,7 +518,7 @@ const EmployeeManager = () => {
                             {employee.joined_date && (
                               <div className="flex items-center gap-1">
                                 <Calendar size={14} />
-                                <span>Joined {formatDatePacific(employee.joined_date)}</span>
+                                <span>{t('employeeManager.joined')} {formatDatePacific(employee.joined_date)}</span>
                               </div>
                             )}
                           </div>

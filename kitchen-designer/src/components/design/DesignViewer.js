@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import DesignPreview from './DesignPreview';
 import sessionManager from '../utils/sessionManager';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const DesignViewer = ({ token, API_BASE, userRole }) => {
+  const { t } = useLanguage();
   const [designs, setDesigns] = useState([]);
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
 
   // New state for enhanced functionality
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
-  
+
   // Notification settings state (super admin only)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({
@@ -225,7 +227,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
 
   // Updated deleteDesign with auth headers
   const deleteDesign = async (designId) => {
-    if (!window.confirm('Are you sure you want to delete this design? This action cannot be undone.')) {
+    if (!window.confirm(t('designViewer.deleteConfirm'))) {
       return;
     }
 
@@ -357,7 +359,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
   const bulkDeleteDesigns = async () => {
     if (selectedDesigns.size === 0) return;
 
-    if (!window.confirm(`Are you sure you want to delete ${selectedDesigns.size} design(s)? This action cannot be undone.`)) {
+    if (!window.confirm(`${t('designViewer.bulkDeleteConfirm')} ${selectedDesigns.size} ${t('designViewer.bulkDeleteConfirmEnd')}`)) {
       return;
     }
 
@@ -482,7 +484,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Designs</p>
+                <p className="text-sm text-gray-600">{t('designViewer.totalDesigns')}</p>
                 <p className="text-2xl font-bold">{stats.totalDesigns}</p>
               </div>
               <FileText className="w-8 h-8 text-gray-400" />
@@ -495,7 +497,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">New Designs</p>
+                <p className="text-sm text-gray-600">{t('designViewer.newDesigns')}</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)}
                 </p>
@@ -510,7 +512,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Viewed</p>
+                <p className="text-sm text-gray-600">{t('designViewer.viewed')}</p>
                 <p className="text-2xl font-bold text-green-600">
                   {stats.statusBreakdown.viewed}
                 </p>
@@ -532,7 +534,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              All Designs
+              {t('designViewer.allDesigns')}
             </button>
             <button
               onClick={() => setFilter('new')}
@@ -541,7 +543,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              New {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ?
+              {t('designViewer.new')} {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ?
                 `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})` : ''}
             </button>
             <button
@@ -551,7 +553,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Viewed {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ?
+              {t('designViewer.viewed')} {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ?
                 `(${stats.statusBreakdown.viewed})` : ''}
             </button>
           </nav>
@@ -562,13 +564,13 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
       {userRole === 'super_admin' && (
         <div className="mb-6 flex justify-between items-center">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm flex-1 mr-4">
-            <strong>Customer Design Notifications:</strong> Currently sending to{' '}
+            <strong>{t('designViewer.customerDesignNotifications')}:</strong> {t('designViewer.currentlySending')}{' '}
             <span className="font-medium">
-              {notificationSettings.notificationType === 'email' ? 'Email only' :
-               notificationSettings.notificationType === 'sms' ? 'SMS only' :
-               'Both Email & SMS'}
+              {notificationSettings.notificationType === 'email' ? t('designViewer.emailOnly') :
+               notificationSettings.notificationType === 'sms' ? t('designViewer.smsOnly') :
+               t('designViewer.bothEmailSMS')}
             </span>
-            {' '}when customers submit cabinet designs.
+            {' '}{t('designViewer.whenCustomersSubmit')}.
           </div>
           <button
             onClick={() => setShowSettingsModal(true)}
@@ -576,7 +578,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
             title={`Design Notifications: ${notificationSettings.notificationType.toUpperCase()}`}
           >
             <Settings size={16} />
-            Notification Settings
+            {t('designViewer.notificationSettings')}
             <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
               notificationSettings.notificationType === 'email' ? 'bg-green-500' :
               notificationSettings.notificationType === 'sms' ? 'bg-blue-500' :
@@ -591,7 +593,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">
-              {selectedDesigns.size} design(s) selected
+              {selectedDesigns.size} {t('designViewer.designsSelected')}
             </span>
             <button
               onClick={bulkDeleteDesigns}
@@ -601,12 +603,12 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
               {bulkActionLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Deleting...
+                  {t('designViewer.deleting')}
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  Delete Selected
+                  {t('designViewer.deleteSelected')}
                 </>
               )}
             </button>
@@ -619,7 +621,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading designs...</p>
+            <p className="text-gray-500">{t('designViewer.loadingDesigns')}</p>
           </div>
         </div>
       ) : (
@@ -643,11 +645,11 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                   </div>
                   {design.status === 'new' ? (
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      NEW
+                      {t('designViewer.new').toUpperCase()}
                     </span>
                   ) : (
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Viewed
+                      {t('designViewer.viewed')}
                     </span>
                   )}
                 </div>
@@ -659,7 +661,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                         {formatPhoneNumber(design.client_phone)}
                       </a>
                     ) : (
-                      <span>Open to see #</span>
+                      <span>{t('designViewer.openToSeeNumber')}</span>
                     )}
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
@@ -713,7 +715,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-1">
-                    Status
+                    {t('designViewer.status')}
                     {sortConfig.key === 'status' && (
                       <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
@@ -724,42 +726,42 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                   onClick={() => handleSort('client_name')}
                 >
                   <div className="flex items-center gap-1">
-                    Client
+                    {t('designViewer.client')}
                     {sortConfig.key === 'client_name' && (
                       <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
+                  {t('designViewer.contact')}
                 </th>
                 <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('total_price')}
                 >
                   <div className="flex items-center gap-1">
-                    Total
+                    {t('designViewer.total')}
                     {sortConfig.key === 'total_price' && (
                       <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Notes
+                  {t('designViewer.notes')}
                 </th>
                 <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('created_at')}
                 >
                   <div className="flex items-center gap-1">
-                    Submitted
+                    {t('designViewer.submittedColumn')}
                     {sortConfig.key === 'created_at' && (
                       <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('designViewer.actions')}
                 </th>
               </tr>
             </thead>
@@ -784,8 +786,8 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                           : 'bg-gray-100 text-gray-800'
                         } ${statusChanging === design.id ? 'opacity-50' : 'cursor-pointer hover:bg-opacity-80'}`}
                     >
-                      <option value="new">New</option>
-                      <option value="viewed">Viewed</option>
+                      <option value="new">{t('designViewer.new')}</option>
+                      <option value="viewed">{t('designViewer.viewed')}</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -799,12 +801,12 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                           <a
                             href={`tel:${design.client_phone}`}
                             className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                            title="Click to call"
+                            title={t('designViewer.clickToCall')}
                           >
                             {formatPhoneNumber(design.client_phone)}
                           </a>
                         ) : (
-                          <span className="text-xs">open to see #</span>
+                          <span className="text-xs">{t('designViewer.openToSeeNumber')}</span>
                         )}
                       </div>
                       <div className="flex items-center">
@@ -812,7 +814,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                         <a
                           href={`mailto:${design.client_email}`}
                           className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                          title="Click to email"
+                          title={t('designViewer.clickToEmail')}
                         >
                           {design.client_email}
                         </a>
@@ -821,7 +823,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                       {/* Preference indicator with icon */}
                       <div className="flex items-center mt-1">
                         {getContactIcon(design.contact_preference)}
-                        <span className="ml-1 text-xs text-blue-600">preferred</span>
+                        <span className="ml-1 text-xs text-blue-600">{t('designViewer.preferred')}</span>
                       </div>
                     </div>
                   </td>
@@ -845,7 +847,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                             }
                           }}
                           className="text-xs border border-gray-300 rounded px-2 py-1 w-32"
-                          placeholder="Add note..."
+                          placeholder={t('designViewer.addNote')}
                           autoFocus
                         />
                         <button
@@ -871,9 +873,9 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                           setNoteValues({ ...noteValues, [design.id]: design.admin_note || '' });
                         }}
                         className="text-xs text-gray-500 cursor-pointer hover:text-blue-600 min-h-[20px]"
-                        title="Click to add note"
+                        title={t('designViewer.clickToAddNote')}
                       >
-                        {design.admin_note || 'Add note...'}
+                        {design.admin_note || t('designViewer.addNote')}
                       </div>
                     )}
                   </td>

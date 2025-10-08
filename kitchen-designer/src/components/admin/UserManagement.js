@@ -10,8 +10,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { formatDatePacific, formatDateTimePacific } from '../../utils/dateUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const UserManagement = ({ token, API_BASE }) => {
+  const { t } = useLanguage();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -58,7 +60,7 @@ const UserManagement = ({ token, API_BASE }) => {
     setSuccess('');
 
     if (newUser.password !== newUser.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('userManagement.passwordMismatch'));
       return;
     }
 
@@ -81,10 +83,10 @@ const UserManagement = ({ token, API_BASE }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create user');
+        throw new Error(data.error || t('userManagement.created'));
       }
 
-      setSuccess('User created successfully');
+      setSuccess(t('userManagement.created'));
       setNewUser({
         username: '',
         email: '',
@@ -111,9 +113,9 @@ const UserManagement = ({ token, API_BASE }) => {
         body: JSON.stringify(updates)
       });
 
-      if (!response.ok) throw new Error('Failed to update user');
+      if (!response.ok) throw new Error(t('userManagement.updated'));
 
-      setSuccess('User updated successfully');
+      setSuccess(t('userManagement.updated'));
       setEditingUser(null);
       fetchUsers();
     } catch (error) {
@@ -122,7 +124,7 @@ const UserManagement = ({ token, API_BASE }) => {
   };
 
   const handleDeactivateUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to deactivate this user?')) return;
+    if (!window.confirm(t('userManagement.deactivateConfirm'))) return;
 
     try {
       const response = await fetch(`${API_BASE}/api/users/${userId}`, {
@@ -132,9 +134,9 @@ const UserManagement = ({ token, API_BASE }) => {
         }
       });
 
-      if (!response.ok) throw new Error('Failed to deactivate user');
+      if (!response.ok) throw new Error(t('userManagement.deactivated'));
 
-      setSuccess('User deactivated successfully');
+      setSuccess(t('userManagement.deactivated'));
       fetchUsers();
     } catch (error) {
       setError('Failed to deactivate user');
@@ -142,7 +144,7 @@ const UserManagement = ({ token, API_BASE }) => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return t('userManagement.never');
     const result = formatDateTimePacific(dateString, {
       year: 'numeric',
       month: 'short',
@@ -156,7 +158,7 @@ const UserManagement = ({ token, API_BASE }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading users...</div>
+        <div className="text-gray-500">{t('userManagement.loading')}</div>
       </div>
     );
   }
@@ -166,7 +168,7 @@ const UserManagement = ({ token, API_BASE }) => {
       <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-xl lg:text-2xl font-bold flex items-center gap-2">
           <Users className="text-blue-600" />
-          User Management
+          {t('userManagement.title')}
         </h2>
         <button
           onClick={() => setShowAddUser(true)}
@@ -174,7 +176,7 @@ const UserManagement = ({ token, API_BASE }) => {
           style={{ minHeight: '44px' }}
         >
           <UserPlus size={18} />
-          Add New User
+          {t('userManagement.addNewUser')}
         </button>
       </div>
 
@@ -196,11 +198,11 @@ const UserManagement = ({ token, API_BASE }) => {
       {showAddUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Add New User</h3>
+            <h3 className="text-xl font-bold mb-4">{t('userManagement.addNewUser')}</h3>
             <div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Username</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.username')}</label>
                   <input
                     type="text"
                     value={newUser.username}
@@ -209,7 +211,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.email')}</label>
                   <input
                     type="email"
                     value={newUser.email}
@@ -218,7 +220,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Full Name</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.fullName')}</label>
                   <input
                     type="text"
                     value={newUser.full_name}
@@ -227,7 +229,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Password</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.password')}</label>
                   <input
                     type="password"
                     value={newUser.password}
@@ -236,7 +238,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Confirm Password</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.confirmPassword')}</label>
                   <input
                     type="password"
                     value={newUser.confirmPassword}
@@ -245,14 +247,14 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.role')}</label>
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="admin">{t('userManagement.admin')}</option>
+                    <option value="super_admin">{t('userManagement.superAdmin')}</option>
                   </select>
                 </div>
               </div>
@@ -261,7 +263,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   onClick={() => setShowAddUser(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Cancel
+                  {t('userManagement.cancel')}
                 </button>
                 <button
                   onClick={(e) => {
@@ -270,7 +272,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   }}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Create User
+                  {t('userManagement.createUser')}
                 </button>
               </div>
             </div>
@@ -285,19 +287,19 @@ const UserManagement = ({ token, API_BASE }) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
+                {t('userManagement.user')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
+                {t('userManagement.role')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                {t('userManagement.status')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Login
+                {t('userManagement.lastLogin')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('userManagement.actions')}
               </th>
             </tr>
           </thead>
@@ -321,7 +323,7 @@ const UserManagement = ({ token, API_BASE }) => {
                       : 'bg-blue-100 text-blue-800'
                     }`}>
                     {user.role === 'super_admin' && <Shield size={12} />}
-                    {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                    {user.role === 'super_admin' ? t('userManagement.superAdmin') : t('userManagement.admin')}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -329,7 +331,7 @@ const UserManagement = ({ token, API_BASE }) => {
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                     }`}>
-                    {user.is_active ? 'Active' : 'Inactive'}
+                    {user.is_active ? t('userManagement.active') : t('userManagement.inactive')}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -433,11 +435,11 @@ const UserManagement = ({ token, API_BASE }) => {
       {editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Edit User</h3>
+            <h3 className="text-xl font-bold mb-4">{t('userManagement.editUser')}</h3>
             <div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Username</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.username')}</label>
                   <input
                     type="text"
                     value={editingUser.username}
@@ -446,7 +448,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.email')}</label>
                   <input
                     type="email"
                     id="edit-email"
@@ -455,7 +457,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Full Name</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.fullName')}</label>
                   <input
                     type="text"
                     id="edit-fullname"
@@ -464,14 +466,14 @@ const UserManagement = ({ token, API_BASE }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <label className="block text-sm font-medium mb-1">{t('userManagement.role')}</label>
                   <select
                     id="edit-role"
                     defaultValue={editingUser.role}
                     className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="admin">{t('userManagement.admin')}</option>
+                    <option value="super_admin">{t('userManagement.superAdmin')}</option>
                   </select>
                 </div>
               </div>
@@ -480,7 +482,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   onClick={() => setEditingUser(null)}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Cancel
+                  {t('userManagement.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -491,7 +493,7 @@ const UserManagement = ({ token, API_BASE }) => {
                   }}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Update User
+                  {t('userManagement.updateUser')}
                 </button>
               </div>
             </div>

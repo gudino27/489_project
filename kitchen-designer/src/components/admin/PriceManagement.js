@@ -22,6 +22,9 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
   // Shared pricing context
   const { refreshPricing, setMaterialMultipliers: setSharedMaterialMultipliers } = usePricing();
 
+  // Active tab state for mobile navigation
+  const [activeTab, setActiveTab] = useState('cabinets');
+
   // State for all pricing data
   const [basePrices, setBasePrices] = useState({
     // Kitchen Cabinets
@@ -287,92 +290,172 @@ const PriceManagement = ({ token, API_BASE, userRole }) => {
     return (
       <div className="p-6">
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Loading prices...</div>
+          <div className="text-gray-500">{t('priceManagement.loading')}</div>
         </div>
       </div>
     );
   }
 
+  const tabs = [
+    { id: 'cabinets', label: t('priceManagement.cabinets') },
+    { id: 'materials', label: t('priceManagement.materials') },
+    { id: 'colors', label: t('priceManagement.colors') },
+    { id: 'walls', label: t('priceManagement.walls') },
+    ...(userRole === 'super_admin' ? [{ id: 'availability', label: t('priceManagement.availability') }] : [])
+  ];
+
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <DollarSign className="text-blue-600" size={28} />
-          Price Management
+      <div className="mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <DollarSign className="text-blue-600" size={24} />
+          {t('priceManagement.title')}
         </h2>
-        <p className="text-gray-600 mt-1">
-          Manage cabinet base prices, material multipliers, color pricing, and wall modification costs
+        <p className="text-sm text-gray-600 mt-1 hidden sm:block">
+          {t('priceManagement.description')}
         </p>
+      </div>
+
+      {/* Mobile-Only Tab Navigation */}
+      <div className="mb-4 overflow-x-auto -mx-3 px-3 md:hidden">
+        <div className="flex gap-1 min-w-max">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              style={{ minHeight: '44px' }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Save Status Banner */}
       {saveStatus && (
-        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${saveStatus === 'saved' ? 'bg-green-50 text-green-700' :
+        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${saveStatus === 'saved' ? 'bg-green-50 text-green-700' :
           saveStatus === 'saving' ? 'bg-blue-50 text-blue-700' :
             'bg-red-50 text-red-700'
           }`}>
           {saveStatus === 'saved' && <Check size={18} />}
-          {saveStatus === 'saved' ? 'Prices saved successfully!' :
-            saveStatus === 'saving' ? 'Saving...' : 'Error saving prices'}
+          {saveStatus === 'saved' ? t('priceManagement.saved') :
+            saveStatus === 'saving' ? t('priceManagement.saving') : t('priceManagement.error')}
         </div>
       )}
 
-      {/* Cabinet & Fixture Pricing */}
-      <CabinetPricing
-        basePrices={basePrices}
-        setBasePrices={setBasePrices}
-        markSectionChanged={markSectionChanged}
-        SectionSaveButton={SectionSaveButtonWithProps}
-      />
+      {/* Mobile: Tab Content (one at a time) */}
+      <div className="space-y-4 md:hidden">
+        {activeTab === 'cabinets' && (
+          <CabinetPricing
+            basePrices={basePrices}
+            setBasePrices={setBasePrices}
+            markSectionChanged={markSectionChanged}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
 
-      {/* Material Multipliers */}
-      <MaterialMultipliers
-        materialMultipliers={materialMultipliers}
-        setMaterialMultipliers={setMaterialMultipliers}
-        markSectionChanged={markSectionChanged}
-        updateSharedMaterials={updateSharedMaterials}
-        refreshPricing={refreshPricing}
-        SectionSaveButton={SectionSaveButtonWithProps}
-      />
+        {activeTab === 'materials' && (
+          <MaterialMultipliers
+            materialMultipliers={materialMultipliers}
+            setMaterialMultipliers={setMaterialMultipliers}
+            markSectionChanged={markSectionChanged}
+            updateSharedMaterials={updateSharedMaterials}
+            refreshPricing={refreshPricing}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
 
-      {/* Color Pricing */}
-      <ColorPricing
-        colorPricing={colorPricing}
-        setColorPricing={setColorPricing}
-        markSectionChanged={markSectionChanged}
-        SectionSaveButton={SectionSaveButtonWithProps}
-      />
+        {activeTab === 'colors' && (
+          <ColorPricing
+            colorPricing={colorPricing}
+            setColorPricing={setColorPricing}
+            markSectionChanged={markSectionChanged}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
 
-      {/* Wall Pricing */}
-      <WallPricing
-        wallPricing={wallPricing}
-        setWallPricing={setWallPricing}
-        markSectionChanged={markSectionChanged}
-        SectionSaveButton={SectionSaveButtonWithProps}
-      />
+        {activeTab === 'walls' && (
+          <WallPricing
+            wallPricing={wallPricing}
+            setWallPricing={setWallPricing}
+            markSectionChanged={markSectionChanged}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
 
-      {/* Wall Service Availability Controls - Super Admin Only */}
-      <WallAvailability
-        wallAvailability={wallAvailability}
-        setWallAvailability={setWallAvailability}
-        markSectionChanged={markSectionChanged}
-        userRole={userRole}
-        SectionSaveButton={SectionSaveButtonWithProps}
-      />
+        {activeTab === 'availability' && userRole === 'super_admin' && (
+          <WallAvailability
+            wallAvailability={wallAvailability}
+            setWallAvailability={setWallAvailability}
+            markSectionChanged={markSectionChanged}
+            userRole={userRole}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
+      </div>
+
+      {/* Desktop: All Sections (no tabs) */}
+      <div className="hidden md:block space-y-6">
+        <CabinetPricing
+          basePrices={basePrices}
+          setBasePrices={setBasePrices}
+          markSectionChanged={markSectionChanged}
+          SectionSaveButton={SectionSaveButtonWithProps}
+        />
+
+        <MaterialMultipliers
+          materialMultipliers={materialMultipliers}
+          setMaterialMultipliers={setMaterialMultipliers}
+          markSectionChanged={markSectionChanged}
+          updateSharedMaterials={updateSharedMaterials}
+          refreshPricing={refreshPricing}
+          SectionSaveButton={SectionSaveButtonWithProps}
+        />
+
+        <ColorPricing
+          colorPricing={colorPricing}
+          setColorPricing={setColorPricing}
+          markSectionChanged={markSectionChanged}
+          SectionSaveButton={SectionSaveButtonWithProps}
+        />
+
+        <WallPricing
+          wallPricing={wallPricing}
+          setWallPricing={setWallPricing}
+          markSectionChanged={markSectionChanged}
+          SectionSaveButton={SectionSaveButtonWithProps}
+        />
+
+        {userRole === 'super_admin' && (
+          <WallAvailability
+            wallAvailability={wallAvailability}
+            setWallAvailability={setWallAvailability}
+            markSectionChanged={markSectionChanged}
+            userRole={userRole}
+            SectionSaveButton={SectionSaveButtonWithProps}
+          />
+        )}
+      </div>
 
       {/* Global Save Button - appears when any section has changes */}
-      <div className="flex justify-end">
+      <div className="mt-6 flex justify-end">
         <button
           onClick={savePriceChanges}
           disabled={!hasUnsavedChanges || saveStatus === 'saving'}
-          className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition ${hasUnsavedChanges && saveStatus !== 'saving'
+          className={`w-full md:w-auto px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition ${hasUnsavedChanges && saveStatus !== 'saving'
             ? 'bg-blue-600 text-white hover:bg-blue-700'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
+          style={{ minHeight: '44px' }}
         >
           <Save size={18} />
-          {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+          {saveStatus === 'saving' ? t('priceManagement.saving') : t('priceManagement.saveChanges')}
         </button>
       </div>
     </div>

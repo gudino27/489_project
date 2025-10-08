@@ -829,34 +829,6 @@ async function addInvoiceTables(db) {
     console.log('Location columns already exist in invoice_views table');
   }
 
-  // Insert default line item labels
-  const defaultLabels = [
-    ['Cabinet - Base', 250.00],
-    ['Cabinet - Wall', 180.00],
-    ['Cabinet - Tall', 450.00],
-    ['Hardware - Handles', 15.00],
-    ['Hardware - Hinges', 8.00],
-    ['Labor - Installation', 85.00],
-    ['Labor - Demolition', 45.00],
-    ['Material - Wood', 12.00],
-    ['Material - Plywood', 8.00],
-    ['Appliance - Built-in', 500.00],
-    ['Countertop - Linear Foot', 75.00],
-    ['Backsplash - Square Foot', 12.00],
-    ['Paint - Per Room', 200.00],
-    ['Electrical - Outlet', 150.00],
-    ['Plumbing - Connection', 200.00]
-  ];
-
-  for (const [labelName, defaultPrice] of defaultLabels) {
-    await db.run(
-      'INSERT OR IGNORE INTO line_item_labels (label_name, default_unit_price) VALUES (?, ?)',
-      [labelName, defaultPrice]
-    );
-  }
-
-  // Note: No pre-populated tax rates - admin will add them manually through the interface
-
   console.log(' Created invoice system tables and default data');
 }
 

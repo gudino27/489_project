@@ -4,22 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 
 
-// Get page category for Clarity tracking
-const getPageCategory = (pagePath) => {
-  if (!pagePath) return 'unknown';
 
-  if (pagePath === '/' || pagePath === '/home') return 'homepage';
-  if (pagePath.includes('/portfolio')) return 'portfolio';
-  if (pagePath.includes('/design')) return 'design_tool';
-  if (pagePath.includes('/about')) return 'about';
-  if (pagePath.includes('/contact')) return 'contact';
-  if (pagePath.includes('/admin')) return 'admin';
-  if (pagePath.includes('/services')) return 'services';
-  if (pagePath.includes('/areas')) return 'location_page';
-  if (pagePath.includes('/testimonial')) return 'testimonial';
-
-  return 'other';
-};
 
 // Generate a unique session ID
 const generateSessionId = () => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Globe, Plus, X, User } from 'lucide-react';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 const EmailModal = ({
   show,
@@ -10,6 +11,7 @@ const EmailModal = ({
   onCancel,
   onSend
 }) => {
+  const { t } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState('english');
   const [sendToSelf, setSendToSelf] = useState(false);
   const [additionalEmails, setAdditionalEmails] = useState(['']);
@@ -26,23 +28,23 @@ const EmailModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ overflowY: 'auto' }}>
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-3 overflow-y-auto z-60" style={{ maxHeight: '75vh'}}>
-        <h3 className="text-lg font-semibold mb-4">Send Invoice Email</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('emailModal.title')}</h3>
 
         <div className="mb-3">
           <p className="text-sm text-gray-600 mb-1">
-            <strong>Invoice:</strong> {emailInvoice.invoice_number}
+            <strong>{t('invoiceManager.invoiceNumber')}:</strong> {emailInvoice.invoice_number}
           </p>
           <p className="text-sm text-gray-600 mb-1">
-            <strong>Client:</strong> {clientName}
+            <strong>{t('invoiceManager.client')}:</strong> {clientName}
           </p>
           <p className="text-sm text-gray-600 mb-3">
-            <strong>Primary Email:</strong> {emailInvoice.email}
+            <strong>{t('clientManagement.isPrimaryEmail')}:</strong> {emailInvoice.email}
           </p>
         </div>
 
         {/* Email Recipients Section */}
         <div className="mb-3">
-          <h4 className="text-sm font-medium mb-2">Email Recipients</h4>
+          <h4 className="text-sm font-medium mb-2">{t('emailModal.to')}</h4>
 
           {/* Primary Recipient Options */}
           <div className=" p-1 border rounded-lg bg-blue-50">
@@ -56,7 +58,7 @@ const EmailModal = ({
                 onChange={() => setUseCustomClientEmail(false)}
                 className="form-radio"
               />
-              <span className="text-sm">Use client email: {emailInvoice.email}</span>
+              <span className="text-sm">{t('clientManagement.email')}: {emailInvoice.email}</span>
             </label>
 
             <label className="flex items-center gap-2 mb-1">
@@ -67,7 +69,7 @@ const EmailModal = ({
                 onChange={() => setUseCustomClientEmail(true)}
                 className="form-radio"
               />
-              <span className="text-sm">Send to different client email</span>
+              <span className="text-sm">{t('smsModal.useCustomPhone')}</span>
             </label>
 
             {useCustomClientEmail && (
@@ -75,7 +77,7 @@ const EmailModal = ({
                 type="email"
                 value={customClientEmail}
                 onChange={(e) => setCustomClientEmail(e.target.value)}
-                placeholder="Enter alternative client email address"
+                placeholder={t('clientManagement.email')}
                 className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm mt-1"
               />
             )}
@@ -91,14 +93,14 @@ const EmailModal = ({
                 className="form-checkbox"
               />
               <User size={16} />
-              <span className="text-sm font-medium">Also send to myself</span>
+              <span className="text-sm font-medium">{t('emailModal.to')}</span>
             </label>
             {sendToSelf && (
               <input
                 type="email"
                 value={selfEmail}
                 onChange={(e) => setSelfEmail(e.target.value)}
-                placeholder="Enter your email address"
+                placeholder={t('clientManagement.email')}
                 className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm mt-1"
               />
             )}
@@ -106,7 +108,7 @@ const EmailModal = ({
 
           {/* Additional Recipients */}
           <div className="p-3 border rounded-lg">
-            <h5 className="text-sm font-medium mb-1">Additional Recipients (Optional)</h5>
+            <h5 className="text-sm font-medium mb-1">{t('emailModal.to')}</h5>
             <div className="space-y-2">
               {additionalEmails.map((email, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -118,7 +120,7 @@ const EmailModal = ({
                       newEmails[index] = e.target.value;
                       setAdditionalEmails(newEmails);
                     }}
-                    placeholder="Enter additional email address"
+                    placeholder={t('clientManagement.email')}
                     className="flex-1 p-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
                   />
                   {additionalEmails.length > 1 && (
@@ -143,7 +145,7 @@ const EmailModal = ({
                   className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
                 >
                   <Plus size={16} />
-                  Add another email
+                  {t('emailModal.to')}
                 </button>
               )}
             </div>
@@ -167,7 +169,7 @@ const EmailModal = ({
 
         <div className="mb-2">
           <label className="block text-sm font-medium mb-1">
-            Additional Message (Optional) / Mensaje Adicional (Opcional)
+            {t('emailModal.message')}
           </label>
           <textarea
             value={emailMessage}
@@ -187,7 +189,7 @@ const EmailModal = ({
             className="px-4  border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             disabled={emailSending}
           >
-            Cancel
+            {t('emailModal.cancel')}
           </button>
           <button
             onClick={() => {
@@ -211,12 +213,12 @@ const EmailModal = ({
             {emailSending ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Sending...
+                {t('emailModal.sending')}
               </>
             ) : (
               <>
                 <Send size={16} />
-                Send Email
+                {t('emailModal.send')}
               </>
             )}
           </button>

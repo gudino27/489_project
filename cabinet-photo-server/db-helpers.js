@@ -3,6 +3,11 @@ const path = require('path');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+
+// Queue for database operations to prevent SQLITE_BUSY errors
+const dbOperationQueue = [];
+let isProcessingQueue = false;
+
 // Database connection helper
 async function getDb() {
   const db = await open({
@@ -15,6 +20,38 @@ async function getDb() {
   await db.exec('PRAGMA busy_timeout = 10000;'); // 10 second timeout
 
   return db;
+}
+
+// Queue database operations to prevent SQLITE_BUSY errors
+async function queueDbOperation(operation) {
+  return new Promise((resolve, reject) => {
+    dbOperationQueue.push({ operation, resolve, reject });
+    processQueue();
+  });
+}
+
+async function processQueue() {
+  if (isProcessingQueue || dbOperationQueue.length === 0) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (dbOperationQueue.length > 0) {
+    const { operation, resolve, reject } = dbOperationQueue.shift();
+
+    try {
+      const result = await operation();
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+
+    // Small delay to prevent overwhelming the database
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  isProcessingQueue = false;
 }
 var fullpath = path.join(__dirname, 'database', 'cabinet_photos.db');
 console.log(fullpath);
@@ -2377,6 +2414,29 @@ const invoiceDb = {
     return lineItems;
   },
 
+  async getPaymentById(paymentId) {
+    const db = await getDb();
+    const payment = await db.get(`
+      SELECT p.*, i.total_amount
+      FROM invoice_payments p
+      JOIN invoices i ON p.invoice_id = i.id
+      WHERE p.id = ?
+    `, [paymentId]);
+
+    if (payment) {
+      // Calculate remaining balance for this payment
+      const allPayments = await db.all(
+        'SELECT payment_amount FROM invoice_payments WHERE invoice_id = ? ORDER BY payment_date ASC',
+        [payment.invoice_id]
+      );
+      const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.payment_amount), 0);
+      payment.remaining_balance = Math.max(0, parseFloat(payment.total_amount) - totalPaid);
+    }
+
+    await db.close();
+    return payment;
+  },
+
   async getAllPayments() {
     const db = await getDb();
     const payments = await db.all(`
@@ -2590,6 +2650,7 @@ const invoiceDb = {
 
 module.exports = {
   getDb,
+  queueDbOperation,
   photoDb,
   employeeDb,
   designDb,
