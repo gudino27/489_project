@@ -32,6 +32,9 @@ const miscRoutes = require("./routes/misc");
 
 const app = express();
 
+// Trust proxy - this allows Express to read X-Forwarded-For headers from nginx
+app.set('trust proxy', true);
+
 // CORS configuration
 app.use(
   cors({

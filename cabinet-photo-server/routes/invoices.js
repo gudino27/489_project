@@ -177,8 +177,8 @@ router.get("/:token", async (req, res) => {
     }
 
     // Track the view with location data
-    const clientIp =
-      req.ip || req.connection.remoteAddress || req.headers["x-forwarded-for"];
+    // req.ip will now correctly return the real client IP due to 'trust proxy' setting
+    const clientIp = req.ip || req.headers["x-real-ip"] || req.headers["x-forwarded-for"]?.split(',')[0] || req.connection.remoteAddress;
     const userAgent = req.headers["user-agent"];
 
     const invoiceId = invoice.invoice_id;
