@@ -121,8 +121,8 @@ const Home = () => {
         </section>
 
         <section className="image-section parallax-section">
-          <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.02}px)` }}>
-            <img src="/home-page-images/whitekitchen.jpg" alt="White Kitchen" />
+          <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.03}px)` }}>
+            <img src="/home-page-images/kitchen-island.jpeg" alt="Kitchen Island" />
           </div>
         </section>
 
@@ -149,8 +149,8 @@ const Home = () => {
         </section>
 
         <section className="image-section parallax-section">
-          <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)` }}>
-            <img src="/home-page-images/diningroom.jpg" alt="Dining Room" />
+          <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)` }}>
+            <img src="/home-page-images/kitchen.jpg" alt="Kitchen" />
           </div>
         </section>
 
