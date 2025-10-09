@@ -456,7 +456,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/invoice/${invoice.access_token}/tracking`);
+      const response = await fetch(`${API_BASE}/invoice/${invoice.access_token}/tracking`);
       if (response.ok) {
         const data = await response.json();
         setSelectedInvoiceTracking(data);

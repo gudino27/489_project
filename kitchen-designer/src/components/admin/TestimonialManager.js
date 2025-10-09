@@ -373,7 +373,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
                   className="mr-2"
                 />
-                <span className="text-sm">Email Only</span>
+                <span className="text-sm">{t('testimonialManager.emailOnly')}</span>
               </label>
               <label className="flex items-center cursor-pointer">
                 <input
@@ -383,7 +383,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
                   className="mr-2"
                 />
-                <span className="text-sm">SMS Only</span>
+                <span className="text-sm">{t('testimonialManager.smsOnly')}</span>
               </label>
               <label className="flex items-center cursor-pointer">
                 <input
@@ -393,7 +393,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   onChange={(e) => setSendLinkForm({ ...sendLinkForm, send_via: e.target.value })}
                   className="mr-2"
                 />
-                <span className="text-sm">Both</span>
+                <span className="text-sm">{t('testimonialManager.both')}</span>
               </label>
             </div>
           </div>
@@ -407,19 +407,19 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
               {sendingLink ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Sending...
+                  {t('testimonialManager.sending')}
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  Send Testimonial Link
+                  {t('testimonialManager.send')}
                 </>
               )}
             </button>
 
             {linkSent && (
               <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md text-green-700">
-                Testimonial link sent successfully!
+                {t('testimonialManager.sent')}
               </div>
             )}
           </div>
@@ -429,7 +429,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       {/* Generated Tokens */}
       {generatedTokens.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h3 className="text-lg font-semibold mb-4">Generated Testimonial Links</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('testimonialManager.generatedLinks')}</h3>
 
           <div className="space-y-3">
             {generatedTokens.map((tokenData) => (
@@ -437,7 +437,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                 <div>
                   <p className="font-medium">{tokenData.client_name}</p>
                   <p className="text-sm text-gray-600">{tokenData.client_email} • {tokenData.project_type}</p>
-                  <p className="text-xs text-gray-500">Created: {formatDate(tokenData.created_at)}</p>
+                  <p className="text-xs text-gray-500">{t('testimonialManager.created')}: {formatDate(tokenData.created_at)}</p>
                 </div>
 
                 <div className="flex gap-2">
@@ -448,12 +448,12 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                     {copiedToken === tokenData.token ? (
                       <>
                         <Check className="w-4 h-4" />
-                        Copied!
+                        {t('testimonialManager.copied')}
                       </>
                     ) : (
                       <>
                         <Copy className="w-4 h-4" />
-                        Copy Link
+                        {t('testimonialManager.copyLink')}
                       </>
                     )}
                   </button>
@@ -461,7 +461,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                   <button
                     onClick={() => deleteTestimonialToken(tokenData.token)}
                     className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
-                    title="Delete testimonial link"
+                    title={t('testimonialManager.deleteLink')}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -477,14 +477,14 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">
-              {selectedTestimonials.size} testimonial(s) selected
+              {selectedTestimonials.size} {t('testimonialManager.selectedCount')}
             </span>
             <button
               onClick={bulkDeleteTestimonials}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              Delete Selected
+              {t('testimonialManager.deleteSelected')}
             </button>
           </div>
         </div>
@@ -495,20 +495,20 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Received Testimonials ({testimonials.length})
+            {t('testimonialManager.received')} ({testimonials.length})
           </h3>
         </div>
 
         {loading ? (
           <div className="p-8 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-2 text-gray-500">Loading testimonials...</p>
+            <p className="mt-2 text-gray-500">{t('testimonialManager.loading')}</p>
           </div>
         ) : testimonials.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>No testimonials received yet.</p>
-            <p className="text-sm">Send testimonial links to clients to get started.</p>
+            <p>{t('testimonialManager.noTestimonials')}</p>
+            <p className="text-sm">{t('testimonialManager.sendLinksToStart')}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
