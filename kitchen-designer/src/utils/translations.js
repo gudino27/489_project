@@ -202,6 +202,7 @@ const translations = {
     'admin.tabs.users': 'Users',
     'admin.tabs.analytics': 'Analytics',
     'admin.tabs.sms-routing': 'SMS Routing',
+    'admin.tabs.security': 'Security',
 
     // Photo Manager
     'photoManager.title': 'Portfolio Photo Manager',
@@ -1103,6 +1104,7 @@ const translations = {
     'admin.tabs.users': 'Usuarios',
     'admin.tabs.analytics': 'Analíticas',
     'admin.tabs.sms-routing': 'Enrutamiento SMS',
+    'admin.tabs.security': 'Seguridad',
 
     // Photo Manager
     'photoManager.title': 'Gestor de Fotos del Portafolio',

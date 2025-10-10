@@ -37,6 +37,7 @@ import Analytics from '../ui/Analytics';
 import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
+import SecurityMonitor from './SecurityMonitor';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 import InvoiceIcon from './invoices/components/InvoiceIcon';
@@ -221,7 +222,7 @@ const AdminPanel = () => {
   const getAvailableTabs = () => {
     const baseTabs = ['prices', 'photos', 'employees', 'designs', 'invoices', 'testimonials'];
     if (user?.role === 'super_admin') {
-      return [...baseTabs, 'users', 'analytics', 'sms-routing'];
+      return [...baseTabs, 'users', 'analytics', 'sms-routing', 'security'];
     }
     return baseTabs;
   };
@@ -361,7 +362,7 @@ const AdminPanel = () => {
           <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
             <div className="flex items-center gap-2 order-1 md:order-2">
               <span className="text-sm md:text-medium text-gray-800">{t('admin.welcome')}</span>
-              <span className="font-medium text-sm md:text-base">{user?.username}</span>
+              <span className="font-medium text-sm md:text-base">{user?.full_name || user?.username}</span>
               {user?.role === 'super_admin' && (
                 <Shield className="text-purple-600" size={16} />
               )}
@@ -411,6 +412,7 @@ const AdminPanel = () => {
                   {tab === 'users' && <Users size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'analytics' && <BarChart3 size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'sms-routing' && <MessageCircle size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'security' && <Shield size={16} className="md:w-[18px] md:h-[18px]" />}
                   <span className="hidden sm:inline">{t(`admin.tabs.${tab}`)}</span>
                 </div>
               </button>
@@ -472,6 +474,12 @@ const AdminPanel = () => {
         */}
         {activeTab === 'sms-routing' && user?.role === 'super_admin' && (
           <SmsRoutingManager token={token} API_BASE={API_BASE} />
+        )}
+        {/*
+         Security Monitor Tab
+        */}
+        {activeTab === 'security' && user?.role === 'super_admin' && (
+          <SecurityMonitor token={token} apiBase={API_BASE} />
         )}
 
       </div>

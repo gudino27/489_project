@@ -376,6 +376,8 @@ async function addUserTables(db) {
       full_name TEXT,
       is_active BOOLEAN DEFAULT 1,
       last_login DATETIME,
+      failed_login_attempts INTEGER DEFAULT 0,
+      account_locked_until DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       created_by INTEGER,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -390,19 +392,24 @@ async function addUserTables(db) {
       user_id INTEGER NOT NULL,
       token TEXT NOT NULL UNIQUE,
       expires_at DATETIME NOT NULL,
+      last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
+      ip_address TEXT,
+      user_agent TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
-  // Activity logs table(not used yet but for future use)
+  // Activity logs table - tracks all user actions for audit trail
   await db.exec(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
+      user_name TEXT,
       action TEXT NOT NULL,
       resource_type TEXT,
       resource_id INTEGER,
+      details TEXT,
       ip_address TEXT,
       user_agent TEXT,
       metadata TEXT,
@@ -464,12 +471,82 @@ async function addUserTables(db) {
     }
   }
 
+  // Migration: Add failed login tracking columns to users table if they don't exist
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0`);
+    console.log('✓ Added failed_login_attempts column to users table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding failed_login_attempts column:', error);
+    }
+  }
+
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN account_locked_until DATETIME`);
+    console.log('✓ Added account_locked_until column to users table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding account_locked_until column:', error);
+    }
+  }
+
+  // Migration: Add session tracking columns to user_sessions table if they don't exist
+  try {
+    // SQLite doesn't allow non-constant defaults in ALTER TABLE, so we use NULL and update after
+    await db.exec(`ALTER TABLE user_sessions ADD COLUMN last_activity DATETIME`);
+    console.log('✓ Added last_activity column to user_sessions table');
+
+    // Set default value for existing rows
+    await db.run(`UPDATE user_sessions SET last_activity = created_at WHERE last_activity IS NULL`);
+    console.log('✓ Set default values for last_activity column');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding last_activity column:', error);
+    }
+  }
+
+  try {
+    await db.exec(`ALTER TABLE user_sessions ADD COLUMN ip_address TEXT`);
+    console.log('✓ Added ip_address column to user_sessions table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding ip_address column:', error);
+    }
+  }
+
+  try {
+    await db.exec(`ALTER TABLE user_sessions ADD COLUMN user_agent TEXT`);
+    console.log('✓ Added user_agent column to user_sessions table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding user_agent column:', error);
+    }
+  }
+
+  // Migration: Add user_name and details columns to activity_logs table if they don't exist
+  try {
+    await db.exec(`ALTER TABLE activity_logs ADD COLUMN user_name TEXT`);
+    console.log('✓ Added user_name column to activity_logs table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding user_name column:', error);
+    }
+  }
+
+  try {
+    await db.exec(`ALTER TABLE activity_logs ADD COLUMN details TEXT`);
+    console.log('✓ Added details column to activity_logs table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding details column:', error);
+    }
+  }
 
   // Create default admin user
   const existingAdmin = await db.get('SELECT id FROM users WHERE username = ?', ['superadmin']);
 
   if (!existingAdmin) {
-    const defaultPassword = await bcrypt.hash('changeme123', 10);
+    const defaultPassword = await bcrypt.hash('changeme123', 12);
 
     await db.run(
       'INSERT INTO users (username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',

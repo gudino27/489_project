@@ -689,6 +689,59 @@ router.put("/api/admin/design-notification-settings",authenticateUser,async (req
     }
   }
 );
-// EXPORTS 
+// Security & Audit Log Routes
+// Get activity logs (audit trail)
+router.get("/api/admin/security/activity-logs", authenticateUser, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { userId, action, limit, offset } = req.query;
+    const logs = await userDb.getActivityLogs({
+      userId: userId ? parseInt(userId) : undefined,
+      action,
+      limit: limit ? parseInt(limit) : 100,
+      offset: offset ? parseInt(offset) : 0
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error("Error fetching activity logs:", error);
+    res.status(500).json({ error: "Failed to fetch activity logs" });
+  }
+});
+
+// Get failed login attempts
+router.get("/api/admin/security/failed-logins", authenticateUser, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { hours } = req.query;
+    const logs = await userDb.getFailedLoginAttempts(hours ? parseInt(hours) : 24);
+    res.json(logs);
+  } catch (error) {
+    console.error("Error fetching failed login attempts:", error);
+    res.status(500).json({ error: "Failed to fetch failed login attempts" });
+  }
+});
+
+// Get currently locked accounts
+router.get("/api/admin/security/locked-accounts", authenticateUser, requireRole("super_admin"), async (req, res) => {
+  try {
+    const accounts = await userDb.getLockedAccounts();
+    res.json(accounts);
+  } catch (error) {
+    console.error("Error fetching locked accounts:", error);
+    res.status(500).json({ error: "Failed to fetch locked accounts" });
+  }
+});
+
+// Unlock a user account (admin action)
+router.post("/api/admin/security/unlock-account/:userId", authenticateUser, requireRole("super_admin"), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    await userDb.unlockAccount(userId, req.user.id, req.user.full_name || req.user.username);
+    res.json({ success: true, message: "Account unlocked successfully" });
+  } catch (error) {
+    console.error("Error unlocking account:", error);
+    res.status(500).json({ error: "Failed to unlock account" });
+  }
+});
+
+// EXPORTS
 module.exports = router;
 

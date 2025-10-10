@@ -668,8 +668,8 @@ const userDb = {
     const { username, email, password, role, full_name, created_by } = userData;
 
     try {
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Hash password with 12 salt rounds (increased from 10)
+      const hashedPassword = await bcrypt.hash(password, 12);
 
       const result = await db.run(
         `INSERT INTO users (username, email, password_hash, role, full_name, created_by)
@@ -686,7 +686,7 @@ const userDb = {
   },
 
   // Authenticate user and return session token
-  async authenticateUser(username, password) {
+  async authenticateUser(username, password, ipAddress = null, userAgent = null) {
     const db = await getDb();
 
     try {
@@ -700,28 +700,121 @@ const userDb = {
         return null;
       }
 
+      // Check if account is locked
+      if (user.account_locked_until) {
+        const lockUntil = new Date(user.account_locked_until);
+        if (lockUntil > new Date()) {
+          await db.close();
+          return {
+            locked: true,
+            lockedUntil: lockUntil,
+            message: `Account is locked until ${lockUntil.toLocaleString()}`
+          };
+        } else {
+          // Unlock account if lock period has expired
+          await db.run(
+            'UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = ?',
+            [user.id]
+          );
+        }
+      }
+
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
       if (!isValidPassword) {
+        // Increment failed login attempts
+        const failedAttempts = (user.failed_login_attempts || 0) + 1;
+        const maxAttempts = 5;
+
+        if (failedAttempts >= maxAttempts) {
+          // Lock account for 15 minutes
+          const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+          await db.run(
+            'UPDATE users SET failed_login_attempts = ?, account_locked_until = ? WHERE id = ?',
+            [failedAttempts, lockUntil.toISOString(), user.id]
+          );
+
+          // Log failed login attempt
+          await db.run(
+            `INSERT INTO activity_logs (user_id, user_name, action, details, ip_address, user_agent)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              user.id,
+              user.full_name || user.username,
+              'account_locked',
+              `Account locked after ${failedAttempts} failed login attempts`,
+              ipAddress,
+              userAgent
+            ]
+          );
+
+          await db.close();
+          return {
+            locked: true,
+            lockedUntil: lockUntil,
+            message: `Account locked for 15 minutes after ${maxAttempts} failed attempts`
+          };
+        }
+
+        await db.run(
+          'UPDATE users SET failed_login_attempts = ? WHERE id = ?',
+          [failedAttempts, user.id]
+        );
+
+        // Log failed login attempt
+        await db.run(
+          `INSERT INTO activity_logs (user_id, user_name, action, details, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            user.id,
+            user.full_name || user.username,
+            'login_failed',
+            `Failed login attempt (${failedAttempts}/${maxAttempts})`,
+            ipAddress,
+            userAgent
+          ]
+        );
+
         await db.close();
         return null;
       }
 
+      // Reset failed login attempts on successful login
+      await db.run(
+        'UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = ?',
+        [user.id]
+      );
+
       // Generate session token
       const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours (increased from 30 min)
 
-      // Save session
+      // Save session with IP and user agent
       await db.run(
-        `INSERT INTO user_sessions (user_id, token, expires_at)
-         VALUES (?, ?, ?)`,
-        [user.id, token, expiresAt.toISOString()]
+        `INSERT INTO user_sessions (user_id, token, expires_at, ip_address, user_agent, last_activity)
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [user.id, token, expiresAt.toISOString(), ipAddress, userAgent]
       );
 
       // Update last login
       await db.run(
         'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
         [user.id]
+      );
+
+      // Log successful login
+      await db.run(
+        `INSERT INTO activity_logs (user_id, user_name, action, details, ip_address, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          user.id,
+          user.full_name || user.username,
+          'login_success',
+          'User logged in successfully',
+          ipAddress,
+          userAgent
+        ]
       );
 
       await db.close();
@@ -742,7 +835,7 @@ const userDb = {
     }
   },
 
-  // Validate session token
+  // Validate session token with rotation support
   async validateSession(token) {
     const db = await getDb();
 
@@ -755,37 +848,90 @@ const userDb = {
       `, [token]);
 
       if (session) {
-        // Only extend session if it expires in the next 10 minutes (less aggressive)
+        const now = new Date();
         const expiresAt = new Date(session.expires_at);
-        const tenMinutesFromNow = new Date(Date.now() + 10 * 60 * 1000);
+        const lastActivity = session.last_activity ? new Date(session.last_activity) : new Date(session.created_at);
 
-        if (expiresAt < tenMinutesFromNow) {
-          try {
-            const newExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
-            await db.run(
-              'UPDATE user_sessions SET expires_at = ? WHERE token = ?',
-              [newExpiresAt.toISOString(), token]
-            );
-          } catch (updateError) {
-            // If session update fails due to locking, log but don't fail validation
-            if (updateError.code === 'SQLITE_BUSY') {
-              console.warn('Session extension skipped due to database lock');
-            } else {
-              throw updateError;
-            }
-          }
+        // Session token rotation: rotate token if last activity was more than 1 hour ago
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        let newToken = null;
+
+        if (lastActivity < oneHourAgo) {
+          // Generate new token
+          newToken = crypto.randomBytes(32).toString('hex');
+          const newExpiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+
+          // Delete old session and create new one
+          await db.run('DELETE FROM user_sessions WHERE token = ?', [token]);
+          await db.run(
+            `INSERT INTO user_sessions (user_id, token, expires_at, ip_address, user_agent, last_activity)
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [session.user_id, newToken, newExpiresAt.toISOString(), session.ip_address, session.user_agent]
+          );
+        } else {
+          // Just update last activity
+          await db.run(
+            'UPDATE user_sessions SET last_activity = CURRENT_TIMESTAMP WHERE token = ?',
+            [token]
+          );
         }
+
+        await db.close();
+
+        return {
+          user: {
+            id: session.id,
+            username: session.username,
+            email: session.email,
+            role: session.role,
+            full_name: session.full_name
+          },
+          newToken: newToken // Will be null if token wasn't rotated
+        };
       }
 
       await db.close();
+      return null;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
 
-      return session ? {
-        id: session.id,
-        username: session.username,
-        email: session.email,
-        role: session.role,
-        full_name: session.full_name
-      } : null;
+  // Invalidate session (logout)
+  async invalidateSession(token) {
+    const db = await getDb();
+
+    try {
+      // Get session info for logging before deleting
+      const session = await db.get(`
+        SELECT s.*, u.full_name, u.username
+        FROM user_sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.token = ?
+      `, [token]);
+
+      if (session) {
+        // Log logout activity
+        await db.run(
+          `INSERT INTO activity_logs (user_id, user_name, action, details, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            session.user_id,
+            session.full_name || session.username,
+            'logout',
+            'User logged out',
+            session.ip_address,
+            session.user_agent
+          ]
+        );
+
+        // Delete the session
+        await db.run('DELETE FROM user_sessions WHERE token = ?', [token]);
+      }
+
+      await db.close();
+      return true;
     } catch (error) {
       await db.close();
       throw error;
@@ -905,8 +1051,8 @@ const userDb = {
         return false;
       }
 
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // Hash new password with 12 salt rounds
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
 
       // Update password
       await db.run(
@@ -940,6 +1086,118 @@ const userDb = {
     }
   },
 
+  // Log user activity for audit trail
+  async logActivity(activityData) {
+    const db = await getDb();
+    const { userId, userName, action, resourceType, resourceId, details, ipAddress, userAgent, metadata } = activityData;
+
+    try {
+      await db.run(
+        `INSERT INTO activity_logs (user_id, user_name, action, resource_type, resource_id, details, ip_address, user_agent, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, userName, action, resourceType, resourceId, details, ipAddress, userAgent, metadata ? JSON.stringify(metadata) : null]
+      );
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get activity logs with optional filters
+  async getActivityLogs(filters = {}) {
+    const db = await getDb();
+    const { userId, action, limit = 100, offset = 0 } = filters;
+
+    try {
+      let query = 'SELECT * FROM activity_logs WHERE 1=1';
+      const params = [];
+
+      if (userId) {
+        query += ' AND user_id = ?';
+        params.push(userId);
+      }
+
+      if (action) {
+        query += ' AND action = ?';
+        params.push(action);
+      }
+
+      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const logs = await db.all(query, params);
+      await db.close();
+      return logs;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get failed login attempts for monitoring
+  async getFailedLoginAttempts(hoursAgo = 24) {
+    const db = await getDb();
+
+    try {
+      const logs = await db.all(`
+        SELECT * FROM activity_logs
+        WHERE action IN ('login_failed', 'account_locked')
+          AND created_at > datetime('now', '-${hoursAgo} hours')
+        ORDER BY created_at DESC
+      `);
+      await db.close();
+      return logs;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get currently locked accounts
+  async getLockedAccounts() {
+    const db = await getDb();
+
+    try {
+      const accounts = await db.all(`
+        SELECT id, username, email, full_name, failed_login_attempts, account_locked_until
+        FROM users
+        WHERE account_locked_until > datetime('now')
+        ORDER BY account_locked_until DESC
+      `);
+      await db.close();
+      return accounts;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Manually unlock an account (admin action)
+  async unlockAccount(userId, adminId, adminName) {
+    const db = await getDb();
+
+    try {
+      await db.run(
+        'UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = ?',
+        [userId]
+      );
+
+      // Log the unlock action
+      await db.run(
+        `INSERT INTO activity_logs (user_id, user_name, action, resource_type, resource_id, details)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [adminId, adminName, 'account_unlocked', 'user', userId, `Admin manually unlocked account`]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
 
 };
 

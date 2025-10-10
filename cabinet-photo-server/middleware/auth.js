@@ -17,13 +17,19 @@ const authenticateUser = async (req, res, next) => {
   }
 
   try {
-    const user = await userDb.validateSession(token);
+    const result = await userDb.validateSession(token);
 
-    if (!user) {
+    if (!result) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 
-    req.user = user;
+    req.user = result.user;
+
+    // If token was rotated, send new token in response header
+    if (result.newToken) {
+      res.setHeader('X-New-Token', result.newToken);
+    }
+
     next();
   } catch (error) {
     console.error("Auth error:", error);

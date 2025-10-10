@@ -1,36 +1,65 @@
 // This file contains all authentication-related API endpoints
-// REQUIRED IMPORTS 
+// REQUIRED IMPORTS
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const { userDb } = require("../db-helpers");
 const { authenticateUser, JWT_SECRET } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
 
+// Rate limiter for login endpoint - 5 attempts per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window
+  message: { error: "Too many login attempts, please try again after 15 minutes" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.get("/me", authenticateUser, (req, res) => {
   res.json({ user: req.user });
 });
-// Login route
-router.post("/login", async (req, res) => {
+
+// Login route with rate limiting
+router.post("/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
+  const ipAddress = req.ip || req.connection.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+
   try {
-    const result = await userDb.authenticateUser(username, password);
+    const result = await userDb.authenticateUser(username, password, ipAddress, userAgent);
+
     if (!result) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+
+    // Check if account is locked
+    if (result.locked) {
+      return res.status(423).json({
+        error: result.message,
+        lockedUntil: result.lockedUntil
+      });
+    }
+
     res.json({
       token: result.token,
       user: result.user,
+      message: `Welcome, ${result.user.full_name || result.user.username}!`
     });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Login failed" });
   }
 });
+
 router.post("/logout", authenticateUser, async (req, res) => {
   try {
-    // In a real implementation, you'd invalidate the session token
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      await userDb.invalidateSession(token);
+    }
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout error:", error);
