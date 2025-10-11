@@ -28,7 +28,6 @@ logs/*
 .env
 cabinet-photo-server/node_modules/.bin/nodemon
 cabinet-photo-server/database/cabinet_photos.db
-.claude/settings.local.json
 email-signature-studio/*
 
 # Backups
@@ -36,10 +35,9 @@ backups/
 backups/*
 data/
 data/*
-CLAUDE.md
 cabinet-photo-server/database/cabinet_photos.db-wal
 cabinet-photo-server/database/cabinet_photos.db-shm
-
+cabinet-photo-server/uploads/*
 # CI/CD server-specific files
 webhook-config.json
 scripts/deploy.sh

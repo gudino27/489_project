@@ -62,7 +62,7 @@ router.post("/", upload.single("photo"), async (req, res) => {
     console.log("[UPLOAD] File saved to:", req.file.path);
     console.log("[UPLOAD] Filename:", req.file.filename);
     const relativePath = `${category}/${req.file.filename}`;
-    // Generate thumbnails
+    // Generate thumbnails with improved quality and aspect ratio handling
     const thumbnailDir = path.join(__dirname, "..", "uploads", "thumbnails");
     await fs.mkdir(thumbnailDir, { recursive: true });
     const thumbnailFilename = `thumb_${req.file.filename}`;
@@ -74,11 +74,30 @@ router.post("/", upload.single("photo"), async (req, res) => {
       thumbnailPath
     );
     try {
-      await sharp(req.file.path)
-        .resize(400, 300, { fit: "inside" })
-        .jpeg({ quality: 100 })
+      // First rotate to buffer to get ACTUAL dimensions after rotation
+      const rotatedBuffer = await sharp(req.file.path)
+        .rotate() // Apply EXIF rotation
+        .toBuffer();
+
+      // Now check the actual rotated dimensions
+      const rotatedMetadata = await sharp(rotatedBuffer).metadata();
+      const isVertical = rotatedMetadata.height > rotatedMetadata.width;
+
+      // Smart sizing: vertical photos get different dimensions than horizontal
+      const thumbnailWidth = isVertical ? 600 : 800;
+      const thumbnailHeight = isVertical ? 800 : 600;
+
+      console.log(`[THUMBNAIL] Actual rotated dimensions: ${rotatedMetadata.width}x${rotatedMetadata.height}, isVertical: ${isVertical}, target: ${thumbnailWidth}x${thumbnailHeight}`);
+
+      // Now resize the rotated image
+      await sharp(rotatedBuffer)
+        .resize(thumbnailWidth, thumbnailHeight, {
+          fit: "inside",
+          withoutEnlargement: true
+        })
+        .jpeg({ quality: 95, progressive: true })
         .toFile(thumbnailFullPath);
-      console.log("[THUMBNAIL] Created:", thumbnailFullPath);
+      console.log("[THUMBNAIL] Created:", thumbnailFullPath, `(${isVertical ? 'vertical' : 'horizontal'} ${thumbnailWidth}x${thumbnailHeight})`);
     } catch (err) {
       console.error("[THUMBNAIL] Error:", err);
     }
@@ -312,5 +331,106 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch photo" });
   }
 });
+
+// One-time thumbnail regeneration endpoint (admin only)
+router.post("/regenerate-thumbnails", authenticateUser, async (req, res) => {
+  try {
+    console.log("[REGENERATE] Starting thumbnail regeneration...");
+
+    const allPhotos = await photoDb.getAllPhotos();
+    let regeneratedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (const photo of allPhotos) {
+      try {
+        if (!photo.thumbnail_path) {
+          skippedCount++;
+          continue;
+        }
+
+        const thumbnailPath = path.join(
+          __dirname,
+          "..",
+          "uploads",
+          photo.thumbnail_path.replace(/\\/g, "/")
+        );
+        const originalPath = path.join(
+          __dirname,
+          "..",
+          "uploads",
+          photo.file_path.replace(/\\/g, "/")
+        );
+
+        // Check if files exist
+        try {
+          await fs.access(thumbnailPath);
+          await fs.access(originalPath);
+        } catch (err) {
+          console.log(`[REGENERATE] Skipping photo ${photo.id}: file not found`);
+          skippedCount++;
+          continue;
+        }
+
+        // Check existing thumbnail size
+        const thumbnailMetadata = await sharp(thumbnailPath).metadata();
+
+        // FORCE regenerate ALL thumbnails to apply new rotation-detection logic
+        // (Normally would check: thumbnailMetadata.width < 600 || thumbnailMetadata.height < 600)
+        console.log(`[REGENERATE] Photo ${photo.id}: ${thumbnailMetadata.width}x${thumbnailMetadata.height} -> regenerating`);
+
+        // Delete old thumbnail
+        await fs.unlink(thumbnailPath);
+
+        // First rotate to buffer to get ACTUAL dimensions after rotation
+        const rotatedBuffer = await sharp(originalPath)
+          .rotate() // Apply EXIF rotation
+          .toBuffer();
+
+        // Now check the actual rotated dimensions
+        const originalMetadata = await sharp(rotatedBuffer).metadata();
+        const isVertical = originalMetadata.height > originalMetadata.width;
+
+        // Generate new thumbnail with updated settings
+        const thumbnailWidth = isVertical ? 600 : 800;
+        const thumbnailHeight = isVertical ? 800 : 600;
+
+        console.log(`[REGENERATE] Photo ${photo.id}: Actual rotated dimensions ${originalMetadata.width}x${originalMetadata.height}, isVertical: ${isVertical}, target: ${thumbnailWidth}x${thumbnailHeight}`);
+
+        // Resize the rotated buffer
+        await sharp(rotatedBuffer)
+          .resize(thumbnailWidth, thumbnailHeight, {
+            fit: "inside",
+            withoutEnlargement: true
+          })
+          .jpeg({ quality: 95, progressive: true })
+          .toFile(thumbnailPath);
+
+        regeneratedCount++;
+        console.log(`[REGENERATE] Photo ${photo.id}: regenerated successfully`);
+      } catch (photoError) {
+        errorCount++;
+        errors.push({ photoId: photo.id, error: photoError.message });
+        console.error(`[REGENERATE] Error processing photo ${photo.id}:`, photoError);
+      }
+    }
+
+    console.log(`[REGENERATE] Complete: ${regeneratedCount} regenerated, ${skippedCount} skipped, ${errorCount} errors`);
+
+    res.json({
+      success: true,
+      regeneratedCount,
+      skippedCount,
+      errorCount,
+      total: allPhotos.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error("[REGENERATE] Fatal error:", error);
+    res.status(500).json({ error: "Failed to regenerate thumbnails: " + error.message });
+  }
+});
+
 // EXPORT
 module.exports = router;

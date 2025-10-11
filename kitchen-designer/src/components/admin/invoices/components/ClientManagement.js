@@ -18,7 +18,7 @@ const ClientManagement = ({
           onClick={() => setActiveView('list')}
           className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm sm:text-base"
         >
-          {t('clientManagement.backToInvoices')}
+          {t('invoiceManager.backToInvoices')}
         </button>
       </div>
 

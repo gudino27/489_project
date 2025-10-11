@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
-
 import {
   Plus,
   Edit,
@@ -10,8 +8,6 @@ import {
   User,
   Check,
   Clock,
-  CreditCard,
-  AlertCircle,
   Download,
   Send,
   MessageCircle,
@@ -2812,18 +2808,18 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             onClick={() => setActiveView('list')}
             className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
           >
-            Back to Invoices
+            {t('invoiceManager.backToInvoices')}
           </button>
         </div>
       </div>
 
       {/* Add Single Label Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Add New Label</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('invoiceManager.addNewLabel')}</h3>
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Label Name *
+              {t('invoiceManager.labelName')}*
             </label>
             <input
               type="text"
@@ -2840,7 +2836,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Plus size={16} />
-            Add Label
+            {t('invoiceManager.addLabel')}
           </button>
         </div>
       </div>
@@ -2855,10 +2851,10 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Label
+                {t('invoiceManager.label')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('invoiceManager.actions')}
               </th>
             </tr>
           </thead>
@@ -2866,7 +2862,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             {lineItemLabels.length === 0 ? (
               <tr>
                 <td colSpan="2" className="px-6 py-8 text-center text-gray-500">
-                  No labels found. Add your first label above.
+                  {t('invoiceManager.noLabelsFound')}
                 </td>
               </tr>
             ) : (
@@ -2938,13 +2934,13 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
     if (!editingInvoice) {
       return (
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Edit Invoice</h2>
-          <p>No invoice selected for editing.</p>
+          <h2 className="text-2xl font-bold mb-4">{t('invoiceManager.editInvoice')}</h2>
+          <p>{t('invoiceManager.noInvoiceSelected')}</p>
           <button
             onClick={() => setActiveView('list')}
             className="mt-4 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
           >
-            Back to Invoices
+            {t('invoiceManager.backToInvoices')}
           </button>
         </div>
       );
@@ -3236,7 +3232,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
 
         {taxRates.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            No tax rates configured. Add one above to get started.
+           {t('invoiceManager.noTaxRatesConfigured')}
           </div>
         )}
       </div>
@@ -3257,7 +3253,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           onClick={() => setActiveView('list')}
           className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
         >
-          Back to Invoices
+          {t('invoiceManager.backToInvoices')}
         </button>
       </div>
 
@@ -3267,28 +3263,28 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Invoice
+                  {t('invoiceManager.invoice')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
+                  {t('invoiceManager.client')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
+                  {t('invoiceManager.amount')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('invoiceManager.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  View Count
+                  {t('invoiceManager.viewCount')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Viewed
+                  {t('invoiceManager.lastViewed')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
+                  {t('invoiceManager.location')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Link Status
+                  {t('invoiceManager.linkStatus')}
                 </th>
               </tr>
             </thead>
@@ -3360,7 +3356,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                         )}
                       </div>
                     ) : (
-                      <span className="text-gray-400">No location data</span>
+                      <span className="text-gray-400">{t('invoiceManager.noLocationData')}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -3368,12 +3364,12 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                       {invoice.has_token ? (
                         <div className="flex items-center">
                           <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                          <span className="text-sm text-green-700">Active Link</span>
+                          <span className="text-sm text-green-700">{t('invoiceManager.activeLink')}</span>
                         </div>
                       ) : (
                         <div className="flex items-center">
                           <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-500">No Link</span>
+                          <span className="text-sm text-gray-500">{t('invoiceManager.noLink')}</span>
                         </div>
                       )}
                     </div>
@@ -3386,7 +3382,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
           {liveTrackingData.length === 0 && (
             <div className="text-center py-8">
               <Eye className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-sm text-gray-500">No tracking data available</p>
+              <p className="text-sm text-gray-500">{t('invoiceManager.noTrackingData')}</p>
             </div>
           )}
         </div>
@@ -3394,7 +3390,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
         <div className="bg-white rounded-lg shadow p-8">
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading live tracking data...</p>
+            <p className="text-gray-500">{t('invoiceManager.loadingTrackingData')}</p>
           </div>
         </div>
       )}
@@ -3408,7 +3404,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <FileText className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Invoices</p>
+                <p className="text-sm font-medium text-gray-600">{t('invoiceManager.totalInvoices')}</p>
                 <p className="text-2xl font-semibold text-gray-900">{liveTrackingData.length}</p>
               </div>
             </div>
@@ -3420,7 +3416,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <Eye className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Viewed Invoices</p>
+                <p className="text-sm font-medium text-gray-600">{t('invoiceManager.viewedInvoices')}</p>
                 <p className="text-2xl font-semibold text-gray-900">
                   {liveTrackingData.filter(inv => inv.is_viewed).length}
                 </p>
@@ -3434,7 +3430,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <DollarSign className="w-6 h-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Views</p>
+                <p className="text-sm font-medium text-gray-600">{t('invoiceManager.totalViews')}</p>
                 <p className="text-2xl font-semibold text-gray-900">
                   {liveTrackingData.reduce((sum, inv) => sum + inv.view_count, 0)}
                 </p>
@@ -3448,7 +3444,7 @@ const InvoiceManager = ({ token, API_BASE, userRole }) => {
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Views</p>
+                <p className="text-sm font-medium text-gray-600">{t('invoiceManager.pendingViews')}</p>
                 <p className="text-2xl font-semibold text-gray-900">
                   {liveTrackingData.filter(inv => !inv.is_viewed && inv.has_token).length}
                 </p>
@@ -3645,13 +3641,13 @@ Plumbing, HVAC, Demolition"
                       onChange={(e) => setReminderSettings(prev => ({ ...prev, reminders_enabled: e.target.checked }))}
                       className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Enable Automatic Reminders</span>
+                    <span className="text-sm font-medium text-gray-700">{t('invoiceManager.enableAutomaticReminders')}</span>
                   </label>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reminder Days (comma-separated)
+                    {t('invoiceManager.reminderDays')}
                   </label>
                   <input
                     type="text"
@@ -3660,7 +3656,7 @@ Plumbing, HVAC, Demolition"
                     placeholder="7,14,30"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Days after due date to send reminders</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('invoiceManager.reminderDaysDescription')}</p>
                 </div>
 
                 <button
@@ -3727,7 +3723,7 @@ Plumbing, HVAC, Demolition"
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   )}
-                  {sendingReminder ? 'Sending...' : 'Send Reminder'}
+                  {sendingReminder ? t('invoiceManager.sending') : t('invoiceManager.sendReminder')}
                 </button>
               </div>
             </div>
@@ -3738,7 +3734,7 @@ Plumbing, HVAC, Demolition"
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Reminder History
+                {t('invoiceManager.reminderHistory')}
               </h4>
 
               {reminderHistory.length > 0 ? (
@@ -3781,7 +3777,7 @@ Plumbing, HVAC, Demolition"
                   <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-gray-500 text-sm">No reminders sent yet</p>
+                  <p className="text-gray-500 text-sm">{t('invoiceManager.noReminders')}</p>
                 </div>
               )}
             </div>
@@ -3796,7 +3792,7 @@ Plumbing, HVAC, Demolition"
               }}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
-              Close
+              {t('invoiceManager.close')}
             </button>
           </div>
         </div>

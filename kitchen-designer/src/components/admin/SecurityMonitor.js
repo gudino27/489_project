@@ -14,7 +14,7 @@ import {
   Filter
 } from 'lucide-react';
 import { formatDateTimePacific } from '../../utils/dateUtils';
-
+import { useLanguage } from '../../contexts/LanguageContext';
 /**
  * SecurityMonitor Component
  *
@@ -28,6 +28,7 @@ import { formatDateTimePacific } from '../../utils/dateUtils';
  * @param {string} apiBase - Base URL for API endpoints
  */
 const SecurityMonitor = ({ token, apiBase }) => {
+  const { t } = useLanguage();
   const [activeView, setActiveView] = useState('overview'); // overview, failed-logins, locked-accounts, audit-logs
   const [failedLogins, setFailedLogins] = useState([]);
   const [lockedAccounts, setLockedAccounts] = useState([]);
@@ -187,13 +188,13 @@ const SecurityMonitor = ({ token, apiBase }) => {
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <Shield className="w-8 h-8 text-red-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Security Monitor</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('securityMonitor.title')}</h1>
         </div>
-        <p className="text-gray-600">Monitor login attempts, locked accounts, and user activity</p>
+        <p className="text-gray-600">{t('securityMonitor.description')}</p>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
+      <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
         <button
           onClick={() => setActiveView('overview')}
           className={`px-4 py-2 font-medium transition-colors ${
@@ -203,7 +204,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
           }`}
         >
           <Activity className="w-4 h-4 inline mr-2" />
-          Overview
+          {t('securityMonitor.overview')}
         </button>
         <button
           onClick={() => setActiveView('failed-logins')}
@@ -214,7 +215,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
           }`}
         >
           <AlertTriangle className="w-4 h-4 inline mr-2" />
-          Failed Logins
+          {t('securityMonitor.failedLogins')}
         </button>
         <button
           onClick={() => setActiveView('locked-accounts')}
@@ -225,7 +226,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
           }`}
         >
           <Lock className="w-4 h-4 inline mr-2" />
-          Locked Accounts
+          {t('securityMonitor.lockedAccounts')}
         </button>
         <button
           onClick={() => setActiveView('audit-logs')}
@@ -236,7 +237,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
           }`}
         >
           <Activity className="w-4 h-4 inline mr-2" />
-          Audit Logs
+          {t('securityMonitor.auditLogs')}
         </button>
       </div>
 
@@ -248,7 +249,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Failed Attempts (24h)</p>
+                  <p className="text-gray-500 text-sm">{t('securityMonitor.failedAttempts')} (24h)</p>
                   <p className="text-3xl font-bold text-yellow-600">{stats.totalFailedAttempts}</p>
                 </div>
                 <AlertTriangle className="w-12 h-12 text-yellow-600 opacity-20" />
@@ -258,7 +259,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Locked Accounts</p>
+                  <p className="text-gray-500 text-sm">{t('securityMonitor.lockedAccounts')}</p>
                   <p className="text-3xl font-bold text-red-600">{stats.lockedAccountsCount}</p>
                 </div>
                 <Lock className="w-12 h-12 text-red-600 opacity-20" />
@@ -268,7 +269,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Recent Activity</p>
+                  <p className="text-gray-500 text-sm">{t('securityMonitor.recentActivity')}</p>
                   <p className="text-3xl font-bold text-blue-600">{stats.recentActivity}</p>
                 </div>
                 <Activity className="w-12 h-12 text-blue-600 opacity-20" />
@@ -281,7 +282,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                Recent Failed Login Attempts
+                {t('securityMonitor.recentFailedLogins')}
               </h2>
               <button
                 onClick={() => fetchFailedLogins(timeFilter)}
@@ -312,7 +313,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
                 </div>
               ))}
               {failedLogins.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No failed login attempts</p>
+                <p className="text-center text-gray-500 py-8">{t('securityMonitor.noFailedLogins')}</p>
               )}
             </div>
           </div>
@@ -322,7 +323,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
                 <Lock className="w-5 h-5 text-red-600" />
-                Currently Locked Accounts
+                {t('securityMonitor.currentlyLockedAccounts')}
               </h2>
               <div className="space-y-2">
                 {lockedAccounts.map((account) => (
@@ -338,16 +339,16 @@ const SecurityMonitor = ({ token, apiBase }) => {
                       <div className="text-right">
                         <p className="text-sm text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          Until {formatDate(account.account_locked_until)}
+                          {t('securityMonitor.lockedUntil', { date: formatDate(account.account_locked_until) })}
                         </p>
-                        <p className="text-xs text-gray-400">{account.failed_login_attempts} failed attempts</p>
+                        <p className="text-xs text-gray-400">{account.failed_login_attempts} {t('securityMonitor.failedAttempts')}</p>
                       </div>
                       <button
                         onClick={() => unlockAccount(account.id)}
                         className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
                       >
                         <Unlock className="w-3 h-3" />
-                        Unlock
+                        {t('securityMonitor.unlock')}
                       </button>
                     </div>
                   </div>
@@ -362,17 +363,17 @@ const SecurityMonitor = ({ token, apiBase }) => {
       {activeView === 'failed-logins' && (
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Failed Login Attempts</h2>
+            <h2 className="text-xl font-semibold">{t('securityMonitor.failedLoginAttempts')}</h2>
             <div className="flex items-center gap-3">
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(parseInt(e.target.value))}
                 className="px-3 py-2 border border-gray-300 rounded-lg"
               >
-                <option value={1}>Last Hour</option>
-                <option value={24}>Last 24 Hours</option>
-                <option value={168}>Last Week</option>
-                <option value={720}>Last Month</option>
+                <option value={1}>{t('securityMonitor.lastHour')}</option>
+                <option value={24}>{t('securityMonitor.last24Hours')}</option>
+                <option value={168}>{t('securityMonitor.lastWeek')}</option>
+                <option value={720}>{t('securityMonitor.lastMonth')}</option>
               </select>
               <button
                 onClick={() => fetchFailedLogins(timeFilter)}
@@ -387,11 +388,11 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left p-3 font-semibold text-gray-700">User</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Details</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">IP Address</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Date/Time</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Status</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.user')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.details')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.ipAddress')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.dateTime')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -421,7 +422,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
               </tbody>
             </table>
             {failedLogins.length === 0 && (
-              <p className="text-center text-gray-500 py-8">No failed login attempts found</p>
+              <p className="text-center text-gray-500 py-8">{t('securityMonitor.noFailedLogins')}</p>
             )}
           </div>
         </div>
@@ -431,7 +432,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
       {activeView === 'locked-accounts' && (
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Locked Accounts</h2>
+            <h2 className="text-xl font-semibold">{t('securityMonitor.lockedAccounts')}</h2>
             <button
               onClick={fetchLockedAccounts}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -449,7 +450,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
                     <p className="font-semibold text-gray-900">{account.full_name || account.username}</p>
                     <p className="text-sm text-gray-600">{account.email}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {account.failed_login_attempts} failed attempts · Locked until {formatDate(account.account_locked_until)}
+                      {account.failed_login_attempts} {t('securityMonitor.failedAttempts')} · {t('securityMonitor.lockedUntil')} {formatDate(account.account_locked_until)}
                     </p>
                   </div>
                 </div>
@@ -458,14 +459,14 @@ const SecurityMonitor = ({ token, apiBase }) => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
                   <Unlock className="w-4 h-4" />
-                  Unlock Account
+                  {t('securityMonitor.unlockAccount')}
                 </button>
               </div>
             ))}
             {lockedAccounts.length === 0 && (
               <div className="text-center py-12">
                 <Shield className="w-16 h-16 text-green-500 mx-auto mb-3 opacity-50" />
-                <p className="text-gray-500">No locked accounts</p>
+                <p className="text-gray-500">{t('securityMonitor.noLockedAccounts')}</p>
               </div>
             )}
           </div>
@@ -476,19 +477,19 @@ const SecurityMonitor = ({ token, apiBase }) => {
       {activeView === 'audit-logs' && (
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Activity Audit Logs</h2>
+            <h2 className="text-xl font-semibold">{t('securityMonitor.activityAuditLogs')}</h2>
             <div className="flex items-center gap-3">
               <select
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg"
               >
-                <option value="all">All Actions</option>
-                <option value="login_success">Login Success</option>
-                <option value="login_failed">Login Failed</option>
-                <option value="logout">Logout</option>
-                <option value="account_locked">Account Locked</option>
-                <option value="account_unlocked">Account Unlocked</option>
+                <option value="all">{t('securityMonitor.allActions')}</option>
+                <option value="login_success">{t('securityMonitor.loginSuccess')}</option>
+                <option value="login_failed">{t('securityMonitor.loginFailed')}</option>
+                <option value="logout">{t('securityMonitor.logout')}</option>
+                <option value="account_locked">{t('securityMonitor.accountLocked')}</option>
+                <option value="account_unlocked">{t('securityMonitor.accountUnlocked')}</option>
               </select>
               <button
                 onClick={() => fetchActivityLogs(actionFilter)}
@@ -503,11 +504,11 @@ const SecurityMonitor = ({ token, apiBase }) => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left p-3 font-semibold text-gray-700">User</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Action</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Details</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">IP Address</th>
-                  <th className="text-left p-3 font-semibold text-gray-700">Date/Time</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.user')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.action')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.details')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.ipAddress')}</th>
+                  <th className="text-left p-3 font-semibold text-gray-700">{t('securityMonitor.dateTime')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -537,7 +538,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
               </tbody>
             </table>
             {activityLogs.length === 0 && (
-              <p className="text-center text-gray-500 py-8">No activity logs found</p>
+              <p className="text-center text-gray-500 py-8">{t('securityMonitor.noActivityLogsFound')}</p>
             )}
           </div>
         </div>
@@ -548,7 +549,7 @@ const SecurityMonitor = ({ token, apiBase }) => {
         <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">
             <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
-            <span>Loading...</span>
+            <span>{t('securityMonitor.loading')}</span>
           </div>
         </div>
       )}
