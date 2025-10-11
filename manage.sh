@@ -606,6 +606,11 @@ case "$1" in
         echo "  check-versions       - Check Docker/BuildX versions and COMPOSE_BAKE compatibility"
         echo "  diagnose             - Same as check-versions (alias)"
         echo ""
+        echo "🚀 === CI/CD COMMANDS ==="
+        echo "  deploy               - Automated deployment (triggered by webhook or manual)"
+        echo "  test                 - Run all tests (backend + frontend)"
+        echo "  rollback             - Rollback to previous version"
+        echo ""
         echo "🎯 === DEPLOYMENT WORKFLOWS ==="
         echo ""
         echo "OPTIMIZED Workflow (Recommended):"
@@ -626,5 +631,55 @@ case "$1" in
         echo ""
         build_stats
         exit 1
+        ;;
+    deploy)
+        log_info "Starting automated deployment..."
+
+        # Run deployment script
+        if [ -f "./scripts/deploy.sh" ]; then
+            ./scripts/deploy.sh
+        else
+            log_error "Deployment script not found at ./scripts/deploy.sh"
+            log_info "This script should be created on the server (not in git)"
+            exit 1
+        fi
+        ;;
+    test)
+        log_info "Running all tests..."
+
+        # Backend tests
+        log_info "Testing backend..."
+        cd cabinet-photo-server
+        if npm test; then
+            log_success "Backend tests passed"
+        else
+            log_error "Backend tests failed"
+            exit 1
+        fi
+
+        # Frontend tests
+        log_info "Testing frontend..."
+        cd ../kitchen-designer
+        if npm test -- --watchAll=false; then
+            log_success "Frontend tests passed"
+        else
+            log_error "Frontend tests failed"
+            exit 1
+        fi
+
+        cd ..
+        log_success "All tests passed!"
+        ;;
+    rollback)
+        log_warning "Initiating rollback..."
+
+        # Run rollback script
+        if [ -f "./scripts/rollback.sh" ]; then
+            ./scripts/rollback.sh
+        else
+            log_error "Rollback script not found at ./scripts/rollback.sh"
+            log_info "This script should be created on the server (not in git)"
+            exit 1
+        fi
         ;;
 esac
