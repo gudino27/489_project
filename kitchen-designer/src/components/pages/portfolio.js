@@ -3,10 +3,7 @@ import "../css/portfolio.css";
 import Navigation from "../ui/Navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAnalytics } from "../../hooks/useAnalytics";
-const API_BASE =
-  "http://192.168.10.7:3001" ||
-  process.env.REACT_APP_API_URL ||
-  "https://api.gudinocustom.com";
+const API_BASE =process.env.REACT_APP_API_URL ||"https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
   useAnalytics("/portfolio");
