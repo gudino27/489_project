@@ -1653,14 +1653,24 @@ const KitchenDesigner = () => {
     setActiveRoom(room);
     setSelectedElement(null);
     setViewMode('floor');
-    // Update canvas scale for the new room
+
+    // Get the target room's data
     const roomData = room === 'kitchen' ? kitchenData : bathroomData;
-    if (roomData.dimensions.width && roomData.dimensions.height) {
+
+    // If the target room has no dimensions set, go back to dimensions step
+    if (!roomData.dimensions.width || !roomData.dimensions.height) {
+      setStep('dimensions');
+    } else {
+      // Room has dimensions, update canvas scale and stay in design step
       const widthInches = parseFloat(roomData.dimensions.width) * 12;
       const heightInches = parseFloat(roomData.dimensions.height) * 12;
       const maxCanvasSize = 600;
       const newScale = Math.min(maxCanvasSize / widthInches, maxCanvasSize / heightInches);
       setScale(newScale);
+      // Ensure we're on design step if room has dimensions
+      if (step !== 'design') {
+        setStep('design');
+      }
     }
   };
   // -----------------------------

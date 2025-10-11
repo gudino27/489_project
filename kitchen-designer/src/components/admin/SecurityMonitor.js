@@ -13,6 +13,7 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
+import { formatDateTimePacific } from '../../utils/dateUtils';
 
 /**
  * SecurityMonitor Component
@@ -150,10 +151,10 @@ const SecurityMonitor = ({ token, apiBase }) => {
     }
   }, [activeView, timeFilter, actionFilter]);
 
-  // Format date for display
+  // Format date for display - using shared dateUtils for consistent Pacific Time formatting
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    if (!dateString) return 'N/A';
+    return formatDateTimePacific(dateString, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
