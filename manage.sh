@@ -408,26 +408,12 @@ case "$1" in
         $COMPOSE_CMD restart ${2:-}
         ;;
     rebuild)
-            log_info "Starting intelligent rebuild with compatibility checks..."
+            log_info "Starting optimized rebuild with BuildKit..."
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
 
-            # Check if we can use COMPOSE_BAKE safely
-            USE_BAKE=false
-            if check_compose_version && setup_buildx_builder; then
-                log_info "System is compatible with COMPOSE_BAKE optimization!"
-                read -p "Enable COMPOSE_BAKE for faster parallel builds? (y/N): " -n 1 -r
-                echo
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    USE_BAKE=true
-                    export COMPOSE_BAKE=true
-                    log_success "COMPOSE_BAKE enabled - expect 40-50% faster builds!"
-                else
-                    log_info "Using traditional build method"
-                fi
-            else
-                log_warning "Falling back to traditional build (still fast with BuildKit)"
-            fi
+            # Note: COMPOSE_BAKE disabled by default - doesn't help I/O-bound npm builds
+            # Traditional sequential builds are faster for this project (8-12 min vs 20+ min)
 
             echo "Stopping all containers..."
             $COMPOSE_CMD down
@@ -436,11 +422,8 @@ case "$1" in
             echo "Removing project images (preserving volumes)..."
             $COMPOSE_CMD down --rmi all --volumes=false
 
-            if [ "$USE_BAKE" = true ]; then
-                log_info "Building with COMPOSE_BAKE (parallel builds enabled)..."
-            else
-                log_info "Building project images with BuildKit..."
-            fi
+            log_info "Building project images with BuildKit..."
+            echo "Expected build time: 8-12 minutes (optimized Dockerfiles)"
 
             $COMPOSE_CMD build --no-cache
 

@@ -21,20 +21,13 @@ FROM nginx:alpine
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built app from builder
-COPY --from=builder /app/build /usr/share/nginx/html
+# Copy built app from builder with ownership (single operation)
+COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
 
-# Create non-root user
-#RUN addgroup -g 1001 -S nginx && \
- #   adduser -S nginx -u 1001
-
-# Change ownership
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d && \
+# Set ownership on nginx runtime directories
+RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid
+    chown nginx:nginx /var/run/nginx.pid
 
 USER nginx
 

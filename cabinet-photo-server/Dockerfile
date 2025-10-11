@@ -9,8 +9,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production
+# Install dependencies (npm ci is faster and more reliable than npm install)
+RUN npm ci --only=production
 
 # Copy application files
 COPY . .
@@ -28,22 +28,16 @@ RUN apk add --no-cache sqlite chromium \
 
 WORKDIR /app
 
-# Copy from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app .
+# Copy from builder with ownership set (fast - single operation vs 30k+ file operations)
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app .
 
-# Create necessary directories and set permissions
-RUN mkdir -p uploads database
+# Create necessary directories with proper ownership
+RUN mkdir -p uploads database && chown -R node:node uploads database
 
-# Copy and make entrypoint executable
-COPY docker-entrypoint.sh /app/
+# Copy entrypoint and make executable (only file that needs +x)
+COPY --chown=node:node docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
-
-# Set proper permissions
-RUN chmod -R 755 /app
-
-# Change ownership to node user (uid 1000)
-RUN chown -R node:node /app
 
 # Tell Puppeteer to use system Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
