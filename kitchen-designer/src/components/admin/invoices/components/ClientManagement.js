@@ -9,7 +9,7 @@ const ClientManagement = ({
   setShowEditClientModal,
   deleteClient
 }) => {
-  const { t } = useLanguage();
+  const {t} = useLanguage();
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
