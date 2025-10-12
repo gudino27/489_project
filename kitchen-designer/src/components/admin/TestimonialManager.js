@@ -32,6 +32,9 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   const [copiedToken, setCopiedToken] = useState('');
   const [selectedTestimonials, setSelectedTestimonials] = useState(new Set());
   const [generatedTokens, setGeneratedTokens] = useState([]);
+  const [modalImage, setModalImage] = useState(null);
+  const [modalImages, setModalImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const projectTypes = [
     t('testimonialManager.kitchenRemodeling'),
@@ -264,6 +267,38 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       />
     ));
   };
+
+  const openImageModal = (photos, index) => {
+    setModalImages(photos);
+    setCurrentImageIndex(index);
+    setModalImage(photos[index]);
+  };
+
+  const closeModal = () => {
+    setModalImage(null);
+    setModalImages([]);
+    setCurrentImageIndex(0);
+  };
+
+  const navigateImage = (direction) => {
+    const newIndex = direction === 'next'
+      ? (currentImageIndex + 1) % modalImages.length
+      : (currentImageIndex - 1 + modalImages.length) % modalImages.length;
+    setCurrentImageIndex(newIndex);
+    setModalImage(modalImages[newIndex]);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!modalImage) return;
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'ArrowLeft') navigateImage('prev');
+    if (e.key === 'ArrowRight') navigateImage('next');
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalImage, currentImageIndex]);
 
   return (
     <div className="p-6">
@@ -550,7 +585,7 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
                                   src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                   alt={`Photo ${photoIndex + 1}`}
                                   className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => window.open(`${API_BASE}${photo.file_path}`, '_blank')}
+                                  onClick={() => openImageModal(testimonial.photos, photoIndex)}
                                 />
                               </div>
                             ))}
@@ -599,6 +634,68 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
           </div>
         )}
       </div>
+
+      {/* Image Modal */}
+      {modalImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
+          <button
+            onClick={closeModal}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            aria-label="Close modal"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {modalImages.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateImage('prev');
+                }}
+                className="absolute left-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+                aria-label="Previous image"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateImage('next');
+                }}
+                className="absolute right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+                aria-label="Next image"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          <div
+            className="relative max-w-7xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={`${API_BASE}${modalImage.file_path}`}
+              alt="Testimonial photo"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            {modalImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
+                {currentImageIndex + 1} / {modalImages.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

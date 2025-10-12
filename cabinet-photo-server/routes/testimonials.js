@@ -2,6 +2,9 @@
 // REQUIRED IMPORTS
 const express = require("express");
 const router = express.Router();
+const path = require("path");
+const fs = require("fs").promises;
+const sharp = require("sharp");
 const { testimonialDb } = require("../db-helpers");
 const { authenticateUser } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
@@ -16,11 +19,20 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to get testimonials" });
   }
 });
-// Public endpoint - Validate testimonial token
+// Public endpoint - Validate testimonial token and return token data
 router.get("/validate-token/:token", async (req, res) => {
   try {
     const tokenData = await testimonialDb.validateToken(req.params.token);
-    res.json({ valid: !!tokenData });
+    if (tokenData) {
+      // Return token data for auto-populating the form
+      res.json({
+        valid: true,
+        client_name: tokenData.client_name,
+        project_type: tokenData.project_type
+      });
+    } else {
+      res.json({ valid: false });
+    }
   } catch (error) {
     console.error("Error validating token:", error);
     res.status(500).json({ error: "Failed to validate token" });
@@ -56,28 +68,32 @@ router.post("/submit",uploadMemory.array("photos", 5),async (req, res) => {
           const thumbnailPath = `/testimonial-photos/${thumbnailFilename}`;
           const fullPath = path.join(
             __dirname,
-            "public",
+            "..",
+            "uploads",
             "testimonial-photos",
             filename
           );
           const thumbnailFullPath = path.join(
             __dirname,
-            "public",
+            "..",
+            "uploads",
             "testimonial-photos",
             thumbnailFilename
           );
           // Ensure directory exists
           await fs.mkdir(path.dirname(fullPath), { recursive: true });
-          // Process main image
+          // Process main image with orientation fix
           const processedImage = await sharp(file.buffer)
+            .rotate() // Auto-rotate based on EXIF orientation
             .jpeg({ quality: 85 })
             .resize(1200, 1200, { fit: "inside", withoutEnlargement: true });
           const metadata = await processedImage.metadata();
           await processedImage.toFile(fullPath);
-          // Create thumbnail
+          // Create high-quality thumbnail with orientation fix
           await sharp(file.buffer)
-            .jpeg({ quality: 80 })
-            .resize(300, 300, { fit: "cover" })
+            .rotate() // Auto-rotate based on EXIF orientation
+            .jpeg({ quality: 90, mozjpeg: true }) // Higher quality for testimonials
+            .resize(400, 400, { fit: "cover", withoutEnlargement: false })
             .toFile(thumbnailFullPath);
           // Save to database
           await testimonialDb.addTestimonialPhoto(testimonial.id, {

@@ -23,16 +23,6 @@ const TestimonialForm = () => {
 
     const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
-    const projectTypes = [
-        'Kitchen Remodeling',
-        'Bathroom Renovation',
-        'Custom Carpentry',
-        'Cabinet Installation',
-        'Home Remodeling',
-        'Commercial Project',
-        'Other'
-    ];
-
     useEffect(() => {
         validateToken();
     }, [token]);
@@ -40,7 +30,21 @@ const TestimonialForm = () => {
     const validateToken = async () => {
         try {
             const response = await fetch(`${API_BASE}/api/testimonials/validate-token/${token}`);
-            setIsValidToken(response.ok);
+            if (response.ok) {
+                const data = await response.json();
+                setIsValidToken(data.valid);
+
+                // Auto-populate form fields from token data
+                if (data.valid && data.client_name && data.project_type) {
+                    setFormData(prev => ({
+                        ...prev,
+                        client_name: data.client_name,
+                        project_type: data.project_type
+                    }));
+                }
+            } else {
+                setIsValidToken(false);
+            }
         } catch (error) {
             console.error('Error validating token:', error);
             setIsValidToken(false);
@@ -210,23 +214,23 @@ const TestimonialForm = () => {
                                 onChange={handleChange}
                                 required
                                 placeholder="Enter your full name"
+                                readOnly
+                                disabled
+                                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                             />
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="project_type">Project Type</label>
-                            <select
+                            <input
+                                type="text"
                                 id="project_type"
                                 name="project_type"
                                 value={formData.project_type}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select project type</option>
-                                {projectTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
+                                readOnly
+                                disabled
+                                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                            />
                         </div>
 
                         <div className="form-group">

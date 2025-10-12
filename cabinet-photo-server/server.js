@@ -72,6 +72,7 @@ app.use("/api/analytics/time", (req, res, next) => {
 
 // Serve static files from uploads directory
 app.use("/photos", express.static(path.join(__dirname, "uploads")));
+app.use("/testimonial-photos", express.static(path.join(__dirname, "uploads", "testimonial-photos")));
 
 // Mount routes
 app.use("/api/photos", photosRoutes);
@@ -83,7 +84,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/invoice", invoicesRoutes); 
 app.use("/api/admin/invoices", adminInvoicesRoutes);
 app.use("/api/testimonials", testimonialsRoutes);
-app.use("/api/admin/testimonials", adminTestimonialsRoutes);
+app.use("/api/admin", adminTestimonialsRoutes);
 app.use("/", adminRoutes);
 app.use("/", miscRoutes);
 

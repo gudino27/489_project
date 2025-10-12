@@ -17,6 +17,11 @@ const About = () => {
     const [loading, setLoading] = useState(true);
     const [testimonialsLoading, setTestimonialsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [modalImage, setModalImage] = useState(null);
+    const [modalImages, setModalImages] = useState([]);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
 
     // API base URL
      const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
@@ -93,6 +98,63 @@ const About = () => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
     };
+
+    const openImageModal = (photos, index) => {
+        setModalImages(photos);
+        setCurrentImageIndex(index);
+        setModalImage(photos[index]);
+    };
+
+    const closeModal = () => {
+        setModalImage(null);
+        setModalImages([]);
+        setCurrentImageIndex(0);
+    };
+
+    const navigateImage = (direction) => {
+        const newIndex = direction === 'next'
+            ? (currentImageIndex + 1) % modalImages.length
+            : (currentImageIndex - 1 + modalImages.length) % modalImages.length;
+        setCurrentImageIndex(newIndex);
+        setModalImage(modalImages[newIndex]);
+    };
+
+    const handleKeyDown = (e) => {
+        if (!modalImage) return;
+        if (e.key === 'Escape') closeModal();
+        if (e.key === 'ArrowLeft') navigateImage('prev');
+        if (e.key === 'ArrowRight') navigateImage('next');
+    };
+
+    // Swipe gesture handlers for mobile
+    const handleTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+
+        if (isLeftSwipe && modalImages.length > 1) {
+            navigateImage('next');
+        }
+        if (isRightSwipe && modalImages.length > 1) {
+            navigateImage('prev');
+        }
+    };
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [modalImage, currentImageIndex]);
 
     return (
         <>
@@ -205,10 +267,8 @@ const About = () => {
                                                     <img
                                                         src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                                         alt={`${t('about.projectPhoto')} ${photoIndex + 1}`}
-                                                        onClick={() => {
-                                                            // Open full size image in modal or new tab
-                                                            window.open(`${API_BASE}${photo.file_path}`, '_blank');
-                                                        }}
+                                                        onClick={() => openImageModal(testimonial.photos, photoIndex)}
+                                                        style={{ cursor: 'pointer' }}
                                                     />
                                                 </div>
                                             ))}
@@ -234,6 +294,167 @@ const About = () => {
                     </div>
                 )}
             </div>
+
+            {/* Image Modal */}
+            {modalImage && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.5rem',
+                        overflow: 'hidden'
+                    }}
+                    onClick={closeModal}
+                >
+                    {/* Close Button */}
+                    <button
+                        onClick={closeModal}
+                        style={{
+                            position: 'absolute',
+                            top: '0.5rem',
+                            right: '0.5rem',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '1.75rem',
+                            width: '2.5rem',
+                            height: '2.5rem',
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10,
+                            touchAction: 'manipulation'
+                        }}
+                        aria-label="Close modal"
+                    >
+                        ×
+                    </button>
+
+                    {/* Navigation Buttons (only show if multiple images) */}
+                    {modalImages.length > 1 && (
+                        <>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigateImage('prev');
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    left: '0.5rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'rgba(0, 0, 0, 0.7)',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '1.75rem',
+                                    width: '2.5rem',
+                                    height: '2.5rem',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                    touchAction: 'manipulation'
+                                }}
+                                aria-label="Previous image"
+                            >
+                                ‹
+                            </button>
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigateImage('next');
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '0.5rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'rgba(0, 0, 0, 0.7)',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '1.75rem',
+                                    width: '2.5rem',
+                                    height: '2.5rem',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                    touchAction: 'manipulation'
+                                }}
+                                aria-label="Next image"
+                            >
+                                ›
+                            </button>
+                        </>
+                    )}
+
+                    {/* Image Container */}
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        style={{
+                            position: 'relative',
+                            maxWidth: '95vw',
+                            maxHeight: '90vh',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <img
+                            src={`${API_BASE}${modalImage.file_path}`}
+                            alt="Testimonial photo"
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '90vh',
+                                width: 'auto',
+                                height: 'auto',
+                                objectFit: 'contain',
+                                borderRadius: '8px',
+                                touchAction: 'pan-y pinch-zoom',
+                                userSelect: 'none'
+                            }}
+                        />
+                        {/* Image Counter */}
+                        {modalImages.length > 1 && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '1rem',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    background: 'rgba(0, 0, 0, 0.8)',
+                                    color: 'white',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '20px',
+                                    fontSize: '0.875rem',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {currentImageIndex + 1} / {modalImages.length}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
         <Footer />
         </>
     );
