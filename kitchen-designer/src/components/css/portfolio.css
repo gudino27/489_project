@@ -282,19 +282,19 @@ body {
 
 /* Adjust dots position based on image orientation */
 .carousel-3d-container[data-active-orientation="landscape"] .dots-3d-container {
-  top: calc(50% + 120px); /* 200px/2 + 20px gap */
+  top: calc(50% + 160px); /* 200px/2 + 20px gap */
 }
 
 .carousel-3d-container[data-active-orientation="portrait"] .dots-3d-container {
-  top: calc(50% + 145px); /* 250px/2 + 20px gap */
+  top: calc(50% + 200px); /* 250px/2 + 20px gap */
 }
 
 .carousel-3d-container[data-active-orientation="square"] .dots-3d-container {
-  top: calc(50% + 170px); /* 300px/2 + 20px gap */
+  top: calc(50% + 200px); /* 300px/2 + 20px gap */
 }
 
 .carousel-3d-container[data-active-orientation="panoramic"] .dots-3d-container {
-  top: calc(50% + 110px); /* 180px/2 + 20px gap */
+  top: calc(50% + 160px); /* 180px/2 + 20px gap */
 }
 
 /* Individual dot styling */
@@ -656,11 +656,11 @@ body {
   /* Adjust dots position for mobile orientations */
   .carousel-3d-container[data-active-orientation="landscape"] .dots-3d-container,
   .dots-3d-container {
-    top: calc(50% + 90px); /* 140px/2 + 20px gap */
+    top: calc(50% + 120px); /* 140px/2 + 20px gap */
   }
 
   .carousel-3d-container[data-active-orientation="portrait"] .dots-3d-container {
-    top: calc(50% + 120px); /* 200px/2 + 20px gap */
+    top: calc(50% + 160px); /* 200px/2 + 20px gap */
   }
 
   .carousel-3d-container[data-active-orientation="square"] .dots-3d-container {
@@ -668,7 +668,7 @@ body {
   }
 
   .carousel-3d-container[data-active-orientation="panoramic"] .dots-3d-container {
-    top: calc(50% + 80px); /* 120px/2 + 20px gap */
+    top: calc(50% + 120px); /* 120px/2 + 20px gap */
   }
 
   /* Smaller dots on mobile */

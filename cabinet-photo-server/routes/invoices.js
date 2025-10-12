@@ -199,7 +199,10 @@ router.get("/:token", async (req, res) => {
     );
     console.log("✅ Invoice view tracked successfully");
 
-    res.json(invoice);
+    // Remove admin_notes from public view (security: clients should never see admin notes)
+    const { admin_notes, ...clientInvoice } = invoice;
+
+    res.json(clientInvoice);
   } catch (error) {
     console.error("Error getting invoice by token:", error);
     res.status(500).json({ error: "Failed to get invoice" });

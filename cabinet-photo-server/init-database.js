@@ -850,6 +850,42 @@ async function addInvoiceTables(db) {
     }
   }
 
+  // Add client_notes and admin_notes columns to invoices table if they don't exist
+  // Migration: Split existing 'notes' field into 'client_notes' (visible to clients) and 'admin_notes' (internal only)
+  try {
+    await db.exec(`ALTER TABLE invoices ADD COLUMN client_notes TEXT`);
+    console.log('✓ Added client_notes column to invoices table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.log('Note: client_notes column may already exist in invoices table');
+    }
+  }
+
+  try {
+    await db.exec(`ALTER TABLE invoices ADD COLUMN admin_notes TEXT`);
+    console.log('✓ Added admin_notes column to invoices table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.log('Note: admin_notes column may already exist in invoices table');
+    }
+  }
+
+  // Migrate existing notes to client_notes (preserve backward compatibility)
+  try {
+    const result = await db.run(`
+      UPDATE invoices
+      SET client_notes = notes
+      WHERE notes IS NOT NULL
+        AND notes != ''
+        AND (client_notes IS NULL OR client_notes = '')
+    `);
+    if (result.changes > 0) {
+      console.log(`✓ Migrated existing notes to client_notes for ${result.changes} invoices`);
+    }
+  } catch (error) {
+    console.log('Note: Could not migrate existing notes:', error.message);
+  }
+
   // Create indexes for invoice tables
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);

@@ -2087,14 +2087,15 @@ const invoiceDb = {
       // Create invoice
       const invoiceResult = await db.run(`
         INSERT INTO invoices (
-          client_id, invoice_number, invoice_date, due_date, status, 
-          subtotal, tax_rate, tax_amount, discount_amount, markup_amount, 
-          total_amount, logo_url, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [invoiceData.client_id, invoiceNumber, invoiceData.invoice_date, invoiceData.due_date, 
-         invoiceData.status || 'draft', invoiceData.subtotal, invoiceData.tax_rate, 
-         invoiceData.tax_amount, invoiceData.discount_amount || 0, invoiceData.markup_amount || 0, 
-         invoiceData.total_amount, invoiceData.logo_url, invoiceData.notes]
+          client_id, invoice_number, invoice_date, due_date, status,
+          subtotal, tax_rate, tax_amount, discount_amount, markup_amount,
+          total_amount, logo_url, notes, client_notes, admin_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [invoiceData.client_id, invoiceNumber, invoiceData.invoice_date, invoiceData.due_date,
+         invoiceData.status || 'draft', invoiceData.subtotal, invoiceData.tax_rate,
+         invoiceData.tax_amount, invoiceData.discount_amount || 0, invoiceData.markup_amount || 0,
+         invoiceData.total_amount, invoiceData.logo_url, invoiceData.notes || null,
+         invoiceData.client_notes || null, invoiceData.admin_notes || null]
       );
 
       const invoiceId = invoiceResult.lastID;
@@ -2251,8 +2252,8 @@ const invoiceDb = {
 
       // Update invoice basic fields
       const invoiceFields = [
-        'client_id', 'invoice_date', 'due_date', 'discount_amount', 
-        'markup_amount', 'tax_rate', 'notes', 'status'
+        'client_id', 'invoice_date', 'due_date', 'discount_amount',
+        'markup_amount', 'tax_rate', 'notes', 'client_notes', 'admin_notes', 'status'
       ];
       
       const updateFields = [];

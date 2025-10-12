@@ -499,23 +499,21 @@ useEffect(() => {
     
     const marginLeft = -(boxWidth / 2);
     const marginTop = -(boxHeight / 2);
-    
-    const currentTransform = container.style.transform;
-    
+    const itemAngle = angleStep * i;
+
     container.style.width = `${boxWidth}px`;
     container.style.height = `${boxHeight}px`;
     container.style.marginLeft = `${marginLeft}px`;
     container.style.marginTop = `${marginTop}px`;
     container.setAttribute("data-orientation", orientation);
-    
+
     // Update carousel container with active image orientation if this is the active image
     if (i === currentIndex && carouselContainer) {
       carouselContainer.setAttribute("data-active-orientation", orientation);
     }
-    
-    if (currentTransform) {
-      container.style.transform = currentTransform;
-    }
+
+    // Reapply the transform to ensure it's centered correctly with new dimensions
+    container.style.transform = `rotateY(${itemAngle}deg) translateZ(${radius}px)`;
     
     img.style.width = "100%";
     img.style.height = "100%";

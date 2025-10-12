@@ -850,17 +850,33 @@ const CreateInvoiceForm = ({
           </div>
         </div>
 
-        {/* Notes */}
+        {/* Client Notes (visible to client) */}
         <div className="mt-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {t('invoiceManager.notes')}
+            {t('invoiceManager.clientNotes')}
+            <span className="text-xs text-gray-500 ml-2">({t('invoiceManager.visibleToClient')})</span>
           </label>
           <textarea
-            value={newInvoice.notes}
-            onChange={(e) => setNewInvoice(prev => ({ ...prev, notes: e.target.value }))}
+            value={newInvoice.client_notes || ''}
+            onChange={(e) => setNewInvoice(prev => ({ ...prev, client_notes: e.target.value }))}
             rows={3}
             className="w-full p-3 border rounded-lg focus:border-blue-500 focus:outline-none"
-            placeholder={t('invoiceManager.additionalNotes')}
+            placeholder={t('invoiceManager.additionalNotesForClient')}
+          />
+        </div>
+
+        {/* Admin Notes (internal only - never visible to client) */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t('invoiceManager.adminNotes')}
+            <span className="text-xs text-red-600 ml-2">({t('invoiceManager.internalOnly')})</span>
+          </label>
+          <textarea
+            value={newInvoice.admin_notes || ''}
+            onChange={(e) => setNewInvoice(prev => ({ ...prev, admin_notes: e.target.value }))}
+            rows={3}
+            className="w-full p-3 border border-red-200 rounded-lg focus:border-red-500 focus:outline-none bg-red-50"
+            placeholder={t('invoiceManager.internalNotesNotVisibleToClient')}
           />
         </div>
 
