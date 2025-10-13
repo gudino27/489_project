@@ -19,11 +19,17 @@ const Portfolio = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSrc, setModalSrc] = useState("");
   const [modalCaption, setModalCaption] = useState("");
+  const [modalIsVideo, setModalIsVideo] = useState(false);
+  const [categoryVideos, setCategoryVideos] = useState([]);
+  const [selectedQuality, setSelectedQuality] = useState('720p');
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [allCategoryPhotos, setAllCategoryPhotos] = useState([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [savedPositions, setSavedPositions] = useState({});
+  const [videoInView, setVideoInView] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const categories = useMemo(
     () => [
       "kitchen",
@@ -120,10 +126,14 @@ const Portfolio = () => {
         filtered = allPhotos.slice(0, Math.min(3, allPhotos.length));
       }
 
-      // Store all photos for this category
-      setAllCategoryPhotos(filtered);
-      // Calculate total pages
-      const pages = Math.ceil(filtered.length / PHOTOS_PER_PAGE);
+      // Separate videos from photos
+      const videos = filtered.filter(item => item.mime_type && item.mime_type.startsWith('video/'));
+      const photosOnly = filtered.filter(item => !item.mime_type || !item.mime_type.startsWith('video/'));
+
+      // Store all photos for this category (photos only, videos shown separately)
+      setAllCategoryPhotos(photosOnly);
+      // Calculate total pages (photos only)
+      const pages = Math.ceil(photosOnly.length / PHOTOS_PER_PAGE);
       setTotalPages(pages);
       // Determine which page to show
       let targetPage = 0;
@@ -137,10 +147,14 @@ const Portfolio = () => {
       setCurrentPage(targetPage);
       // Get photos for the target page
       const startIndex = targetPage * PHOTOS_PER_PAGE;
-      const endIndex = Math.min(startIndex + PHOTOS_PER_PAGE, filtered.length);
-      const pagePhotos = filtered.slice(startIndex, endIndex);
+      const endIndex = Math.min(startIndex + PHOTOS_PER_PAGE, photosOnly.length);
+      const pagePhotos = photosOnly.slice(startIndex, endIndex);
 
       setPhotos(pagePhotos);
+
+      // Store videos separately for hero section
+      setCategoryVideos(videos);
+      setCurrentVideoIndex(0); // Reset to first video when category changes
     },
     [allPhotos, savedPositions]
   );
@@ -235,13 +249,21 @@ const Portfolio = () => {
     },
     [photos.length]
   );
-  const openModal = (src, caption) => {
+  const openModal = (src, caption, isVideo = false, videoQualities = null) => {
     setModalSrc(src);
     setModalCaption(caption);
+    setModalIsVideo(isVideo);
     setModalOpen(true);
+
+    // Store video qualities for quality selector
+    if (videoQualities) {
+      window.currentVideoQualities = videoQualities;
+    }
   };
   const closeModal = () => {
     setModalOpen(false);
+    setModalSrc("");
+    setModalIsVideo(false);
   };
   // Keyboard navigation
   useEffect(() => {
@@ -552,6 +574,9 @@ useEffect(() => {
           ))}
         </div>
       </div>
+
+     
+
       {totalPages > 1 && currentCategory && (
         <div className="page-navigation enhanced">
           <div className="page-header">
@@ -684,14 +709,15 @@ useEffect(() => {
   const itemAngle = angleStep * i;
   const zIndex =
     i === currentIndex ? 999 : 100 - Math.abs(i - currentIndex) * 10;
+  const isVideo = photo.mime_type && photo.mime_type.startsWith('video/');
   const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`; // Thumbnail for display
-  const fullImg = `${API_BASE}${photo.url}`; // Full image for modal
+  const fullSrc = `${API_BASE}${photo.url}`; // Full image/video for modal
   const caption = photo.title || photo.label || `Cabinet ${i + 1}`;
 
   return (
     <div
       key={`${photo.id || i}-${currentCategory}`}
-      className={`carousel-item-3d ${i === currentIndex ? "active" : ""}`}
+      className={`carousel-item-3d ${i === currentIndex ? "active" : ""} ${isVideo ? "video-item" : ""}`}
       style={{
         transform: `rotateY(${itemAngle}deg) translateZ(${radius}px)`,
         zIndex,
@@ -705,20 +731,56 @@ useEffect(() => {
         backgroundColor: "transparent",
       }}
       data-orientation="landscape"
-      onClick={() => openModal(fullImg, caption)}
+      onClick={() => openModal(fullSrc, caption, isVideo)}
     >
-      <img
-        src={imgSrc}
-        alt={caption}
-        onLoad={(e) => handleImageLoad(e, i)}
-        style={{
-          width: "100%",
-          height: "100%",
-          backgroundColor: "transparent",
-          objectFit: "cover",
-          objectPosition: "center",
-        }}
-      />
+      {isVideo ? (
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+          <img
+            src={imgSrc}
+            alt={caption}
+            onLoad={(e) => handleImageLoad(e, i)}
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "transparent",
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
+          />
+          {/* Video play icon overlay */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '60px',
+            height: '60px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none'
+          }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </div>
+        </div>
+      ) : (
+        <img
+          src={imgSrc}
+          alt={caption}
+          onLoad={(e) => handleImageLoad(e, i)}
+          style={{
+            width: "100%",
+            height: "100%",
+            backgroundColor: "transparent",
+            objectFit: "cover",
+            objectPosition: "center",
+          }}
+        />
+      )}
       <div className="caption">{caption}</div>
     </div>
   );
@@ -734,7 +796,163 @@ useEffect(() => {
             ></span>
           ))}
         </div>
+        {photos.length > 0 && (
+          <div className="carousel-hint">
+            <span className="desktop-hint">← → arrow keys or swipe to navigate photos</span>
+            <span className="mobile-hint">← Swipe to browse →</span>
+          </div>
+        )}
       </div>
+       {/* Hero Video Section - Full Screen with Navigation */}
+      {categoryVideos.length > 0 && currentCategory && (
+        <div className="video-hero-fullscreen">
+          <div className="video-hero-container">
+            
+
+            {/* Main Video Player */}
+            <div className="video-player-wrapper">
+              {(() => {
+                const video = categoryVideos[currentVideoIndex];
+                if (!video) return null;
+
+                // Parse video qualities from label field
+                let qualities = null;
+                try {
+                  if (video.label) {
+                    const parsed = JSON.parse(video.label);
+                    qualities = {};
+                    Object.keys(parsed).forEach(q => {
+                      qualities[q] = `${API_BASE}/photos/${video.category}/${parsed[q]}`;
+                    });
+                  }
+                } catch (e) {
+                    console.log('[VIDEO] No qualities found, using original');
+                }
+
+                // Determine video source with proper fallback chain:
+                // 1. Try 720p WebM from qualities (best quality)
+                // 2. Try 480p WebM from qualities (medium quality)
+                // 3. Try 360p WebM from qualities (low quality)
+                // 4. Fall back to video.url (database path - should be 720p WebM)
+                let videoSrc = `${API_BASE}${video.url}`; // Default fallback (720p WebM from DB)
+                let fallbackSrc = null;
+
+                if (qualities) {
+                  if (qualities['720p']) {
+                    videoSrc = qualities['720p'];
+                    fallbackSrc = qualities['480p'] || qualities['360p'];
+                  } else if (qualities['480p']) {
+                    videoSrc = qualities['480p'];
+                    fallbackSrc = qualities['360p'];
+                  } else if (qualities['360p']) {
+                    videoSrc = qualities['360p'];
+                  }
+                }
+
+                const thumbnail = `${API_BASE}${video.thumbnail || video.url}`;
+
+                // Detect video type from URL
+                const getVideoType = (url) => {
+                  if (url.endsWith('.webm')) return 'video/webm';
+                  if (url.endsWith('.mp4') || url.endsWith('.m4v')) return 'video/mp4';
+                  if (url.endsWith('.mov')) return 'video/quicktime';
+                  return 'video/mp4'; // default fallback
+                };
+
+                console.log('[VIDEO HERO] Playing:', videoSrc);
+                console.log('[VIDEO HERO] Fallback:', fallbackSrc);
+                console.log('[VIDEO HERO] Qualities:', qualities);
+
+                return (
+                  <>
+                    <video
+                      key={videoSrc}
+                      className="hero-video-player"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      poster={thumbnail}
+                      onClick={() => openModal(videoSrc, video.title || `Video ${currentVideoIndex + 1}`, true, qualities)}
+                      onError={(e) => {
+                        console.error('[VIDEO HERO] Failed to load:', videoSrc);
+                        if (fallbackSrc && e.target.src !== fallbackSrc) {
+                          console.log('[VIDEO HERO] Trying fallback quality:', fallbackSrc);
+                          e.target.src = fallbackSrc;
+                        } else {
+                          console.error('[VIDEO HERO] No fallback available');
+                        }
+                      }}
+                    >
+                      {/* Primary video source (720p, 480p, or 360p based on availability) */}
+                      <source src={videoSrc} type="video/webm" />
+                      {/* Fallback to lower quality if available */}
+                      {fallbackSrc && <source src={fallbackSrc} type="video/webm" />}
+                      Your browser does not support the video tag.
+                    </video>
+
+                    
+
+                    {/* Click to expand hint */}
+                    <div className="video-expand-hint">
+                      Click to view fullscreen
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* Navigation Buttons */}
+              {categoryVideos.length > 1 && (
+                <>
+                  <button
+                    className="video-nav-btn video-nav-prev"
+                    onClick={() => setCurrentVideoIndex((prev) =>
+                      prev === 0 ? categoryVideos.length - 1 : prev - 1
+                    )}
+                    disabled={categoryVideos.length <= 1}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                      <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="video-nav-btn video-nav-next"
+                    onClick={() => setCurrentVideoIndex((prev) =>
+                      prev === categoryVideos.length - 1 ? 0 : prev + 1
+                    )}
+                    disabled={categoryVideos.length <= 1}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Navigation */}
+            {categoryVideos.length > 1 && (
+              <div className="video-thumbnails-nav">
+                {categoryVideos.map((video, idx) => {
+                  const thumbnail = `${API_BASE}${video.thumbnail || video.url}`;
+                  return (
+                    <div
+                      key={video.id || idx}
+                      className={`video-thumb ${idx === currentVideoIndex ? 'active' : ''}`}
+                      onClick={() => setCurrentVideoIndex(idx)}
+                    >
+                      <img src={thumbnail} alt={video.title || `Video ${idx + 1}`} />
+                      {idx === currentVideoIndex && (
+                        <div className="video-thumb-active-indicator" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {modalOpen && (
         <div
           className="modal active"
@@ -744,7 +962,55 @@ useEffect(() => {
           <span className="modal-close" onClick={closeModal}>
             &times;
           </span>
-          <img className="modal-content" src={modalSrc} alt="Preview" />
+          {modalIsVideo ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              {/* Quality selector */}
+              {window.currentVideoQualities && (
+                <div style={{
+                  position: 'absolute',
+                  top: '60px',
+                  right: '20px',
+                  zIndex: 10
+                }}>
+                  <select
+                    value={selectedQuality}
+                    onChange={(e) => {
+                      setSelectedQuality(e.target.value);
+                      const newSrc = window.currentVideoQualities[e.target.value];
+                      if (newSrc) setModalSrc(newSrc);
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'rgba(0,0,0,0.8)',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="720p">720p (HD)</option>
+                    <option value="480p">480p (SD)</option>
+                    <option value="360p">360p (Low)</option>
+                  </select>
+                </div>
+              )}
+              <video
+                className="modal-content"
+                controls
+                autoPlay
+                loop
+                preload="metadata"
+                style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
+                key={modalSrc}
+              >
+                <source src={modalSrc} type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          ) : (
+            <img className="modal-content" src={modalSrc} alt="Preview" />
+          )}
           <div className="modal-caption">{modalCaption}</div>
         </div>
       )}

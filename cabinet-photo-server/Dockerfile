@@ -17,8 +17,8 @@ COPY . .
 # Production stage
 FROM node:20-alpine
 
-# Install runtime dependencies including Chromium for Puppeteer
-RUN apk add --no-cache sqlite chromium \
+# Install runtime dependencies including Chromium for Puppeteer and FFmpeg for video processing
+RUN apk add --no-cache sqlite chromium ffmpeg \
     nss \
     freetype \
     freetype-dev \

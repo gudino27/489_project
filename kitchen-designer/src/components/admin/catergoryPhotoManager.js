@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Edit2, Save, Image, GripVertical, X } from 'lucide-react';
+import { Upload, Trash2, Edit2, Save, Image, GripVertical, X, Video, Play } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
@@ -25,6 +25,11 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
 
   // Use API_BASE from props or fallback
   const apiBase = API_BASE || process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+  // Helper function to check if item is a video
+  const isVideo = (item) => {
+    return item.mime_type && item.mime_type.startsWith('video/');
+  };
 
   // Create headers with authentication
   const getAuthHeaders = () => ({
@@ -385,20 +390,39 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
           <h3 className="text-lg font-semibold mb-3">
             {t('photoManager.uploadTo')} {categories.find(c => c.id === selectedCategory)?.name}
           </h3>
-          <label className="inline-block">
-            <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors ">
-              <Upload size={20} />
-              {uploading ? t('photoManager.uploading') : t('photoManager.selectPhotos')}
-            </div>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-              disabled={uploading}
-            />
-          </label>
+          <div className="flex flex-wrap gap-3">
+            {/* Add Photos Button */}
+            <label className="inline-block">
+              <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
+                <Image size={20} />
+                {uploading ? t('photoManager.uploading') : t('photoManager.selectPhotos')}
+              </div>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
+
+            {/* Add Videos Button */}
+            <label className="inline-block">
+              <div className="flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-lg cursor-pointer hover:bg-purple-700 transition-colors">
+                <Video size={20} />
+                {uploading ? 'Uploading...' : 'Add Videos'}
+              </div>
+              <input
+                type="file"
+                multiple
+                accept="video/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
+          </div>
           <p className="text-sm text-gray-600 mt-2">
             {t('photoManager.multiplePhotos')} {categories.find(c => c.id === selectedCategory)?.name} {t('photoManager.category')}
           </p>
@@ -441,16 +465,42 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
                   </div>
                 )}
 
-                <img
-                  src={`${apiBase}${photo.thumbnail || photo.full || photo.url}`}
-                  alt={photo.title}
-                  className="w-full h-40 object-cover"
-                  draggable={false}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'placeholder.jpg';
-                  }}
-                />
+                {/* Video indicator overlay */}
+                {isVideo(photo) && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                    <div className="bg-black bg-opacity-60 rounded-full p-4">
+                      <Play size={32} className="text-white" fill="white" />
+                    </div>
+                  </div>
+                )}
+
+                {isVideo(photo) ? (
+                  <video
+                    src={`${apiBase}${photo.thumbnail || photo.url}`}
+                    className="w-full h-40 object-cover"
+                    muted
+                    playsInline
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      // Try to show thumbnail or placeholder
+                      const img = document.createElement('img');
+                      img.src = `${apiBase}${photo.thumbnail || photo.url}`;
+                      img.className = 'w-full h-40 object-cover';
+                      e.target.parentNode.replaceChild(img, e.target);
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={`${apiBase}${photo.thumbnail || photo.full || photo.url}`}
+                    alt={photo.title}
+                    className="w-full h-40 object-cover"
+                    draggable={false}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'placeholder.jpg';
+                    }}
+                  />
+                )}
 
                 <div className="p-2">
                   {editingPhoto === photo.id ? (
@@ -535,18 +585,34 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
       <div className="mt-8 p-4 bg-gray-50 rounded-lg">
         <h3 className="text-lg font-semibold mb-3">{t('photoManager.categoryOverview')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {categories.map(category => (
-            <div key={category.id} className="bg-white p-3 rounded border">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">
-                  {category.icon} {category.name}
-                </span>
-                <span className="text-2xl font-bold text-blue-600">
-                  {photosByCategory[category.id]?.length || 0}
-                </span>
+          {categories.map(category => {
+            const categoryItems = photosByCategory[category.id] || [];
+            const videoCount = categoryItems.filter(item => isVideo(item)).length;
+            const photoCount = categoryItems.length - videoCount;
+
+            return (
+              <div key={category.id} className="bg-white p-3 rounded border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">
+                    {category.icon} {category.name}
+                  </span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {categoryItems.length}
+                  </span>
+                </div>
+                <div className="flex gap-3 text-xs text-gray-600">
+                  <span className="flex items-center gap-1">
+                    <Image size={12} />
+                    {photoCount} photos
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Video size={12} />
+                    {videoCount} videos
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

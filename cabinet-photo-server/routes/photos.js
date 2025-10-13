@@ -7,7 +7,7 @@ const path = require("path");
 const fs = require("fs").promises;
 const { photoDb } = require("../db-helpers");
 const { authenticateUser } = require("../middleware/auth");
-const { upload } = require("../middleware/upload");
+const { upload, uploadMedia, getVideoDuration, convertVideoToMultiQuality, generateVideoThumbnail } = require("../middleware/upload");
 
 async function getImageDimensions(filePath) {
   try {
@@ -51,59 +51,139 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch photos" });
   }
 });
-// Upload photo
-router.post("/", upload.single("photo"), async (req, res) => {
+// Upload media (photo or video)
+router.post("/", uploadMedia.single("photo"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
     const category = req.file.uploadCategory || req.body.category || "showcase";
+    const isVideo = req.file.mimetype.startsWith('video/');
+
     console.log("[UPLOAD] Final category:", category);
+    console.log("[UPLOAD] File type:", isVideo ? 'video' : 'image');
     console.log("[UPLOAD] File saved to:", req.file.path);
     console.log("[UPLOAD] Filename:", req.file.filename);
-    const relativePath = `${category}/${req.file.filename}`;
-    // Generate thumbnails with improved quality and aspect ratio handling
-    const thumbnailDir = path.join(__dirname, "..", "uploads", "thumbnails");
-    await fs.mkdir(thumbnailDir, { recursive: true });
-    const thumbnailFilename = `thumb_${req.file.filename}`;
-    const thumbnailPath = `thumbnails/${thumbnailFilename}`;
-    const thumbnailFullPath = path.join(
-      __dirname,
-      "..",
-      "uploads",
-      thumbnailPath
-    );
-    try {
-      // First rotate to buffer to get ACTUAL dimensions after rotation
-      const rotatedBuffer = await sharp(req.file.path)
-        .rotate() // Apply EXIF rotation
-        .toBuffer();
 
-      // Now check the actual rotated dimensions
-      const rotatedMetadata = await sharp(rotatedBuffer).metadata();
-      const isVertical = rotatedMetadata.height > rotatedMetadata.width;
+    let relativePath = `${category}/${req.file.filename}`; // Will be updated for videos after conversion
+    let thumbnailPath = null;
+    let dimensions = { width: null, height: null };
 
-      // Smart sizing: vertical photos get different dimensions than horizontal
-      const thumbnailWidth = isVertical ? 600 : 800;
-      const thumbnailHeight = isVertical ? 800 : 600;
+    if (isVideo) {
+      // For videos: convert to multiple qualities and generate thumbnail
+      console.log("[VIDEO] Processing uploaded video file (iPhone HEVC/MOV supported)");
 
-      console.log(`[THUMBNAIL] Actual rotated dimensions: ${rotatedMetadata.width}x${rotatedMetadata.height}, isVertical: ${isVertical}, target: ${thumbnailWidth}x${thumbnailHeight}`);
+      try {
+        // Base filename without extension
+        const baseFilename = req.file.filename.replace(/\.[^/.]+$/, "");
+        const webmBasePath = path.join(__dirname, "..", "uploads", category, `${baseFilename}.webm`);
 
-      // Now resize the rotated image
-      await sharp(rotatedBuffer)
-        .resize(thumbnailWidth, thumbnailHeight, {
-          fit: "inside",
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 95, progressive: true })
-        .toFile(thumbnailFullPath);
-      console.log("[THUMBNAIL] Created:", thumbnailFullPath, `(${isVertical ? 'vertical' : 'horizontal'} ${thumbnailWidth}x${thumbnailHeight})`);
-    } catch (err) {
-      console.error("[THUMBNAIL] Error:", err);
+        // Convert to multiple qualities (720p, 480p, 360p)
+        const qualityFiles = await convertVideoToMultiQuality(req.file.path, webmBasePath);
+
+        // Use 720p as the default/primary file
+        const mainQualityFile = qualityFiles['720p'];
+        if (!mainQualityFile) {
+          throw new Error("720p conversion failed");
+        }
+
+        // Update file references to use 720p WebM as primary
+        const webmFilename = path.basename(mainQualityFile);
+        req.file.filename = webmFilename;
+        req.file.mimetype = 'video/webm';
+        const stats = await fs.stat(mainQualityFile);
+        req.file.size = stats.size;
+
+        // Update relativePath to use WebM filename
+        relativePath = `${category}/${webmFilename}`;
+        console.log("[VIDEO] Updated file path to:", relativePath);
+
+        // Delete original video file to save space (only keep WebM versions)
+        await fs.unlink(req.file.path);
+        console.log("[VIDEO] Deleted original video file, keeping only WebM versions");
+
+        // Generate video thumbnail from 720p version
+        const thumbnailDir = path.join(__dirname, "..", "uploads", "thumbnails");
+        await fs.mkdir(thumbnailDir, { recursive: true });
+        const thumbnailFilename = `thumb_${baseFilename}.jpg`;
+        thumbnailPath = `thumbnails/${thumbnailFilename}`;
+        const thumbnailFullPath = path.join(__dirname, "..", "uploads", thumbnailPath);
+
+        await generateVideoThumbnail(mainQualityFile, thumbnailFullPath, '00:00:01');
+
+        // Get video duration
+        const duration = await getVideoDuration(mainQualityFile);
+        if (duration) {
+          console.log(`[VIDEO] Duration: ${duration}s`);
+        }
+
+        // Store quality URLs in label field as JSON
+        // Format: {"720p": "filename_720p.webm", "480p": "filename_480p.webm", "360p": "filename_360p.webm"}
+        const qualityUrls = {};
+        Object.keys(qualityFiles).forEach(quality => {
+          qualityUrls[quality] = path.basename(qualityFiles[quality]);
+        });
+
+        // Store in a custom field for quality options
+        req.body.video_qualities = JSON.stringify(qualityUrls);
+
+        // Videos get 720p dimensions (from conversion)
+        dimensions = { width: 1280, height: 720 };
+      } catch (error) {
+        console.error("[VIDEO] Processing error:", error);
+        // If video processing fails, still save the original file
+        console.log("[VIDEO] Falling back to original file");
+        dimensions = { width: 1920, height: 1080 };
+      }
+    } else {
+      // For images: generate thumbnails with improved quality and aspect ratio handling
+      const thumbnailDir = path.join(__dirname, "..", "uploads", "thumbnails");
+      await fs.mkdir(thumbnailDir, { recursive: true });
+      const thumbnailFilename = `thumb_${req.file.filename}`;
+      thumbnailPath = `thumbnails/${thumbnailFilename}`;
+      const thumbnailFullPath = path.join(
+        __dirname,
+        "..",
+        "uploads",
+        thumbnailPath
+      );
+
+      try {
+        // First rotate to buffer to get ACTUAL dimensions after rotation
+        const rotatedBuffer = await sharp(req.file.path)
+          .rotate() // Apply EXIF rotation
+          .toBuffer();
+
+        // Now check the actual rotated dimensions
+        const rotatedMetadata = await sharp(rotatedBuffer).metadata();
+        const isVertical = rotatedMetadata.height > rotatedMetadata.width;
+
+        // Smart sizing: vertical photos get different dimensions than horizontal
+        const thumbnailWidth = isVertical ? 600 : 800;
+        const thumbnailHeight = isVertical ? 800 : 600;
+
+        console.log(`[THUMBNAIL] Actual rotated dimensions: ${rotatedMetadata.width}x${rotatedMetadata.height}, isVertical: ${isVertical}, target: ${thumbnailWidth}x${thumbnailHeight}`);
+
+        // Now resize the rotated image
+        await sharp(rotatedBuffer)
+          .resize(thumbnailWidth, thumbnailHeight, {
+            fit: "inside",
+            withoutEnlargement: true
+          })
+          .jpeg({ quality: 95, progressive: true })
+          .toFile(thumbnailFullPath);
+        console.log("[THUMBNAIL] Created:", thumbnailFullPath, `(${isVertical ? 'vertical' : 'horizontal'} ${thumbnailWidth}x${thumbnailHeight})`);
+      } catch (err) {
+        console.error("[THUMBNAIL] Error:", err);
+      }
+
+      dimensions = await getImageDimensions(req.file.path);
     }
-    const dimensions = await getImageDimensions(req.file.path);
-    const photoId = await photoDb.createPhoto({
-      title: req.body.title || req.file.originalname.split(".")[0],
+
+    // For videos, store quality URLs in label field (unused for photos)
+    const title = req.body.title || req.file.originalname.split(".")[0];
+    const photoData = {
+      title: title,
       filename: req.file.filename,
       original_name: req.file.originalname,
       category: category,
@@ -114,25 +194,48 @@ router.post("/", upload.single("photo"), async (req, res) => {
       width: dimensions.width,
       height: dimensions.height,
       featured: req.body.featured === "true",
-    });
+    };
+
+    // If video qualities exist, store them in label field as JSON
+    if (req.body.video_qualities) {
+      photoData.label = req.body.video_qualities;
+    }
+
+    const photoId = await photoDb.createPhoto(photoData);
 
     console.log("[DATABASE] Saved with ID:", photoId);
 
     const photo = await photoDb.getPhoto(photoId);
+
+    // Parse video qualities if they exist
+    let videoQualities = null;
+    if (isVideo && photo.label) {
+      try {
+        const qualityUrls = JSON.parse(photo.label);
+        videoQualities = {};
+        Object.keys(qualityUrls).forEach(quality => {
+          videoQualities[quality] = `/photos/${category}/${qualityUrls[quality]}`;
+        });
+      } catch (e) {
+        console.warn("[VIDEO] Could not parse quality URLs:", e.message);
+      }
+    }
 
     res.json({
       success: true,
       photo: {
         ...photo,
         full: `/${relativePath}`,
-        thumbnail: `photos/thumbnails/${thumbnailPath}`,
+        thumbnail: thumbnailPath ? `photos/thumbnails/${thumbnailPath}` : null,
         url: `/photos/${relativePath}`,
         featured: photo.featured === 1,
+        isVideo: isVideo,
+        videoQualities: videoQualities, // Include quality URLs for frontend
       },
     });
   } catch (error) {
     console.error("Upload error:", error);
-    res.status(500).json({ error: "Failed to upload photo: " + error.message });
+    res.status(500).json({ error: "Failed to upload media: " + error.message });
   }
 });
 router.put("/reorder", async (req, res) => {
