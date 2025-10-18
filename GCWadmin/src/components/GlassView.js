@@ -54,19 +54,21 @@ const GlassView = ({
   // For iOS 13+, use BlurView
   // For older versions, use semi-transparent overlay
   const renderGlass = () => {
-    if (Platform.OS === 'ios' && Platform.Version >= 13) {
+    // TEMPORARY: Use fallback until native module is compiled
+    // After rebuilding in Xcode, this will automatically use BlurView
+    const useBlur = false; // Set to true after Xcode rebuild
+
+    if (useBlur && Platform.OS === 'ios' && Platform.Version >= 13) {
       return (
         <BlurView
-          style={[styles.absolute, style]}
+          style={[style]}
           blurType={config.blurType}
           blurAmount={config.blurAmount}
           reducedTransparencyFallbackColor={config.overlayColor}
           {...props}
         >
-          {/* Overlay to match web admin's rgba */}
           <View
             style={[
-              styles.absolute,
               {
                 backgroundColor: config.overlayColor,
                 borderWidth: showBorder ? 1 : 0,
@@ -91,12 +93,18 @@ const GlassView = ({
     return (
       <View
         style={[
-          styles.absolute,
           style,
           {
             backgroundColor: config.overlayColor,
             borderWidth: showBorder ? 1 : 0,
             borderColor: config.borderColor,
+          },
+          showShadow && {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 4,
           },
         ]}
         {...props}
@@ -162,29 +170,21 @@ export const ContentGlass = ({ children, style, ...props }) => (
 );
 
 const styles = StyleSheet.create({
-  absolute: {
-    ...StyleSheet.absoluteFillObject,
-  },
   navGlass: {
     borderRadius: 0,
   },
   tabGlass: {
     borderRadius: 12,
-    margin: 4,
   },
   tabGlassActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.3)',
-    borderColor: 'rgba(59, 130, 246, 0.5)',
+    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+    borderColor: 'rgba(59, 130, 246, 0.8)',
   },
   headerGlass: {
     borderRadius: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
   },
   contentGlass: {
     borderRadius: 16,
-    margin: 20,
-    padding: 30,
   },
 });
 

@@ -272,6 +272,7 @@ const InvoiceDetailsScreen = () => {
 
         {/* Totals */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Totals</Text>
           <ContentGlass style={styles.totalsCard}>
             {invoice.subtotal && (
               <View style={styles.totalRow}>

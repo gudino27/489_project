@@ -6,16 +6,22 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from './src/utils/AuthContext';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { LanguageProvider } from './src/contexts/LanguageContext';
+import { PricingProvider } from './src/contexts/PricingContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar barStyle="light-content" />
-        <AppNavigator />
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <PricingProvider>
+            <StatusBar barStyle="light-content" />
+            <AppNavigator />
+          </PricingProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

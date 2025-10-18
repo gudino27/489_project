@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
-import { useAuth } from '../utils/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import InvoiceDetailsScreen from '../screens/InvoiceDetailsScreen';

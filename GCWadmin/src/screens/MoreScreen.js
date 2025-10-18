@@ -7,7 +7,8 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { useAuth } from '../utils/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
 import { ContentGlass } from '../components/GlassView';
 

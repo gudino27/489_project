@@ -1,0 +1,461 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { Settings, Plus, Edit2, Trash2, Check, X } from 'lucide-react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../../constants';
+import { ContentGlass } from '../../components/GlassView';
+import SectionSaveButton from './SectionSaveButton';
+
+const MaterialMultipliers = ({
+  materialMultipliers,
+  setMaterialMultipliers,
+  markSectionChanged,
+  updateSharedMaterials,
+  refreshPricing,
+  sectionChanges,
+  saveStatus,
+  onSave,
+}) => {
+  const { t } = useLanguage();
+  const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({
+    nameEn: '',
+    nameEs: '',
+    multiplier: '1.0'
+  });
+  const [editingMaterial, setEditingMaterial] = useState(null);
+
+  const handleAddMaterial = () => {
+    if (!newMaterial.nameEn || !newMaterial.nameEs || parseFloat(newMaterial.multiplier) <= 0) {
+      Alert.alert('Invalid Input', 'Please enter both English and Spanish names, plus a valid multiplier');
+      return;
+    }
+
+    const tempId = Date.now() + Math.random();
+    const newMaterialObj = {
+      id: tempId,
+      nameEn: newMaterial.nameEn,
+      nameEs: newMaterial.nameEs,
+      multiplier: parseFloat(newMaterial.multiplier),
+      isTemporary: true
+    };
+
+    const updatedMaterials = [...materialMultipliers, newMaterialObj];
+    setMaterialMultipliers(updatedMaterials);
+    setNewMaterial({ nameEn: '', nameEs: '', multiplier: '1.0' });
+    setShowMaterialForm(false);
+    markSectionChanged('materials');
+
+    updateSharedMaterials(updatedMaterials);
+    refreshPricing();
+  };
+
+  const handleUpdateMaterial = () => {
+    if (!editingMaterial || !editingMaterial.nameEn || !editingMaterial.nameEs || parseFloat(editingMaterial.multiplier) <= 0) {
+      Alert.alert('Invalid Input', 'Please enter valid values');
+      return;
+    }
+
+    const updated = materialMultipliers.map(material =>
+      material.id === editingMaterial.id
+        ? {
+            ...material,
+            nameEn: editingMaterial.nameEn,
+            nameEs: editingMaterial.nameEs,
+            multiplier: parseFloat(editingMaterial.multiplier)
+          }
+        : material
+    );
+
+    setMaterialMultipliers(updated);
+    setEditingMaterial(null);
+    markSectionChanged('materials');
+
+    updateSharedMaterials(updated);
+    refreshPricing();
+  };
+
+  const handleDeleteMaterial = (materialId, materialName) => {
+    Alert.alert(
+      'Delete Material',
+      `Delete ${materialName} material?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const updated = materialMultipliers.filter(material => material.id !== materialId);
+            setMaterialMultipliers(updated);
+            markSectionChanged('materials');
+            updateSharedMaterials(updated);
+            refreshPricing();
+          }
+        }
+      ]
+    );
+  };
+
+  return (
+    <ContentGlass style={styles.container}>
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTitleRow}>
+          <Settings color={COLORS.success} size={20} />
+          <Text style={styles.headerTitle}>Material Multipliers</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowMaterialForm(!showMaterialForm)}
+        >
+          <Plus color={COLORS.white} size={16} />
+          <Text style={styles.addButtonText}>Add Material</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.description}>
+        Material multipliers affect the base cabinet prices. A multiplier of 1.5 means the material costs 50% more than the base price.
+      </Text>
+
+      {/* Add Material Form */}
+      {showMaterialForm && (
+        <View style={styles.formContainer}>
+          <Text style={styles.formTitle}>Add New Material (Bilingual)</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="English Name"
+            value={newMaterial.nameEn}
+            onChangeText={(value) => setNewMaterial({ ...newMaterial, nameEn: value })}
+            placeholderTextColor={COLORS.textSecondary}
+          />
+          <TextInput
+            style={styles.formInput}
+            placeholder="Spanish Name (Nombre en Español)"
+            value={newMaterial.nameEs}
+            onChangeText={(value) => setNewMaterial({ ...newMaterial, nameEs: value })}
+            placeholderTextColor={COLORS.textSecondary}
+          />
+          <TextInput
+            style={styles.formInput}
+            placeholder="Price Multiplier"
+            value={newMaterial.multiplier}
+            onChangeText={(value) => setNewMaterial({ ...newMaterial, multiplier: value })}
+            keyboardType="decimal-pad"
+            placeholderTextColor={COLORS.textSecondary}
+          />
+          <View style={styles.formActions}>
+            <TouchableOpacity
+              style={[styles.formButton, styles.formButtonPrimary]}
+              onPress={handleAddMaterial}
+            >
+              <Text style={styles.formButtonText}>Add Material</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.formButton, styles.formButtonSecondary]}
+              onPress={() => {
+                setShowMaterialForm(false);
+                setNewMaterial({ nameEn: '', nameEs: '', multiplier: '1.0' });
+              }}
+            >
+              <Text style={styles.formButtonTextSecondary}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Materials List */}
+      <ScrollView style={styles.materialsList} showsVerticalScrollIndicator={false}>
+        {Array.isArray(materialMultipliers) && materialMultipliers.length > 0 ? (
+          materialMultipliers.map((material) => (
+            <View key={material.id || `${material.nameEn}-${material.nameEs}`} style={styles.materialItem}>
+              {editingMaterial?.id === material.id ? (
+                // Edit Mode
+                <View style={styles.editContainer}>
+                  <View style={styles.editInputsContainer}>
+                    <TextInput
+                      style={styles.editInput}
+                      placeholder="English name"
+                      value={editingMaterial.nameEn}
+                      onChangeText={(value) =>
+                        setEditingMaterial({ ...editingMaterial, nameEn: value })
+                      }
+                      placeholderTextColor={COLORS.textSecondary}
+                    />
+                    <TextInput
+                      style={styles.editInput}
+                      placeholder="Spanish name"
+                      value={editingMaterial.nameEs}
+                      onChangeText={(value) =>
+                        setEditingMaterial({ ...editingMaterial, nameEs: value })
+                      }
+                      placeholderTextColor={COLORS.textSecondary}
+                    />
+                    <TextInput
+                      style={styles.editInputSmall}
+                      placeholder="Multiplier"
+                      value={editingMaterial.multiplier?.toString()}
+                      onChangeText={(value) =>
+                        setEditingMaterial({ ...editingMaterial, multiplier: value })
+                      }
+                      keyboardType="decimal-pad"
+                      placeholderTextColor={COLORS.textSecondary}
+                    />
+                  </View>
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={handleUpdateMaterial}
+                    >
+                      <Check color={COLORS.success} size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={() => setEditingMaterial(null)}
+                    >
+                      <X color={COLORS.textSecondary} size={20} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                // Display Mode
+                <>
+                  <View style={styles.materialInfo}>
+                    <View style={styles.materialNameRow}>
+                      <Text style={styles.materialNameEn}>{material.nameEn}</Text>
+                      {material.isTemporary && (
+                        <View style={styles.unsavedBadge}>
+                          <Text style={styles.unsavedText}>Unsaved</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.materialNameEs}>{material.nameEs}</Text>
+                  </View>
+                  <Text style={styles.multiplier}>×{material.multiplier}</Text>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => setEditingMaterial({ ...material, multiplier: material.multiplier.toString() })}
+                  >
+                    <Edit2 color={COLORS.info} size={20} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => handleDeleteMaterial(material.id, material.nameEn)}
+                  >
+                    <Trash2 color={COLORS.error} size={20} />
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No materials configured yet.</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Section Save Button */}
+      <SectionSaveButton
+        sectionKey="materials"
+        sectionChanges={sectionChanges}
+        saveStatus={saveStatus}
+        onSave={onSave}
+      />
+    </ContentGlass>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    margin: SPACING.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+  },
+  headerContainer: {
+    marginBottom: SPACING.md,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  headerTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.success,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
+    gap: SPACING.xs,
+    minHeight: 44,
+  },
+  addButtonText: {
+    ...TYPOGRAPHY.buttonMedium,
+    color: COLORS.white,
+  },
+  description: {
+    ...TYPOGRAPHY.bodySmall,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+  },
+  formContainer: {
+    backgroundColor: '#ECFDF5', // green-50
+    borderWidth: 1,
+    borderColor: '#A7F3D0', // green-200
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  formTitle: {
+    ...TYPOGRAPHY.h4,
+    color: '#065F46', // green-800
+    marginBottom: SPACING.md,
+  },
+  formInput: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.sm,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    minHeight: 44,
+  },
+  formActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  formButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  formButtonPrimary: {
+    backgroundColor: COLORS.success,
+  },
+  formButtonSecondary: {
+    backgroundColor: COLORS.textSecondary,
+  },
+  formButtonText: {
+    ...TYPOGRAPHY.buttonMedium,
+    color: COLORS.white,
+  },
+  formButtonTextSecondary: {
+    ...TYPOGRAPHY.buttonMedium,
+    color: COLORS.white,
+  },
+  materialsList: {
+    maxHeight: 400,
+  },
+  materialItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  materialInfo: {
+    flex: 1,
+  },
+  materialNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  materialNameEn: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  materialNameEs: {
+    ...TYPOGRAPHY.bodySmall,
+    color: COLORS.textSecondary,
+  },
+  unsavedBadge: {
+    backgroundColor: '#FEF3C7', // yellow-100
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  unsavedText: {
+    ...TYPOGRAPHY.caption,
+    color: '#92400E', // yellow-800
+  },
+  multiplier: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    marginRight: SPACING.sm,
+  },
+  iconButton: {
+    padding: SPACING.sm,
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editContainer: {
+    flex: 1,
+  },
+  editInputsContainer: {
+    marginBottom: SPACING.sm,
+  },
+  editInput: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.sm,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    minHeight: 44,
+  },
+  editInputSmall: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    width: 100,
+    minHeight: 44,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  emptyState: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+  },
+});
+
+export default MaterialMultipliers;

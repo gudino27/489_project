@@ -11,12 +11,14 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { useAuth } from '../utils/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
 import { ContentGlass } from '../components/GlassView';
 
 const LoginScreen = () => {
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,18 +28,21 @@ const LoginScreen = () => {
     setError('');
 
     if (!username || !password) {
-      setError('Please enter both username and password');
+      setError(t('admin.enterBothCredentials') || 'Please enter both username and password');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await login(username, password);
-      // Navigation will happen automatically via AuthContext
+      const result = await login(username, password);
+      if (!result.success) {
+        setError(result.error || 'Invalid credentials');
+      }
+      // Navigation will happen automatically via AuthContext when successful
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.error || 'Invalid credentials');
+      setError(err.message || 'Invalid credentials');
     } finally {
       setIsLoading(false);
     }
@@ -57,8 +62,8 @@ const LoginScreen = () => {
           />
         </View>
 
-        <Text style={styles.title}>Admin Login</Text>
-        <Text style={styles.subtitle}>Gudino Custom Admin Panel</Text>
+        <Text style={styles.title}>{t('admin.login') || 'Admin Login'}</Text>
+        <Text style={styles.subtitle}>{t('admin.title') || 'Gudino Custom Admin Panel'}</Text>
 
         {error ? (
           <View style={styles.errorContainer}>
@@ -68,28 +73,30 @@ const LoginScreen = () => {
 
         <ContentGlass style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>{t('admin.username') || 'Username'}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter username"
+              placeholder={t('admin.enterUsername') || 'Enter username'}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="username"
               editable={!isLoading}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('admin.password') || 'Password'}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter password"
+              placeholder={t('admin.enterPassword') || 'Enter password'}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="password"
               editable={!isLoading}
               onSubmitEditing={handleLogin}
             />
@@ -103,7 +110,7 @@ const LoginScreen = () => {
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} />
             ) : (
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.loginButtonText}>{t('admin.login') || 'Login'}</Text>
             )}
           </TouchableOpacity>
         </ContentGlass>
@@ -115,7 +122,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primary, // Admin gray background matching web
   },
   content: {
     flex: 1,
