@@ -45,3 +45,35 @@ scripts/health-check.sh
 scripts/rollback.sh
 deployment.log
 webhook-receiver.log
+GCWadmin/.env.production
+# React Native / Node
+node_modules/
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+.expo/
+.expo-shared/
+dist/
+build/
+
+# Metro bundler
+.cache/
+bundles/
+
+# macOS / Xcode
+*.xcuserdata
+DerivedData/
+*.xcuserstate
+*.xcworkspace
+Pods/
+Podfile.lock
+
+# Android / Gradle
+/android/.gradle/
+/android/app/build/
+/android/build/
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
