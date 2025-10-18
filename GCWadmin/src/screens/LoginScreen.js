@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../utils/AuthContext';
 import { COLORS } from '../constants/colors';
+import { ContentGlass } from '../components/GlassView';
 
 const LoginScreen = () => {
   const { login } = useAuth();
@@ -65,7 +66,7 @@ const LoginScreen = () => {
           </View>
         ) : null}
 
-        <View style={styles.form}>
+        <ContentGlass style={styles.form}>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Username</Text>
             <TextInput
@@ -105,7 +106,7 @@ const LoginScreen = () => {
               <Text style={styles.loginButtonText}>Login</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </ContentGlass>
       </View>
     </KeyboardAvoidingView>
   );
@@ -167,17 +168,8 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
-    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   inputContainer: {
     marginBottom: 20,

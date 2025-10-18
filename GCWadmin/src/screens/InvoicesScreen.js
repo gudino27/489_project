@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import * as invoiceAPI from '../api/invoices';
 import { COLORS } from '../constants/colors';
+import { ContentGlass, TabGlass } from '../components/GlassView';
 
 const InvoicesScreen = () => {
   const navigation = useNavigation();
@@ -101,46 +102,49 @@ const InvoicesScreen = () => {
 
   const renderInvoiceItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.invoiceCard}
       onPress={() => {
         navigation.navigate('InvoiceDetails', { invoiceId: item.id });
       }}
     >
-      <View style={styles.invoiceHeader}>
-        <Text style={styles.invoiceNumber}>{item.invoice_number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status?.toUpperCase()}</Text>
+      <ContentGlass style={styles.invoiceCard}>
+        <View style={styles.invoiceHeader}>
+          <Text style={styles.invoiceNumber}>{item.invoice_number}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+            <Text style={styles.statusText}>{item.status?.toUpperCase()}</Text>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.clientName}>
-        {item.is_business ? item.company_name : `${item.first_name} ${item.last_name}`}
-      </Text>
+        <Text style={styles.clientName}>
+          {item.is_business ? item.company_name : `${item.first_name} ${item.last_name}`}
+        </Text>
 
-      <View style={styles.invoiceFooter}>
-        <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
-        <Text style={styles.date}>{formatDate(item.created_at)}</Text>
-      </View>
+        <View style={styles.invoiceFooter}>
+          <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
+          <Text style={styles.date}>{formatDate(item.created_at)}</Text>
+        </View>
 
-      {item.due_date && (
-        <Text style={styles.dueDate}>Due: {formatDate(item.due_date)}</Text>
-      )}
+        {item.due_date && (
+          <Text style={styles.dueDate}>Due: {formatDate(item.due_date)}</Text>
+        )}
+      </ContentGlass>
     </TouchableOpacity>
   );
 
   const renderFilterButton = (status, label) => (
-    <TouchableOpacity
-      style={[styles.filterButton, filterStatus === status && styles.filterButtonActive]}
-      onPress={() => setFilterStatus(status)}
-    >
-      <Text
-        style={[
-          styles.filterButtonText,
-          filterStatus === status && styles.filterButtonTextActive,
-        ]}
+    <TouchableOpacity onPress={() => setFilterStatus(status)}>
+      <TabGlass
+        style={[styles.filterButton, filterStatus === status && styles.filterButtonActive]}
+        active={filterStatus === status}
       >
-        {label}
-      </Text>
+        <Text
+          style={[
+            styles.filterButtonText,
+            filterStatus === status && styles.filterButtonTextActive,
+          ]}
+        >
+          {label}
+        </Text>
+      </TabGlass>
     </TouchableOpacity>
   );
 
@@ -156,16 +160,17 @@ const InvoicesScreen = () => {
   return (
     <View style={styles.container}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      <ContentGlass style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search by invoice number or client..."
+          placeholderTextColor={COLORS.textLight}
           value={searchTerm}
           onChangeText={setSearchTerm}
           autoCapitalize="none"
           autoCorrect={false}
         />
-      </View>
+      </ContentGlass>
 
       {/* Status Filters */}
       <View style={styles.filtersContainer}>
@@ -222,15 +227,13 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    marginBottom: 8,
   },
   searchInput: {
-    backgroundColor: COLORS.lightGray,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    color: COLORS.text,
   },
   filtersContainer: {
     flexDirection: 'row',
@@ -243,14 +246,10 @@ const styles = StyleSheet.create({
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.lightGray,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderRadius: 12,
   },
   filterButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    // Active state handled by TabGlass component
   },
   filterButtonText: {
     fontSize: 14,
@@ -258,21 +257,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterButtonTextActive: {
-    color: COLORS.white,
+    color: COLORS.accent,
+    fontWeight: 'bold',
   },
   listContainer: {
     padding: 16,
   },
   invoiceCard: {
-    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   invoiceHeader: {
     flexDirection: 'row',

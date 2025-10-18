@@ -12,6 +12,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import * as invoiceAPI from '../api/invoices';
 import { COLORS } from '../constants/colors';
+import { ContentGlass, NavGlass } from '../components/GlassView';
 
 const InvoiceDetailsScreen = () => {
   const route = useRoute();
@@ -212,7 +213,7 @@ const InvoiceDetailsScreen = () => {
         {/* Client Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Client Information</Text>
-          <View style={styles.infoCard}>
+          <ContentGlass style={styles.infoCard}>
             <Text style={styles.clientName}>
               {invoice.is_business
                 ? invoice.company_name
@@ -221,13 +222,13 @@ const InvoiceDetailsScreen = () => {
             {invoice.email && <Text style={styles.infoText}>📧 {invoice.email}</Text>}
             {invoice.phone && <Text style={styles.infoText}>📱 {invoice.phone}</Text>}
             {invoice.address && <Text style={styles.infoText}>📍 {invoice.address}</Text>}
-          </View>
+          </ContentGlass>
         </View>
 
         {/* Invoice Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Invoice Details</Text>
-          <View style={styles.infoCard}>
+          <ContentGlass style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Issue Date:</Text>
               <Text style={styles.infoValue}>{formatDate(invoice.created_at)}</Text>
@@ -246,7 +247,7 @@ const InvoiceDetailsScreen = () => {
                 <Text style={styles.infoValue}>{invoice.project_description}</Text>
               </View>
             )}
-          </View>
+          </ContentGlass>
         </View>
 
         {/* Line Items */}
@@ -254,7 +255,7 @@ const InvoiceDetailsScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Line Items</Text>
             {invoice.line_items.map((item, index) => (
-              <View key={index} style={styles.lineItem}>
+              <ContentGlass key={index} style={styles.lineItem}>
                 <View style={styles.lineItemHeader}>
                   <Text style={styles.lineItemName}>{item.description || item.label}</Text>
                   <Text style={styles.lineItemAmount}>{formatCurrency(item.amount)}</Text>
@@ -264,14 +265,14 @@ const InvoiceDetailsScreen = () => {
                     Qty: {item.quantity} × {formatCurrency(item.unit_price || item.amount / item.quantity)}
                   </Text>
                 )}
-              </View>
+              </ContentGlass>
             ))}
           </View>
         )}
 
         {/* Totals */}
         <View style={styles.section}>
-          <View style={styles.totalsCard}>
+          <ContentGlass style={styles.totalsCard}>
             {invoice.subtotal && (
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Subtotal:</Text>
@@ -296,7 +297,7 @@ const InvoiceDetailsScreen = () => {
               <Text style={styles.totalLabelFinal}>Total:</Text>
               <Text style={styles.totalValueFinal}>{formatCurrency(invoice.total_amount)}</Text>
             </View>
-          </View>
+          </ContentGlass>
         </View>
 
         {/* Payment History */}
@@ -304,7 +305,7 @@ const InvoiceDetailsScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment History</Text>
             {invoice.payments.map((payment, index) => (
-              <View key={index} style={styles.paymentItem}>
+              <ContentGlass key={index} style={styles.paymentItem}>
                 <View style={styles.paymentHeader}>
                   <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
                   <Text style={styles.paymentDate}>{formatDate(payment.payment_date)}</Text>
@@ -313,7 +314,7 @@ const InvoiceDetailsScreen = () => {
                   <Text style={styles.paymentMethod}>Method: {payment.payment_method}</Text>
                 )}
                 {payment.notes && <Text style={styles.paymentNotes}>{payment.notes}</Text>}
-              </View>
+              </ContentGlass>
             ))}
           </View>
         )}
@@ -322,9 +323,9 @@ const InvoiceDetailsScreen = () => {
         {invoice.notes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
-            <View style={styles.infoCard}>
+            <ContentGlass style={styles.infoCard}>
               <Text style={styles.notesText}>{invoice.notes}</Text>
-            </View>
+            </ContentGlass>
           </View>
         )}
 
@@ -332,7 +333,7 @@ const InvoiceDetailsScreen = () => {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={styles.actionBar}>
+      <NavGlass style={styles.actionBar}>
         <TouchableOpacity
           style={[styles.actionButton, styles.emailButton]}
           onPress={handleEmailInvoice}
@@ -383,7 +384,7 @@ const InvoiceDetailsScreen = () => {
         >
           <Text style={styles.actionButtonText}>⋯</Text>
         </TouchableOpacity>
-      </View>
+      </NavGlass>
     </View>
   );
 };
@@ -445,14 +446,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoCard: {
-    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   clientName: {
     fontSize: 20,
@@ -483,7 +478,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   lineItem: {
-    backgroundColor: COLORS.white,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -510,14 +504,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   totalsCard: {
-    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
   },
   totalRow: {
     flexDirection: 'row',
@@ -552,7 +540,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   paymentItem: {
-    backgroundColor: COLORS.white,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -591,9 +578,6 @@ const styles = StyleSheet.create({
   },
   actionBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 24,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../utils/AuthContext';
 import { COLORS } from '../constants/colors';
+import { ContentGlass } from '../components/GlassView';
 
 const MoreScreen = () => {
   const { user, logout } = useAuth();
@@ -63,13 +64,14 @@ const MoreScreen = () => {
             return (
               <TouchableOpacity
                 key={index}
-                style={styles.menuItem}
                 onPress={() => {
                   Alert.alert('Coming Soon', `${item.title} will be implemented soon`);
                 }}
               >
-                <Text style={styles.menuItemText}>{item.title}</Text>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <ContentGlass style={styles.menuItem}>
+                  <Text style={styles.menuItemText}>{item.title}</Text>
+                  <Text style={styles.menuItemArrow}>›</Text>
+                </ContentGlass>
               </TouchableOpacity>
             );
           })}
@@ -123,15 +125,15 @@ const styles = StyleSheet.create({
   },
   menuSection: {
     marginTop: 20,
-    backgroundColor: COLORS.white,
+    padding: 16,
+    gap: 12,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderRadius: 12,
   },
   menuItemText: {
     fontSize: 16,

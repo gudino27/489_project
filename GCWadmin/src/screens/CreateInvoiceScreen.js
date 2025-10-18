@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import * as invoiceAPI from '../api/invoices';
 import { COLORS } from '../constants/colors';
+import { ContentGlass, NavGlass } from '../components/GlassView';
 
 const CreateInvoiceScreen = () => {
   const navigation = useNavigation();
@@ -214,7 +215,7 @@ const CreateInvoiceScreen = () => {
           </View>
 
           {showClientDropdown && searchResults.length > 0 && (
-            <View style={styles.dropdown}>
+            <ContentGlass style={styles.dropdown}>
               {searchResults.map((client) => (
                 <TouchableOpacity
                   key={client.id}
@@ -231,7 +232,7 @@ const CreateInvoiceScreen = () => {
                   )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ContentGlass>
           )}
 
           <TouchableOpacity
@@ -288,7 +289,7 @@ const CreateInvoiceScreen = () => {
           <Text style={styles.sectionTitle}>Line Items</Text>
 
           {lineItems.map((item) => (
-            <View key={item.id} style={styles.lineItemCard}>
+            <ContentGlass key={item.id} style={styles.lineItemCard}>
               <View style={styles.lineItemHeader}>
                 <Text style={styles.lineItemTitle}>{item.title}</Text>
                 <TouchableOpacity onPress={() => removeLineItem(item.id)}>
@@ -306,7 +307,7 @@ const CreateInvoiceScreen = () => {
                   {formatCurrency(item.total_price)}
                 </Text>
               </View>
-            </View>
+            </ContentGlass>
           ))}
 
           {/* Add Line Item Form */}
@@ -387,7 +388,7 @@ const CreateInvoiceScreen = () => {
         </View>
 
         {/* Totals Summary */}
-        <View style={styles.totalsSection}>
+        <ContentGlass style={styles.totalsSection}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal:</Text>
             <Text style={styles.totalValue}>{formatCurrency(totals.subtotal)}</Text>
@@ -408,13 +409,13 @@ const CreateInvoiceScreen = () => {
             <Text style={styles.totalLabelFinal}>Total:</Text>
             <Text style={styles.totalValueFinal}>{formatCurrency(totals.total)}</Text>
           </View>
-        </View>
+        </ContentGlass>
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Create Button */}
-      <View style={styles.footer}>
+      <NavGlass style={styles.footer}>
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
           onPress={handleCreateInvoice}
@@ -426,7 +427,7 @@ const CreateInvoiceScreen = () => {
             <Text style={styles.createButtonText}>Create Invoice</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </NavGlass>
     </KeyboardAvoidingView>
   );
 };
@@ -479,11 +480,8 @@ const styles = StyleSheet.create({
     top: 12,
   },
   dropdown: {
-    backgroundColor: COLORS.white,
     borderRadius: 8,
     marginTop: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     maxHeight: 200,
   },
   dropdownItem: {
@@ -517,12 +515,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   lineItemCard: {
-    backgroundColor: COLORS.white,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   lineItemHeader: {
     flexDirection: 'row',
@@ -582,14 +577,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   totalsSection: {
-    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   totalRow: {
     flexDirection: 'row',
@@ -624,9 +613,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   footer: {
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     padding: 16,
     paddingBottom: 24,
   },
