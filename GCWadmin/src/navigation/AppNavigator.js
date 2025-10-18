@@ -4,7 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../utils/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
-import MainTabs from './MainTabs';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import InvoiceDetailsScreen from '../screens/InvoiceDetailsScreen';
+import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator();
@@ -24,7 +26,11 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Dashboard" component={AdminDashboardScreen} />
+            <Stack.Screen name="InvoiceDetails" component={InvoiceDetailsScreen} />
+            <Stack.Screen name="CreateInvoice" component={CreateInvoiceScreen} />
+          </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
         )}
