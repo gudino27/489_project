@@ -77,3 +77,6 @@ Podfile.lock
 .vscode/
 .idea/
 .DS_Store
+GCWadmin/.bundle/
+GCWadmin/Gemfile
+GCWadmin/android/
