@@ -11,8 +11,8 @@
 
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
-import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const GlassView = ({
   children,
@@ -25,24 +25,25 @@ const GlassView = ({
   ...props
 }) => {
   // Glass effect configurations matching web admin
+  // Expo blur uses 'intensity' (0-100) instead of blurAmount
   const glassConfig = {
     light: {
-      blurType: 'light',
-      blurAmount: 5,
+      intensity: 30, // ~5px blur
+      tint: 'light',
       overlayColor: 'rgba(255, 255, 255, 0.1)',
       borderColor: 'rgba(255, 255, 255, 0.2)',
       shadowColor: 'rgba(31, 38, 135, 0.15)',
     },
     regular: {
-      blurType: 'light',
-      blurAmount: 10,
+      intensity: 60, // ~10px blur
+      tint: 'light',
       overlayColor: 'rgba(255, 255, 255, 0.25)',
       borderColor: 'rgba(255, 255, 255, 0.18)',
       shadowColor: 'rgba(31, 38, 135, 0.37)',
     },
     strong: {
-      blurType: 'light',
-      blurAmount: 15,
+      intensity: 90, // ~15px blur
+      tint: 'light',
       overlayColor: 'rgba(255, 255, 255, 0.15)',
       borderColor: 'rgba(255, 255, 255, 0.2)',
       shadowColor: 'rgba(31, 38, 135, 0.2)',
@@ -51,20 +52,15 @@ const GlassView = ({
 
   const config = glassConfig[intensity];
 
-  // For iOS 13+, use BlurView
-  // For older versions, use semi-transparent overlay
+  // Expo BlurView works immediately without native compilation
   const renderGlass = () => {
-    // TEMPORARY: Use fallback until native module is compiled
-    // After rebuilding in Xcode, this will automatically use BlurView
-    const useBlur = false; // Set to true after Xcode rebuild
-
-    if (useBlur && Platform.OS === 'ios' && Platform.Version >= 13) {
+    // Use BlurView on iOS, fallback on other platforms
+    if (Platform.OS === 'ios') {
       return (
         <BlurView
           style={[style]}
-          blurType={config.blurType}
-          blurAmount={config.blurAmount}
-          reducedTransparencyFallbackColor={config.overlayColor}
+          intensity={config.intensity}
+          tint={config.tint}
           {...props}
         >
           <View
@@ -89,7 +85,7 @@ const GlassView = ({
       );
     }
 
-    // Fallback for older iOS or non-iOS platforms
+    // Fallback for non-iOS platforms
     return (
       <View
         style={[

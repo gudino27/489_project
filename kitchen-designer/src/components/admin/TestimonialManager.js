@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  User,
   X
 } from 'lucide-react';
 import { formatDateTimePacific } from '../../utils/dateUtils';
@@ -35,6 +34,11 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
   const [modalImage, setModalImage] = useState(null);
   const [modalImages, setModalImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [expandedToken, setExpandedToken] = useState(null);
+  const [trackingData, setTrackingData] = useState({});
+  const [loadingTracking, setLoadingTracking] = useState({});
+  const [hasTokens, setHasTokens] = useState(false);
 
   const projectTypes = [
     t('testimonialManager.kitchenRemodeling'),
@@ -50,6 +54,10 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
     loadTestimonials();
     loadGeneratedTokens();
   }, []);
+
+  useEffect(() => {
+    loadGeneratedTokens(statusFilter);
+  }, [statusFilter]);
 
   const loadTestimonials = async () => {
     try {
@@ -71,9 +79,13 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
     }
   };
 
-  const loadGeneratedTokens = async () => {
+  const loadGeneratedTokens = async (status = 'all') => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/testimonial-tokens`, {
+      const url = status && status !== 'all'
+        ? `${API_BASE}/api/admin/testimonial-tokens?status=${status}`
+        : `${API_BASE}/api/admin/testimonial-tokens`;
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -83,10 +95,71 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       if (response.ok) {
         const data = await response.json();
         setGeneratedTokens(data);
+
+        // Track if we've ever had tokens (when viewing 'all')
+        if (status === 'all' && data.length > 0) {
+          setHasTokens(true);
+        }
       }
     } catch (error) {
       console.error('Error loading tokens:', error);
     }
+  };
+
+  const loadTokenTracking = async (tokenValue, offset = 0) => {
+    setLoadingTracking(prev => ({ ...prev, [tokenValue]: true }));
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/testimonial-tokens/${tokenValue}/tracking?limit=20&offset=${offset}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrackingData(prev => ({
+          ...prev,
+          [tokenValue]: {
+            records: offset === 0 ? data.records : [...(prev[tokenValue]?.records || []), ...data.records],
+            total: data.total,
+            hasMore: data.hasMore,
+            offset: offset + 20
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading tracking data:', error);
+    } finally {
+      setLoadingTracking(prev => ({ ...prev, [tokenValue]: false }));
+    }
+  };
+
+  const toggleTokenExpand = (tokenValue) => {
+    if (expandedToken === tokenValue) {
+      setExpandedToken(null);
+    } else {
+      setExpandedToken(tokenValue);
+      if (!trackingData[tokenValue]) {
+        loadTokenTracking(tokenValue, 0);
+      }
+    }
+  };
+
+  const getCountryFlag = (countryCode) => {
+    if (!countryCode) return '';
+    return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  };
+
+  const getDeviceInfo = (userAgent) => {
+    if (!userAgent) return 'Unknown Device';
+    if (userAgent.includes('Mobile')) return 'Mobile';
+    if (userAgent.includes('Tablet')) return 'Tablet';
+    return 'Desktop';
   };
 
   const sendTestimonialLink = async (e) => {
@@ -462,47 +535,158 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
       </div>
 
       {/* Generated Tokens */}
-      {generatedTokens.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h3 className="text-lg font-semibold mb-4">{t('testimonialManager.generatedLinks')}</h3>
+      {hasTokens && (
+        <div className="bg-white rounded-lg shadow-md mb-8">
+          {/* Status Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex gap-4 px-6 pt-4">
+              {['all', 'sent', 'opened', 'submitted'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                    statusFilter === status
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {t(`testimonialManager.status${status.charAt(0).toUpperCase()}${status.slice(1)}`)}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <div className="space-y-3">
-            {generatedTokens.map((tokenData) => (
-              <div key={tokenData.token} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div>
-                  <p className="font-medium">{tokenData.client_name}</p>
-                  <p className="text-sm text-gray-600">{tokenData.client_email} • {tokenData.project_type}</p>
-                  <p className="text-xs text-gray-500">{t('testimonialManager.created')}: {formatDate(tokenData.created_at)}</p>
-                </div>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">{t('testimonialManager.generatedLinks')}</h3>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => copyTestimonialLink(tokenData.token)}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    {copiedToken === tokenData.token ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        {t('testimonialManager.copied')}
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        {t('testimonialManager.copyLink')}
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => deleteTestimonialToken(tokenData.token)}
-                    className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
-                    title={t('testimonialManager.deleteLink')}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+            {generatedTokens.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>{t('testimonialManager.noLinksFound').replace('{status}', statusFilter !== 'all' ? t(`testimonialManager.status${statusFilter.charAt(0).toUpperCase()}${statusFilter.slice(1)}`).toLowerCase() : '')}</p>
               </div>
-            ))}
+            ) : (
+              <div className="space-y-3">
+              {generatedTokens.map((tokenData) => (
+                <div key={tokenData.token} className="border border-gray-200 rounded-md overflow-hidden">
+                  <div className="flex items-center justify-between p-3 bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium">{tokenData.client_name}</p>
+                        <span
+                          className={`px-2 py-0.5 text-xs rounded-full ${
+                            tokenData.status === 'submitted'
+                              ? 'bg-green-100 text-green-700'
+                              : tokenData.status === 'opened'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {tokenData.status === 'submitted' ? `✓ ${t('testimonialManager.statusSubmitted')}` :
+                           tokenData.status === 'opened' ? `◉ ${t('testimonialManager.statusOpened')}` :
+                           `○ ${t('testimonialManager.statusSent')}`}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {tokenData.client_email} • {tokenData.project_type}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {t('testimonialManager.created')}: {formatDate(tokenData.created_at)}
+                        {tokenData.opened_count > 0 && (
+                          <span className="ml-2">
+                            • {t('testimonialManager.openedCount')
+                                .replace('{count}', tokenData.opened_count)
+                                .replace('{plural}', tokenData.opened_count !== 1 ? 's' : '')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {tokenData.opened_count > 0 && (
+                        <button
+                          onClick={() => toggleTokenExpand(tokenData.token)}
+                          className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          {expandedToken === tokenData.token
+                            ? t('testimonialManager.hideTracking')
+                            : t('testimonialManager.viewTracking')}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => copyTestimonialLink(tokenData.token)}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        {copiedToken === tokenData.token ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            {t('testimonialManager.copied')}
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            {t('testimonialManager.copyLink')}
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => deleteTestimonialToken(tokenData.token)}
+                        className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                        title={t('testimonialManager.deleteLink')}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tracking Details (Expandable) */}
+                  {expandedToken === tokenData.token && (
+                    <div className="p-4 bg-white border-t border-gray-200">
+                      <h4 className="font-semibold mb-3">{t('testimonialManager.linkOpenActivity')}</h4>
+
+                      {loadingTracking[tokenData.token] && !trackingData[tokenData.token] ? (
+                        <div className="text-center py-4">
+                          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : trackingData[tokenData.token]?.records.length === 0 ? (
+                        <p className="text-gray-500 text-sm">{t('testimonialManager.noTrackingData')}</p>
+                      ) : (
+                        <>
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {trackingData[tokenData.token]?.records.map((record, idx) => (
+                              <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-medium">
+                                    {getCountryFlag(record.country_code)} {record.city}, {record.region}, {record.country}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(record.opened_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  IP: {record.ip_address} • {t('testimonialManager.device')}: {getDeviceInfo(record.user_agent)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {trackingData[tokenData.token]?.hasMore && (
+                            <button
+                              onClick={() => loadTokenTracking(tokenData.token, trackingData[tokenData.token].offset)}
+                              disabled={loadingTracking[tokenData.token]}
+                              className="mt-3 w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50"
+                            >
+                              {loadingTracking[tokenData.token] ? t('testimonialManager.loadingTracking') : t('testimonialManager.loadMore')}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              </div>
+            )}
           </div>
         </div>
       )}

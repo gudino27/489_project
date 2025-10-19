@@ -11,9 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, IdCard, Mail, Phone } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
-import { getEmployees } from '../api/employees';
+import employeesApi from '../api/employees';
+import { useAuth } from '../contexts/AuthContext';
 
 const EmployeeManagementScreen = () => {
+  const { token } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,11 +27,14 @@ const EmployeeManagementScreen = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const data = await getEmployees();
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      const data = await employeesApi.getEmployees(token);
       setEmployees(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      Alert.alert('Error', 'Failed to load employees');
+      Alert.alert('Error', error.message || 'Failed to load employees');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -100,8 +105,16 @@ const EmployeeManagementScreen = () => {
         renderItem={renderEmployeeCard}
         keyExtractor={(item) => item.id?.toString()}
         contentContainerStyle={{ paddingVertical: 12, paddingBottom: 20 }}
+        nestedScrollEnabled
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchEmployees(); }} tintColor={COLORS.blue} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={() => { 
+              setRefreshing(true); 
+              fetchEmployees(); 
+            }} 
+            tintColor={COLORS.blue} 
+          />
         }
         ListEmptyComponent={
           <View style={{ padding: 40, alignItems: 'center' }}>

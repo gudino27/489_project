@@ -274,18 +274,18 @@ const MaterialMultipliers = ({
 
 const styles = StyleSheet.create({
   container: {
-    margin: SPACING.md,
-    padding: SPACING.lg,
+    margin: SPACING[4],
+    padding: SPACING[5],
     borderRadius: RADIUS.lg,
   },
   headerContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: SPACING[2],
+    marginBottom: SPACING[4],
   },
   headerTitle: {
     ...TYPOGRAPHY.h3,
@@ -296,10 +296,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.success,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[4],
     borderRadius: RADIUS.sm,
-    gap: SPACING.xs,
+    gap: SPACING[1],
     minHeight: 44,
   },
   addButtonText: {
@@ -309,41 +309,41 @@ const styles = StyleSheet.create({
   description: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   formContainer: {
     backgroundColor: '#ECFDF5', // green-50
     borderWidth: 1,
     borderColor: '#A7F3D0', // green-200
     borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
+    padding: SPACING[4],
+    marginBottom: SPACING[5],
   },
   formTitle: {
     ...TYPOGRAPHY.h4,
     color: '#065F46', // green-800
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   formInput: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[2],
+    marginBottom: SPACING[2],
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     minHeight: 44,
   },
   formActions: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
+    gap: SPACING[2],
+    marginTop: SPACING[2],
   },
   formButton: {
     flex: 1,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING[2],
     borderRadius: RADIUS.sm,
     alignItems: 'center',
     minHeight: 44,
@@ -370,10 +370,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.backgroundLight,
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderRadius: RADIUS.sm,
-    marginBottom: SPACING.sm,
-    gap: SPACING.sm,
+    marginBottom: SPACING[2],
+    gap: SPACING[2],
   },
   materialInfo: {
     flex: 1,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   materialNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING[2],
   },
   materialNameEn: {
     ...TYPOGRAPHY.bodyMedium,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   unsavedBadge: {
     backgroundColor: '#FEF3C7', // yellow-100
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING[2],
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
   },
@@ -405,10 +405,10 @@ const styles = StyleSheet.create({
   multiplier: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
-    marginRight: SPACING.sm,
+    marginRight: SPACING[2],
   },
   iconButton: {
-    padding: SPACING.sm,
+    padding: SPACING[2],
     minHeight: 44,
     minWidth: 44,
     alignItems: 'center',
@@ -418,16 +418,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   editInputsContainer: {
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING[2],
   },
   editInput: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[2],
+    marginBottom: SPACING[2],
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     minHeight: 44,
@@ -437,8 +437,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[2],
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     width: 100,
@@ -446,10 +446,10 @@ const styles = StyleSheet.create({
   },
   editActions: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: SPACING[2],
   },
   emptyState: {
-    padding: SPACING.xl,
+    padding: SPACING[8],
     alignItems: 'center',
   },
   emptyText: {

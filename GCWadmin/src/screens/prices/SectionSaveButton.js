@@ -39,13 +39,13 @@ const SectionSaveButton = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: SPACING.lg,
-    padding: SPACING.md,
+    marginTop: SPACING[5],
+    padding: SPACING[4],
     backgroundColor: '#EFF6FF', // blue-50
     borderWidth: 1,
     borderColor: '#BFDBFE', // blue-200
     borderRadius: RADIUS.md,
-    gap: SPACING.sm,
+    gap: SPACING[2],
   },
   warningContainer: {
     flexDirection: 'row',
@@ -60,10 +60,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[4],
     borderRadius: RADIUS.sm,
-    gap: SPACING.xs,
+    gap: SPACING[1],
     minHeight: 44,
   },
   buttonDisabled: {

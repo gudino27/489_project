@@ -113,44 +113,44 @@ const WallAvailability = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderLeftWidth: 4,
     borderLeftColor: COLORS.info,
   },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.info,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   description: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING[5],
   },
   servicesContainer: {
-    gap: SPACING.md,
+    gap: SPACING[4],
   },
   serviceCard: {
     backgroundColor: '#EFF6FF', // blue-50
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderRadius: RADIUS.md,
   },
   serviceInfo: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   serviceTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#1E3A8A', // blue-900
     fontWeight: '600',
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING[1],
   },
   serviceDescription: {
     ...TYPOGRAPHY.caption,
     color: '#1D4ED8', // blue-700
   },
   toggleButton: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[4],
     borderRadius: RADIUS.sm,
     alignItems: 'center',
     minHeight: 44,
@@ -168,8 +168,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   warningBox: {
-    marginTop: SPACING.sm,
-    padding: SPACING.sm,
+    marginTop: SPACING[2],
+    padding: SPACING[2],
     backgroundColor: '#FEE2E2', // red-100
     borderRadius: RADIUS.sm,
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   footerNote: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    marginTop: SPACING[4],
   },
 });
 

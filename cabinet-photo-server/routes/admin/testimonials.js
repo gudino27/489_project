@@ -111,14 +111,30 @@ router.get("/testimonials", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to get testimonials" });
   }
 });
-// Admin endpoint - Get testimonial tokens
+// Admin endpoint - Get testimonial tokens with status filtering
 router.get("/testimonial-tokens", authenticateUser, async (req, res) => {
   try {
-    const tokens = await testimonialDb.getTokens();
+    const { status } = req.query;
+    const tokens = await testimonialDb.getTokens(null, status);
     res.json(tokens);
   } catch (error) {
     console.error("Error getting testimonial tokens:", error);
     res.status(500).json({ error: "Failed to get testimonial tokens" });
+  }
+});
+
+// Admin endpoint - Get tracking data for a specific token
+router.get("/testimonial-tokens/:token/tracking", authenticateUser, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const trackingData = await testimonialDb.getTokenTracking(token, limit, offset);
+    res.json(trackingData);
+  } catch (error) {
+    console.error("Error getting token tracking:", error);
+    res.status(500).json({ error: "Failed to get token tracking" });
   }
 });
 // Admin endpoint - Delete testimonial token

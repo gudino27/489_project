@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import InvoicesScreen from '../screens/InvoicesScreen';
-import InvoiceDetailsScreen from '../screens/InvoiceDetailsScreen';
+import InvoiceDetailsScreen from '../screens/invoices/InvoiceDetailsScreen';
 import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
 import { COLORS } from '../constants/colors';
 
@@ -31,7 +31,7 @@ const InvoicesStack = () => {
         name="InvoiceDetails"
         component={InvoiceDetailsScreen}
         options={{
-          title: 'Invoice Details',
+          headerShown: false,
         }}
       />
       <Stack.Screen

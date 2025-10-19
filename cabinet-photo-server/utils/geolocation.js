@@ -13,8 +13,11 @@ async function getLocationFromIP(ip) {
     if (data.countryName) {
       return {
         country: data.countryName || 'Unknown',
+        country_code: data.countryCode || null,
         region: data.regionName || 'Unknown',
         city: data.cityName || 'Unknown',
+        latitude: data.latitude || null,
+        longitude: data.longitude || null,
         timezone: data.timeZones?.[0] || 'UTC'
       };
     }
@@ -24,8 +27,11 @@ async function getLocationFromIP(ip) {
   // Fallback for any errors
   return {
     country: 'Unknown',
+    country_code: null,
     region: 'Unknown',
     city: 'Unknown',
+    latitude: null,
+    longitude: null,
     timezone: 'UTC'
   };
 }

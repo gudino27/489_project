@@ -87,20 +87,20 @@ const WallPricing = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: SPACING.md,
+    padding: SPACING[4],
   },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   description: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING[5],
   },
   priceGrid: {
-    gap: SPACING.lg,
+    gap: SPACING[5],
   },
   inputRow: {
     flexDirection: 'row',
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING[2],
     minWidth: 100,
   },
   dollarSign: {
@@ -132,25 +132,25 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     flex: 1,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING[2],
     minHeight: 44,
   },
   examplesBox: {
     backgroundColor: '#EFF6FF', // blue-50
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderRadius: RADIUS.md,
-    marginTop: SPACING.lg,
+    marginTop: SPACING[5],
   },
   examplesTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#1E40AF', // blue-800
     fontWeight: '600',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING[2],
   },
   exampleItem: {
     ...TYPOGRAPHY.bodySmall,
     color: '#1D4ED8', // blue-700
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING[1],
   },
 });
 

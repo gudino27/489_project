@@ -601,6 +601,10 @@ async function addTestimonialTables(db) {
       sent_by INTEGER,
       expires_at DATETIME NOT NULL,
       used_at DATETIME,
+      opened_count INTEGER DEFAULT 0,
+      first_opened_at DATETIME,
+      last_opened_at DATETIME,
+      status TEXT DEFAULT 'sent' CHECK(status IN ('sent', 'opened', 'submitted')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (sent_by) REFERENCES users(id)
     )
@@ -644,16 +648,60 @@ async function addTestimonialTables(db) {
     )
   `);
 
+  // Testimonial link tracking table for tracking link opens
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS testimonial_link_tracking (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL,
+      opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      ip_address TEXT,
+      user_agent TEXT,
+      referer TEXT,
+      city TEXT,
+      region TEXT,
+      country TEXT,
+      country_code TEXT,
+      latitude REAL,
+      longitude REAL,
+      FOREIGN KEY (token) REFERENCES testimonial_tokens(token) ON DELETE CASCADE
+    )
+  `);
+
+  // Migration: Add new columns to existing testimonial_tokens table
+  try {
+    // Check if columns exist and add them if they don't
+    const tableInfo = await db.all('PRAGMA table_info(testimonial_tokens)');
+    const columnNames = tableInfo.map(col => col.name);
+
+    if (!columnNames.includes('opened_count')) {
+      await db.exec('ALTER TABLE testimonial_tokens ADD COLUMN opened_count INTEGER DEFAULT 0');
+    }
+    if (!columnNames.includes('first_opened_at')) {
+      await db.exec('ALTER TABLE testimonial_tokens ADD COLUMN first_opened_at DATETIME');
+    }
+    if (!columnNames.includes('last_opened_at')) {
+      await db.exec('ALTER TABLE testimonial_tokens ADD COLUMN last_opened_at DATETIME');
+    }
+    if (!columnNames.includes('status')) {
+      await db.exec("ALTER TABLE testimonial_tokens ADD COLUMN status TEXT DEFAULT 'sent' CHECK(status IN ('sent', 'opened', 'submitted'))");
+    }
+  } catch (migrationError) {
+    console.warn(' Migration warning:', migrationError.message);
+  }
+
   // Create indexes for testimonials
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_token ON testimonial_tokens(token);
     CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_expires ON testimonial_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_email ON testimonial_tokens(client_email);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_tokens_status ON testimonial_tokens(status);
     CREATE INDEX IF NOT EXISTS idx_testimonials_visible ON testimonials(is_visible);
     CREATE INDEX IF NOT EXISTS idx_testimonials_rating ON testimonials(rating);
     CREATE INDEX IF NOT EXISTS idx_testimonials_created ON testimonials(created_at);
     CREATE INDEX IF NOT EXISTS idx_testimonial_photos_testimonial ON testimonial_photos(testimonial_id);
     CREATE INDEX IF NOT EXISTS idx_testimonial_photos_order ON testimonial_photos(display_order);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_link_tracking_token ON testimonial_link_tracking(token);
+    CREATE INDEX IF NOT EXISTS idx_testimonial_link_tracking_opened ON testimonial_link_tracking(opened_at);
   `);
 
   console.log(' Created testimonial tables and indexes');

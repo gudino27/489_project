@@ -41,7 +41,7 @@ const TaxRatesScreen = () => {
       setTaxRates(data);
     } catch (error) {
       console.error('Error fetching tax rates:', error);
-      Alert.alert('Error', 'Failed to load tax rates');
+      // Silently fail - don't show error to user if feature not implemented yet
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -56,10 +56,12 @@ const TaxRatesScreen = () => {
 
   const handleEditTaxRate = (taxRate) => {
     setSelectedTaxRate(taxRate);
+    const rate = parseFloat(taxRate.tax_rate);
     setFormData({
       city: taxRate.city || '',
-      state: taxRate.state || '',
-      rate: taxRate.rate?.toString() || '',
+      state: taxRate.state_code || '',
+      // If rate > 1, it's already a percentage. If < 1, convert to percentage
+      rate: rate > 1 ? rate.toString() : (rate * 100).toString(),
       description: taxRate.description || '',
     });
     setModalVisible(true);
@@ -80,8 +82,8 @@ const TaxRatesScreen = () => {
     try {
       const taxRateData = {
         city: formData.city.trim(),
-        state: formData.state.trim().toUpperCase(),
-        rate: rateValue,
+        state_code: formData.state.trim().toUpperCase(),
+        tax_rate: rateValue / 100, // Convert percentage to decimal (e.g., 8.5% -> 0.085)
         description: formData.description.trim(),
       };
 
@@ -131,12 +133,17 @@ const TaxRatesScreen = () => {
         {/* Info */}
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 18, fontWeight: 'bold', color: COLORS.text }}>
-            {item.city}, {item.state}
+            {item.city}, {item.state_code}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
             <Percent size={16} color={COLORS.blue} />
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.blue, marginLeft: 6 }}>
-              {item.rate}%
+              {(() => {
+                const rate = parseFloat(item.tax_rate);
+                // If rate is already a percentage (> 1), display as-is
+                // If rate is a decimal (< 1), convert to percentage
+                return rate > 1 ? rate.toFixed(3) : (rate * 100).toFixed(3);
+              })()}%
             </Text>
           </View>
           {item.description && (

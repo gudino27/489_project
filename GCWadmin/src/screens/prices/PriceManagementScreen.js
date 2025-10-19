@@ -195,14 +195,12 @@ const PriceManagementScreen = () => {
     ...(user?.role === 'super_admin' ? [{ id: 'availability', label: t('priceManagement.availability') || 'Availability' }] : [])
   ];
 
-  console.log('Current activeTab:', activeTab);
-
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <DollarSign color={COLORS.primary} size={24} />
+          <DollarSign color={COLORS.primary} size={36} />
           <Text style={styles.headerTitle}>{t('priceManagement.title') || 'Price Management'}</Text>
         </View>
       </View>
@@ -217,10 +215,7 @@ const PriceManagementScreen = () => {
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
-            onPress={() => {
-              console.log('Tab pressed:', tab.id);
-              setActiveTab(tab.id);
-            }}
+            onPress={() => setActiveTab(tab.id)}
             style={[
               styles.tab,
               activeTab === tab.id && styles.tabActive
@@ -256,7 +251,6 @@ const PriceManagementScreen = () => {
       {/* Content */}
       <ScrollView style={styles.content}>
         {(() => {
-          console.log('Rendering tab content for:', activeTab);
           switch (activeTab) {
             case 'cabinets':
               return (
@@ -364,47 +358,52 @@ const styles = StyleSheet.create({
   loadingText: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    marginTop: SPACING[4],
   },
   header: {
     backgroundColor: COLORS.white,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING[5],
+    paddingVertical: SPACING[4],
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING[2],
   },
   headerTitle: {
-    ...TYPOGRAPHY.h2,
+    ...TYPOGRAPHY.h1,
     color: COLORS.text,
+    fontSize: 30,
+    fontWeight: '700',
   },
   tabScrollView: {
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    maxHeight: 60,
   },
   tabContainer: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    gap: SPACING.xs,
+    paddingHorizontal: SPACING[1],
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tab: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING[0],
+    paddingVertical: SPACING[2],
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.backgroundLight,
-    marginRight: SPACING.xs,
+    marginRight: SPACING[4],
   },
   tabActive: {
     backgroundColor: COLORS.primary,
   },
   tabText: {
-    ...TYPOGRAPHY.bodyMedium,
+    ...TYPOGRAPHY.bodyLarge,
     color: COLORS.textSecondary,
+    fontSize: 20,
   },
   tabTextActive: {
     color: COLORS.white,
@@ -413,8 +412,8 @@ const styles = StyleSheet.create({
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    gap: SPACING.sm,
+    padding: SPACING[4],
+    gap: SPACING[2],
   },
   statusBannerSuccess: {
     backgroundColor: COLORS.success,
@@ -438,8 +437,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: COLORS.white,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING[5],
+    paddingVertical: SPACING[4],
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     shadowColor: '#000',
@@ -453,9 +452,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING[4],
     borderRadius: RADIUS.md,
-    gap: SPACING.sm,
+    gap: SPACING[2],
   },
   saveButtonDisabled: {
     backgroundColor: COLORS.disabled,

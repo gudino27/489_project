@@ -167,14 +167,14 @@ const CabinetPricing = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: SPACING.md,
+    padding: SPACING[4],
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.backgroundLight,
     borderRadius: RADIUS.md,
     padding: 4,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING[5],
     gap: 4,
   },
   tab: {
@@ -182,10 +182,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[4],
     borderRadius: RADIUS.sm,
-    gap: SPACING.xs,
+    gap: SPACING[1],
   },
   tabActiveKitchen: {
     backgroundColor: COLORS.white,
@@ -221,21 +221,21 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: SPACING[2],
+    marginBottom: SPACING[4],
   },
   sectionTitle: {
     ...TYPOGRAPHY.h4,
     fontWeight: '600',
   },
   priceGrid: {
-    gap: SPACING.md,
+    gap: SPACING[4],
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING[2],
   },
   label: {
     ...TYPOGRAPHY.body,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING[2],
     minWidth: 100,
   },
   dollarSign: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     flex: 1,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING[2],
     minHeight: 44,
   },
 });

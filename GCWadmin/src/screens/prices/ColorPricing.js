@@ -103,40 +103,40 @@ const ColorPricing = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: SPACING.md,
+    padding: SPACING[4],
   },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   description: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING[4],
   },
   content: {
     maxHeight: 500,
   },
   priceGrid: {
-    gap: SPACING.md,
+    gap: SPACING[4],
   },
   colorCard: {
     backgroundColor: COLORS.backgroundLight,
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING[2],
   },
   colorLabel: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
     fontWeight: '600',
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING[1],
   },
   colorDescription: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING[2],
   },
   inputContainer: {
     flexDirection: 'row',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING[2],
     width: 100,
   },
   dollarSign: {
@@ -157,25 +157,25 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.text,
     flex: 1,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING[2],
     minHeight: 44,
   },
   examplesBox: {
     backgroundColor: '#EFF6FF', // blue-50
-    padding: SPACING.md,
+    padding: SPACING[4],
     borderRadius: RADIUS.md,
-    marginTop: SPACING.md,
+    marginTop: SPACING[4],
   },
   examplesTitle: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#1E40AF', // blue-800
     fontWeight: '600',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING[2],
   },
   exampleItem: {
     ...TYPOGRAPHY.bodySmall,
     color: '#1D4ED8', // blue-700
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING[1],
   },
 });
 

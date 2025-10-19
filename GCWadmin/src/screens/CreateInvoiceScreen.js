@@ -65,6 +65,8 @@ const CreateInvoiceScreen = () => {
       setClients(data);
     } catch (error) {
       console.error('Error loading clients:', error);
+      // Don't show error to user, just log it
+      // The user can still create invoices by typing client info manually
     }
   };
 

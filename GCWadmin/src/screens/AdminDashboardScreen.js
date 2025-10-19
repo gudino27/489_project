@@ -30,14 +30,12 @@ import DesignsScreen from './DesignsScreen';
 import TestimonialsScreen from './TestimonialsScreen';
 import MoreScreen from './MoreScreen';
 import PriceManagementScreen from './prices/PriceManagementScreen';
-import PortfolioScreen from './photos/PortfolioScreen';
-import GalleryScreen from './photos/GalleryScreen';
-import VideosScreen from './photos/VideosScreen';
+import PhotoManagementScreen from './photos/PhotoManagementScreen';
 import ClientManagementScreen from './ClientManagementScreen';
 import TaxRatesScreen from './TaxRatesScreen';
 import LineItemLabelsScreen from './LineItemLabelsScreen';
 import InvoiceTrackingScreen from './InvoiceTrackingScreen';
-import EmployeeManagementScreen from './EmployeeManagementScreen';
+import EmployeeManagementScreen from './employees/EmployeeManagementScreen';
 import UserManagementScreen from './UserManagementScreen';
 import AnalyticsScreen from './AnalyticsScreen';
 import SmsRoutingScreen from './SmsRoutingScreen';
@@ -86,18 +84,8 @@ const AdminDashboardScreen = () => {
   );
 
   // Section-specific tabs
+  // Note: 'prices' and 'photos' sections removed because they manage their own tabs internally
   const sectionTabs = {
-    prices: [
-      { key: 'cabinets', label: 'Cabinets' },
-      { key: 'materials', label: 'Materials' },
-      { key: 'colors', label: 'Colors' },
-      { key: 'walls', label: 'Walls' },
-    ],
-    photos: [
-      { key: 'portfolio', label: 'Portfolio' },
-      { key: 'gallery', label: 'Gallery' },
-      { key: 'videos', label: 'Videos' },
-    ],
     invoices: [
       { key: 'list', label: 'All Invoices' },
       { key: 'clients', label: 'Clients' },
@@ -112,26 +100,14 @@ const AdminDashboardScreen = () => {
   };
 
   const renderContent = () => {
-    console.log('=== RENDERING CONTENT ===');
-    console.log('Active Section:', activeSection);
-    console.log('Active Tab:', activeTab);
-    
     // Render screens based on section
     if (activeSection === 'prices') {
       return <PriceManagementScreen />;
     }
 
     if (activeSection === 'photos') {
-      switch (activeTab) {
-        case 'portfolio':
-          return <PortfolioScreen />;
-        case 'gallery':
-          return <GalleryScreen />;
-        case 'videos':
-          return <VideosScreen />;
-        default:
-          return <PortfolioScreen />;
-      }
+      // Photo management with upload, delete, edit, reorder capabilities
+      return <PhotoManagementScreen />;
     }
 
     if (activeSection === 'invoices') {
@@ -249,12 +225,7 @@ const AdminDashboardScreen = () => {
         </ScrollView>
       </NavGlass>
 
-      {/* Section Title */}
-      <View style={styles.sectionTitleContainer}>
-        <Text style={styles.sectionTitle}>
-          {sections.find(s => s.key === activeSection)?.label}
-        </Text>
-      </View>
+     
 
       {/* Section-Specific Horizontal Tabs */}
       {getCurrentTabs().length > 0 && (
@@ -289,9 +260,9 @@ const AdminDashboardScreen = () => {
       )}
 
       {/* Content Area */}
-      <ScrollView style={styles.content}>
+      <View style={styles.content}>
         {renderContent()}
-      </ScrollView>
+      </View>
     </View>
   );
 };

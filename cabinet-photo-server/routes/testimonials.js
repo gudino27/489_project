@@ -9,6 +9,7 @@ const { testimonialDb } = require("../db-helpers");
 const { authenticateUser } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
 const { uploadMemory } = require("../middleware/upload");
+const { getLocationFromIP } = require("../utils/geolocation");
 // Public endpoint - Get all visible testimonials
 router.get("/", async (req, res) => {
   try {
@@ -38,6 +39,86 @@ router.get("/validate-token/:token", async (req, res) => {
     res.status(500).json({ error: "Failed to validate token" });
   }
 });
+
+// Public endpoint - Track testimonial link open from frontend
+router.post("/track-open", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    // Validate token exists and is not expired
+    const tokenData = await testimonialDb.validateToken(token);
+    if (!tokenData) {
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+
+    // Extract request information
+    const ip = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0];
+    const userAgent = req.headers['user-agent'] || '';
+    const referer = req.headers['referer'] || req.headers['referrer'] || '';
+
+    // Get geolocation data
+    const location = await getLocationFromIP(ip);
+
+    // Track the link open
+    await testimonialDb.trackLinkOpen(token, {
+      ip_address: ip,
+      user_agent: userAgent,
+      referer: referer,
+      city: location.city,
+      region: location.region,
+      country: location.country,
+      country_code: location.country_code,
+      latitude: location.latitude,
+      longitude: location.longitude
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error tracking link open:", error);
+    res.status(500).json({ error: "Failed to track link open" });
+  }
+});
+
+// Public endpoint - Track testimonial link open and redirect to form
+router.get("/t/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    // Validate token exists and is not expired
+    const tokenData = await testimonialDb.validateToken(token);
+    if (!tokenData) {
+      return res.redirect('/testimonials?error=invalid_token');
+    }
+
+    // Extract request information
+    const ip = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0];
+    const userAgent = req.headers['user-agent'] || '';
+    const referer = req.headers['referer'] || req.headers['referrer'] || '';
+
+    // Get geolocation data
+    const location = await getLocationFromIP(ip);
+
+    // Track the link open
+    await testimonialDb.trackLinkOpen(token, {
+      ip_address: ip,
+      user_agent: userAgent,
+      referer: referer,
+      city: location.city,
+      region: location.region,
+      country: location.country,
+      country_code: location.country_code,
+      latitude: location.latitude,
+      longitude: location.longitude
+    });
+
+    // Redirect to testimonial form with token
+    res.redirect(`/testimonials?token=${token}`);
+  } catch (error) {
+    console.error("Error tracking link open:", error);
+    res.redirect('/testimonials');
+  }
+});
+
 // Public endpoint - Submit testimonial with photos
 router.post("/submit",uploadMemory.array("photos", 5),async (req, res) => {
     try {

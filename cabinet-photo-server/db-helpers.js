@@ -1385,15 +1385,27 @@ const testimonialDb = {
     return tokenData;
   },
 
-  async getTokens(sentBy = null) {
+  async getTokens(sentBy = null, status = null) {
     const db = await getDb();
-    let query = 'SELECT * FROM testimonial_tokens ORDER BY created_at DESC';
+    let query = 'SELECT * FROM testimonial_tokens';
     let params = [];
+    let conditions = [];
 
     if (sentBy) {
-      query = 'SELECT * FROM testimonial_tokens WHERE sent_by = ? ORDER BY created_at DESC';
-      params = [sentBy];
+      conditions.push('sent_by = ?');
+      params.push(sentBy);
     }
+
+    if (status && status !== 'all') {
+      conditions.push('status = ?');
+      params.push(status);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY created_at DESC';
 
     const tokens = await db.all(query, params);
     await db.close();
@@ -1409,10 +1421,89 @@ const testimonialDb = {
   async markTokenUsed(token) {
     const db = await getDb();
     await db.run(
-      'UPDATE testimonial_tokens SET used_at = datetime("now") WHERE token = ?',
-      [token]
+      'UPDATE testimonial_tokens SET used_at = datetime("now"), status = ? WHERE token = ?',
+      ['submitted', token]
     );
     await db.close();
+  },
+
+  async trackLinkOpen(token, trackingData) {
+    const db = await getDb();
+
+    // Insert tracking record
+    await db.run(
+      `INSERT INTO testimonial_link_tracking
+       (token, ip_address, user_agent, referer, city, region, country, country_code, latitude, longitude)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        token,
+        trackingData.ip_address,
+        trackingData.user_agent,
+        trackingData.referer,
+        trackingData.city,
+        trackingData.region,
+        trackingData.country,
+        trackingData.country_code,
+        trackingData.latitude,
+        trackingData.longitude
+      ]
+    );
+
+    // Update token with tracking info
+    const tokenInfo = await db.get(
+      'SELECT opened_count, first_opened_at FROM testimonial_tokens WHERE token = ?',
+      [token]
+    );
+
+    if (tokenInfo) {
+      const isFirstOpen = !tokenInfo.first_opened_at;
+      const newCount = (tokenInfo.opened_count || 0) + 1;
+
+      if (isFirstOpen) {
+        await db.run(
+          `UPDATE testimonial_tokens
+           SET opened_count = ?, first_opened_at = datetime("now"), last_opened_at = datetime("now"), status = ?
+           WHERE token = ?`,
+          [newCount, 'opened', token]
+        );
+      } else {
+        await db.run(
+          `UPDATE testimonial_tokens
+           SET opened_count = ?, last_opened_at = datetime("now")
+           WHERE token = ?`,
+          [newCount, token]
+        );
+      }
+    }
+
+    await db.close();
+  },
+
+  async getTokenTracking(token, limit = 20, offset = 0) {
+    const db = await getDb();
+
+    // Get tracking records with pagination
+    const trackingRecords = await db.all(
+      `SELECT * FROM testimonial_link_tracking
+       WHERE token = ?
+       ORDER BY opened_at DESC
+       LIMIT ? OFFSET ?`,
+      [token, limit, offset]
+    );
+
+    // Get total count for pagination
+    const countResult = await db.get(
+      'SELECT COUNT(*) as total FROM testimonial_link_tracking WHERE token = ?',
+      [token]
+    );
+
+    await db.close();
+
+    return {
+      records: trackingRecords,
+      total: countResult.total,
+      hasMore: (offset + limit) < countResult.total
+    };
   },
 
   async createTestimonial(testimonialData) {

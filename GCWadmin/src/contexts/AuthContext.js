@@ -26,8 +26,12 @@ export const AuthProvider = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      const savedToken = await AsyncStorage.getItem('auth_token');
-      const savedUser = await AsyncStorage.getItem('auth_user');
+      // Try multiple token keys for backwards compatibility
+      const savedToken = await AsyncStorage.getItem('auth_token') || 
+                         await AsyncStorage.getItem('authToken') ||
+                         await AsyncStorage.getItem('token');
+      const savedUser = await AsyncStorage.getItem('auth_user') ||
+                        await AsyncStorage.getItem('user');
 
       if (savedToken && savedUser) {
         // Validate session with backend
@@ -68,14 +72,18 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Save session
+        // Save session with multiple keys for backwards compatibility
         await AsyncStorage.setItem('auth_token', data.token);
+        await AsyncStorage.setItem('authToken', data.token); // Backwards compatibility
+        await AsyncStorage.setItem('token', data.token); // Additional compatibility
         await AsyncStorage.setItem('auth_user', JSON.stringify(data.user));
+        await AsyncStorage.setItem('user', JSON.stringify(data.user)); // Backwards compatibility
 
         setUser(data.user);
         setToken(data.token);
         setIsAuthenticated(true);
 
+        console.log('✅ Login successful, token saved');
         return { success: true };
       } else {
         return { success: false, error: data.error || 'Invalid credentials' };
@@ -89,12 +97,16 @@ export const AuthProvider = ({ children }) => {
         const mockToken = 'development-token';
 
         await AsyncStorage.setItem('auth_token', mockToken);
+        await AsyncStorage.setItem('authToken', mockToken);
+        await AsyncStorage.setItem('token', mockToken);
         await AsyncStorage.setItem('auth_user', JSON.stringify(mockUser));
+        await AsyncStorage.setItem('user', JSON.stringify(mockUser));
 
         setUser(mockUser);
         setToken(mockToken);
         setIsAuthenticated(true);
 
+        console.log('✅ Development login successful, token saved');
         return { success: true };
       }
 
@@ -120,8 +132,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const clearSession = async () => {
+    // Clear all token variants
     await AsyncStorage.removeItem('auth_token');
+    await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('auth_user');
+    await AsyncStorage.removeItem('user');
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);

@@ -41,6 +41,20 @@ const TestimonialForm = () => {
                         client_name: data.client_name,
                         project_type: data.project_type
                     }));
+
+                    // Track the link open
+                    try {
+                        await fetch(`${API_BASE}/api/testimonials/track-open`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ token }),
+                        });
+                    } catch (trackError) {
+                        // Silently fail tracking - don't block the form
+                        console.error('Tracking error:', trackError);
+                    }
                 }
             } else {
                 setIsValidToken(false);

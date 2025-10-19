@@ -8,7 +8,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
+import { BlurView } from 'expo-blur';
 import { COLORS } from '../constants/colors';
 
 const GlassTabBar = ({ state, descriptors, navigation }) => {
@@ -17,9 +17,8 @@ const GlassTabBar = ({ state, descriptors, navigation }) => {
   return (
     <BlurView
       style={[styles.container, { paddingBottom: insets.bottom }]}
-      blurType="light"
-      blurAmount={10}
-      reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.9)"
+      intensity={60}
+      tint="light"
     >
       {/* Glass overlay matching admin.css */}
       <View style={styles.overlay}>

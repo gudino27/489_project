@@ -1,4 +1,23 @@
 {
-  "name": "GCWadmin",
-  "displayName": "GC Admin"
+  "expo": {
+    "name": "GC Admin",
+    "slug": "gcwadmin",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.gudinocustom.admin",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.gudinocustom.admin"
+    },
+    "extra": {
+      "API_BASE": "https://api.gudinocustom.com",
+      "API_URL": "https://api.gudinocustom.com",
+      "JWT_EXPIRES_IN": "24h"
+    }
+  }
 }

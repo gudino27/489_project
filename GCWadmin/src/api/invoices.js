@@ -106,9 +106,17 @@ export const addPayment = async (id, paymentData) => {
 // Get clients
 export const getAllClients = async () => {
   try {
+    console.log('📞 Calling getAllClients...');
     const response = await apiClient.get('/api/admin/clients');
+    console.log('✅ getAllClients success:', response.data.length, 'clients');
     return response.data;
   } catch (error) {
+    console.error('❌ getAllClients error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url
+    });
     throw error.response?.data || { error: 'Failed to get clients' };
   }
 };
@@ -116,11 +124,18 @@ export const getAllClients = async () => {
 // Search clients
 export const searchClients = async (searchTerm) => {
   try {
+    console.log('📞 Calling searchClients with term:', searchTerm);
     const response = await apiClient.get('/api/admin/clients/search', {
       params: { q: searchTerm },
     });
+    console.log('✅ searchClients success:', response.data.length, 'results');
     return response.data;
   } catch (error) {
+    console.error('❌ searchClients error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
     throw error.response?.data || { error: 'Failed to search clients' };
   }
 };
@@ -128,9 +143,16 @@ export const searchClients = async (searchTerm) => {
 // Create client
 export const createClient = async (clientData) => {
   try {
+    console.log('📞 Calling createClient...');
     const response = await apiClient.post('/api/admin/clients', clientData);
+    console.log('✅ createClient success');
     return response.data;
   } catch (error) {
+    console.error('❌ createClient error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
     throw error.response?.data || { error: 'Failed to create client' };
   }
 };
@@ -138,9 +160,17 @@ export const createClient = async (clientData) => {
 // Get line item labels
 export const getLineItemLabels = async () => {
   try {
+    console.log('📞 Calling getLineItemLabels...');
     const response = await apiClient.get('/api/admin/line-item-labels');
+    console.log('✅ getLineItemLabels success:', response.data.length, 'labels');
     return response.data;
   } catch (error) {
+    console.error('❌ getLineItemLabels error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url
+    });
     throw error.response?.data || { error: 'Failed to get line item labels' };
   }
 };
@@ -148,9 +178,17 @@ export const getLineItemLabels = async () => {
 // Get tax rates
 export const getTaxRates = async () => {
   try {
+    console.log('📞 Calling getTaxRates...');
     const response = await apiClient.get('/api/admin/tax-rates');
+    console.log('✅ getTaxRates success:', response.data.length, 'rates');
     return response.data;
   } catch (error) {
+    console.error('❌ getTaxRates error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url
+    });
     throw error.response?.data || { error: 'Failed to get tax rates' };
   }
 };
