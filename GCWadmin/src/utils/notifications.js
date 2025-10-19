@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import { API_URL } from '../constants/config';
+import { API_URL, EAS_PROJECT_ID } from '../constants/config';
 
 // Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
@@ -43,8 +43,10 @@ export async function registerForPushNotificationsAsync(authToken, userId) {
   }
 
   try {
-    // Get Expo push token (project ID is automatically determined from app.json)
-    const pushTokenData = await Notifications.getExpoPushTokenAsync();
+    // Get Expo push token with explicit project ID
+    const pushTokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: EAS_PROJECT_ID
+    });
     token = pushTokenData.data;
 
     // Register token with backend
@@ -66,6 +68,10 @@ export async function registerForPushNotificationsAsync(authToken, userId) {
  */
 async function registerTokenWithBackend(pushToken, authToken, userId) {
   try {
+    console.log('Registering push token with:', `${API_URL}/api/admin/push-tokens`);
+    console.log('Auth token:', authToken ? 'Present' : 'Missing');
+    console.log('User ID:', userId);
+
     const response = await fetch(`${API_URL}/api/admin/push-tokens`, {
       method: 'POST',
       headers: {
@@ -79,13 +85,18 @@ async function registerTokenWithBackend(pushToken, authToken, userId) {
       }),
     });
 
+    console.log('Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Failed to register push token');
+      const errorData = await response.text();
+      console.error('Backend error:', errorData);
+      throw new Error(`Failed to register push token: ${response.status} - ${errorData}`);
     }
 
     console.log('Push token registered with backend');
   } catch (error) {
     console.error('Error registering token with backend:', error);
+    throw error;
   }
 }
 

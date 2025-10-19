@@ -22,7 +22,17 @@
     "extra": {
       "API_BASE": "https://api.gudinocustom.com",
       "API_URL": "https://api.gudinocustom.com",
-      "JWT_EXPIRES_IN": "24h"
+      "JWT_EXPIRES_IN": "24h",
+      "EAS_PROJECT_ID": "daeaf20a-5b3d-4456-8e9c-ce1c3bce4cbe",
+      "eas": {
+        "projectId": "daeaf20a-5b3d-4456-8e9c-ce1c3bce4cbe"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/daeaf20a-5b3d-4456-8e9c-ce1c3bce4cbe"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

@@ -11,16 +11,18 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
 import { ContentGlass } from '../components/GlassView';
 
 const LoginScreen = () => {
-  const { login } = useAuth();
+  const { login, promptEnableBiometric, enableBiometric } = useAuth();
   const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,6 +40,32 @@ const LoginScreen = () => {
       const result = await login(username, password);
       if (!result.success) {
         setError(result.error || 'Invalid credentials');
+      } else {
+        // Login successful - prompt for biometric if available
+        const biometricPrompt = await promptEnableBiometric();
+
+        if (biometricPrompt.shouldPrompt) {
+          Alert.alert(
+            `Enable ${biometricPrompt.biometricType}?`,
+            `Use ${biometricPrompt.biometricType} to quickly sign in next time without entering your password.`,
+            [
+              {
+                text: 'Not Now',
+                style: 'cancel',
+              },
+              {
+                text: 'Enable',
+                onPress: async () => {
+                  await enableBiometric();
+                  Alert.alert(
+                    'Success',
+                    `${biometricPrompt.biometricType} enabled! You can now use it to sign in.`
+                  );
+                },
+              },
+            ]
+          );
+        }
       }
       // Navigation will happen automatically via AuthContext when successful
     } catch (err) {
@@ -88,18 +116,31 @@ const LoginScreen = () => {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>{t('admin.password') || 'Password'}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('admin.enterPassword') || 'Enter password'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="password"
-              editable={!isLoading}
-              onSubmitEditing={handleLogin}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={t('admin.enterPassword') || 'Enter password'}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                editable={!isLoading}
+                onSubmitEditing={handleLogin}
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={24}
+                  color={COLORS.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -194,6 +235,24 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: COLORS.white,
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 12,
+    paddingRight: 48,
+    fontSize: 16,
+    backgroundColor: COLORS.white,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    padding: 4,
   },
   loginButton: {
     backgroundColor: COLORS.primary,

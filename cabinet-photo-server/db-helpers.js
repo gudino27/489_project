@@ -1199,6 +1199,110 @@ const userDb = {
     }
   },
 
+  // Create refresh token for mobile app
+  async createRefreshToken(userId, deviceId, deviceType, ipAddress = null, userAgent = null) {
+    const db = await getDb();
+
+    try {
+      // Generate secure refresh token
+      const refreshToken = crypto.randomBytes(64).toString('hex');
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await db.run(
+        `INSERT INTO refresh_tokens (user_id, token, device_id, device_type, expires_at, ip_address, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, refreshToken, deviceId, deviceType, expiresAt.toISOString(), ipAddress, userAgent]
+      );
+
+      await db.close();
+      return refreshToken;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Validate refresh token and return user info
+  async validateRefreshToken(refreshToken) {
+    const db = await getDb();
+
+    try {
+      const tokenData = await db.get(`
+        SELECT rt.*, u.id as user_id, u.username, u.email, u.role, u.full_name
+        FROM refresh_tokens rt
+        JOIN users u ON rt.user_id = u.id
+        WHERE rt.token = ?
+          AND rt.is_revoked = 0
+          AND rt.expires_at > datetime('now')
+          AND u.is_active = 1
+      `, [refreshToken]);
+
+      await db.close();
+      return tokenData;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Revoke refresh token (logout from specific device)
+  async revokeRefreshToken(refreshToken) {
+    const db = await getDb();
+
+    try {
+      await db.run(
+        `UPDATE refresh_tokens
+         SET is_revoked = 1, revoked_at = CURRENT_TIMESTAMP
+         WHERE token = ?`,
+        [refreshToken]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Revoke all refresh tokens for a user (logout from all devices)
+  async revokeAllRefreshTokens(userId) {
+    const db = await getDb();
+
+    try {
+      await db.run(
+        `UPDATE refresh_tokens
+         SET is_revoked = 1, revoked_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND is_revoked = 0`,
+        [userId]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Clean up expired refresh tokens (run periodically)
+  async cleanupExpiredRefreshTokens() {
+    const db = await getDb();
+
+    try {
+      const result = await db.run(
+        `DELETE FROM refresh_tokens
+         WHERE expires_at < datetime('now', '-7 days')`
+      );
+
+      await db.close();
+      return result.changes;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
 };
 
 // Analytics database operations

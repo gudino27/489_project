@@ -24,7 +24,7 @@ router.get("/me", authenticateUser, (req, res) => {
 
 // Login route with rate limiting
 router.post("/login", loginLimiter, async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, deviceId, deviceType } = req.body;
   const ipAddress = req.ip || req.connection.remoteAddress;
   const userAgent = req.headers['user-agent'];
 
@@ -43,8 +43,21 @@ router.post("/login", loginLimiter, async (req, res) => {
       });
     }
 
+    // Generate refresh token for mobile apps (if deviceId provided)
+    let refreshToken = null;
+    if (deviceId && deviceType) {
+      refreshToken = await userDb.createRefreshToken(
+        result.user.id,
+        deviceId,
+        deviceType,
+        ipAddress,
+        userAgent
+      );
+    }
+
     res.json({
       token: result.token,
+      refreshToken,
       user: result.user,
       message: `Welcome, ${result.user.full_name || result.user.username}!`
     });
@@ -57,13 +70,71 @@ router.post("/login", loginLimiter, async (req, res) => {
 router.post("/logout", authenticateUser, async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
+    const refreshToken = req.body?.refreshToken; // Optional - only sent from mobile app
+
+    // Invalidate session token
     if (token) {
       await userDb.invalidateSession(token);
     }
+
+    // Revoke refresh token if provided (mobile app only)
+    if (refreshToken) {
+      await userDb.revokeRefreshToken(refreshToken);
+    }
+
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+// Refresh access token using refresh token
+router.post("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    // Validate refresh token
+    const tokenData = await userDb.validateRefreshToken(refreshToken);
+
+    if (!tokenData) {
+      return res.status(401).json({ error: "Invalid or expired refresh token" });
+    }
+
+    // Generate new access token (session token)
+    const newToken = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    const db = require('../db-helpers').getDb();
+    const dbConn = await db;
+
+    await dbConn.run(
+      `INSERT INTO user_sessions (user_id, token, expires_at, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?)`,
+      [tokenData.user_id, newToken, expiresAt.toISOString(), ipAddress, userAgent]
+    );
+
+    await dbConn.close();
+
+    res.json({
+      token: newToken,
+      user: {
+        id: tokenData.user_id,
+        username: tokenData.username,
+        email: tokenData.email,
+        role: tokenData.role,
+        full_name: tokenData.full_name
+      }
+    });
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    res.status(500).json({ error: "Failed to refresh token" });
   }
 });
 // Password reset endpoints

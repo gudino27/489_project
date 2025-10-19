@@ -415,6 +415,24 @@ async function addUserTables(db) {
     )
   `);
 
+  // Refresh tokens table - stores long-lived refresh tokens for mobile app
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      device_id TEXT,
+      device_type TEXT,
+      expires_at DATETIME NOT NULL,
+      is_revoked BOOLEAN DEFAULT 0,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      revoked_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Activity logs table - tracks all user actions for audit trail
   await db.exec(`
     CREATE TABLE IF NOT EXISTS activity_logs (
@@ -469,6 +487,10 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id);
     CREATE INDEX IF NOT EXISTS idx_push_tokens_token ON push_tokens(token);
     CREATE INDEX IF NOT EXISTS idx_push_tokens_active ON push_tokens(is_active);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked ON refresh_tokens(is_revoked);
     CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);
