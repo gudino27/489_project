@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
 } from 'react-native';
 import {
   DollarSign,
@@ -19,6 +20,8 @@ import {
   MessageCircle,
   Shield,
   LogOut,
+  ChevronDown,
+  Globe,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -43,9 +46,10 @@ import SecurityMonitorScreen from './SecurityMonitorScreen';
 
 const AdminDashboardScreen = () => {
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
   const [activeSection, setActiveSection] = useState('prices');
   const [activeTab, setActiveTab] = useState('cabinets');
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -66,16 +70,16 @@ const AdminDashboardScreen = () => {
 
   // Icon grid sections (2 rows, 5 per row)
   const sections = [
-    { key: 'prices', label: 'Prices', icon: DollarSign },
-    { key: 'photos', label: 'Photos', icon: ImageIcon },
-    { key: 'employees', label: 'Employees', icon: IdCard },
-    { key: 'designs', label: 'Designs', icon: FileText },
-    { key: 'invoices', label: 'Invoices', icon: Receipt },
-    { key: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-    { key: 'users', label: 'Users', icon: Users, superAdminOnly: true },
-    { key: 'analytics', label: 'Analytics', icon: BarChart3, superAdminOnly: true },
-    { key: 'sms-routing', label: 'SMS Routing', icon: MessageCircle, superAdminOnly: true },
-    { key: 'security', label: 'Security', icon: Shield, superAdminOnly: true },
+    { key: 'prices', label: t('admin.tabs.prices'), icon: DollarSign },
+    { key: 'photos', label: t('admin.tabs.photos'), icon: ImageIcon },
+    { key: 'employees', label: t('admin.tabs.employees'), icon: IdCard },
+    { key: 'designs', label: t('admin.tabs.designs'), icon: FileText },
+    { key: 'invoices', label: t('admin.tabs.invoices'), icon: Receipt },
+    { key: 'testimonials', label: t('admin.tabs.testimonials'), icon: MessageSquare },
+    { key: 'users', label: t('admin.tabs.users'), icon: Users, superAdminOnly: true },
+    { key: 'analytics', label: t('admin.tabs.analytics'), icon: BarChart3, superAdminOnly: true },
+    { key: 'sms-routing', label: t('admin.tabs.sms-routing'), icon: MessageCircle, superAdminOnly: true },
+    { key: 'security', label: t('admin.tabs.security'), icon: Shield, superAdminOnly: true },
   ];
 
   // Filter sections based on user role
@@ -164,18 +168,89 @@ const AdminDashboardScreen = () => {
           <Text style={styles.headerTitle}>Admin Panel</Text>
           <View style={styles.headerRight}>
             <View style={styles.userInfo}>
-              <Text style={styles.welcomeText}>Welcome</Text>
+              <Text style={styles.welcomeText}>{t('admin.welcome')}</Text>
               <Text style={styles.username}>{user?.username || 'Admin'}</Text>
               {user?.role === 'super_admin' && (
                 <Shield size={16} color={COLORS.accent} style={styles.badgeIcon} />
               )}
             </View>
+            
+            {/* Language Dropdown Selector */}
+            <TouchableOpacity 
+              style={styles.languageSelector}
+              onPress={() => setShowLanguageMenu(!showLanguageMenu)}
+            >
+              <Globe size={12} color={COLORS.textLight} />
+              <Text style={styles.languageSelectorText}>
+                {currentLanguage.toUpperCase()}
+              </Text>
+              <ChevronDown size={12} color={COLORS.textLight} />
+            </TouchableOpacity>
+            
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-              <LogOut size={20} color={COLORS.text} />
+              <LogOut size={18} color={COLORS.text} />
             </TouchableOpacity>
           </View>
         </View>
       </NavGlass>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLanguageMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowLanguageMenu(false)}
+        >
+          <View style={styles.languageMenu}>
+            <TouchableOpacity
+              style={[
+                styles.languageMenuItem,
+                currentLanguage === 'en' && styles.languageMenuItemActive
+              ]}
+              onPress={() => {
+                changeLanguage('en');
+                setShowLanguageMenu(false);
+              }}
+            >
+              <Text style={[
+                styles.languageMenuText,
+                currentLanguage === 'en' && styles.languageMenuTextActive
+              ]}>
+                English
+              </Text>
+              {currentLanguage === 'en' && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
+            <View style={styles.languageMenuDivider} />
+            <TouchableOpacity
+              style={[
+                styles.languageMenuItem,
+                currentLanguage === 'es' && styles.languageMenuItemActive
+              ]}
+              onPress={() => {
+                changeLanguage('es');
+                setShowLanguageMenu(false);
+              }}
+            >
+              <Text style={[
+                styles.languageMenuText,
+                currentLanguage === 'es' && styles.languageMenuTextActive
+              ]}>
+                Español
+              </Text>
+              {currentLanguage === 'es' && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Horizontal Navigation Tabs - MATCHES WEB EXACTLY */}
       <NavGlass style={styles.navTabs}>
@@ -285,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY['2xl'],
+    fontSize: TYPOGRAPHY.l,
     fontWeight: TYPOGRAPHY.bold,
     color: COLORS.text,
   },
@@ -318,6 +393,74 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.glassDark,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Language Dropdown Selector
+  languageSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.glassDark,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING[2],
+    paddingVertical: SPACING[1],
+    gap: 4,
+    minWidth: 60,
+  },
+  languageSelectorText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.textLight,
+  },
+  
+  // Language Menu Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: SPACING[4],
+  },
+  languageMenu: {
+    backgroundColor: COLORS.glass,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    minWidth: 150,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  languageMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+  },
+  languageMenuItemActive: {
+    backgroundColor: COLORS.glassDark,
+  },
+  languageMenuText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.medium,
+    color: COLORS.text,
+  },
+  languageMenuTextActive: {
+    color: COLORS.accent,
+    fontWeight: TYPOGRAPHY.bold,
+  },
+  languageMenuDivider: {
+    height: 1,
+    backgroundColor: COLORS.glassBorder,
+  },
+  checkmark: {
+    fontSize: TYPOGRAPHY.lg,
+    color: COLORS.accent,
+    fontWeight: TYPOGRAPHY.bold,
   },
 
   // Horizontal Navigation Tabs - MATCHES WEB

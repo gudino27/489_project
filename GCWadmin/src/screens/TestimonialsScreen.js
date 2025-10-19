@@ -25,6 +25,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  Clock,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { testimonialsApi } from '../api/testimonials';
@@ -45,6 +47,9 @@ const TestimonialsScreen = () => {
   const [modalImage, setModalImage] = useState(null);
   const [modalImages, setModalImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [expandedToken, setExpandedToken] = useState(null);
+  const [trackingData, setTrackingData] = useState({});
+  const [loadingTracking, setLoadingTracking] = useState({});
 
   const [sendLinkForm, setSendLinkForm] = useState({
     client_name: '',
@@ -249,6 +254,61 @@ const TestimonialsScreen = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getStatusBadgeStyle = (status) => {
+    switch (status) {
+      case 'submitted':
+        return { bg: COLORS.success + '20', color: COLORS.success, text: 'Submitted' };
+      case 'opened':
+        return { bg: COLORS.warning + '20', color: COLORS.warning, text: 'Opened' };
+      case 'sent':
+      default:
+        return { bg: COLORS.gray200, color: COLORS.textSecondary, text: 'Sent' };
+    }
+  };
+
+  const getCountryFlag = (countryCode) => {
+    if (!countryCode) return '';
+    return String.fromCodePoint(...[...countryCode.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  };
+
+  const getDeviceInfo = (userAgent) => {
+    if (!userAgent) return 'Unknown';
+    if (userAgent.includes('Mobile') || userAgent.includes('iPhone') || userAgent.includes('Android')) return 'Mobile';
+    return 'Desktop';
+  };
+
+  const loadTokenTracking = async (tokenValue, offset = 0) => {
+    try {
+      setLoadingTracking({ ...loadingTracking, [tokenValue]: true });
+      const data = await testimonialsApi.getTokenTracking(token, tokenValue, 20, offset);
+
+      setTrackingData({
+        ...trackingData,
+        [tokenValue]: {
+          records: offset === 0 ? data.records : [...(trackingData[tokenValue]?.records || []), ...data.records],
+          total: data.total,
+          offset: offset + data.records.length,
+          hasMore: data.hasMore
+        }
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load tracking data');
+    } finally {
+      setLoadingTracking({ ...loadingTracking, [tokenValue]: false });
+    }
+  };
+
+  const toggleTokenExpand = async (tokenValue) => {
+    if (expandedToken === tokenValue) {
+      setExpandedToken(null);
+    } else {
+      setExpandedToken(tokenValue);
+      if (!trackingData[tokenValue]) {
+        await loadTokenTracking(tokenValue, 0);
+      }
+    }
   };
 
   const renderStars = (rating) => {
@@ -466,37 +526,117 @@ const TestimonialsScreen = () => {
         {generatedTokens.length > 0 && (
           <ContentGlass style={styles.tokensCard}>
             <Text style={styles.sectionTitle}>Generated Links</Text>
-            {generatedTokens.map((tokenData) => (
-              <View key={tokenData.token} style={styles.tokenItem}>
-                <View style={styles.tokenInfo}>
-                  <Text style={styles.tokenName}>{tokenData.client_name}</Text>
-                  <Text style={styles.tokenDetails}>
-                    {tokenData.client_email} • {tokenData.project_type}
-                  </Text>
-                  <Text style={styles.tokenDate}>Created: {formatDate(tokenData.created_at)}</Text>
-                </View>
+            {generatedTokens.map((tokenData) => {
+              const statusStyle = getStatusBadgeStyle(tokenData.status);
+              return (
+                <View key={tokenData.token}>
+                <View style={styles.tokenItem}>
+                  <View style={styles.tokenInfo}>
+                    <View style={styles.tokenNameRow}>
+                      <Text style={styles.tokenName}>{tokenData.client_name}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                        <Text style={[styles.statusBadgeText, { color: statusStyle.color }]}>
+                          {statusStyle.text}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.tokenDetails}>
+                      {tokenData.client_email} • {tokenData.project_type}
+                    </Text>
+                    <Text style={styles.tokenDate}>Created: {formatDate(tokenData.created_at)}</Text>
 
-                <View style={styles.tokenActions}>
-                  <TouchableOpacity
-                    onPress={() => copyTestimonialLink(tokenData.token)}
-                    style={styles.tokenActionButton}
-                  >
-                    {copiedToken === tokenData.token ? (
-                      <Check size={16} color={COLORS.success} />
-                    ) : (
-                      <Copy size={16} color={COLORS.primary} />
+                    {tokenData.status === 'opened' && tokenData.opened_count > 0 && (
+                      <View style={styles.tokenOpenedInfo}>
+                        <ExternalLink size={12} color={COLORS.warning} />
+                        <Text style={styles.tokenOpenedText}>
+                          Opened {tokenData.opened_count} time{tokenData.opened_count > 1 ? 's' : ''}
+                        </Text>
+                      </View>
                     )}
-                  </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => deleteTestimonialToken(tokenData.token)}
-                    style={styles.tokenActionButton}
-                  >
-                    <X size={16} color={COLORS.error} />
-                  </TouchableOpacity>
+                    {tokenData.status === 'submitted' && tokenData.first_opened_at && (
+                      <View style={styles.tokenOpenedInfo}>
+                        <Check size={12} color={COLORS.success} />
+                        <Text style={styles.tokenOpenedText}>
+                          Submitted: {formatDate(tokenData.used_at)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.tokenActions}>
+                    {tokenData.opened_count > 0 && (
+                      <TouchableOpacity
+                        onPress={() => toggleTokenExpand(tokenData.token)}
+                        style={[styles.tokenActionButton, styles.viewDetailsButton]}
+                      >
+                        <Eye size={16} color={COLORS.white} />
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() => copyTestimonialLink(tokenData.token)}
+                      style={styles.tokenActionButton}
+                    >
+                      {copiedToken === tokenData.token ? (
+                        <Check size={16} color={COLORS.success} />
+                      ) : (
+                        <Copy size={16} color={COLORS.primary} />
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => deleteTestimonialToken(tokenData.token)}
+                      style={styles.tokenActionButton}
+                    >
+                      <X size={16} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
+
+                {/* Expandable Tracking Details */}
+                {expandedToken === tokenData.token && trackingData[tokenData.token] && (
+                  <View style={styles.trackingSection}>
+                    <Text style={styles.trackingTitle}>
+                      Link Opening History ({trackingData[tokenData.token].total} total)
+                    </Text>
+
+                    <ScrollView style={styles.trackingList}>
+                      {trackingData[tokenData.token].records.map((record, idx) => (
+                        <View key={idx} style={styles.trackingRecord}>
+                          <View style={styles.trackingHeader}>
+                            <Text style={styles.trackingLocation}>
+                              {getCountryFlag(record.country_code)} {record.city}, {record.region}, {record.country}
+                            </Text>
+                            <Text style={styles.trackingTime}>
+                              {formatDate(record.opened_at)}
+                            </Text>
+                          </View>
+                          <Text style={styles.trackingDetails}>
+                            IP: {record.ip_address} • {getDeviceInfo(record.user_agent)}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+
+                    {trackingData[tokenData.token].hasMore && (
+                      <TouchableOpacity
+                        onPress={() => loadTokenTracking(tokenData.token, trackingData[tokenData.token].offset)}
+                        disabled={loadingTracking[tokenData.token]}
+                        style={styles.loadMoreButton}
+                      >
+                        {loadingTracking[tokenData.token] ? (
+                          <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                          <Text style={styles.loadMoreText}>Load More</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+                </View>
+              );
+            })}
           </ContentGlass>
         )}
 
@@ -857,10 +997,26 @@ const styles = StyleSheet.create({
   tokenInfo: {
     flex: 1,
   },
+  tokenNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
+    marginBottom: SPACING[1],
+  },
   tokenName: {
     ...TYPOGRAPHY.bodyMedium,
     color: COLORS.text,
     fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING[2],
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  statusBadgeText: {
+    ...TYPOGRAPHY.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   tokenDetails: {
     ...TYPOGRAPHY.small,
@@ -872,6 +1028,16 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING[1],
   },
+  tokenOpenedInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+    marginTop: SPACING[2],
+  },
+  tokenOpenedText: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
+  },
   tokenActions: {
     flexDirection: 'row',
     gap: SPACING[2],
@@ -882,6 +1048,63 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  viewDetailsButton: {
+    backgroundColor: COLORS.gray600,
+    borderColor: COLORS.gray600,
+  },
+  trackingSection: {
+    marginTop: SPACING[3],
+    padding: SPACING[3],
+    backgroundColor: COLORS.gray50,
+    borderRadius: RADIUS.md,
+  },
+  trackingTitle: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING[3],
+  },
+  trackingList: {
+    maxHeight: 300,
+  },
+  trackingRecord: {
+    padding: SPACING[3],
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING[2],
+  },
+  trackingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING[1],
+  },
+  trackingLocation: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  trackingTime: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
+  },
+  trackingDetails: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.textGray,
+  },
+  loadMoreButton: {
+    marginTop: SPACING[3],
+    padding: SPACING[3],
+    backgroundColor: COLORS.gray100,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.text,
+    fontWeight: '500',
   },
   bulkActions: {
     flexDirection: 'row',

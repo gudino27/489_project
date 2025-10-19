@@ -1027,6 +1027,34 @@ const translations = {
     "receipt.download": "Download Receipt",
     "receipt.send": "Send Receipt",
     "receipt.print": "Print Receipt",
+
+    // Common
+    "common.cancel": "Cancel",
+    "common.confirm": "Confirm",
+    "common.save": "Save",
+    "common.delete": "Delete",
+    "common.edit": "Edit",
+    "common.add": "Add",
+    "common.remove": "Remove",
+    "common.close": "Close",
+    "common.ok": "OK",
+    "common.yes": "Yes",
+    "common.no": "No",
+    "common.loading": "Loading...",
+    "common.error": "Error",
+    "common.success": "Success",
+    "common.coming_soon": "Coming Soon",
+
+    // More Screen
+    "more.title": "More",
+    "more.employees": "Employees",
+    "more.price_management": "Price Management",
+    "more.testimonials": "Testimonials",
+    "more.analytics": "Analytics",
+    "more.logout": "Logout",
+    "more.logout_confirm": "Are you sure you want to logout?",
+    "more.settings": "Settings",
+    "more.profile": "Profile",
   },
 
   es: {
@@ -2082,6 +2110,34 @@ const translations = {
     "receipt.download": "Descargar Recibo",
     "receipt.send": "Enviar Recibo",
     "receipt.print": "Imprimir Recibo",
+
+    // Common (Común)
+    "common.cancel": "Cancelar",
+    "common.confirm": "Confirmar",
+    "common.save": "Guardar",
+    "common.delete": "Eliminar",
+    "common.edit": "Editar",
+    "common.add": "Agregar",
+    "common.remove": "Quitar",
+    "common.close": "Cerrar",
+    "common.ok": "OK",
+    "common.yes": "Sí",
+    "common.no": "No",
+    "common.loading": "Cargando...",
+    "common.error": "Error",
+    "common.success": "Éxito",
+    "common.coming_soon": "Próximamente",
+
+    // More Screen (Pantalla de Más)
+    "more.title": "Más",
+    "more.employees": "Empleados",
+    "more.price_management": "Administración de Precios",
+    "more.testimonials": "Testimonios",
+    "more.analytics": "Analíticas",
+    "more.logout": "Cerrar Sesión",
+    "more.logout_confirm": "¿Está seguro que desea cerrar sesión?",
+    "more.settings": "Configuración",
+    "more.profile": "Perfil",
   },
 };
 

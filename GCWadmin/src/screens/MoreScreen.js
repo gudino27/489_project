@@ -14,18 +14,19 @@ import { ContentGlass } from '../components/GlassView';
 
 const MoreScreen = () => {
   const { user, logout } = useAuth();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('more.logout'),
+      t('more.logout_confirm'),
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Logout',
+          text: t('more.logout'),
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -37,10 +38,10 @@ const MoreScreen = () => {
   };
 
   const menuItems = [
-    { title: 'Employees', screen: 'Employees' },
-    { title: 'Price Management', screen: 'PriceManagement' },
-    { title: 'Testimonials', screen: 'Testimonials' },
-    { title: 'Analytics', screen: 'Analytics', adminOnly: true },
+    { title: t('more.employees'), screen: 'Employees' },
+    { title: t('more.price_management'), screen: 'PriceManagement' },
+    { title: t('more.testimonials'), screen: 'Testimonials' },
+    { title: t('more.analytics'), screen: 'Analytics', adminOnly: true },
   ];
 
   return (
@@ -56,6 +57,42 @@ const MoreScreen = () => {
           <Text style={styles.role}>{user?.role || 'Administrator'}</Text>
         </View>
 
+        {/* Language Selector */}
+        <ContentGlass style={styles.languageSection}>
+          <Text style={styles.sectionTitle}>🌐 {t('language.select')}</Text>
+          <View style={styles.languageButtons}>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                currentLanguage === 'en' && styles.languageButtonActive
+              ]}
+              onPress={() => changeLanguage('en')}
+            >
+              <Text style={[
+                styles.languageButtonText,
+                currentLanguage === 'en' && styles.languageButtonTextActive
+              ]}>
+                English
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                currentLanguage === 'es' && styles.languageButtonActive
+              ]}
+              onPress={() => changeLanguage('es')}
+            >
+              <Text style={[
+                styles.languageButtonText,
+                currentLanguage === 'es' && styles.languageButtonTextActive
+              ]}>
+                Español
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ContentGlass>
+
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => {
             if (item.adminOnly && user?.role !== 'super_admin') {
@@ -66,7 +103,7 @@ const MoreScreen = () => {
               <TouchableOpacity
                 key={index}
                 onPress={() => {
-                  Alert.alert('Coming Soon', `${item.title} will be implemented soon`);
+                  Alert.alert(t('common.coming_soon'), `${item.title}`);
                 }}
               >
                 <ContentGlass style={styles.menuItem}>
@@ -79,7 +116,7 @@ const MoreScreen = () => {
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+          <Text style={styles.logoutButtonText}>{t('more.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -123,6 +160,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
     opacity: 0.9,
+  },
+  languageSection: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  languageButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+  },
+  languageButtonActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+  },
+  languageButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  languageButtonTextActive: {
+    color: COLORS.white,
   },
   menuSection: {
     marginTop: 20,

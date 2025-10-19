@@ -464,6 +464,155 @@ async function addUserTables(db) {
     )
   `);
 
+  // Time clock entries table - tracks employee clock in/out
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS time_clock_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id INTEGER NOT NULL,
+      employee_name TEXT NOT NULL,
+      clock_in_time DATETIME NOT NULL,
+      clock_out_time DATETIME,
+      total_hours REAL,
+      regular_hours REAL,
+      overtime_hours REAL,
+      break_minutes INTEGER DEFAULT 0,
+      notes TEXT,
+      location TEXT,
+      ip_address TEXT,
+      status TEXT DEFAULT 'active',
+      entry_method TEXT DEFAULT 'automatic',
+      manually_entered_by INTEGER,
+      manual_entry_reason TEXT,
+      original_clock_in DATETIME,
+      original_clock_out DATETIME,
+      modification_count INTEGER DEFAULT 0,
+      pay_period_id INTEGER,
+      is_deleted BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      edited_at DATETIME,
+      FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (manually_entered_by) REFERENCES users(id),
+      FOREIGN KEY (pay_period_id) REFERENCES pay_periods(id)
+    )
+  `);
+
+  // Time clock breaks table - tracks breaks within shifts
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS time_clock_breaks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      time_entry_id INTEGER NOT NULL,
+      break_start DATETIME NOT NULL,
+      break_end DATETIME,
+      duration_minutes INTEGER,
+      break_type TEXT DEFAULT 'unpaid',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (time_entry_id) REFERENCES time_clock_entries(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Time entry modifications table - audit trail for edits
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS time_entry_modifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      time_entry_id INTEGER NOT NULL,
+      modified_by INTEGER NOT NULL,
+      modified_by_name TEXT NOT NULL,
+      modification_type TEXT NOT NULL,
+      old_clock_in DATETIME,
+      old_clock_out DATETIME,
+      old_total_hours REAL,
+      new_clock_in DATETIME,
+      new_clock_out DATETIME,
+      new_total_hours REAL,
+      reason TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (time_entry_id) REFERENCES time_clock_entries(id) ON DELETE CASCADE,
+      FOREIGN KEY (modified_by) REFERENCES users(id)
+    )
+  `);
+
+  // Employee payroll info table - stores pay configuration per employee
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS employee_payroll_info (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id INTEGER NOT NULL UNIQUE,
+      employment_type TEXT NOT NULL DEFAULT 'hourly',
+      pay_schedule TEXT NOT NULL DEFAULT 'biweekly',
+      hourly_rate REAL,
+      annual_salary REAL,
+      overtime_rate REAL,
+      tax_rate REAL,
+      save_tax_rate BOOLEAN DEFAULT 0,
+      hire_date DATE,
+      is_active BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Pay periods table - defines pay period boundaries
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS pay_periods (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      period_type TEXT NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      pay_date DATE,
+      status TEXT DEFAULT 'active',
+      total_employees INTEGER DEFAULT 0,
+      total_hours REAL DEFAULT 0,
+      total_gross_pay REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      closed_at DATETIME,
+      closed_by INTEGER,
+      FOREIGN KEY (closed_by) REFERENCES users(id)
+    )
+  `);
+
+  // Payroll summaries table - summary per employee per pay period
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS payroll_summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pay_period_id INTEGER NOT NULL,
+      employee_id INTEGER NOT NULL,
+      employee_name TEXT NOT NULL,
+      employment_type TEXT NOT NULL,
+      total_hours REAL DEFAULT 0,
+      regular_hours REAL DEFAULT 0,
+      overtime_hours REAL DEFAULT 0,
+      hourly_rate REAL,
+      overtime_rate REAL,
+      gross_pay REAL DEFAULT 0,
+      estimated_taxes REAL DEFAULT 0,
+      estimated_net_pay REAL DEFAULT 0,
+      is_approved BOOLEAN DEFAULT 0,
+      approved_by INTEGER,
+      approved_at DATETIME,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pay_period_id) REFERENCES pay_periods(id) ON DELETE CASCADE,
+      FOREIGN KEY (employee_id) REFERENCES users(id),
+      FOREIGN KEY (approved_by) REFERENCES users(id)
+    )
+  `);
+
+  // Admin preferences table - per-admin settings
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_preferences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL UNIQUE,
+      suppress_manual_entry_warning BOOLEAN DEFAULT 0,
+      default_export_format TEXT DEFAULT 'csv',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Site analytics table(not used yet but for future use)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS site_analytics (
@@ -498,6 +647,22 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_reset_token ON password_reset_tokens(token);
     CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_reset_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_time_entries_employee ON time_clock_entries(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in ON time_clock_entries(clock_in_time);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_status ON time_clock_entries(status);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_pay_period ON time_clock_entries(pay_period_id);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_deleted ON time_clock_entries(is_deleted);
+    CREATE INDEX IF NOT EXISTS idx_time_breaks_entry ON time_clock_breaks(time_entry_id);
+    CREATE INDEX IF NOT EXISTS idx_time_mods_entry ON time_entry_modifications(time_entry_id);
+    CREATE INDEX IF NOT EXISTS idx_time_mods_modified_by ON time_entry_modifications(modified_by);
+    CREATE INDEX IF NOT EXISTS idx_payroll_info_employee ON employee_payroll_info(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_payroll_info_active ON employee_payroll_info(is_active);
+    CREATE INDEX IF NOT EXISTS idx_pay_periods_dates ON pay_periods(start_date, end_date);
+    CREATE INDEX IF NOT EXISTS idx_pay_periods_status ON pay_periods(status);
+    CREATE INDEX IF NOT EXISTS idx_payroll_summaries_period ON payroll_summaries(pay_period_id);
+    CREATE INDEX IF NOT EXISTS idx_payroll_summaries_employee ON payroll_summaries(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_prefs_admin ON admin_preferences(admin_id);
   `);
 
   // Add admin_note column to designs table if it doesn't exist (migration)

@@ -136,7 +136,8 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // Get refresh token from secure storage (may require biometric auth)
-      const refreshToken = await getRefreshToken(biometricEnabled);
+      // Pass true to require biometric if user has enabled it
+      const refreshToken = await getRefreshToken(true);
 
       if (!refreshToken) {
         console.log('No refresh token available');

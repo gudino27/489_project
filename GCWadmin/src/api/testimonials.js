@@ -72,6 +72,32 @@ export const testimonialsApi = {
       return await response.json();
     }
     throw new Error('Failed to bulk update testimonials');
+  },
+
+  // Get tracking details for a token
+  getTokenTracking: async (token, tokenValue, limit = 20, offset = 0) => {
+    const response = await fetch(
+      `${API_BASE}/api/admin/testimonial-tokens/${tokenValue}/tracking?limit=${limit}&offset=${offset}`,
+      {
+        headers: createAuthHeadersJson(token)
+      }
+    );
+    if (response.ok) {
+      return await response.json();
+    }
+    throw new Error('Failed to fetch tracking data');
+  },
+
+  // Delete testimonial token
+  deleteToken: async (token, tokenValue) => {
+    const response = await fetch(`${API_BASE}/api/admin/testimonial-tokens/${tokenValue}`, {
+      method: 'DELETE',
+      headers: createAuthHeaders(token)
+    });
+    if (response.ok) {
+      return true;
+    }
+    throw new Error('Failed to delete token');
   }
 };
 

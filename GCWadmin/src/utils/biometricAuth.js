@@ -86,8 +86,11 @@ export async function storeRefreshToken(refreshToken) {
  */
 export async function getRefreshToken(requireBiometric = true) {
   try {
-    // Check if biometric is required and supported
-    if (requireBiometric) {
+    // Check if user has enabled biometric
+    const userEnabled = await isBiometricEnabled();
+
+    // Check if biometric is required, enabled by user, and supported by device
+    if (requireBiometric && userEnabled) {
       const biometricSupport = await checkBiometricSupport();
 
       if (biometricSupport.supported) {

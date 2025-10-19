@@ -3,7 +3,7 @@
  * Handles sending push notifications via Expo Push Notification service
  */
 
-const { userDb } = require('../db-helpers');
+const { getDb } = require('../db-helpers');
 
 // Expo Push Notification API endpoint
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -22,7 +22,7 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 async function sendPushNotification(userIds, notification) {
   try {
     // Get active push tokens for the specified users
-    const db = await userDb();
+    const db = await getDb();
     const placeholders = userIds.map(() => '?').join(',');
 
     const tokens = await db.all(
@@ -34,6 +34,7 @@ async function sendPushNotification(userIds, notification) {
 
     if (tokens.length === 0) {
       console.log('⚠️ No active push tokens found for users:', userIds);
+      await db.close();
       return { success: true, sent: 0, message: 'No active push tokens found' };
     }
 
@@ -106,6 +107,8 @@ async function sendPushNotification(userIds, notification) {
       console.error('Push notification errors:', errors);
     }
 
+    await db.close();
+
     return {
       success: true,
       sent: successes.length,
@@ -126,12 +129,13 @@ async function sendPushNotification(userIds, notification) {
  */
 async function sendToAdmins(notification) {
   try {
-    const db = await userDb();
+    const db = await getDb();
 
     // Get all admin user IDs
     const admins = await db.all(
       `SELECT id FROM users WHERE role = 'admin' AND is_active = 1`
     );
+    await db.close();
 
     if (admins.length === 0) {
       console.log('⚠️ No active admin users found');
