@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerForPushNotificationsAsync, unregisterPushToken } from '../utils/notifications';
 
 const AuthContext = createContext();
 
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [pushToken, setPushToken] = useState(null);
 
   // Initialize session on app start
   useEffect(() => {
@@ -27,11 +29,12 @@ export const AuthProvider = ({ children }) => {
   const initializeAuth = async () => {
     try {
       // Try multiple token keys for backwards compatibility
-      const savedToken = await AsyncStorage.getItem('auth_token') || 
+      const savedToken = await AsyncStorage.getItem('auth_token') ||
                          await AsyncStorage.getItem('authToken') ||
                          await AsyncStorage.getItem('token');
       const savedUser = await AsyncStorage.getItem('auth_user') ||
                         await AsyncStorage.getItem('user');
+      const savedPushToken = await AsyncStorage.getItem('push_token');
 
       if (savedToken && savedUser) {
         // Validate session with backend
@@ -46,6 +49,18 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
           setToken(savedToken);
           setIsAuthenticated(true);
+
+          // Restore push token if available
+          if (savedPushToken) {
+            setPushToken(savedPushToken);
+          } else {
+            // Re-register for push notifications if token was lost
+            const expoPushToken = await registerForPushNotificationsAsync(savedToken, data.user.id);
+            if (expoPushToken) {
+              setPushToken(expoPushToken);
+              await AsyncStorage.setItem('push_token', expoPushToken);
+            }
+          }
         } else {
           // Session invalid, clear storage
           await clearSession();
@@ -84,6 +99,14 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         console.log('✅ Login successful, token saved');
+
+        // Register for push notifications
+        const expoPushToken = await registerForPushNotificationsAsync(data.token, data.user.id);
+        if (expoPushToken) {
+          setPushToken(expoPushToken);
+          await AsyncStorage.setItem('push_token', expoPushToken);
+        }
+
         return { success: true };
       } else {
         return { success: false, error: data.error || 'Invalid credentials' };
@@ -93,7 +116,7 @@ export const AuthProvider = ({ children }) => {
 
       // Fallback for development
       if (username === 'admin' && password === 'testing') {
-        const mockUser = { username: 'admin', role: 'admin' };
+        const mockUser = { username: 'admin', role: 'admin', id: 1 };
         const mockToken = 'development-token';
 
         await AsyncStorage.setItem('auth_token', mockToken);
@@ -107,6 +130,14 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         console.log('✅ Development login successful, token saved');
+
+        // Register for push notifications in development too
+        const expoPushToken = await registerForPushNotificationsAsync(mockToken, mockUser.id);
+        if (expoPushToken) {
+          setPushToken(expoPushToken);
+          await AsyncStorage.setItem('push_token', expoPushToken);
+        }
+
         return { success: true };
       }
 
@@ -116,6 +147,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Unregister push token before logging out
+      if (pushToken && token) {
+        await unregisterPushToken(pushToken, token);
+        await AsyncStorage.removeItem('push_token');
+      }
+
       if (token) {
         await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
@@ -138,9 +175,11 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('auth_user');
     await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem('push_token');
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
+    setPushToken(null);
   };
 
   const getAuthHeaders = () => ({

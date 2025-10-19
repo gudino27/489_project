@@ -400,6 +400,21 @@ async function addUserTables(db) {
     )
   `);
 
+  // Push tokens table - stores Expo push notification tokens for users
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      device_type TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT 1,
+      last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Activity logs table - tracks all user actions for audit trail
   await db.exec(`
     CREATE TABLE IF NOT EXISTS activity_logs (
@@ -451,6 +466,9 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
     CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(token);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_push_tokens_user ON push_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_push_tokens_token ON push_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_push_tokens_active ON push_tokens(is_active);
     CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_analytics_created ON site_analytics(created_at);

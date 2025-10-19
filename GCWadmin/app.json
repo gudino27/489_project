@@ -3,10 +3,15 @@
     "name": "GC Admin",
     "slug": "gcwadmin",
     "version": "1.0.0",
+    "owner": "gudino27",
     "platforms": [
       "ios",
       "android"
     ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#3b82f6"
+    },
     "ios": {
       "bundleIdentifier": "com.gudinocustom.admin",
       "supportsTablet": true

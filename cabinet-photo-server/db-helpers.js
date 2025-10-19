@@ -2530,6 +2530,21 @@ const invoiceDb = {
 
     const db = await getDb();
     try {
+      // Get previous view stats and invoice update time before inserting new view
+      const previousStats = await db.get(`
+        SELECT
+          COUNT(*) as view_count,
+          MAX(viewed_at) as last_viewed
+        FROM invoice_views
+        WHERE invoice_id = ?
+      `, [invoiceId]);
+
+      const invoice = await db.get(`
+        SELECT updated_at
+        FROM invoices
+        WHERE id = ?
+      `, [invoiceId]);
+
       const params = [
         invoiceId,
         token,
@@ -2549,10 +2564,22 @@ const invoiceDb = {
       `, params);
 
       console.log('💾 Invoice view successfully inserted into database');
+
+      // Determine if this is first view or first view after update
+      const isFirstView = previousStats.view_count === 0;
+      const invoiceUpdatedAfterLastView = previousStats.last_viewed && invoice &&
+        new Date(invoice.updated_at) > new Date(previousStats.last_viewed);
+
+      await db.close();
+
+      return {
+        isFirstView,
+        isFirstViewAfterUpdate: !isFirstView && invoiceUpdatedAfterLastView
+      };
     } catch (error) {
       console.error('❌ Error tracking invoice view:', error);
-    } finally {
       await db.close();
+      return { isFirstView: false, isFirstViewAfterUpdate: false };
     }
   },
 

@@ -12,6 +12,7 @@ const { generateReceiptPdf } = require("../utils/receipt-generator");
 const { emailTransporter } = require("../utils/email");
 const { twilioClient } = require("../utils/sms");
 const { getLocationFromIP } = require("../utils/geolocation");
+const { notifyInvoiceOpened, notifyInvoiceChangesViewed } = require("../utils/push-notifications");
 
 // Public endpoint - Generate invoice PDF by token (for client download)
 router.get("/:token/pdf", async (req, res) => {
@@ -190,14 +191,36 @@ router.get("/:token", async (req, res) => {
     const locationData = await getLocationFromIP(clientIp);
     console.log("🌐 Location data received:", locationData);
 
-    await invoiceDb.trackInvoiceView(
+    const viewInfo = await invoiceDb.trackInvoiceView(
       invoiceId,
       token,
       clientIp,
       userAgent,
       locationData
     );
-    console.log("✅ Invoice view tracked successfully");
+    console.log("✅ Invoice view tracked successfully", viewInfo);
+
+    // Send push notification to admins for first view or first view after update
+    try {
+      const clientName = invoice.is_business
+        ? invoice.company_name
+        : `${invoice.first_name} ${invoice.last_name}`;
+
+      if (viewInfo.isFirstView) {
+        await notifyInvoiceOpened({
+          clientName,
+          invoiceNumber: invoice.invoice_number
+        });
+      } else if (viewInfo.isFirstViewAfterUpdate) {
+        await notifyInvoiceChangesViewed({
+          clientName,
+          invoiceNumber: invoice.invoice_number
+        });
+      }
+    } catch (notifError) {
+      // Don't fail the request if notification fails
+      console.error('Failed to send push notification:', notifError);
+    }
 
     // Remove admin_notes from public view (security: clients should never see admin notes)
     const { admin_notes, ...clientInvoice } = invoice;

@@ -10,6 +10,7 @@ const { authenticateUser } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
 const { uploadMemory } = require("../middleware/upload");
 const { getLocationFromIP } = require("../utils/geolocation");
+const { notifyTestimonialLinkOpened, notifyTestimonialSubmitted } = require("../utils/push-notifications");
 // Public endpoint - Get all visible testimonials
 router.get("/", async (req, res) => {
   try {
@@ -71,6 +72,16 @@ router.post("/track-open", async (req, res) => {
       latitude: location.latitude,
       longitude: location.longitude
     });
+
+    // Send push notification to admins
+    try {
+      await notifyTestimonialLinkOpened({
+        clientName: tokenData.client_name
+      });
+    } catch (notifError) {
+      // Don't fail the request if notification fails
+      console.error('Failed to send push notification:', notifError);
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -192,6 +203,19 @@ router.post("/submit",uploadMemory.array("photos", 5),async (req, res) => {
       }
       // Mark token as used
       await testimonialDb.markTokenUsed(token);
+
+      // Send push notification to admins
+      try {
+        await notifyTestimonialSubmitted({
+          clientName: client_name,
+          rating: parseInt(rating),
+          projectType: project_type
+        });
+      } catch (notifError) {
+        // Don't fail the request if notification fails
+        console.error('Failed to send push notification:', notifError);
+      }
+
       res.json({ success: true, testimonial_id: testimonial.id });
     } catch (error) {
       console.error("Error submitting testimonial:", error);
