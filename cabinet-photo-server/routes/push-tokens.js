@@ -1,7 +1,7 @@
 // Push notification token management routes
 const express = require('express');
 const router = express.Router();
-const { userDb } = require('../db-helpers');
+const { getDb } = require('../db-helpers');
 const { authenticateUser } = require('../middleware/auth');
 
 /**
@@ -21,7 +21,7 @@ router.post('/', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: 'Device type is required' });
     }
 
-    const db = await userDb();
+    const db = await getDb();
 
     // Check if token already exists for this user
     const existingToken = await db.get(
@@ -32,18 +32,19 @@ router.post('/', authenticateUser, async (req, res) => {
     if (existingToken) {
       // Update existing token
       await db.run(
-        `UPDATE push_tokens 
-         SET is_active = 1, 
+        `UPDATE push_tokens
+         SET is_active = 1,
              last_used_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP,
              device_type = ?
          WHERE id = ?`,
         [device_type, existingToken.id]
       );
+      await db.close();
 
       console.log(`✅ Push token updated for user ${userId}`);
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         message: 'Push token updated',
         token_id: existingToken.id
       });
@@ -55,10 +56,11 @@ router.post('/', authenticateUser, async (req, res) => {
        VALUES (?, ?, ?, 1)`,
       [userId, token, device_type]
     );
+    await db.close();
 
     console.log(`✅ Push token registered for user ${userId}`);
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: 'Push token registered',
       token_id: result.lastID
     });
@@ -82,25 +84,26 @@ router.delete('/:token', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: 'Push token is required' });
     }
 
-    const db = await userDb();
+    const db = await getDb();
 
     // Deactivate the token instead of deleting (for audit trail)
     const result = await db.run(
-      `UPDATE push_tokens 
-       SET is_active = 0, 
+      `UPDATE push_tokens
+       SET is_active = 0,
            updated_at = CURRENT_TIMESTAMP
        WHERE token = ? AND user_id = ?`,
       [token, userId]
     );
+    await db.close();
 
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Push token not found' });
     }
 
     console.log(`✅ Push token unregistered for user ${userId}`);
-    res.json({ 
-      success: true, 
-      message: 'Push token unregistered' 
+    res.json({
+      success: true,
+      message: 'Push token unregistered'
     });
 
   } catch (error) {
@@ -116,7 +119,7 @@ router.delete('/:token', authenticateUser, async (req, res) => {
 router.get('/', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.id;
-    const db = await userDb();
+    const db = await getDb();
 
     const tokens = await db.all(
       `SELECT id, token, device_type, last_used_at, created_at
@@ -125,10 +128,11 @@ router.get('/', authenticateUser, async (req, res) => {
        ORDER BY last_used_at DESC`,
       [userId]
     );
+    await db.close();
 
-    res.json({ 
-      success: true, 
-      tokens 
+    res.json({
+      success: true,
+      tokens
     });
 
   } catch (error) {
@@ -144,20 +148,21 @@ router.get('/', authenticateUser, async (req, res) => {
 router.delete('/', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.id;
-    const db = await userDb();
+    const db = await getDb();
 
     const result = await db.run(
-      `UPDATE push_tokens 
-       SET is_active = 0, 
+      `UPDATE push_tokens
+       SET is_active = 0,
            updated_at = CURRENT_TIMESTAMP
        WHERE user_id = ?`,
       [userId]
     );
+    await db.close();
 
     console.log(`✅ All push tokens unregistered for user ${userId}`);
-    res.json({ 
-      success: true, 
-      message: `${result.changes} push token(s) unregistered` 
+    res.json({
+      success: true,
+      message: `${result.changes} push token(s) unregistered`
     });
 
   } catch (error) {
