@@ -41,7 +41,10 @@ async function initializeDatabase() {
     console.log(' Adding SMS routing settings...');
     await addSmsRoutingTables(db);
 
-    console.log('\n Database initialization completed successfully!');
+    console.log(' Checking and fixing payroll schema...');
+    await fixPayrollSchema(db);
+
+    console.log('\n✅ Database initialization completed successfully!');
 
   } catch (error) {
     console.error(' Error during database initialization:', error);
@@ -1279,6 +1282,86 @@ async function addSmsRoutingTables(db) {
   }
 
   console.log(' Created SMS routing tables and default settings');
+}
+
+async function fixPayrollSchema(db) {
+  try {
+    console.log('   Checking employee_payroll_info schema...');
+    
+    // Get current table schema
+    const tableInfo = await db.all(`PRAGMA table_info(employee_payroll_info)`);
+    const columnNames = tableInfo.map(col => col.name);
+    
+    console.log('   Current columns:', columnNames.join(', '));
+    
+    // Check if we need to migrate from old schema to new schema
+    const needsMigration = 
+      columnNames.includes('annual_salary') || 
+      columnNames.includes('pay_schedule');
+    
+    if (needsMigration) {
+      console.log('   ⚠️  Old schema detected - performing migration...');
+      
+      // Step 1: Rename old table
+      await db.exec(`ALTER TABLE employee_payroll_info RENAME TO employee_payroll_info_old`);
+      console.log('   ✓ Renamed old table');
+      
+      // Step 2: Create new table with correct schema
+      await db.exec(`
+        CREATE TABLE employee_payroll_info (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          employee_id INTEGER NOT NULL UNIQUE,
+          employment_type TEXT NOT NULL DEFAULT 'hourly',
+          hourly_rate REAL,
+          overtime_rate REAL,
+          salary REAL,
+          pay_period_type TEXT DEFAULT 'biweekly',
+          save_tax_rate REAL DEFAULT 0,
+          is_active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+      console.log('   ✓ Created new table with correct schema');
+      
+      // Step 3: Migrate data from old table to new table
+      const oldData = await db.all(`SELECT * FROM employee_payroll_info_old`);
+      
+      for (const row of oldData) {
+        await db.run(`
+          INSERT INTO employee_payroll_info (
+            employee_id, employment_type, hourly_rate, overtime_rate, 
+            salary, pay_period_type, save_tax_rate, is_active, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          row.employee_id,
+          row.employment_type || 'hourly',
+          row.hourly_rate || null,
+          row.overtime_rate || null,
+          row.annual_salary || row.salary || null, // Map annual_salary to salary
+          row.pay_schedule || row.pay_period_type || 'biweekly', // Map pay_schedule to pay_period_type
+          row.save_tax_rate || row.tax_rate || 0,
+          row.is_active !== undefined ? row.is_active : 1,
+          row.created_at || new Date().toISOString(),
+          row.updated_at || new Date().toISOString()
+        ]);
+      }
+      
+      console.log(`   ✓ Migrated ${oldData.length} payroll records`);
+      
+      // Step 4: Drop old table
+      await db.exec(`DROP TABLE employee_payroll_info_old`);
+      console.log('   ✓ Dropped old table');
+      
+      console.log('   ✅ Payroll schema migration completed successfully!');
+    } else {
+      console.log('   ✓ Payroll schema is up to date');
+    }
+  } catch (error) {
+    console.error('   ❌ Error fixing payroll schema:', error.message);
+    // Don't throw - allow initialization to continue
+  }
 }
 
 // Only run if this file is executed directly
