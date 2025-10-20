@@ -18,6 +18,7 @@ import { COLORS } from '../constants/colors';
 import { photosApi } from '../api/photos';
 import { API_BASE } from '../api/config';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMNS = 3;
@@ -25,6 +26,7 @@ const PHOTO_MARGIN = 4;
 const PHOTO_SIZE = (SCREEN_WIDTH - (PHOTO_MARGIN * (COLUMNS + 1))) / COLUMNS;
 
 const PhotosScreen = () => {
+  const { t, currentLanguage, changeLanguage } = useLanguage();
   const { token } = useAuth();
   const [allPhotos, setAllPhotos] = useState([]);
   const [filteredPhotos, setFilteredPhotos] = useState([]);
@@ -35,14 +37,15 @@ const PhotosScreen = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [photoStats, setPhotoStats] = useState({ photos: 0, videos: 0 });
 
-  const categories = [
-    { key: 'kitchen', label: 'Kitchen', icon: '🏠' },
-    { key: 'bathroom', label: 'Bathroom', icon: '🚿' },
-    { key: 'livingroom', label: 'Living Room', icon: '🛋️' },
-    { key: 'laundryroom', label: 'Laundry', icon: '🧺' },
-    { key: 'bedroom', label: 'Bedroom', icon: '🛏️' },
-    { key: 'showcase', label: 'Showcase', icon: '⭐' },
-  ];
+  // Categories - will update when language changes
+  const categories = React.useMemo(() => [
+    { key: 'kitchen', label: t('categories.kitchen'), icon: '🏠' },
+    { key: 'bathroom', label: t('categories.bathroom'), icon: '🚿' },
+    { key: 'livingroom', label: t('categories.livingroom'), icon: '🛋️' },
+    { key: 'laundryroom', label: t('categories.laundryroom'), icon: '🧺' },
+    { key: 'bedroom', label: t('categories.bedroom'), icon: '🛏️' },
+    { key: 'showcase', label: t('categories.showcase'), icon: '⭐' },
+  ], [currentLanguage]);
 
   const loadPhotos = useCallback(async () => {
     try {

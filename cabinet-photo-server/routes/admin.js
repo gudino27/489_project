@@ -139,8 +139,8 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
     return { success: false, error: error.message };
   }
 }
-// User management endpoints (super admin only)
-router.get("/api/users",authenticateUser,requireRole("super_admin"),async (req, res) => {
+// User management endpoints (admin and super admin can view users)
+router.get("/api/users",authenticateUser,requireRole(["admin", "super_admin"]),async (req, res) => {
     try {
       const includeInactive = req.query.includeInactive === "true";
       const users = await userDb.getAllUsers();
@@ -148,7 +148,7 @@ router.get("/api/users",authenticateUser,requireRole("super_admin"),async (req, 
       const filteredUsers = includeInactive
         ? users
         : users.filter((user) => user.is_active === 1);
-      res.json(filteredUsers);
+      res.json({ success: true, users: filteredUsers });
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -164,7 +164,7 @@ router.post("/api/users",authenticateUser,requireRole("super_admin"),async (req,
           .status(400)
           .json({ error: "Username, email, and password are required" });
       }
-      if (!["admin", "super_admin"].includes(role)) {
+      if (!["admin", "super_admin", "employee"].includes(role)) {
         return res.status(400).json({ error: "Invalid role" });
       }
       const userId = await userDb.createUser({
@@ -205,10 +205,10 @@ router.put("/api/users/:id",authenticateUser,requireRole("super_admin"),async (r
       }
 
       // Validate role if provided
-      if (updates.role && !["admin", "super_admin"].includes(updates.role)) {
+      if (updates.role && !["admin", "super_admin", "employee"].includes(updates.role)) {
         return res
           .status(400)
-          .json({ error: "Invalid role. Must be admin or super_admin" });
+          .json({ error: "Invalid role. Must be admin, super_admin, or employee" });
       }
       const success = await userDb.updateUser(userId, updates);
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Send, Mail, MessageSquare, Receipt } from 'lucide-react';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 const SendReceiptModal = ({
   payment,
@@ -9,6 +10,7 @@ const SendReceiptModal = ({
   onClose,
   onSend,
 }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     send_via: 'email',
     recipients: clientEmail ? [clientEmail] : [],
@@ -72,7 +74,7 @@ const SendReceiptModal = ({
         <div className="flex items-center justify-between p-4 sm:p-6 border-b">
           <div className="flex items-center gap-3">
             <Receipt className="text-green-600" size={24} />
-            <h2 className="text-lg sm:text-xl font-semibold">Send Receipt</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">{t('receipt.send')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -89,15 +91,15 @@ const SendReceiptModal = ({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Invoice:</span>
+                <span className="text-gray-600">{t('receipt.invoice')}:</span>
                 <span className="font-medium">#{invoiceShortNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Payment Amount:</span>
+                <span className="text-gray-600">{t('receipt.paymentAmount')}:</span>
                 <span className="font-medium text-green-600">${paymentAmount}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Payment Date:</span>
+                <span className="text-gray-600">{t('receipt.paymentDate')}:</span>
                 <span className="font-medium">
                   {payment?.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
                 </span>
@@ -107,7 +109,7 @@ const SendReceiptModal = ({
 
           {/* Send Via Radio Buttons */}
           <div>
-            <label className="block text-sm font-medium mb-2">Send via</label>
+            <label className="block text-sm font-medium mb-2">{t('receipt.sendVia')}</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
@@ -120,7 +122,7 @@ const SendReceiptModal = ({
                 style={{ minHeight: '44px' }}
               >
                 <Mail size={18} />
-                <span className="font-medium">Email</span>
+                <span className="font-medium">{t('receipt.email')}</span>
               </button>
               <button
                 type="button"
@@ -133,7 +135,7 @@ const SendReceiptModal = ({
                 style={{ minHeight: '44px' }}
               >
                 <MessageSquare size={18} />
-                <span className="font-medium">SMS</span>
+                <span className="font-medium">{t('receipt.sms')}</span>
               </button>
               <button
                 type="button"
@@ -145,7 +147,7 @@ const SendReceiptModal = ({
                 }`}
                 style={{ minHeight: '44px' }}
               >
-                <span className="font-medium">Both</span>
+                <span className="font-medium">{t('receipt.both')}</span>
               </button>
             </div>
           </div>
@@ -153,7 +155,7 @@ const SendReceiptModal = ({
           {/* Recipients */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              {formData.send_via === 'sms' ? 'Phone Number(s)' : 'Recipient(s)'}
+              {formData.send_via === 'sms' ? t('receipt.phoneNumbers') : t('receipt.recipients')}
             </label>
             <div className="space-y-2">
               {formData.recipients.map((recipient, index) => (
@@ -182,8 +184,8 @@ const SendReceiptModal = ({
                   onChange={(e) => setCustomRecipient(e.target.value)}
                   placeholder={
                     formData.send_via === 'sms'
-                      ? '+1234567890'
-                      : 'additional@email.com'
+                      ? t('receipt.phonePlaceholder')
+                      : t('receipt.emailPlaceholder')
                   }
                   className="flex-1 px-3 py-2 border rounded-lg"
                   style={{ minHeight: '44px' }}
@@ -200,7 +202,7 @@ const SendReceiptModal = ({
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   style={{ minHeight: '44px' }}
                 >
-                  Add
+                  {t('receipt.addRecipient')}
                 </button>
               </div>
             </div>
@@ -208,7 +210,7 @@ const SendReceiptModal = ({
 
           {/* Language Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2">Language</label>
+            <label className="block text-sm font-medium mb-2">{t('receipt.language')}</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -220,7 +222,7 @@ const SendReceiptModal = ({
                 }`}
                 style={{ minHeight: '44px' }}
               >
-                English
+                {t('language.english')}
               </button>
               <button
                 type="button"
@@ -232,7 +234,7 @@ const SendReceiptModal = ({
                 }`}
                 style={{ minHeight: '44px' }}
               >
-                Español
+                {t('language.spanish')}
               </button>
             </div>
           </div>
@@ -246,7 +248,7 @@ const SendReceiptModal = ({
               style={{ minHeight: '44px' }}
               disabled={sending}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -255,7 +257,7 @@ const SendReceiptModal = ({
               disabled={sending || formData.recipients.length === 0}
             >
               <Send size={18} />
-              {sending ? 'Sending...' : 'Send Receipt'}
+              {sending ? t('receipt.sending') : t('receipt.send')}
             </button>
           </div>
         </form>

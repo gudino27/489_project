@@ -19,6 +19,7 @@
     "fluent-ffmpeg": "^2.1.3",
     "html-pdf-node": "^1.0.8",
     "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.6.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",
     "puppeteer": "^24.22.0",

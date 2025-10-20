@@ -12,9 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, IdCard, Mail, Phone } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 import employeesApi from '../api/employees';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const EmployeeManagementScreen = () => {
+  const { t } = useLanguage();
   const { token } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ const EmployeeManagementScreen = () => {
       setEmployees(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      Alert.alert('Error', error.message || 'Failed to load employees');
+      Alert.alert(t('common.error'), error.message || t('employeeManager.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);

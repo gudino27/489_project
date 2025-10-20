@@ -30,6 +30,7 @@ import {
   Bell,
   Trash2,
 } from 'lucide-react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import * as invoiceAPI from '../api/invoices';
 import { COLORS } from '../constants/colors';
@@ -39,6 +40,7 @@ import { ContentGlass, TabGlass } from '../components/GlassView';
 import InvoiceIcon from '../components/InvoiceIcon';
 
 const InvoicesScreen = () => {
+  const { t } = useLanguage();
   const navigation = useNavigation();
   const { token } = useAuth();
   const [invoices, setInvoices] = useState([]);
@@ -75,7 +77,7 @@ const InvoicesScreen = () => {
       
       // Don't show alert if it's an auth error (user might not be logged in yet)
       if (error.error !== 'No authentication token provided' && error.error !== 'Unauthorized') {
-        Alert.alert('Error', error.error || 'Failed to load invoices');
+        Alert.alert(t('common.error'), error.error || t('invoiceManager.loadError'));
       }
     } finally {
       setLoading(false);
@@ -269,7 +271,7 @@ const InvoicesScreen = () => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading invoices...</Text>
+        <Text style={styles.loadingText}>{t('invoiceManager.loading')}</Text>
       </View>
     );
   }
@@ -279,7 +281,7 @@ const InvoicesScreen = () => {
     return (
       <View style={styles.centerContainer}>
         <InvoiceIcon size={48} color={COLORS.textLight} style={{ opacity: 0.5, marginBottom: SPACING[3] }} />
-        <Text style={styles.loadingText}>Please log in to view invoices</Text>
+        <Text style={styles.loadingText}>{t('invoiceManager.loginRequired')}</Text>
       </View>
     );
   }
@@ -288,13 +290,13 @@ const InvoicesScreen = () => {
     <View style={styles.container}>
       {/* Header with Create Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Invoice Management</Text>
+        <Text style={styles.headerTitle}>{t('invoiceManager.invoiceManagement')}</Text>
         <TouchableOpacity
           style={styles.createHeaderButton}
           onPress={() => navigation.navigate('CreateInvoice')}
         >
           <Plus size={20} color={COLORS.white} />
-          <Text style={styles.createHeaderButtonText}>Create</Text>
+          <Text style={styles.createHeaderButtonText}>{t('invoiceManager.create')}</Text>
         </TouchableOpacity>
       </View>
 

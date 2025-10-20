@@ -28,6 +28,7 @@ const adminInvoicesRoutes = require("./routes/admin/invoices");
 const testimonialsRoutes = require("./routes/testimonials");
 const adminTestimonialsRoutes = require("./routes/admin/testimonials");
 const pushTokensRoutes = require("./routes/push-tokens");
+const timeclockRoutes = require("./routes/timeclock");
 const adminRoutes = require("./routes/admin");
 const miscRoutes = require("./routes/misc");
 
@@ -86,6 +87,7 @@ app.use("/invoice", invoicesRoutes);
 app.use("/api/admin/invoices", adminInvoicesRoutes);
 app.use("/api/testimonials", testimonialsRoutes);
 app.use("/api/admin/push-tokens", pushTokensRoutes);
+app.use("/api/timeclock", timeclockRoutes);
 app.use("/api/admin", adminTestimonialsRoutes);
 app.use("/", adminRoutes);
 app.use("/", miscRoutes);

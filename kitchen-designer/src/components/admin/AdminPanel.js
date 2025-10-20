@@ -18,7 +18,8 @@ import {
   MessageCircle,
   Receipt,
   DollarSign,
-  Languages
+  Languages,
+  Clock
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
@@ -38,6 +39,7 @@ import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
 import SecurityMonitor from './SecurityMonitor';
+import TimeClockManager from './TimeClockManager';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 import InvoiceIcon from './invoices/components/InvoiceIcon';
@@ -101,6 +103,10 @@ const AdminPanel = () => {
             setUser(data.user);
             setToken(session.token);
             setIsAuthenticated(true);
+            // Set default tab based on role
+            if (data.user.role === 'employee') {
+              setActiveTab('timeclock');
+            }
           } else {
             sessionManager.clearSession();
           }
@@ -144,6 +150,11 @@ const AdminPanel = () => {
         setUser(data.user);
         setToken(data.token);
         setIsAuthenticated(true);
+        
+        // Set default tab based on role
+        if (data.user.role === 'employee') {
+          setActiveTab('timeclock');
+        }
 
         // Clear form
         setLoginCredentials({ username: '', password: '' });
@@ -221,10 +232,19 @@ const AdminPanel = () => {
 
   // Tab access control
   const getAvailableTabs = () => {
-    const baseTabs = ['prices', 'photos', 'employees', 'designs', 'invoices', 'testimonials'];
+    // Employees only get access to time clock
+    if (user?.role === 'employee') {
+      return ['timeclock'];
+    }
+    
+    // Admin users get access to base tabs
+    const baseTabs = ['prices', 'photos', 'employees', 'timeclock', 'designs', 'invoices', 'testimonials'];
+    
+    // Super admins get access to all tabs
     if (user?.role === 'super_admin') {
       return [...baseTabs, 'users', 'analytics', 'sms-routing', 'security'];
     }
+    
     return baseTabs;
   };
   // Login screen
@@ -377,7 +397,7 @@ const AdminPanel = () => {
       <MainNavBar />
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
+        <div className="px-4 md:px-6 py-5 md:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
           <h1 className="text-xl md:text-2xl font-bold">{t('admin.title')}</h1>
           <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
             <div className="flex items-center gap-2 order-1 md:order-2">
@@ -426,6 +446,7 @@ const AdminPanel = () => {
                   {tab === 'prices' && <DollarSign size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'photos' && <Image size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'employees' && <IdCardLanyard size={16} className="md:w-[18px] md:h-[18px]" />}
+                  {tab === 'timeclock' && <Clock size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'designs' && <FileText size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'invoices' && <InvoiceIcon size={16} className="md:w-[18px] md:h-[18px]" />}
                   {tab === 'testimonials' && <MessageSquare size={16} className="md:w-[18px] md:h-[18px]" />}
@@ -465,6 +486,11 @@ const AdminPanel = () => {
          This component will handle employee data management, including adding, editing, and deleting employees
         */}
         {activeTab === 'employees' && (<EmployeeManager token={token} API_BASE={API_BASE} />)}
+        {/*
+         Time Clock Tab
+         This component will handle employee time tracking
+        */}
+        {activeTab === 'timeclock' && (<TimeClockManager token={token} API_BASE={API_BASE} user={user} />)}
         {/*
          Design Viewer Tab
         */}

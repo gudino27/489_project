@@ -29,6 +29,7 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { testimonialsApi } from '../api/testimonials';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
@@ -36,6 +37,7 @@ import { API_URL } from '../constants/config';
 
 const TestimonialsScreen = () => {
   const { token, user } = useAuth();
+  const { t } = useLanguage();
 
   const [testimonials, setTestimonials] = useState([]);
   const [generatedTokens, setGeneratedTokens] = useState([]);
@@ -358,19 +360,19 @@ const TestimonialsScreen = () => {
         <ContentGlass style={styles.formCard}>
           <View style={styles.formHeader}>
             <Send size={20} color={COLORS.primary} />
-            <Text style={styles.formHeaderText}>Send Testimonial Link</Text>
+            <Text style={styles.formHeaderText}>{t('testimonialManager.sendLink')}</Text>
           </View>
 
           <View style={styles.formRow}>
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Client Name *</Text>
+              <Text style={styles.formLabel}>{t('testimonialManager.clientName')} *</Text>
               <TextInput
                 style={styles.formInput}
                 value={sendLinkForm.client_name}
                 onChangeText={(text) =>
                   setSendLinkForm({ ...sendLinkForm, client_name: text })
                 }
-                placeholder="Enter name"
+                placeholder={t('testimonialManager.enterName')}
                 placeholderTextColor={COLORS.textSecondary}
               />
             </View>
@@ -378,7 +380,7 @@ const TestimonialsScreen = () => {
 
           <View style={styles.formRow}>
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Project Type *</Text>
+              <Text style={styles.formLabel}>{t('testimonialManager.projectType')} *</Text>
               <View style={styles.pickerContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {projectTypes.map((type) => (
@@ -421,7 +423,7 @@ const TestimonialsScreen = () => {
                   onChangeText={(text) =>
                     setSendLinkForm({ ...sendLinkForm, custom_project_type: text })
                   }
-                  placeholder="Specify project type"
+                  placeholder={t('testimonialManager.enterCustomType')}
                   placeholderTextColor={COLORS.textSecondary}
                 />
               </View>
@@ -431,7 +433,7 @@ const TestimonialsScreen = () => {
           <View style={styles.formRow}>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>
-                Email{' '}
+                {t('testimonialManager.email')}{' '}
                 {(sendLinkForm.send_via === 'email' || sendLinkForm.send_via === 'both') && '*'}
               </Text>
               <TextInput
@@ -440,7 +442,7 @@ const TestimonialsScreen = () => {
                 onChangeText={(text) =>
                   setSendLinkForm({ ...sendLinkForm, client_email: text })
                 }
-                placeholder="Enter email"
+                placeholder={t('testimonialManager.enterEmail')}
                 placeholderTextColor={COLORS.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -451,7 +453,7 @@ const TestimonialsScreen = () => {
           <View style={styles.formRow}>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>
-                Phone{' '}
+                {t('testimonialManager.phone')}{' '}
                 {(sendLinkForm.send_via === 'sms' || sendLinkForm.send_via === 'both') && '*'}
               </Text>
               <TextInput
@@ -468,12 +470,12 @@ const TestimonialsScreen = () => {
           </View>
 
           <View style={styles.formRow}>
-            <Text style={styles.formLabel}>Send Via *</Text>
+            <Text style={styles.formLabel}>{t('testimonialManager.sendVia')} *</Text>
             <View style={styles.radioGroup}>
               {[
-                { label: 'Email Only', value: 'email' },
-                { label: 'SMS Only', value: 'sms' },
-                { label: 'Both', value: 'both' },
+                { label: t('testimonialManager.emailOnly'), value: 'email' },
+                { label: t('testimonialManager.smsOnly'), value: 'sms' },
+                { label: t('testimonialManager.both'), value: 'both' },
               ].map((option) => (
                 <TouchableOpacity
                   key={option.value}
@@ -504,12 +506,12 @@ const TestimonialsScreen = () => {
             {sendingLink ? (
               <>
                 <ActivityIndicator size="small" color={COLORS.white} />
-                <Text style={styles.sendButtonText}>Sending...</Text>
+                <Text style={styles.sendButtonText}>{t('testimonialManager.sending')}</Text>
               </>
             ) : (
               <>
                 <Send size={16} color={COLORS.white} />
-                <Text style={styles.sendButtonText}>Send Link</Text>
+                <Text style={styles.sendButtonText}>{t('testimonialManager.send')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -525,7 +527,7 @@ const TestimonialsScreen = () => {
         {/* Generated Tokens */}
         {generatedTokens.length > 0 && (
           <ContentGlass style={styles.tokensCard}>
-            <Text style={styles.sectionTitle}>Generated Links</Text>
+            <Text style={styles.sectionTitle}>{t('testimonialManager.generatedLinks')}</Text>
             {generatedTokens.map((tokenData) => {
               const statusStyle = getStatusBadgeStyle(tokenData.status);
               return (
@@ -661,20 +663,20 @@ const TestimonialsScreen = () => {
           <View style={styles.testimonialsHeader}>
             <MessageSquare size={20} color={COLORS.primary} />
             <Text style={styles.testimonialsHeaderText}>
-              Received Testimonials ({testimonials.length})
+              {t('testimonialManager.received')} ({testimonials.length})
             </Text>
           </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading testimonials...</Text>
+              <Text style={styles.loadingText}>{t('testimonialManager.loading')}</Text>
             </View>
           ) : testimonials.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MessageSquare size={48} color={COLORS.gray300} />
-              <Text style={styles.emptyText}>No testimonials yet</Text>
-              <Text style={styles.emptySubtext}>Send links to clients to start collecting reviews</Text>
+              <Text style={styles.emptyText}>{t('testimonialManager.noTestimonials')}</Text>
+              <Text style={styles.emptySubtext}>{t('testimonialManager.sendLinksToStart')}</Text>
             </View>
           ) : (
             <View style={styles.testimonialsList}>

@@ -22,6 +22,7 @@ import {
   LogOut,
   ChevronDown,
   Globe,
+  Clock,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -43,8 +44,9 @@ import UserManagementScreen from './UserManagementScreen';
 import AnalyticsScreen from './AnalyticsScreen';
 import SmsRoutingScreen from './SmsRoutingScreen';
 import SecurityMonitorScreen from './SecurityMonitorScreen';
+import TimeClockScreen from './TimeClockScreen';
 
-const AdminDashboardScreen = () => {
+const AdminDashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t, currentLanguage, changeLanguage } = useLanguage();
   const [activeSection, setActiveSection] = useState('prices');
@@ -73,6 +75,7 @@ const AdminDashboardScreen = () => {
     { key: 'prices', label: t('admin.tabs.prices'), icon: DollarSign },
     { key: 'photos', label: t('admin.tabs.photos'), icon: ImageIcon },
     { key: 'employees', label: t('admin.tabs.employees'), icon: IdCard },
+    { key: 'timeclock', label: t('timeclock.title'), icon: Clock },
     { key: 'designs', label: t('admin.tabs.designs'), icon: FileText },
     { key: 'invoices', label: t('admin.tabs.invoices'), icon: Receipt },
     { key: 'testimonials', label: t('admin.tabs.testimonials'), icon: MessageSquare },
@@ -138,6 +141,8 @@ const AdminDashboardScreen = () => {
         return <TestimonialsScreen />;
       case 'employees':
         return <EmployeeManagementScreen />;
+      case 'timeclock':
+        return <TimeClockScreen navigation={navigation} />;
       case 'users':
         return user?.role === 'super_admin' ? <UserManagementScreen /> : null;
       case 'analytics':

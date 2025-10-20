@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Edit2, Trash2, Percent, X } from 'lucide-react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
 import { getTaxRates, createTaxRate, updateTaxRate, deleteTaxRate } from '../api/taxRates';
 
 const TaxRatesScreen = () => {
+  const { t } = useLanguage();
   const [taxRates, setTaxRates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,13 +71,13 @@ const TaxRatesScreen = () => {
 
   const handleSaveTaxRate = async () => {
     if (!formData.city.trim() || !formData.state.trim() || !formData.rate.trim()) {
-      Alert.alert('Error', 'City, State, and Rate are required');
+      Alert.alert(t('common.error'), t('invoiceManager.taxRateRequired'));
       return;
     }
 
     const rateValue = parseFloat(formData.rate);
     if (isNaN(rateValue) || rateValue < 0 || rateValue > 100) {
-      Alert.alert('Error', 'Please enter a valid rate between 0 and 100');
+      Alert.alert(t('common.error'), t('invoiceManager.validRateRequired'));
       return;
     }
 
@@ -89,37 +91,37 @@ const TaxRatesScreen = () => {
 
       if (selectedTaxRate) {
         await updateTaxRate(selectedTaxRate.id, taxRateData);
-        Alert.alert('Success', 'Tax rate updated successfully');
+        Alert.alert(t('common.success'), t('invoiceManager.taxRateUpdated'));
       } else {
         await createTaxRate(taxRateData);
-        Alert.alert('Success', 'Tax rate created successfully');
+        Alert.alert(t('common.success'), t('invoiceManager.taxRateCreated'));
       }
 
       setModalVisible(false);
       fetchTaxRates();
     } catch (error) {
       console.error('Error saving tax rate:', error);
-      Alert.alert('Error', 'Failed to save tax rate');
+      Alert.alert(t('common.error'), t('invoiceManager.saveTaxRateError'));
     }
   };
 
   const handleDeleteTaxRate = (taxRate) => {
     Alert.alert(
-      'Delete Tax Rate',
-      `Are you sure you want to delete the tax rate for ${taxRate.city}, ${taxRate.state}?`,
+      t('invoiceManager.deleteTaxRate'),
+      t('invoiceManager.deleteTaxRateConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteTaxRate(taxRate.id);
-              Alert.alert('Success', 'Tax rate deleted successfully');
+              Alert.alert(t('common.success'), t('invoiceManager.taxRateDeleted'));
               fetchTaxRates();
             } catch (error) {
               console.error('Error deleting tax rate:', error);
-              Alert.alert('Error', 'Failed to delete tax rate');
+              Alert.alert(t('common.error'), t('invoiceManager.deleteTaxRateError'));
             }
           },
         },

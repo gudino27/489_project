@@ -8,10 +8,12 @@ import {
   Image,
   Switch,
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
 
 const PortfolioScreen = () => {
+  const { t } = useLanguage();
   const [portfolioItems, setPortfolioItems] = useState([
     {
       id: 1,
@@ -52,9 +54,9 @@ const PortfolioScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Info Card */}
         <ContentGlass style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Portfolio Management</Text>
+          <Text style={styles.infoTitle}>{t('photoManager.portfolio')}</Text>
           <Text style={styles.infoText}>
-            Manage your portfolio showcase. Featured items appear on the homepage and get priority in search results.
+            {t('photoManager.portfolioDescription')}
           </Text>
         </ContentGlass>
 
@@ -62,19 +64,19 @@ const PortfolioScreen = () => {
         <View style={styles.statsRow}>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>{portfolioItems.length}</Text>
-            <Text style={styles.statLabel}>Total Items</Text>
+            <Text style={styles.statLabel}>{t('photoManager.totalItems')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>
               {portfolioItems.filter(i => i.featured).length}
             </Text>
-            <Text style={styles.statLabel}>Featured</Text>
+            <Text style={styles.statLabel}>{t('photoManager.featured')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>
               {portfolioItems.reduce((sum, i) => sum + i.views, 0)}
             </Text>
-            <Text style={styles.statLabel}>Total Views</Text>
+            <Text style={styles.statLabel}>{t('photoManager.totalViews')}</Text>
           </ContentGlass>
         </View>
 
@@ -93,9 +95,9 @@ const PortfolioScreen = () => {
               </View>
 
               <View style={styles.portfolioStats}>
-                <Text style={styles.viewsText}>👁 {item.views.toLocaleString()} views</Text>
+                <Text style={styles.viewsText}>👁 {item.views.toLocaleString()} {t('photoManager.views')}</Text>
                 <View style={styles.featuredToggle}>
-                  <Text style={styles.featuredLabel}>Featured</Text>
+                  <Text style={styles.featuredLabel}>{t('photoManager.featured')}</Text>
                   <Switch
                     value={item.featured}
                     onValueChange={() => toggleFeatured(item.id)}
@@ -107,10 +109,10 @@ const PortfolioScreen = () => {
 
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.editButton}>
-                  <Text style={styles.editButtonText}>Edit</Text>
+                  <Text style={styles.editButtonText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteButton}>
-                  <Text style={styles.deleteButtonText}>Delete</Text>
+                  <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -120,7 +122,7 @@ const PortfolioScreen = () => {
         {/* Add New Button */}
         <TouchableOpacity style={styles.addButton}>
           <ContentGlass style={styles.addButtonInner}>
-            <Text style={styles.addButtonText}>+ Add Portfolio Item</Text>
+            <Text style={styles.addButtonText}>+ {t('photoManager.addPortfolioItem')}</Text>
           </ContentGlass>
         </TouchableOpacity>
       </ScrollView>

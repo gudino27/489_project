@@ -59,7 +59,7 @@ const DesignsScreen = () => {
       const data = await designsApi.getDesigns(token, filterStatus);
       setDesigns(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load designs');
+      Alert.alert(t('common.error'), t('designsManager.loadError'));
     } finally {
       setLoading(false);
     }
@@ -83,15 +83,15 @@ const DesignsScreen = () => {
       loadDesigns();
       loadStats();
     } catch (error) {
-      Alert.alert('Error', 'Failed to load design details');
+      Alert.alert(t('common.error'), t('designsManager.loadDetailsError'));
     }
   };
 
   const deleteDesign = (designId) => {
-    Alert.alert('Delete Design', 'Are you sure you want to delete this design?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('designsManager.deleteDesign'), t('designsManager.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -103,7 +103,7 @@ const DesignsScreen = () => {
               setSelectedDesign(null);
             }
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete design');
+            Alert.alert(t('common.error'), t('designsManager.deleteError'));
           }
         },
       },
@@ -112,7 +112,7 @@ const DesignsScreen = () => {
 
   const downloadPDF = (designId, clientName) => {
     const pdfUrl = designsApi.getDesignPdfUrl(designId);
-    Linking.openURL(pdfUrl).catch(() => Alert.alert('Error', 'Failed to open PDF'));
+    Linking.openURL(pdfUrl).catch(() => Alert.alert(t('common.error'), t('designsManager.openPDFError')));
   };
 
   const toggleDesignSelection = (designId) => {
@@ -137,12 +137,12 @@ const DesignsScreen = () => {
     if (selectedDesigns.size === 0) return;
 
     Alert.alert(
-      'Delete Designs',
-      `Are you sure you want to delete ${selectedDesigns.size} design(s)?`,
+      t('designsManager.deleteDesign'),
+      t('designsManager.bulkDeleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setBulkActionLoading(true);
@@ -161,7 +161,7 @@ const DesignsScreen = () => {
                 setSelectedDesign(null);
               }
             } catch (error) {
-              Alert.alert('Error', 'Error deleting some designs');
+              Alert.alert(t('common.error'), t('designsManager.deleteSelectedError'));
             } finally {
               setBulkActionLoading(false);
             }

@@ -55,6 +55,32 @@ const requireRole = (allowedRoles) => {
   };
 };
 
+// Super admin specific middleware
+const isSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: "Super admin access required" });
+  }
+
+  next();
+};
+
+// Admin or Super Admin middleware (for payroll management)
+const isAdminOrSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+
+  next();
+};
+
 
 
 
@@ -62,6 +88,8 @@ const requireRole = (allowedRoles) => {
 module.exports = {
   authenticateUser,
   requireRole,
+  isSuperAdmin,
+  isAdminOrSuperAdmin,
   JWT_SECRET // Export this so other files can use it
 };
 

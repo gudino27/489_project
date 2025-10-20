@@ -26,12 +26,14 @@ import {
   Camera,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { employeesApi } from '../../api/employees';
 import { API_BASE } from '../../api/config';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../constants';
 
 const EmployeeManagementScreen = () => {
+  const { t } = useLanguage();
   const { token } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ const EmployeeManagementScreen = () => {
       setEmployees(data);
     } catch (error) {
       console.error('Failed to load employees:', error);
-      Alert.alert('Error', 'Failed to load employees');
+      Alert.alert(t('common.error'), t('employeeManager.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,8 +84,8 @@ const EmployeeManagementScreen = () => {
       const { status } = await permissionMethod();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          `Please allow access to your ${useCamera ? 'camera' : 'photo library'}`,
+          t('common.error'),
+          useCamera ? t('employeeManager.cameraPermission') : t('employeeManager.galleryPermission')
         );
         return;
       }
@@ -112,25 +114,25 @@ const EmployeeManagementScreen = () => {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('employeeManager.pickImageError'));
     }
   };
 
   const showImageSourcePicker = (employeeId = null) => {
     Alert.alert(
-      'Upload Photo',
-      'Choose source',
+      t('employeeManager.photo'),
+      t('employeeManager.chooseSource'),
       [
         {
-          text: 'Camera',
+          text: t('employeeManager.camera'),
           onPress: () => handleImagePick(employeeId, true),
         },
         {
-          text: 'Gallery',
+          text: t('employeeManager.gallery'),
           onPress: () => handleImagePick(employeeId, false),
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ],
@@ -139,7 +141,7 @@ const EmployeeManagementScreen = () => {
 
   const handleAddEmployee = async () => {
     if (!newEmployee.name || !newEmployee.position) {
-      Alert.alert('Error', 'Name and position are required');
+      Alert.alert(t('common.error'), t('employeeManager.nameRequired'));
       return;
     }
 
@@ -174,10 +176,10 @@ const EmployeeManagementScreen = () => {
         photo: null,
       });
       setIsAddingNew(false);
-      Alert.alert('Success', 'Employee added successfully!');
+      Alert.alert(t('common.success'), t('employeeManager.added'));
     } catch (error) {
       console.error('Error adding employee:', error);
-      Alert.alert('Error', 'Failed to add employee');
+      Alert.alert(t('common.error'), t('employeeManager.addError'));
     } finally {
       setUploading(false);
     }
@@ -210,10 +212,10 @@ const EmployeeManagementScreen = () => {
         emp.id === id ? result.employee : emp
       ));
       setEditingId(null);
-      Alert.alert('Success', 'Employee updated successfully!');
+      Alert.alert(t('common.success'), t('employeeManager.updated'));
     } catch (error) {
       console.error('Error updating employee:', error);
-      Alert.alert('Error', 'Failed to update employee');
+      Alert.alert(t('common.error'), t('employeeManager.updateError'));
     } finally {
       setUploading(false);
     }
@@ -221,21 +223,21 @@ const EmployeeManagementScreen = () => {
 
   const handleDeleteEmployee = (id) => {
     Alert.alert(
-      'Delete Employee',
-      'Are you sure you want to delete this employee?',
+      t('employeeManager.deleteEmployee'),
+      t('employeeManager.deleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await employeesApi.deleteEmployee(token, id);
               setEmployees(employees.filter(emp => emp.id !== id));
-              Alert.alert('Success', 'Employee deleted successfully!');
+              Alert.alert(t('common.success'), t('employeeManager.deleted'));
             } catch (error) {
               console.error('Error deleting employee:', error);
-              Alert.alert('Error', 'Failed to delete employee');
+              Alert.alert(t('common.error'), t('employeeManager.deleteError'));
             }
           },
         },
@@ -250,10 +252,10 @@ const EmployeeManagementScreen = () => {
       await employeesApi.reorderEmployees(token, employeeIds);
       setHasOrderChanges(false);
       setIsReordering(false);
-      Alert.alert('Success', 'Employee order saved!');
+      Alert.alert(t('common.success'), t('employeeManager.orderSaved'));
     } catch (error) {
       console.error('Save order error:', error);
-      Alert.alert('Error', 'Failed to save order');
+      Alert.alert(t('common.error'), t('employeeManager.saveOrderError'));
     }
   };
 
@@ -305,7 +307,7 @@ const EmployeeManagementScreen = () => {
             <View style={styles.formFields}>
               <View style={styles.row}>
                 <View style={styles.field}>
-                  <Text style={styles.label}>Name *</Text>
+                  <Text style={styles.label}>{t('employeeManager.name')} *</Text>
                   <TextInput
                     style={styles.input}
                     value={item.name}
@@ -314,11 +316,11 @@ const EmployeeManagementScreen = () => {
                         emp.id === item.id ? { ...emp, name: text } : emp
                       ))
                     }
-                    placeholder="John Doe"
+                    placeholder={t('employeeManager.namePlaceholder')}
                   />
                 </View>
                 <View style={styles.field}>
-                  <Text style={styles.label}>Position *</Text>
+                  <Text style={styles.label}>{t('employeeManager.position')} *</Text>
                   <TextInput
                     style={styles.input}
                     value={item.position}
@@ -327,14 +329,14 @@ const EmployeeManagementScreen = () => {
                         emp.id === item.id ? { ...emp, position: text } : emp
                       ))
                     }
-                    placeholder="Senior Designer"
+                    placeholder={t('employeeManager.positionPlaceholder')}
                   />
                 </View>
               </View>
 
               <View style={styles.row}>
                 <View style={styles.field}>
-                  <Text style={styles.label}>Email</Text>
+                  <Text style={styles.label}>{t('employeeManager.email')}</Text>
                   <TextInput
                     style={styles.input}
                     value={item.email || ''}
@@ -343,13 +345,13 @@ const EmployeeManagementScreen = () => {
                         emp.id === item.id ? { ...emp, email: text } : emp
                       ))
                     }
-                    placeholder="john@company.com"
+                    placeholder={t('employeeManager.emailPlaceholder')}
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
                 </View>
                 <View style={styles.field}>
-                  <Text style={styles.label}>Phone</Text>
+                  <Text style={styles.label}>{t('employeeManager.phone')}</Text>
                   <TextInput
                     style={styles.input}
                     value={item.phone || ''}
@@ -358,14 +360,14 @@ const EmployeeManagementScreen = () => {
                         emp.id === item.id ? { ...emp, phone: text } : emp
                       ))
                     }
-                    placeholder="(555) 123-4567"
+                    placeholder={t('employeeManager.phonePlaceholder')}
                     keyboardType="phone-pad"
                   />
                 </View>
               </View>
 
               <View style={styles.fullField}>
-                <Text style={styles.label}>Bio</Text>
+                <Text style={styles.label}>{t('employeeManager.bio')}</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={item.bio || ''}
@@ -374,7 +376,7 @@ const EmployeeManagementScreen = () => {
                       emp.id === item.id ? { ...emp, bio: text } : emp
                     ))
                   }
-                  placeholder="Brief description about the employee..."
+                  placeholder={t('employeeManager.bioPlaceholder')}
                   multiline
                   numberOfLines={3}
                 />
@@ -389,7 +391,7 @@ const EmployeeManagementScreen = () => {
                 >
                   <Save size={16} color={COLORS.white} />
                   <Text style={styles.saveButtonText}>
-                    {uploading ? 'Saving...' : 'Save'}
+                    {uploading ? t('employeeManager.adding') : t('employeeManager.save')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -400,7 +402,7 @@ const EmployeeManagementScreen = () => {
                   }}
                 >
                   <X size={16} color={COLORS.white} />
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -506,7 +508,7 @@ const EmployeeManagementScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Team Management</Text>
+        <Text style={styles.headerTitle}>{t('employeeManager.title')}</Text>
         <View style={styles.headerButtons}>
           {isReordering ? (
             <>
@@ -516,7 +518,7 @@ const EmployeeManagementScreen = () => {
                   onPress={saveOrder}
                 >
                   <Save size={16} color={COLORS.white} />
-                  <Text style={styles.saveOrderText}>Save</Text>
+                  <Text style={styles.saveOrderText}>{t('employeeManager.save')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -527,7 +529,7 @@ const EmployeeManagementScreen = () => {
                   loadEmployees();
                 }}
               >
-                <Text style={styles.cancelOrderText}>Cancel</Text>
+                <Text style={styles.cancelOrderText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -537,7 +539,7 @@ const EmployeeManagementScreen = () => {
                 onPress={() => setIsReordering(true)}
               >
                 <GripVertical size={16} color={COLORS.text} />
-                <Text style={styles.reorderButtonText}>Reorder</Text>
+                <Text style={styles.reorderButtonText}>{t('employeeManager.reorder')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addButton}
@@ -664,7 +666,7 @@ const EmployeeManagementScreen = () => {
               >
                 <Plus size={16} color={COLORS.white} />
                 <Text style={styles.saveButtonText}>
-                  {uploading ? 'Adding...' : 'Add Employee'}
+                  {uploading ? t('employeeManager.adding') : t('employeeManager.addEmployee')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity

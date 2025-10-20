@@ -7,6 +7,8 @@ import LoginScreen from '../screens/LoginScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import InvoiceDetailsScreen from '../screens/InvoiceDetailsScreen';
 import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
+import TimeClockScreen from '../screens/TimeClockScreen';
+import TimeClockCalendarScreen from '../screens/TimeClockCalendarScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator();
@@ -30,6 +32,8 @@ const AppNavigator = () => {
             <Stack.Screen name="Dashboard" component={AdminDashboardScreen} />
             <Stack.Screen name="InvoiceDetails" component={InvoiceDetailsScreen} />
             <Stack.Screen name="CreateInvoice" component={CreateInvoiceScreen} />
+            <Stack.Screen name="TimeClock" component={TimeClockScreen} />
+            <Stack.Screen name="TimeClockCalendar" component={TimeClockCalendarScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

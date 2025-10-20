@@ -6,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
 
 const VideosScreen = () => {
+  const { t } = useLanguage();
   const [videos, setVideos] = useState([
     {
       id: 1,
@@ -47,9 +49,9 @@ const VideosScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Info Card */}
         <ContentGlass style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Video Management</Text>
+          <Text style={styles.infoTitle}>{t('videoManager.title')}</Text>
           <Text style={styles.infoText}>
-            Upload and manage project videos, time-lapses, and customer testimonials.
+            {t('videoManager.description')}
           </Text>
         </ContentGlass>
 
@@ -57,13 +59,13 @@ const VideosScreen = () => {
         <View style={styles.statsRow}>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>{videos.length}</Text>
-            <Text style={styles.statLabel}>Videos</Text>
+            <Text style={styles.statLabel}>{t('videoManager.videos')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>
               {videos.reduce((sum, v) => sum + v.views, 0).toLocaleString()}
             </Text>
-            <Text style={styles.statLabel}>Total Views</Text>
+            <Text style={styles.statLabel}>{t('photoManager.totalViews')}</Text>
           </ContentGlass>
         </View>
 
@@ -85,7 +87,7 @@ const VideosScreen = () => {
               <View style={styles.videoMeta}>
                 <View style={styles.metaItem}>
                   <Text style={styles.metaIcon}>👁</Text>
-                  <Text style={styles.metaText}>{video.views.toLocaleString()} views</Text>
+                  <Text style={styles.metaText}>{video.views.toLocaleString()} {t('photoManager.views')}</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <Text style={styles.metaIcon}>📅</Text>
@@ -95,13 +97,13 @@ const VideosScreen = () => {
 
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.editButton}>
-                  <Text style={styles.editButtonText}>Edit</Text>
+                  <Text style={styles.editButtonText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.viewButton}>
-                  <Text style={styles.viewButtonText}>View</Text>
+                  <Text style={styles.viewButtonText}>{t('common.view')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteButton}>
-                  <Text style={styles.deleteButtonText}>Delete</Text>
+                  <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -111,7 +113,7 @@ const VideosScreen = () => {
         {/* Add Video Button */}
         <TouchableOpacity style={styles.addButton}>
           <ContentGlass style={styles.addButtonInner}>
-            <Text style={styles.addButtonText}>+ Upload Video</Text>
+            <Text style={styles.addButtonText}>+ {t('videoManager.uploadVideo')}</Text>
           </ContentGlass>
         </TouchableOpacity>
       </ScrollView>

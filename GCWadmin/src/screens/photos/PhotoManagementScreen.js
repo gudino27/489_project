@@ -30,6 +30,7 @@ import DraggableFlatList, {
   OpacityDecorator,
 } from 'react-native-draggable-flatlist';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { photosApi } from '../../api/photos';
 import { API_BASE } from '../../api/config';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS } from '../../constants';
@@ -41,6 +42,7 @@ const PHOTO_SIZE = (SCREEN_WIDTH - PHOTO_MARGIN * (COLUMNS + 3)) / COLUMNS;
 
 const PhotoManagementScreen = () => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [photos, setPhotos] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('kitchen');
   const [uploading, setUploading] = useState(false);
@@ -54,12 +56,12 @@ const PhotoManagementScreen = () => {
   const [manualPosition, setManualPosition] = useState('');
 
   const categories = [
-    { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
-    { id: 'bathroom', name: 'Bathroom', icon: '🚿' },
-    { id: 'livingroom', name: 'Living Room', icon: '🛋️' },
-    { id: 'bedroom', name: 'Bedroom', icon: '🛏️' },
-    { id: 'laundryroom', name: 'Laundry Room', icon: '🧺' },
-    { id: 'showcase', name: 'Showcase', icon: '✨' },
+    { id: 'kitchen', name: t('categories.kitchen'), icon: '🍳' },
+    { id: 'bathroom', name: t('categories.bathroom'), icon: '🚿' },
+    { id: 'livingroom', name: t('categories.livingRoom'), icon: '🛋️' },
+    { id: 'bedroom', name: t('categories.bedroom'), icon: '🛏️' },
+    { id: 'laundryroom', name: t('categories.laundryRoom'), icon: '🧺' },
+    { id: 'showcase', name: t('categories.showcase'), icon: '✨' },
   ];
 
   const isVideo = item => {
@@ -75,7 +77,7 @@ const PhotoManagementScreen = () => {
       setPhotos(data);
     } catch (error) {
       console.error('Error loading photos:', error);
-      Alert.alert('Error', 'Failed to load photos');
+      Alert.alert(t('common.error'), t('photoManager.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -183,18 +185,18 @@ const PhotoManagementScreen = () => {
   };
 
   const deletePhoto = async photoId => {
-    Alert.alert('Delete Photo', 'Are you sure you want to delete this photo?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('photoManager.deletePhoto'), t('photoManager.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await photosApi.deletePhoto(token, photoId);
             await loadPhotos();
-            Alert.alert('Success', 'Photo deleted');
+            Alert.alert(t('common.success'), t('photoManager.photoDeleted'));
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete photo');
+            Alert.alert(t('common.error'), t('photoManager.deleteError'));
           }
         },
       },
@@ -206,9 +208,9 @@ const PhotoManagementScreen = () => {
       await photosApi.updatePhoto(token, photoId, { title: newTitle });
       await loadPhotos();
       setEditingPhoto(null);
-      Alert.alert('Success', 'Title updated');
+      Alert.alert(t('common.success'), t('photoManager.titleUpdated'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to update title');
+      Alert.alert(t('common.error'), t('photoManager.updateError'));
     }
   };
 
@@ -512,7 +514,7 @@ const PhotoManagementScreen = () => {
               isReordering && styles.reorderButtonTextActive,
             ]}
           >
-            {isReordering ? 'Done' : 'Reorder'}
+            {isReordering ? t('photoManager.done') : t('photoManager.reorder')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -532,7 +534,7 @@ const PhotoManagementScreen = () => {
       {!isReordering && (
         <View style={styles.uploadSection}>
           <Text style={styles.uploadTitle}>
-            Upload to {categories.find(c => c.id === selectedCategory)?.name}
+            {t('photoManager.uploadTo')} {categories.find(c => c.id === selectedCategory)?.name}
           </Text>
           <View style={styles.uploadButtons}>
             <TouchableOpacity
@@ -542,7 +544,7 @@ const PhotoManagementScreen = () => {
             >
               <ImageIcon size={20} color={COLORS.white} />
               <Text style={styles.uploadButtonText}>
-                {uploading ? 'Uploading...' : 'Add Photos'}
+                {uploading ? t('photoManager.uploading') : t('photoManager.selectPhotos')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -551,7 +553,7 @@ const PhotoManagementScreen = () => {
               disabled={uploading}
             >
               <Video size={20} color={COLORS.white} />
-              <Text style={styles.uploadButtonText}>Add Videos</Text>
+              <Text style={styles.uploadButtonText}>{t('photoManager.selectVideos')}</Text>
             </TouchableOpacity>
           </View>
         </View>

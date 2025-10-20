@@ -8,6 +8,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
 
@@ -15,6 +16,7 @@ const { width } = Dimensions.get('window');
 const IMAGE_SIZE = (width - (SPACING[4] * 3)) / 2;
 
 const GalleryScreen = () => {
+  const { t } = useLanguage();
   const [galleryImages, setGalleryImages] = useState([
     { id: 1, url: 'https://via.placeholder.com/300/1e3a8a/ffffff?text=Image+1', tags: ['kitchen', 'modern'] },
     { id: 2, url: 'https://via.placeholder.com/300/3b82f6/ffffff?text=Image+2', tags: ['bathroom'] },
@@ -37,9 +39,9 @@ const GalleryScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Info Card */}
         <ContentGlass style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Gallery</Text>
+          <Text style={styles.infoTitle}>{t('photoManager.gallery')}</Text>
           <Text style={styles.infoText}>
-            Manage all project photos. Organize by tags and categories.
+            {t('photoManager.galleryDescription')}
           </Text>
         </ContentGlass>
 
@@ -73,7 +75,7 @@ const GalleryScreen = () => {
 
         {/* Image Count */}
         <Text style={styles.imageCount}>
-          {filteredImages.length} {filteredImages.length === 1 ? 'image' : 'images'}
+          {filteredImages.length} {filteredImages.length === 1 ? t('photoManager.image') : t('photoManager.images')}
         </Text>
 
         {/* Image Grid */}
@@ -100,7 +102,7 @@ const GalleryScreen = () => {
         {/* Add Photos Button */}
         <TouchableOpacity style={styles.addButton}>
           <ContentGlass style={styles.addButtonInner}>
-            <Text style={styles.addButtonText}>+ Add Photos</Text>
+            <Text style={styles.addButtonText}>+ {t('photoManager.addPhotos')}</Text>
           </ContentGlass>
         </TouchableOpacity>
       </ScrollView>

@@ -20,12 +20,14 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
 
 const UserManagementScreen = () => {
+  const { t } = useLanguage();
   const { token } = useAuth();
 
   const [users, setUsers] = useState([]);
@@ -60,7 +62,7 @@ const UserManagementScreen = () => {
       const data = await getUsers();
       setUsers(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load users');
+      Alert.alert(t('common.error'), t('userManagement.loadError'));
     } finally {
       setLoading(false);
     }
@@ -124,19 +126,19 @@ const UserManagementScreen = () => {
   };
 
   const handleDeactivateUser = async (userId) => {
-    Alert.alert('Deactivate User', 'Are you sure you want to deactivate this user?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('userManagement.deactivateUser'), t('userManagement.deactivateConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Deactivate',
+        text: t('userManagement.deactivateUser'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteUser(userId);
-            setSuccess('User deactivated successfully');
+            setSuccess(t('userManagement.deactivated'));
             fetchUsers();
             setTimeout(() => setSuccess(''), 3000);
           } catch (error) {
-            Alert.alert('Error', 'Failed to deactivate user');
+            Alert.alert(t('common.error'), t('userManagement.deactivateError'));
           }
         },
       },
