@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronLeft, ChevronRight, Plus, Clock, Calendar } from 'lucide-react-native';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
@@ -16,9 +17,11 @@ import { ContentGlass } from '../components/GlassView';
 import api from '../api/client';
 import {
   formatDatePST,
+  formatTimePST,
   getTodayPST,
   extractPSTDate,
   getTimezoneAbbreviation,
+  toPSTDateString,
 } from '../utils/timezoneHelpers';
 
 const TimeClockCalendarScreen = ({ navigation, route }) => {
@@ -29,6 +32,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
   
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarView, setCalendarView] = useState('month'); // 'month' or 'week'
   const [monthEntries, setMonthEntries] = useState([]);
   const [monthSummary, setMonthSummary] = useState({
     totalHours: 0,
@@ -45,16 +49,17 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
       setLoading(true);
       const year = currentDate.getFullYear();
       const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      
-      const endpoint = isAdmin 
-        ? `/admin/timeclock/entries/month?employeeId=${employeeId}&year=${year}&month=${month}`
-        : `/timeclock/my-entries?startDate=${year}-${month}-01&endDate=${year}-${month}-31`;
-      
-      const response = await api.get(endpoint);
-      
+
+      // Get last day of month for end date
+      const lastDay = new Date(year, currentDate.getMonth() + 1, 0).getDate();
+      const startDate = `${year}-${month}-01`;
+      const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+      // Use the same endpoint for both admin and employee
+      const response = await api.get(`/api/timeclock/my-entries?startDate=${startDate}&endDate=${endDate}`);
+
       if (response.data.success) {
-        const entries = isAdmin ? response.data.entries : response.data.entries;
-        processMonthEntries(entries);
+        processMonthEntries(response.data.entries);
       }
     } catch (error) {
       console.error('Error fetching month data:', error);
@@ -128,6 +133,34 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
     return days;
   };
 
+  const getWeekDays = () => {
+    const days = [];
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Go to Sunday
+    
+    const todayPST = getTodayPST();
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      const dateStr = toPSTDateString(date);
+      const dayEntry = monthEntries.find(e => e.date === dateStr);
+
+      days.push({
+        type: 'day',
+        day: date.getDate(),
+        date: dateStr,
+        hasEntry: !!dayEntry,
+        totalHours: dayEntry?.totalHours || 0,
+        isToday: dateStr === todayPST,
+        key: `day-${dateStr}`,
+        fullDate: date,
+      });
+    }
+
+    return days;
+  };
+
   const getDayColor = (hours) => {
     if (hours === 0) return COLORS.glassDark;
     if (hours >= 8) return COLORS.success;
@@ -136,11 +169,23 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
   };
 
   const handlePreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    if (calendarView === 'week') {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() - 7);
+      setCurrentDate(newDate);
+    } else {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    }
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    if (calendarView === 'week') {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() + 7);
+      setCurrentDate(newDate);
+    } else {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    }
   };
 
   const handleToday = () => {
@@ -148,55 +193,96 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
   };
 
   const handleDayPress = (dayData) => {
-    if (!dayData.hasEntry && isAdmin) {
-      // Navigate to add manual entry
-      navigation.navigate('AddTimeEntry', {
-        employeeId,
-        date: dayData.date,
-      });
-    } else if (dayData.hasEntry) {
-      // Show day details or navigate to edit
-      navigation.navigate('TimeEntryDetails', {
-        date: dayData.date,
-        employeeId,
-      });
-    }
+    // Navigate to TimeEntryDetails screen for any day (with or without entries)
+    navigation.navigate('TimeEntryDetails', {
+      date: dayData.date,
+      employeeId,
+    });
   };
 
-  const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthName = calendarView === 'week'
+    ? `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const days = calendarView === 'month' ? getDaysInMonth() : getWeekDays();
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.accent} />
+          <ActivityIndicator size="large" color={COLORS.blue} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Month Navigation */}
-      <ContentGlass style={styles.navigationCard}>
-        <View style={styles.monthNavigation}>
-          <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
-            <ChevronLeft size={24} color={COLORS.accent} />
-          </TouchableOpacity>
-          
-          <View style={styles.monthTitleContainer}>
-            <View style={styles.monthTitleRow}>
-              <Text style={styles.monthTitle}>{monthName}</Text>
-              <Text style={styles.timezone}>{getTimezoneAbbreviation()}</Text>
-            </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Month Navigation */}
+        <ContentGlass style={styles.navigationCard}>
+          <View style={styles.monthNavigation}>
+            <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
+              <ChevronLeft size={24} color={COLORS.blue} />
+              <Text style={styles.navButtonText}>
+                {calendarView === 'month' ? 'Previous' : 'Prev Week'}
+              </Text>
+            </TouchableOpacity>
+            
+            <View style={styles.monthTitleContainer}>
+              <View style={styles.monthTitleRow}>
+                <Text style={styles.monthTitle}>{monthName}</Text>
+                <Text style={styles.timezone}>{getTimezoneAbbreviation()}</Text>
+              </View>
             <TouchableOpacity onPress={handleToday} style={styles.todayButton}>
               <Text style={styles.todayButtonText}>{t('timeclock.today')}</Text>
             </TouchableOpacity>
           </View>
           
           <TouchableOpacity onPress={handleNextMonth} style={styles.navButton}>
-            <ChevronRight size={24} color={COLORS.accent} />
+            <Text style={styles.navButtonText}>
+              {calendarView === 'month' ? 'Next' : 'Next Week'}
+            </Text>
+            <ChevronRight size={24} color={COLORS.blue} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Week/Month Toggle */}
+        <View style={styles.viewToggle}>
+          <TouchableOpacity
+            style={[
+              styles.viewToggleButton,
+              calendarView === 'week' && styles.viewToggleButtonActive,
+            ]}
+            onPress={() => setCalendarView('week')}
+          >
+            <Calendar size={16} color={calendarView === 'week' ? COLORS.blue : COLORS.textGray} />
+            <Text
+              style={[
+                styles.viewToggleText,
+                calendarView === 'week' && styles.viewToggleTextActive,
+              ]}
+            >
+              Week
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.viewToggleButton,
+              calendarView === 'month' && styles.viewToggleButtonActive,
+            ]}
+            onPress={() => setCalendarView('month')}
+          >
+            <Calendar size={16} color={calendarView === 'month' ? COLORS.blue : COLORS.textGray} />
+            <Text
+              style={[
+                styles.viewToggleText,
+                calendarView === 'month' && styles.viewToggleTextActive,
+              ]}
+            >
+              Month
+            </Text>
           </TouchableOpacity>
         </View>
       </ContentGlass>
@@ -240,7 +326,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
 
         {/* Calendar Days */}
         <View style={styles.calendarGrid}>
-          {getDaysInMonth().map((dayData) => {
+          {days.map((dayData) => {
             if (dayData.type === 'padding') {
               return <View key={dayData.key} style={styles.calendarDay} />;
             }
@@ -253,7 +339,6 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
                   dayData.isToday && styles.calendarDayToday,
                 ]}
                 onPress={() => handleDayPress(dayData)}
-                disabled={!dayData.hasEntry && !isAdmin}
               >
                 <View
                   style={[
@@ -311,7 +396,8 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
           <Text style={styles.addButtonText}>{t('timeclock.add_time')}</Text>
         </TouchableOpacity>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -319,6 +405,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     padding: SPACING[4],
@@ -335,8 +424,8 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   navigationCard: {
-    padding: SPACING[3],
-    marginBottom: SPACING[4],
+    padding: SPACING[2],
+    marginBottom: SPACING[3],
   },
   monthNavigation: {
     flexDirection: 'row',
@@ -344,34 +433,43 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   navButton: {
-    padding: SPACING[2],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+    padding: SPACING[1.5],
     borderRadius: RADIUS.lg,
     backgroundColor: COLORS.glassDark,
   },
+  navButtonText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.blue,
+  },
   monthTitleContainer: {
     alignItems: 'center',
+    paddingVertical: SPACING[1],
   },
   monthTitleRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: SPACING[2],
+    gap: SPACING[1],
   },
   monthTitle: {
-    fontSize: TYPOGRAPHY.xl,
+    fontSize: TYPOGRAPHY.md,
     fontWeight: TYPOGRAPHY.bold,
     color: COLORS.text,
   },
   timezone: {
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.xs,
     fontWeight: TYPOGRAPHY.semibold,
-    color: COLORS.accent,
+    color: COLORS.blue,
   },
   todayButton: {
-    marginTop: SPACING[1],
-    paddingHorizontal: SPACING[3],
-    paddingVertical: SPACING[1],
+    marginTop: SPACING[0.5],
+    paddingHorizontal: SPACING[2],
+    paddingVertical: SPACING[0.5],
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.blue,
   },
   todayButtonText: {
     fontSize: TYPOGRAPHY.xs,
@@ -379,8 +477,8 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
   summaryCard: {
-    padding: SPACING[4],
-    marginBottom: SPACING[4],
+    padding: SPACING[3],
+    marginBottom: SPACING[3],
   },
   summaryRow: {
     flexDirection: 'row',
@@ -391,34 +489,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: TYPOGRAPHY['2xl'],
+    fontSize: TYPOGRAPHY.xl,
     fontWeight: TYPOGRAPHY.bold,
-    color: COLORS.accent,
+    color: COLORS.blue,
   },
   summaryLabel: {
     fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
-    marginTop: SPACING[1],
+    marginTop: SPACING[0.5],
     textAlign: 'center',
   },
   summaryDivider: {
     width: 1,
-    height: 40,
+    height: 30,
     backgroundColor: COLORS.glassBorder,
     marginHorizontal: SPACING[2],
   },
   calendarCard: {
-    padding: SPACING[3],
-    marginBottom: SPACING[4],
+    padding: SPACING[2],
+    marginBottom: SPACING[3],
+    width: '100%',
+    alignSelf: 'stretch',
   },
   weekHeader: {
     flexDirection: 'row',
-    marginBottom: SPACING[2],
+    marginBottom: SPACING[1],
+    gap: 0,
   },
   dayHeader: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: SPACING[2],
+    paddingVertical: SPACING[1],
   },
   dayHeaderText: {
     fontSize: TYPOGRAPHY.xs,
@@ -428,11 +529,11 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 1,
   },
   calendarDay: {
-    width: `${100 / 7}%`,
+    width: `${(100 / 7) - 0.35}%`,
     aspectRatio: 1,
-    padding: 2,
   },
   calendarDayToday: {
     backgroundColor: COLORS.glassDark,
@@ -455,7 +556,7 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.bold,
   },
   dayNumberToday: {
-    color: COLORS.accent,
+    color: COLORS.blue,
   },
   dayHours: {
     fontSize: 10,
@@ -464,14 +565,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   legendCard: {
-    padding: SPACING[3],
-    marginBottom: SPACING[4],
+    padding: SPACING[2],
+    marginBottom: SPACING[3],
   },
   legendTitle: {
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.xs,
     fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: SPACING[2],
+    marginBottom: SPACING[1],
   },
   legendItems: {
     flexDirection: 'row',
@@ -480,11 +581,11 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING[2],
+    gap: SPACING[1],
   },
   legendColor: {
-    width: 16,
-    height: 16,
+    width: 14,
+    height: 14,
     borderRadius: RADIUS.sm,
   },
   legendText: {
@@ -496,14 +597,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING[2],
-    padding: SPACING[4],
+    padding: SPACING[3],
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.blue,
   },
   addButtonText: {
-    fontSize: TYPOGRAPHY.md,
+    fontSize: TYPOGRAPHY.sm,
     fontWeight: TYPOGRAPHY.bold,
     color: COLORS.background,
+  },
+  // View Toggle Styles
+  viewToggle: {
+    flexDirection: 'row',
+    marginTop: SPACING[2],
+    gap: SPACING[1],
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING[1],
+    paddingVertical: SPACING[1.5],
+    paddingHorizontal: SPACING[2],
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.glassLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: COLORS.gray100,
+    borderColor: COLORS.blue,
+  },
+  viewToggleText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.textGray,
+  },
+  viewToggleTextActive: {
+    color: COLORS.blue,
   },
 });
 

@@ -580,6 +580,12 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
 
     try {
       setActionLoading(true);
+      
+      // Format times as PST timestamps (YYYY-MM-DD HH:MM:SS format)
+      // The input times are already in PST, so we just format them correctly
+      const clockInTime = `${manualEntry.date} ${manualEntry.timeIn}:00`;
+      const clockOutTime = `${manualEntry.date} ${manualEntry.timeOut}:00`;
+      
       const response = await fetch(`${API_BASE}/api/timeclock/admin/add-manual-entry`, {
         method: 'POST',
         headers: {
@@ -589,8 +595,8 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
         body: JSON.stringify({
           employeeId: user.id,
           employeeName: user.full_name,
-          clockInTime: `${manualEntry.date}T${manualEntry.timeIn}:00`,
-          clockOutTime: `${manualEntry.date}T${manualEntry.timeOut}:00`,
+          clockInTime,
+          clockOutTime,
           breakMinutes: parseInt(manualEntry.breakMinutes) || 0,
           reason: 'Employee forgot to clock in/out',
           notes: '[Manual Entry] Employee added missed clock in/out',

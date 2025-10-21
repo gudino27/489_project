@@ -60,8 +60,10 @@ const UserManagementScreen = () => {
     try {
       setLoading(true);
       const data = await getUsers();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
       Alert.alert(t('common.error'), t('userManagement.loadError'));
     } finally {
       setLoading(false);
@@ -208,32 +210,33 @@ const UserManagementScreen = () => {
 
       {/* Users List */}
       <ScrollView style={styles.content}>
-        {users.map((user) => (
-          <ContentGlass key={user.id} style={styles.userCard}>
-            <View style={styles.userCardHeader}>
-              <View style={styles.userInfo}>
-                <View style={styles.userAvatar}>
-                  <User size={24} color={COLORS.textSecondary} />
+        {users && users.length > 0 ? (
+          users.map((user) => (
+            <ContentGlass key={user.id} style={styles.userCard}>
+              <View style={styles.userCardHeader}>
+                <View style={styles.userInfo}>
+                  <View style={styles.userAvatar}>
+                    <User size={24} color={COLORS.textSecondary} />
+                  </View>
+                  <View style={styles.userDetails}>
+                    <Text style={styles.userName}>{user.full_name || user.username}</Text>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                  </View>
                 </View>
-                <View style={styles.userDetails}>
-                  <Text style={styles.userName}>{user.full_name || user.username}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                </View>
-              </View>
-              <View style={styles.userActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => openEditModal(user)}
-                >
-                  <Edit2 size={18} color={COLORS.primary} />
-                </TouchableOpacity>
-                {user.is_active && (
+                <View style={styles.userActions}>
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => handleDeactivateUser(user.id)}
+                    onPress={() => openEditModal(user)}
                   >
-                    <Trash2 size={18} color={COLORS.error} />
+                    <Edit2 size={18} color={COLORS.primary} />
                   </TouchableOpacity>
+                  {user.is_active && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleDeactivateUser(user.id)}
+                    >
+                      <Trash2 size={18} color={COLORS.error} />
+                    </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -290,7 +293,12 @@ const UserManagementScreen = () => {
               </View>
             </View>
           </ContentGlass>
-        ))}
+          ))
+        ) : (
+          <ContentGlass style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No users found</Text>
+          </ContentGlass>
+        )}
       </ScrollView>
 
       {/* Add User Modal */}

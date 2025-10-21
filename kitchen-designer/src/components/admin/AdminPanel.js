@@ -279,7 +279,7 @@ const AdminPanel = () => {
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">{t('admin.password')}</label>
-                  <div className="relative">
+                  <div className="relative flex items-center">
                     <input
                       type={showPassword ? "text" : "password"}
                       name="password"
@@ -293,7 +293,8 @@ const AdminPanel = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      className="absolute right-3 flex items-center justify-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
                       tabIndex={-1}
                     >
                       {showPassword ? (

@@ -8,6 +8,8 @@ export const designsApi = {
         ? `${API_URL}/api/designs?status=${status}`
         : `${API_URL}/api/designs`;
 
+      console.log('📡 Fetching designs from:', url);
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -15,13 +17,24 @@ export const designsApi = {
         },
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch designs');
+        throw new Error(`Failed to fetch designs: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('📡 Designs received:', Array.isArray(data) ? data.length : 'Not an array', data);
+      
+      // Server returns a plain array of designs
+      if (!Array.isArray(data)) {
+        console.error('❌ Expected array but got:', typeof data, data);
+        return [];
+      }
+      
+      return data;
     } catch (error) {
-      console.error('Error fetching designs:', error);
+      console.error('❌ Error fetching designs:', error);
       throw error;
     }
   },
@@ -29,6 +42,8 @@ export const designsApi = {
   // Get design statistics
   getStats: async (token) => {
     try {
+      console.log('📊 Fetching design stats...');
+
       const response = await fetch(`${API_URL}/api/designs/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -37,12 +52,16 @@ export const designsApi = {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch design stats');
+        throw new Error(`Failed to fetch design stats: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('📊 Stats received:', data);
+      
+      // Server returns stats object directly
+      return data;
     } catch (error) {
-      console.error('Error fetching design stats:', error);
+      console.error('❌ Error fetching design stats:', error);
       throw error;
     }
   },
@@ -50,6 +69,8 @@ export const designsApi = {
   // Get single design details (also marks as viewed)
   getDesignById: async (token, designId) => {
     try {
+      console.log('🔍 Fetching design details for ID:', designId);
+
       const response = await fetch(`${API_URL}/api/designs/${designId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -58,12 +79,16 @@ export const designsApi = {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch design details');
+        throw new Error(`Failed to fetch design details: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('🔍 Design details received:', data);
+      
+      // Server returns design object directly
+      return data;
     } catch (error) {
-      console.error('Error fetching design details:', error);
+      console.error('❌ Error fetching design details:', error);
       throw error;
     }
   },

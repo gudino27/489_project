@@ -939,7 +939,7 @@
 .day-hours {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #22c55e;
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -2039,4 +2039,1087 @@
 
 .btn-primary:active {
   transform: translateY(0);
+}
+
+/* ===============================================
+   MOBILE RESPONSIVE STYLES
+   =============================================== */
+
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .timeclock-manager {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .timeclock-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .timeclock-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .view-toggle {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .view-toggle button {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* Workday Interface */
+  .workday-interface {
+    padding: 1rem;
+  }
+
+  .week-buttons {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .week-btn {
+    width: 100%;
+  }
+
+  /* Clock Actions */
+  .clock-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .clock-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Period Stats */
+  .period-stats {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .stat-box {
+    width: 100%;
+    text-align: left;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+  }
+
+  /* Calendar Grid */
+  .calendar-grid {
+    gap: 0.25rem;
+  }
+
+  .calendar-day {
+    min-height: 60px;
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .calendar-day-name {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .day-hours {
+    font-size: 0.625rem;
+  }
+
+  /* Admin View */
+  .admin-content {
+    padding: 1rem;
+  }
+
+  .live-employee-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .employee-hours-info {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .employee-payroll-table {
+    overflow-x: auto;
+  }
+
+  .employee-payroll-table table {
+    min-width: 600px;
+  }
+
+  /* Modal */
+  .modal-content {
+    width: 95%;
+    max-width: 100%;
+    margin: 1rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-group {
+    width: 100%;
+  }
+
+  /* Tax Calculator */
+  .tax-calc-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .week-summary-buttons {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Hours Report */
+  .hours-report-filters {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .timeclock-manager {
+    padding: 0.75rem;
+  }
+
+  .timeclock-header h2 {
+    font-size: 1.25rem;
+    gap: 0.5rem;
+  }
+
+  .timeclock-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .current-time-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .current-time {
+    font-size: 2rem;
+  }
+
+  .current-date {
+    font-size: 0.875rem;
+  }
+
+  /* Workday Sections */
+  .workday-section {
+    padding: 1rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .week-btn {
+    padding: 0.75rem;
+  }
+
+  .week-label {
+    font-size: 0.875rem;
+  }
+
+  /* Clock Buttons */
+  .clock-btn {
+    padding: 1rem;
+    font-size: 1rem;
+    gap: 0.5rem;
+  }
+
+  /* Status Display */
+  .status-details {
+    gap: 0.5rem;
+  }
+
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .status-label,
+  .status-value {
+    font-size: 0.875rem;
+  }
+
+  /* Period Card */
+  .period-header {
+    margin-bottom: 1rem;
+  }
+
+  .period-dates {
+    font-size: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  /* Calendar */
+  .calendar-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .calendar-header h3 {
+    font-size: 1rem;
+  }
+
+  .btn-nav {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .calendar-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .view-toggle-group {
+    width: 100%;
+  }
+
+  .btn-view-toggle {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .calendar-day {
+    min-height: 50px;
+    font-size: 0.7rem;
+    padding: 0.2rem;
+  }
+
+  .day-number {
+    font-size: 0.875rem;
+  }
+
+  .day-hours {
+    font-size: 0.625rem;
+    margin-top: 0.25rem;
+    
+  }
+
+  .entries-indicator {
+    font-size: 0.5rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  /* Date Details */
+  .date-details {
+    padding: 1rem;
+  }
+
+  .date-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .entry-card {
+    padding: 0.75rem;
+  }
+
+  .entry-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .entry-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .btn-icon {
+    padding: 0.5rem;
+  }
+
+  /* Admin Employee List */
+  .employee-list-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .employee-card {
+    padding: 0.75rem;
+  }
+
+  .employee-info h3 {
+    font-size: 1rem;
+  }
+
+  .employee-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Payroll Modal */
+  .payroll-form {
+    padding: 1rem;
+  }
+
+  .payroll-input-group {
+    margin-bottom: 1rem;
+  }
+
+  .payroll-input-group label {
+    font-size: 0.875rem;
+  }
+
+  .payroll-input-group input,
+  .payroll-input-group select {
+    font-size: 1rem;
+    padding: 0.75rem;
+  }
+
+  /* Manual Entry Modal */
+  .manual-entry-form {
+    padding: 1rem;
+  }
+
+  .time-inputs {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .time-input-group {
+    width: 100%;
+  }
+
+  /* Audit Trail */
+  .audit-log {
+    padding: 0.75rem;
+  }
+
+  .audit-entry {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .audit-timestamp {
+    font-size: 0.75rem;
+  }
+
+  /* Action Buttons */
+  .btn-calendar,
+  .btn-text-link {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 0.875rem;
+  }
+
+  /* Timezone Indicator */
+  .timezone-indicator {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Empty States */
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state-icon {
+    font-size: 2rem;
+  }
+
+  .empty-state-text {
+    font-size: 0.875rem;
+  }
+
+  /* Summary Boxes */
+  .summary-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+  }
+
+  .summary-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Extra Small Mobile (360px and below) */
+@media (max-width: 360px) {
+  .timeclock-manager {
+    padding: 0.5rem;
+  }
+
+  .timeclock-header h2 {
+    font-size: 1.125rem;
+  }
+
+  .timeclock-card {
+    padding: 0.75rem;
+  }
+
+  .current-time {
+    font-size: 1.75rem;
+  }
+
+  .clock-btn {
+    padding: 0.875rem;
+    font-size: 0.9375rem;
+  }
+
+  .calendar-day {
+    min-height: 40px;
+    font-size: 0.625rem;
+  }
+
+  .day-number {
+    font-size: 0.75rem;
+  }
+
+  .calendar-day-name {
+    font-size: 0.625rem;
+  }
+
+  .modal-content {
+    width: 100%;
+    margin: 0.5rem;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal-content {
+    max-height: 85vh;
+  }
+
+  .modal-body {
+    max-height: calc(85vh - 120px);
+    overflow-y: auto;
+  }
+
+  .workday-section {
+    padding: 0.75rem;
+  }
+
+  .clock-btn {
+    padding: 0.75rem;
+  }
+}
+
+/* Ensure touch targets are at least 44x44px for mobile */
+@media (max-width: 768px) {
+  button,
+  .btn,
+  .clock-btn,
+  .week-btn,
+  .calendar-day,
+  .btn-nav,
+  .btn-view-toggle {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .timeclock-manager {
+    overflow-x: hidden;
+  }
+
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Additional Mobile Fixes for Admin Panel Layout */
+@media (max-width: 768px) {
+  /* Hide or collapse sidebar on mobile */
+  .admin-sidebar {
+    position: fixed;
+    left: -100%;
+    transition: left 0.3s ease;
+    z-index: 1000;
+  }
+
+  .admin-sidebar.open {
+    left: 0;
+  }
+
+  /* Full width content on mobile */
+  .admin-content,
+  .timeclock-container {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Tabs should scroll horizontally if needed */
+  .timeclock-tabs,
+  .view-selector {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .timeclock-tab,
+  .view-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: auto;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Calendar specific mobile fixes */
+  .calendar-container {
+    padding: 0.5rem;
+  }
+
+  .calendar-header-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .month-year-display {
+    font-size: 1rem;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .calendar-nav-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* View toggle buttons */
+  .view-toggle-container {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .week-month-toggle {
+    width: 100%;
+    display: flex;
+  }
+
+  .week-month-toggle button {
+    flex: 1;
+  }
+
+  /* Calendar grid mobile optimizations */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    width: 100%;
+  }
+
+  .calendar-day-cell {
+    aspect-ratio: 1;
+    min-height: 45px;
+    padding: 2px;
+    font-size: 0.7rem;
+  }
+
+  .calendar-day-number {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .calendar-day-hours {
+    font-size: 0.625rem;
+    margin-top: 1px;
+  }
+
+  .calendar-day-indicator {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    margin: 1px auto 0;
+  }
+
+  /* Summary stats mobile layout */
+  .summary-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+  }
+
+  .summary-stat {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    text-align: center;
+  }
+
+  .summary-stat-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+  }
+
+  .summary-stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #f97316;
+  }
+
+  /* Entry details mobile */
+  .entry-details-container {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .entry-date-header {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+
+  .entry-time-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .entry-time-range {
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .entry-hours-badge {
+    background: #10b981;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .add-entry-button {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border: 2px dashed #f97316;
+    border-radius: 0.5rem;
+    color: #f97316;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .add-entry-button:active {
+    background: #fff7ed;
+  }
+
+  /* Today button styling */
+  .today-button {
+    background: #333;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Week day headers */
+  .calendar-weekday-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem 0;
+    color: #666;
+  }
+}
+
+/* Specific fix for very small phones */
+@media (max-width: 375px) {
+  .calendar-day-cell {
+    min-height: 40px;
+    font-size: 0.65rem;
+  }
+
+  .calendar-day-number {
+    font-size: 0.8rem;
+  }
+
+  .calendar-day-hours {
+    font-size: 0.55rem;
+  }
+
+  .summary-stat-value {
+    font-size: 1rem;
+  }
+
+  .summary-stat-label {
+    font-size: 0.7rem;
+  }
+
+  .entry-time-range {
+    font-size: 0.8rem;
+  }
+
+  .entry-hours-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .calendar-day-cell,
+  button,
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Better active/hover states for touch */
+  .calendar-day-cell:active {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Better scrolling on mobile */
+@media (max-width: 768px) {
+  .timeclock-manager {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    -webkit-touch-callout: none;
+  }
+}
+
+/* ===============================================
+   FIX: Calendar Grid Overflow on Mobile
+   =============================================== */
+
+@media (max-width: 768px) {
+  /* Prevent calendar overflow */
+  .calendar-view,
+  .calendar-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  /* Calendar header controls */
+  .calendar-header {
+    width: 100%;
+    padding: 0.75rem 0.5rem;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .calendar-header button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Calendar navigation */
+  .calendar-nav,
+  .month-navigation {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .month-year-selector {
+    flex: 1;
+    text-align: center;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  /* View toggle buttons */
+  .calendar-view-toggle,
+  .view-selector {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .view-toggle-btn,
+  .calendar-view-toggle button {
+    width: 100%;
+    padding: 0.625rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  /* Summary card */
+  .calendar-summary,
+  .month-summary {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+  }
+
+  .summary-stat,
+  .summary-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+  }
+
+  .summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f97316;
+  }
+
+  /* CRITICAL: Calendar Grid Fix */
+  .calendar-grid {
+    width: 100%;
+    max-width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2px !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Day headers */
+  .calendar-day-names,
+  .calendar-header-row {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2px !important;
+    margin-bottom: 0.25rem;
+  }
+
+  .calendar-day-name,
+  .day-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem 0;
+    color: #666;
+    box-sizing: border-box;
+  }
+
+  /* Individual calendar day cells */
+  .calendar-day,
+  .calendar-cell,
+  .day-cell {
+    width: 100% !important;
+    aspect-ratio: 1 !important;
+    min-height: 50px !important;
+    max-height: 60px !important;
+    padding: 2px !important;
+    box-sizing: border-box !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calendar-day.has-entries,
+  .calendar-day.active {
+    background: #10b981;
+    color: white;
+    font-weight: 600;
+  }
+
+  .calendar-day.today {
+    border: 2px solid #f97316;
+    font-weight: 700;
+  }
+
+  .calendar-day.empty {
+    background: transparent;
+    border: none;
+  }
+
+  /* Day number */
+  .day-number {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  /* Hours display in calendar cell */
+  .day-hours {
+    font-size: 0.625rem;
+    font-weight: 600;
+    margin-top: 2px;
+    line-height: 1;
+  }
+
+  /* Entry indicator dots */
+  .entry-indicator {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #10b981;
+    margin-top: 2px;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 375px) {
+  .calendar-grid {
+    gap: 1px !important;
+  }
+
+  .calendar-day-names {
+    gap: 1px !important;
+  }
+
+  .calendar-day,
+  .calendar-cell,
+  .day-cell {
+    min-height: 45px !important;
+    max-height: 50px !important;
+    font-size: 0.7rem;
+  }
+
+  .day-number {
+    font-size: 0.8rem;
+  }
+
+  .day-hours {
+    font-size: 0.55rem;
+  }
+
+  .calendar-day-name {
+    font-size: 0.7rem;
+    padding: 0.375rem 0;
+  }
+
+  .summary-value {
+    font-size: 1.25rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* Ensure no horizontal scroll */
+@media (max-width: 768px) {
+  .timeclock-manager,
+  .calendar-view,
+  .calendar-container,
+  .calendar-wrapper {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  body {
+    overflow-x: hidden !important;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
 }

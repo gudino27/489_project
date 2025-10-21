@@ -3,7 +3,8 @@ import api from './client';
 // Get all users
 export const getUsers = async () => {
   const response = await api.get('/api/users');
-  return response.data;
+  // Backend returns { success: true, users: [...] }
+  return response.data.users || [];
 };
 
 // Get single user

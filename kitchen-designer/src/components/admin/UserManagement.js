@@ -56,9 +56,11 @@ const UserManagement = ({ token, API_BASE }) => {
       if (!response.ok) throw new Error('Failed to fetch users');
 
       const data = await response.json();
-      setUsers(data);
+      // Backend returns { success: true, users: [...] }
+      setUsers(data.users || []);
     } catch (error) {
       setError('Failed to load users');
+      setUsers([]);
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
@@ -398,7 +400,7 @@ const UserManagement = ({ token, API_BASE }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
+            {users && users.length > 0 ? users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -468,7 +470,13 @@ const UserManagement = ({ token, API_BASE }) => {
                   </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  No users found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         </div>
@@ -476,7 +484,7 @@ const UserManagement = ({ token, API_BASE }) => {
 
       {/* Users Cards - Mobile */}
       <div className="lg:hidden space-y-4">
-        {users.map((user) => (
+        {users && users.length > 0 ? users.map((user) => (
           <div key={user.id} className="bg-white rounded-lg shadow p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center flex-1">
@@ -545,7 +553,11 @@ const UserManagement = ({ token, API_BASE }) => {
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
+            No users found
+          </div>
+        )}
       </div>
 
       {/* Edit User Modal */}
