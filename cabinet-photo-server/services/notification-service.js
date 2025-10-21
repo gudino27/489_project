@@ -8,12 +8,12 @@ let emailTransporter = null;
 
 if (config.email.auth.user && config.email.auth.pass) {
   emailTransporter = nodemailer.createTransport({
-    host: config.email.host,
-    port: config.email.port,
-    secure: config.email.secure,
+    host: process.env.EMAIL_HOST || config.email.host,
+    port: process.env.EMAIL_PORT || config.email.port,
+    secure: process.env.EMAIL_SECURE === 'true' || config.email.secure,
     auth: {
-      user: config.email.auth.user,
-      pass: config.email.auth.pass
+      user: process.env.EMAIL_USER || config.email.auth.user,
+      pass: process.env.EMAIL_PASS || config.email.auth.pass
     }
   });
   console.log('✅ Email service configured');
