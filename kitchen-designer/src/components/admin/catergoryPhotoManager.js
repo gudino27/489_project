@@ -87,7 +87,6 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     }
 
     setUploading(true);
-    console.log('Uploading to category:', selectedCategory);
 
     try {
       for (const file of files) {
@@ -117,7 +116,6 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
           }
         } else {
           const result = await response.json();
-          console.log('Upload success:', result);
         }
       }
 
@@ -189,7 +187,6 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
         body: JSON.stringify({ photoIds })
       });
 
-      console.log('Save response status:', response.status);
 
       if (response.ok || response.status === 204) {
         setHasOrderChanges(false);

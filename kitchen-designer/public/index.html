@@ -124,7 +124,6 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
-            console.log('SW registered: ', registration);
 
             // Listen for updates
             registration.addEventListener('updatefound', () => {
@@ -133,7 +132,6 @@
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     // New content is available, show update notification
-                    console.log('New content is available; please refresh.');
 
                     // Optional: Show user notification about update
                     if (window.confirm('New version available! Refresh to update?')) {
@@ -145,16 +143,13 @@
             });
           })
           .catch((registrationError) => {
-            console.log('SW registration failed: ', registrationError);
           });
       });
 
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('Message from SW:', event.data);
 
         if (event.data.type === 'CACHE_UPDATED') {
-          console.log('Cache has been updated');
         }
       });
     }
@@ -166,7 +161,6 @@
       e.preventDefault();
       // Stash the event so it can be triggered later
       deferredPrompt = e;
-      console.log('PWA install prompt available');
 
       // Store in global scope for admin panel to access
       window.deferredPrompt = deferredPrompt;
@@ -174,7 +168,6 @@
 
     // Track app install
     window.addEventListener('appinstalled', (evt) => {
-      console.log('PWA was installed');
     });
   </script>
 </body>

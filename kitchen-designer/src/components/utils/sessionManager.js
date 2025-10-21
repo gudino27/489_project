@@ -91,7 +91,7 @@ class SessionManager {
 
     this.inactivityTimer = setInterval(() => {
       if (Date.now() - this.lastActivity > INACTIVITY_TIMEOUT) {
-        console.log('Session expired due to inactivity');
+        //console.log('Session expired due to inactivity');
         this.clearSession();
       }
     }, 60000); // Check every minute

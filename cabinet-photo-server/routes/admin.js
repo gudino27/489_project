@@ -385,7 +385,7 @@ router.get("/api/users/invitations",authenticateUser,requireRole("super_admin"),
 // Resend invitation (super_admin only)
 router.post("/api/users/invitations/:id/resend",authenticateUser,requireRole("super_admin"),async (req, res) => {
     const invitationId = parseInt(req.params.id);
-    const { deliveryMethod } = req.body;
+    const deliveryMethod = req.body?.deliveryMethod;
 
     try {
       const db = await getDb();
@@ -415,6 +415,8 @@ router.post("/api/users/invitations/:id/resend",authenticateUser,requireRole("su
         token: invitation.token,
         deliveryMethod: deliveryMethod || (invitation.email && invitation.phone ? "both" : invitation.email ? "email" : "sms")
       };
+
+      console.log('🔄 Resending invitation with data:', JSON.stringify(invitationData, null, 2));
 
       const sendResult = await sendInvitation(invitationData);
 

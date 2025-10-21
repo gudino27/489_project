@@ -3,21 +3,21 @@
 
 // Check if cabinet would collide with custom walls using proper line-rectangle intersection
 export const checkWallCollision = (x, y, width, depth, customWalls, currentRoomData) => {
-  console.log('Checking wall collision for position:', { 
-    x, y, width, depth, 
-    customWalls: customWalls?.length || 0, 
-    roomWalls: currentRoomData?.walls?.length || 0,
-    customWallsArray: customWalls,
-    roomWallsArray: currentRoomData?.walls
-  });
+  //console.log('Checking wall collision for position:', { 
+  //   x, y, width, depth, 
+  //   customWalls: customWalls?.length || 0, 
+  //   roomWalls: currentRoomData?.walls?.length || 0,
+  //   customWallsArray: customWalls,
+  //   roomWallsArray: currentRoomData?.walls
+  // });
   
   if (!customWalls || customWalls.length === 0) {
-    console.log('No custom walls to check');
+    //console.log('No custom walls to check');
     return false;
   }
   
   if (!currentRoomData?.walls || currentRoomData.walls.length === 0) {
-    console.log('No room walls defined');
+    //console.log('No room walls defined');
     return false;
   }
   
@@ -37,15 +37,15 @@ export const checkWallCollision = (x, y, width, depth, customWalls, currentRoomD
       const buffer = Math.min(50, elementMinDimension * 2);
       const minDistance = (wall.thickness + elementMinDimension) / 2 + buffer;
       
-      console.log(`Wall ${wall.wallNumber} collision check:`, {
-        wallNumber: wall.wallNumber,
-        wallCoords: { x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 },
-        cabinetPos: { x, y, width, depth },
-        cabinetCenter: { x: cabinetCenterX, y: cabinetCenterY },
-        distance,
-        minDistance,
-        willCollide: distance < minDistance
-      });
+      //console.log(`Wall ${wall.wallNumber} collision check:`, {
+      //   wallNumber: wall.wallNumber,
+      //   wallCoords: { x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 },
+      //   cabinetPos: { x, y, width, depth },
+      //   cabinetCenter: { x: cabinetCenterX, y: cabinetCenterY },
+      //   distance,
+      //   minDistance,
+      //   willCollide: distance < minDistance
+      // });
     }
     
     // Check if wall line intersects with any cabinet edge or if cabinet overlaps wall
@@ -139,19 +139,19 @@ export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomDat
       
       // Debug logging for 90-degree rotations, especially wall 4
       if (Math.abs((elementRotation || 0) % 360 - 90) < 1 && wall.wallNumber === 4) {
-        console.log('90-degree cabinet collision with Wall 4:', {
-          rotation: elementRotation,
-          wallNumber: wall.wallNumber,
-          wallCoords: { x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 },
-          cabinetPos: { x, y, width, depth },
-          backDirection: { x: backDirectionX, y: backDirectionY },
-          wallNormal: wallToCenter,
-          dotProduct,
-          isBackSide,
-          centerDistance,
-          collisionThreshold,
-          willPush: centerDistance < collisionThreshold
-        });
+        // //console.log('90-degree cabinet collision with Wall 4:', {
+        //   rotation: elementRotation,
+        //   wallNumber: wall.wallNumber,
+        //   wallCoords: { x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 },
+        //   cabinetPos: { x, y, width, depth },
+        //   backDirection: { x: backDirectionX, y: backDirectionY },
+        //   wallNormal: wallToCenter,
+        //   dotProduct,
+        //   isBackSide,
+        //   centerDistance,
+        //   collisionThreshold,
+        //   willPush: centerDistance < collisionThreshold
+        // });
       }
       
       let newX = x;
@@ -165,14 +165,14 @@ export const pushAwayFromWall = (x, y, width, depth, customWalls, currentRoomDat
         const moveDistance = centerDistance - targetDistance;
         newX = x - wallNormalX * moveDistance;
         newY = y - wallNormalY * moveDistance;
-        console.log('Back side collision - moving closer to wall:', { moveDistance, newX, newY, isWallMounted, targetDistance });
+        //console.log('Back side collision - moving closer to wall:', { moveDistance, newX, newY, isWallMounted, targetDistance });
       } else {
         // Front side - push cabinet away to provide door clearance
         const targetDistance = wallThickness / 2 + 50; // Extra space for door opening
         const moveDistance = targetDistance - centerDistance;
         newX = x + wallNormalX * moveDistance;
         newY = y + wallNormalY * moveDistance;
-        console.log('Front side collision - pushing away from wall:', { moveDistance, newX, newY });
+        //console.log('Front side collision - pushing away from wall:', { moveDistance, newX, newY });
       }
       
       // Keep within room bounds and prevent pushing through walls

@@ -260,7 +260,7 @@ const KitchenDesigner = () => {
         materialObject = sharedMaterialMultipliers;
       }
       setMaterialMultipliers(materialObject);
-      //console.log('Updated Kitchen Designer with shared material multipliers:', materialObject);
+      ////console.log('Updated Kitchen Designer with shared material multipliers:', materialObject);
     }
   }, [pricingVersion, sharedMaterialMultipliers]);
   const loadPrices = async () => {
@@ -288,15 +288,15 @@ const KitchenDesigner = () => {
         if (data.wallPricing) {
           setWallPricing(data.wallPricing);
         }
-        //console.log('Loaded prices from database:', data);
-        //console.log('Converted material multipliers for designer:', materialObject);
+        ////console.log('Loaded prices from database:', data);
+        ////console.log('Converted material multipliers for designer:', materialObject);
       } else {
         console.error('Failed to load prices, using defaults');
       }
       if (wallAvailResponse.ok) {
         const wallAvailData = await wallAvailResponse.json();
         setWallAvailability(wallAvailData);
-        //console.log('Loaded wall availability settings:', wallAvailData);
+        ////console.log('Loaded wall availability settings:', wallAvailData);
       } else {
         console.error('Failed to load wall availability, using defaults');
       }
@@ -570,7 +570,7 @@ const KitchenDesigner = () => {
       wallNumber: nextWallNumber,
       doors: [] // Array to store doors on this wall
     };
-    /*console.log('Wall snapping:', {
+    /*//console.log('Wall snapping:', {
       original: { x1, y1, x2, y2 },
       snapped: { x1: snappedStart.x, y1: snappedStart.y, x2: snappedEnd.x, y2: snappedEnd.y },
       startSnapped: snappedStart.snapped,
@@ -1423,11 +1423,11 @@ const KitchenDesigner = () => {
 
         // Try snapping to other cabinets first
         let position = snapToCabinet(boundedX, boundedY, elementWidth, elementDepth, element.id, element.rotation);
-        //console.log('Cabinet snap result:', position);
+        ////console.log('Cabinet snap result:', position);
         // If not snapped to cabinet, try snapping to walls
         if (!position.snapped) {
           position = snapToWall(boundedX, boundedY, elementWidth, elementDepth, currentRoomData, scale, allWallsForCollision, wallHelpersCollision, wallHelpersPush);
-          //console.log('Wall snap result:', position);
+          ////console.log('Wall snap result:', position);
         }
         // If not snapped to regular walls, try snapping to custom walls
         if (!position.snapped) {
@@ -1441,21 +1441,21 @@ const KitchenDesigner = () => {
           }
         }
         // Check for wall collision and push away if needed
-        //console.log('About to check wall collision for element:', element.id, 'at position:', position);
-        //console.log('customWalls length:', customWalls?.length, 'currentRoomData.walls:', currentRoomData?.walls);
-        //console.log('Full customWalls array:', customWalls);
-        //console.log('currentRoomData object keys:', Object.keys(currentRoomData));
+        ////console.log('About to check wall collision for element:', element.id, 'at position:', position);
+        ////console.log('customWalls length:', customWalls?.length, 'currentRoomData.walls:', currentRoomData?.walls);
+        ////console.log('Full customWalls array:', customWalls);
+        ////console.log('currentRoomData object keys:', Object.keys(currentRoomData));
 
         // Check for room boundary collision since customWalls is empty
         let hasCollision = false;
         const wallThickness = 10; // Assume standard wall thickness
         const wallBoundary = roomWidth - wallThickness - (elementWidth / 2); // Right wall boundary
 
-        //console.log('Room width:', roomWidth, 'Wall boundary:', wallBoundary, 'Element width:', elementWidth);
+        ////console.log('Room width:', roomWidth, 'Wall boundary:', wallBoundary, 'Element width:', elementWidth);
 
         if (position.x >= wallBoundary) {
           hasCollision = true;
-          //console.log('COLLISION DETECTED! X position', position.x, 'is at/beyond room wall boundary at', wallBoundary);
+          ////console.log('COLLISION DETECTED! X position', position.x, 'is at/beyond room wall boundary at', wallBoundary);
         }
 
         // Wall-mounted elements (with mountHeight) should be exempt from floor-level collision detection
@@ -2362,7 +2362,7 @@ const KitchenDesigner = () => {
                               Math.pow(clickX - wallDrawStart.x, 2) +
                               Math.pow(clickY - wallDrawStart.y, 2)
                             );
-                            /*console.log('Wall drawing mouseUp:', {
+                            /*//console.log('Wall drawing mouseUp:', {
                               startX: wallDrawStart.x,
                               startY: wallDrawStart.y,
                               endX: clickX,
@@ -2377,7 +2377,7 @@ const KitchenDesigner = () => {
                                 clickX,
                                 clickY
                               );
-                              //console.log('Wall completed via mouseUp');
+                              ////console.log('Wall completed via mouseUp');
                             } else if (wallLength > 5) { // Only show alert if they actually tried to draw something
                               alert(`Wall is too short (${wallLength.toFixed(1)}px). Minimum length is ${minWallLength}px.`);
                             }
@@ -2420,7 +2420,7 @@ const KitchenDesigner = () => {
                                 x: clickX,
                                 y: clickY
                               });
-                              //console.log('Wall drawing started at:', { x: clickX, y: clickY });
+                              ////console.log('Wall drawing started at:', { x: clickX, y: clickY });
                             } else {
                               // Second click: Complete wall
                               const minWallLength = 20; // Minimum wall length in pixels
@@ -2428,7 +2428,7 @@ const KitchenDesigner = () => {
                                 Math.pow(clickX - wallDrawStart.x, 2) +
                                 Math.pow(clickY - wallDrawStart.y, 2)
                               );
-                              //console.log('Attempting to complete wall:', {
+                              ////console.log('Attempting to complete wall:', {
                               //  startX: wallDrawStart.x,
                               //  startY: wallDrawStart.y,
                               //  endX: clickX,
@@ -2444,7 +2444,7 @@ const KitchenDesigner = () => {
                                   clickX,
                                   clickY
                                 );
-                                // console.log('Wall completed successfully');
+                                // //console.log('Wall completed successfully');
                               } else {
                                 alert(`Wall is too short (${wallLength.toFixed(1)}px). Minimum length is ${minWallLength}px.`);
                               }
@@ -2455,7 +2455,7 @@ const KitchenDesigner = () => {
                             return;
                           } else {
                             // Log what was clicked if not a valid target
-                            /*   console.log('Invalid wall drawing target:', {
+                            /*   //console.log('Invalid wall drawing target:', {
                                 tagName: e.target.tagName,
                                 id: e.target.id,
                                 className: e.target.className,

@@ -51,8 +51,6 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
   const getAuthHeaders = () => {
     const session = sessionManager.initSession();
     const token = session ? session.token : null;
-    console.log('DesignViewer - Session:', session ? 'exists' : 'null');
-    console.log('DesignViewer - Token:', token ? 'exists' : 'null');
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''
@@ -143,7 +141,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Stats data received:', data);
+        //console.log('Stats data received:', data);
         setStats(data);
       } else if (response.status === 401) {
         console.error('Unauthorized access to stats');
@@ -418,11 +416,11 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
 
   // Status change functionality
   const changeStatus = async (designId, newStatus) => {
-    console.log('Changing status for design:', designId, 'to:', newStatus);
+    //console.log('Changing status for design:', designId, 'to:', newStatus);
     setStatusChanging(designId);
     try {
       const headers = getAuthHeaders();
-      console.log('Request headers:', headers);
+      //console.log('Request headers:', headers);
 
       const response = await fetch(`${API_BASE}/api/designs/${designId}/status`, {
         method: 'PUT',
@@ -430,10 +428,10 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
         body: JSON.stringify({ status: newStatus })
       });
 
-      console.log('Response status:', response.status);
+      //console.log('Response status:', response.status);
 
       if (response.ok) {
-        console.log('Status update successful');
+        //console.log('Status update successful');
         // Update local state
         setDesigns(designs.map(d =>
           d.id === designId ? { ...d, status: newStatus } : d

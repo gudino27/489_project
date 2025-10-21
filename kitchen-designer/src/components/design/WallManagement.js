@@ -153,7 +153,7 @@ const WallManagement = ({
                                 const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
                                 const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
 
-                                console.log('Deleting removed custom wall from status grid:', wallNum);
+                                //console.log('Deleting removed custom wall from status grid:', wallNum);
 
                                 setCurrentRoomData({
                                   ...currentRoomData,
@@ -186,7 +186,7 @@ const WallManagement = ({
                                 const updatedOriginalWalls = originalWalls.filter(w => w !== wallNum);
                                 const updatedRemovedWalls = (currentRoomData.removedWalls || []).filter(w => w !== wallNum);
 
-                                console.log('Deleting custom wall from status grid:', wallNum);
+                                //console.log('Deleting custom wall from status grid:', wallNum);
 
                                 setCurrentRoomData({
                                   ...currentRoomData,

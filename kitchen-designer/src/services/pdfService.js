@@ -434,11 +434,11 @@ export const sendQuote = async ({
       wall_view_images: wallViewImages
     };
 
-    console.log('Sending design:', {
-      hasFloorPlan: !!floorPlanImage,
-      wallViews: wallViewImages.length,
-      dataSize: JSON.stringify(designData).length
-    });
+    // //console.log('Sending design:', {
+    //   hasFloorPlan: !!floorPlanImage,
+    //   wallViews: wallViewImages.length,
+    //   dataSize: JSON.stringify(designData).length
+    // });
 
     formData.append('designData', JSON.stringify(designData));
 

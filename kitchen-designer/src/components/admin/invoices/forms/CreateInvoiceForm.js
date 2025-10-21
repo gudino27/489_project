@@ -348,14 +348,7 @@ const CreateInvoiceForm = ({
               value={newInvoice.tax_rate}
               onChange={(e) => {
                 const taxRate = parseFloat(e.target.value);
-                console.log('📊 Tax Rate Selection Debug:');
-                console.log('  Selected value:', e.target.value);
-                console.log('  Parsed tax rate:', taxRate);
-                console.log('  Current invoice state:', {
-                  line_items: newInvoice.line_items,
-                  discount_amount: newInvoice.discount_amount,
-                  markup_amount: newInvoice.markup_amount
-                });
+                
 
                 const totals = calculateTotals(
                   newInvoice.line_items,
@@ -364,7 +357,6 @@ const CreateInvoiceForm = ({
                   newInvoice.markup_amount
                 );
 
-                console.log('  New totals:', totals);
 
                 setNewInvoice(prev => ({
                   ...prev,
@@ -810,12 +802,7 @@ const CreateInvoiceForm = ({
                       markupAmount = numValue;
                     }
                   }
-                  console.log('💰 Markup Change Debug:', {
-                    old_markup: newInvoice.markup_amount,
-                    new_markup: markupAmount,
-                    tax_rate: newInvoice.tax_rate,
-                    discount_amount: newInvoice.discount_amount
-                  });
+                 
 
                   const totals = calculateTotals(
                     newInvoice.line_items,

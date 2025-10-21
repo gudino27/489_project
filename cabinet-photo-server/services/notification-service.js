@@ -191,7 +191,7 @@ async function sendInvitationEmail(invitation) {
     const roleName = roleNames[invitation.role]?.[language] || invitation.role;
 
     const mailOptions = {
-      from: `"Gudino Custom Cabinets" <${config.email.from}>`,
+      from: config.email.from,
       to: invitation.email,
       subject: template.subject,
       html: template.body({

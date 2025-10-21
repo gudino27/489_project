@@ -432,7 +432,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
       
       const data = await response.json();
       if (data.success) {
-        console.log('fetchMonthEntries - received entries:', data.entries);
         
         // Group entries by date (extract date from PST timestamp)
         const entriesByDate = {};
@@ -440,7 +439,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
           // Database stores PST timestamps like "2025-10-19 18:08:00"
           // Just extract the date portion
           const entryDate = extractPSTDate(entry.clock_in_time);
-          console.log(`Entry clock_in_time: ${entry.clock_in_time}, extracted date: ${entryDate}`);
           
           if (!entriesByDate[entryDate]) {
             entriesByDate[entryDate] = [];
@@ -448,7 +446,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
           entriesByDate[entryDate].push(entry);
         });
         
-        console.log('fetchMonthEntries - entriesByDate:', entriesByDate);
         setMonthEntries(entriesByDate);
       }
     } catch (error) {
@@ -463,10 +460,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startDay = firstDay.getDay(); // 0-6, Sunday-Saturday
-
-    console.log('getDaysInMonth - monthEntries:', monthEntries);
-    console.log('getDaysInMonth - looking for dates in format YYYY-MM-DD');
-
     const days = [];
     const todayPST = getTodayPST(); // Get current date in PST
     
@@ -481,9 +474,7 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
       const entries = monthEntries[dateStr] || [];
       const totalHours = entries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
       
-      if (entries.length > 0) {
-        console.log(`Date ${dateStr} has ${entries.length} entries:`, entries);
-      }
+      
       
       days.push({
         day,
@@ -782,7 +773,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
 
   const fetchPayrollInfo = async (employeeId = null) => {
     try {
-      console.log('Fetching payroll info for user ID:', employeeId || user.id);
       
       let response;
       if (employeeId) {
@@ -808,7 +798,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
       }
       
       const data = await response.json();
-      console.log('Payroll info response:', data);
       
       if (data.success && data.payrollInfo) {
         if (employeeId) {
@@ -822,7 +811,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
           });
         } else {
           // Employee viewing their own info
-          console.log('Setting payroll info:', data.payrollInfo);
           setPayrollInfo(data.payrollInfo);
           setEmployeeTaxRate(data.payrollInfo.save_tax_rate || 0);
           // Fetch pay period hours based on their pay period type
@@ -831,7 +819,6 @@ const TimeClockManager = ({ token, API_BASE, user }) => {
           }
         }
       } else {
-        console.log('No payroll info found or unsuccessful response');
         // Clear payroll info if none exists
         if (!employeeId) {
           setPayrollInfo(null);
@@ -1925,11 +1912,7 @@ const CalendarView = ({
           </h4>
           {(() => {
             const dayData = days.find(d => d && d.date === selectedDate);
-            console.log('Selected date:', selectedDate);
-            console.log('Day data:', dayData);
-            console.log('Has entries:', dayData?.hasEntries);
-            console.log('Entries array:', dayData?.entries);
-            
+                       
             if (!dayData || !dayData.hasEntries) {
               return (
                 <>
@@ -2269,18 +2252,14 @@ const AdminLiveView = ({
 
   const fetchAllEmployees = async () => {
     try {
-      console.log('Fetching all employees with token:', token ? 'Token exists' : 'No token');
       const response = await fetch(`${API_BASE}/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      console.log('Employee fetch response status:', response.status);
       const data = await response.json();
-      console.log('Employee fetch data:', data);
       if (data.success) {
         // Include ALL users (employees, admins, super admins)
-        console.log('Setting all employees:', data.users.length, 'users');
         setAllEmployees(data.users);
       } else {
         console.error('Failed to fetch employees:', data.message);

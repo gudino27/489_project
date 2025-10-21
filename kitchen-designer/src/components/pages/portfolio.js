@@ -826,7 +826,7 @@ useEffect(() => {
                     });
                   }
                 } catch (e) {
-                    console.log('[VIDEO] No qualities found, using original');
+                    //console.log('[VIDEO] No qualities found, using original');
                 }
 
                 // Determine video source with proper fallback chain:
@@ -859,9 +859,9 @@ useEffect(() => {
                   return 'video/mp4'; // default fallback
                 };
 
-                console.log('[VIDEO HERO] Playing:', videoSrc);
-                console.log('[VIDEO HERO] Fallback:', fallbackSrc);
-                console.log('[VIDEO HERO] Qualities:', qualities);
+                //console.log('[VIDEO HERO] Playing:', videoSrc);
+                //console.log('[VIDEO HERO] Fallback:', fallbackSrc);
+                //console.log('[VIDEO HERO] Qualities:', qualities);
 
                 return (
                   <>
@@ -877,7 +877,7 @@ useEffect(() => {
                       onError={(e) => {
                         console.error('[VIDEO HERO] Failed to load:', videoSrc);
                         if (fallbackSrc && e.target.src !== fallbackSrc) {
-                          console.log('[VIDEO HERO] Trying fallback quality:', fallbackSrc);
+                          //console.log('[VIDEO HERO] Trying fallback quality:', fallbackSrc);
                           e.target.src = fallbackSrc;
                         } else {
                           console.error('[VIDEO HERO] No fallback available');

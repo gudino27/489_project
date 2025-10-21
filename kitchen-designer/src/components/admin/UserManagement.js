@@ -48,7 +48,6 @@ const UserManagement = ({ token, API_BASE }) => {
   const [newUser, setNewUser] = useState(initialUserState);
 
   const resetUserForm = () => {
-    console.log('🔄 Resetting form to:', initialUserState);
     setNewUser(initialUserState);
     setError('');
     setSuccess('');
@@ -59,9 +58,7 @@ const UserManagement = ({ token, API_BASE }) => {
     fetchInvitations();
   }, []);
 
-  useEffect(() => {
-    console.log('👤 newUser state changed:', newUser);
-  }, [newUser]);
+
 
   const fetchUsers = async () => {
     try {
