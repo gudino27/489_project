@@ -14,6 +14,7 @@ services:
     volumes:
       - ./data/uploads:/app/uploads
       - ./data/database:/app/database
+      - ./data/logs:/app/logs 
     networks:
       - app-network
     healthcheck:
