@@ -76,7 +76,7 @@ LABEL org.opencontainers.image.description="Backend API for Gudino Custom Cabine
 USER node
 EXPOSE 3001
 
-HEALTHCHECK --interval=30s --timeout=30s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=20s --timeout=90s --start-period=90s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:3001/api/health || exit 1
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
