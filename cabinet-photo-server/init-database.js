@@ -1278,34 +1278,22 @@ async function addSmsRoutingTables(db) {
     CREATE INDEX IF NOT EXISTS idx_sms_history_sent_at ON sms_routing_history(sent_at);
   `);
 
-  // Insert default SMS routing settings
-  const defaultSmsSettings = [
-    ['design_submission', 1, 'all'],
-    ['test_sms', 1, 'single']
-  ];
+  // (No automatic seeding of SMS routing settings or recipients.)
+  // Ensure there are no duplicate recipients for the same message_type + phone_number
+  // and create a unique index to prevent future duplicates. This is wrapped in try/catch
+  // because older DBs may temporarily contain duplicates; we'll attempt to clean them first.
+  try {
+    await db.run(`DELETE FROM sms_routing_recipients
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid) FROM sms_routing_recipients GROUP BY message_type, phone_number
+      )`);
 
-  for (const [messageType, isEnabled, routingMode] of defaultSmsSettings) {
-    await db.run(
-      'INSERT OR IGNORE INTO sms_routing_settings (message_type, is_enabled, routing_mode) VALUES (?, ?, ?)',
-      [messageType, isEnabled, routingMode]
-    );
+    await db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_recipient_unique ON sms_routing_recipients(message_type, phone_number)`);
+  } catch (err) {
+    console.warn('Could not dedupe/create unique index for sms_routing_recipients:', err.message);
   }
 
-  // Add default admin phone number as fallback recipient
-  const adminPhone = process.env.ADMIN_PHONE || '+15551234567';
-  const defaultRecipients = [
-    ['design_submission', null, adminPhone, 'Admin'],
-    ['test_sms', null, adminPhone, 'Admin']
-  ];
-
-  for (const [messageType, employeeId, phone, name] of defaultRecipients) {
-    await db.run(
-      'INSERT OR IGNORE INTO sms_routing_recipients (message_type, employee_id, phone_number, name, priority_order) VALUES (?, ?, ?, ?, 1)',
-      [messageType, employeeId, phone, name]
-    );
-  }
-
-  console.log(' Created SMS routing tables and default settings');
+  console.log(' Created SMS routing tables');
 }
 
 async function fixPayrollSchema(db) {
