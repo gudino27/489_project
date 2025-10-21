@@ -467,6 +467,24 @@ async function addUserTables(db) {
     )
   `);
 
+  // Invitation tokens table - for employee invitation/sign-up system
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS invitation_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT,
+      phone TEXT,
+      full_name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'employee',
+      language TEXT NOT NULL DEFAULT 'en',
+      token TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      created_by INTEGER NOT NULL,
+      used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `);
+
   // Time clock entries table - tracks employee clock in/out
   await db.exec(`
     CREATE TABLE IF NOT EXISTS time_clock_entries (
@@ -650,6 +668,12 @@ async function addUserTables(db) {
     CREATE INDEX IF NOT EXISTS idx_reset_token ON password_reset_tokens(token);
     CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_reset_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_invitation_token ON invitation_tokens(token);
+    CREATE INDEX IF NOT EXISTS idx_invitation_expires ON invitation_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_invitation_email ON invitation_tokens(email);
+    CREATE INDEX IF NOT EXISTS idx_invitation_phone ON invitation_tokens(phone);
+    CREATE INDEX IF NOT EXISTS idx_invitation_created_by ON invitation_tokens(created_by);
     
     CREATE INDEX IF NOT EXISTS idx_time_entries_employee ON time_clock_entries(employee_id);
     CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in ON time_clock_entries(clock_in_time);

@@ -36,3 +36,29 @@ export const toggleUserStatus = async (userId) => {
   const response = await api.patch(`/api/users/${userId}/toggle-status`);
   return response.data;
 };
+
+// Invitation System APIs
+
+// Get all invitations
+export const getInvitations = async () => {
+  const response = await api.get('/api/users/invitations');
+  return response.data.invitations || [];
+};
+
+// Send invitation
+export const sendInvitation = async (invitationData) => {
+  const response = await api.post('/api/users/send-invite', invitationData);
+  return response.data;
+};
+
+// Resend invitation
+export const resendInvitation = async (invitationId) => {
+  const response = await api.post(`/api/users/invitations/${invitationId}/resend`);
+  return response.data;
+};
+
+// Cancel invitation
+export const cancelInvitation = async (invitationId) => {
+  const response = await api.delete(`/api/users/invitations/${invitationId}`);
+  return response.data;
+};

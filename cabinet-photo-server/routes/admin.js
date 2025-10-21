@@ -5,6 +5,12 @@ const router = express.Router();
 const {getDb,userDb, invoiceDb} = require("../db-helpers");
 const { authenticateUser, requireRole } = require("../middleware/auth");
 const { twilioClient } = require("../utils/sms");
+const bcrypt = require("bcryptjs");
+const {
+  generateInvitationToken,
+  sendInvitation,
+  cleanupExpiredInvitations
+} = require("../services/notification-service");
 // SMS routing helper functions
 async function getSmsRoutingRecipients(messageType) {
   const db = await getDb();
@@ -248,6 +254,375 @@ router.delete("/api/users/:id",authenticateUser,requireRole("super_admin"),async
     }
   }
 );
+
+// Invitation System Endpoints
+
+// Send invitation to new user
+router.post("/api/users/send-invite",authenticateUser,requireRole("super_admin"),async (req, res) => {
+    const { email, phone, full_name, role, language, deliveryMethod } = req.body;
+
+    try {
+      // Validate required fields
+      if (!full_name || !role) {
+        return res.status(400).json({ error: "Full name and role are required" });
+      }
+
+      // Validate role (super_admin can create any role)
+      if (!["admin", "super_admin", "employee"].includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+
+      // Validate delivery method and contact info
+      if (!deliveryMethod || !["email", "sms", "both"].includes(deliveryMethod)) {
+        return res.status(400).json({ error: "Invalid delivery method" });
+      }
+
+      if ((deliveryMethod === "email" || deliveryMethod === "both") && !email) {
+        return res.status(400).json({ error: "Email address required for email delivery" });
+      }
+
+      if ((deliveryMethod === "sms" || deliveryMethod === "both") && !phone) {
+        return res.status(400).json({ error: "Phone number required for SMS delivery" });
+      }
+
+      // Check if user with this email already exists
+      if (email) {
+        const existingUser = await userDb.getUserByEmail(email);
+        if (existingUser) {
+          return res.status(400).json({ error: "User with this email already exists" });
+        }
+      }
+
+      // Generate invitation token
+      const token = generateInvitationToken();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+
+      // Save invitation to database
+      const db = await getDb();
+      const result = await db.run(
+        `INSERT INTO invitation_tokens 
+         (email, phone, full_name, role, language, token, expires_at, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          email || null,
+          phone || null,
+          full_name,
+          role,
+          language || "en",
+          token,
+          expiresAt.toISOString(),
+          req.user.id
+        ]
+      );
+
+      // Send invitation via specified method(s)
+      const invitationData = {
+        email,
+        phone,
+        fullName: full_name,
+        role,
+        language: language || "en",
+        token,
+        deliveryMethod
+      };
+
+      const sendResult = await sendInvitation(invitationData);
+
+      if (!sendResult.success) {
+        // Rollback invitation if sending failed
+        await db.run("DELETE FROM invitation_tokens WHERE id = ?", [result.lastID]);
+        
+        return res.status(500).json({
+          error: "Failed to send invitation",
+          details: {
+            email: sendResult.email?.error,
+            sms: sendResult.sms?.error
+          }
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Invitation sent successfully",
+        invitationId: result.lastID,
+        expiresAt: expiresAt.toISOString(),
+        deliveryResults: {
+          email: sendResult.email,
+          sms: sendResult.sms
+        }
+      });
+    } catch (error) {
+      console.error("Error sending invitation:", error);
+      res.status(500).json({ error: "Failed to send invitation" });
+    }
+  }
+);
+
+// Get pending invitations (super_admin only)
+router.get("/api/users/invitations",authenticateUser,requireRole("super_admin"),async (req, res) => {
+    try {
+      const db = await getDb();
+      const invitations = await db.all(
+        `SELECT 
+          i.id, i.email, i.phone, i.full_name, i.role, i.language,
+          i.expires_at, i.used_at, i.created_at,
+          u.username as created_by_username, u.full_name as created_by_name
+         FROM invitation_tokens i
+         LEFT JOIN users u ON i.created_by = u.id
+         WHERE i.used_at IS NULL
+         ORDER BY i.created_at DESC`
+      );
+
+      res.json({ success: true, invitations });
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ error: "Failed to fetch invitations" });
+    }
+  }
+);
+
+// Resend invitation (super_admin only)
+router.post("/api/users/invitations/:id/resend",authenticateUser,requireRole("super_admin"),async (req, res) => {
+    const invitationId = parseInt(req.params.id);
+    const { deliveryMethod } = req.body;
+
+    try {
+      const db = await getDb();
+      
+      // Get invitation details
+      const invitation = await db.get(
+        "SELECT * FROM invitation_tokens WHERE id = ? AND used_at IS NULL",
+        [invitationId]
+      );
+
+      if (!invitation) {
+        return res.status(404).json({ error: "Invitation not found or already used" });
+      }
+
+      // Check if expired
+      if (new Date(invitation.expires_at) < new Date()) {
+        return res.status(400).json({ error: "Invitation has expired" });
+      }
+
+      // Send invitation
+      const invitationData = {
+        email: invitation.email,
+        phone: invitation.phone,
+        fullName: invitation.full_name,
+        role: invitation.role,
+        language: invitation.language,
+        token: invitation.token,
+        deliveryMethod: deliveryMethod || (invitation.email && invitation.phone ? "both" : invitation.email ? "email" : "sms")
+      };
+
+      const sendResult = await sendInvitation(invitationData);
+
+      if (!sendResult.success) {
+        return res.status(500).json({
+          error: "Failed to resend invitation",
+          details: {
+            email: sendResult.email?.error,
+            sms: sendResult.sms?.error
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Invitation resent successfully",
+        deliveryResults: {
+          email: sendResult.email,
+          sms: sendResult.sms
+        }
+      });
+    } catch (error) {
+      console.error("Error resending invitation:", error);
+      res.status(500).json({ error: "Failed to resend invitation" });
+    }
+  }
+);
+
+// Cancel invitation (super_admin only)
+router.delete("/api/users/invitations/:id",authenticateUser,requireRole("super_admin"),async (req, res) => {
+    const invitationId = parseInt(req.params.id);
+
+    try {
+      const db = await getDb();
+      const result = await db.run(
+        "DELETE FROM invitation_tokens WHERE id = ? AND used_at IS NULL",
+        [invitationId]
+      );
+
+      if (result.changes > 0) {
+        res.json({ success: true, message: "Invitation cancelled successfully" });
+      } else {
+        res.status(404).json({ error: "Invitation not found or already used" });
+      }
+    } catch (error) {
+      console.error("Error cancelling invitation:", error);
+      res.status(500).json({ error: "Failed to cancel invitation" });
+    }
+  }
+);
+
+// Validate invitation token (PUBLIC - no authentication required)
+router.get("/api/users/validate-invite/:token", async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const db = await getDb();
+    const invitation = await db.get(
+      `SELECT id, email, phone, full_name, role, language, expires_at, used_at
+       FROM invitation_tokens 
+       WHERE token = ?`,
+      [token]
+    );
+
+    if (!invitation) {
+      return res.status(404).json({ 
+        valid: false, 
+        error: "Invalid invitation link" 
+      });
+    }
+
+    // Check if already used
+    if (invitation.used_at) {
+      return res.status(400).json({ 
+        valid: false, 
+        error: "This invitation has already been used" 
+      });
+    }
+
+    // Check if expired
+    if (new Date(invitation.expires_at) < new Date()) {
+      return res.status(400).json({ 
+        valid: false, 
+        error: "This invitation has expired" 
+      });
+    }
+
+    res.json({
+      valid: true,
+      invitation: {
+        fullName: invitation.full_name,
+        email: invitation.email,
+        phone: invitation.phone,
+        role: invitation.role,
+        language: invitation.language
+      }
+    });
+  } catch (error) {
+    console.error("Error validating invitation:", error);
+    res.status(500).json({ error: "Failed to validate invitation" });
+  }
+});
+
+// Complete registration (PUBLIC - no authentication required)
+router.post("/api/users/complete-registration", async (req, res) => {
+  const { token, username, password } = req.body;
+
+  try {
+    // Validate input
+    if (!token || !username || !password) {
+      return res.status(400).json({ 
+        error: "Token, username, and password are required" 
+      });
+    }
+
+    const db = await getDb();
+    
+    // Get and validate invitation
+    const invitation = await db.get(
+      "SELECT * FROM invitation_tokens WHERE token = ?",
+      [token]
+    );
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invalid invitation link" });
+    }
+
+    if (invitation.used_at) {
+      return res.status(400).json({ error: "This invitation has already been used" });
+    }
+
+    if (new Date(invitation.expires_at) < new Date()) {
+      return res.status(400).json({ error: "This invitation has expired" });
+    }
+
+    // Check if username already exists
+    const existingUser = await db.get(
+      "SELECT id FROM users WHERE username = ?",
+      [username]
+    );
+
+    if (existingUser) {
+      return res.status(400).json({ error: "Username already taken" });
+    }
+
+    // Check if email already exists (if invitation has email)
+    if (invitation.email) {
+      const existingEmail = await db.get(
+        "SELECT id FROM users WHERE email = ?",
+        [invitation.email]
+      );
+
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Create user
+    const userResult = await db.run(
+      `INSERT INTO users 
+       (username, email, password_hash, role, full_name, is_active, created_by)
+       VALUES (?, ?, ?, ?, ?, 1, ?)`,
+      [
+        username,
+        invitation.email || `${username}@temp.local`,
+        passwordHash,
+        invitation.role,
+        invitation.full_name,
+        invitation.created_by
+      ]
+    );
+
+    // Mark invitation as used
+    await db.run(
+      "UPDATE invitation_tokens SET used_at = datetime('now') WHERE id = ?",
+      [invitation.id]
+    );
+
+    // Log activity
+    await db.run(
+      `INSERT INTO activity_logs 
+       (user_id, user_name, action, details, created_at)
+       VALUES (?, ?, ?, ?, datetime('now'))`,
+      [
+        userResult.lastID,
+        username,
+        "user_registered",
+        `User completed registration via invitation (${invitation.role})`
+      ]
+    );
+
+    console.log(`✅ New user registered: ${username} (${invitation.role})`);
+
+    res.status(201).json({
+      success: true,
+      message: "Registration completed successfully",
+      userId: userResult.lastID,
+      username,
+      role: invitation.role
+    });
+  } catch (error) {
+    console.error("Error completing registration:", error);
+    res.status(500).json({ error: "Failed to complete registration" });
+  }
+});
 // SMS Routing Management Endpoints
 // Get SMS routing settings
 router.get("/api/admin/sms-routing/settings",authenticateUser,requireRole(["super_admin"]),async (req, res) => {

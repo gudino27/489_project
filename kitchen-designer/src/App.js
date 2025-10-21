@@ -7,6 +7,7 @@ import About from './components/pages/About';
 import Contact from './components/pages/Contact';
 import AdminPanel from './components/admin/AdminPanel';
 import PasswordReset from './components/admin/PasswordReset';
+import Registration from './components/auth/Registration';
 import TestimonialForm from './components/forms/TestimonialForm';
 import InvoiceViewer from './components/invoice/InvoiceViewer';
 import ReceiptViewer from './components/invoice/ReceiptViewer';
@@ -33,6 +34,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/reset-password" element={<PasswordReset />} />
+            <Route path="/register/:token" element={<Registration />} />
             <Route path="/testimonial/:token" element={<TestimonialForm />} />
             <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
             <Route path="/invoice/:token" element={<InvoiceViewer />} />

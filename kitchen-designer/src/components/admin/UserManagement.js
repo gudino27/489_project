@@ -8,7 +8,13 @@ import {
   User,
   Check,
   AlertCircle,
-  DollarSign
+  Mail,
+  MessageSquare,
+  Send,
+  Clock,
+  X,
+  RefreshCw,
+  UserCheck
 } from 'lucide-react';
 import { formatDatePacific, formatDateTimePacific } from '../../utils/dateUtils';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -19,31 +25,43 @@ const UserManagement = ({ token, API_BASE }) => {
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [editingPayroll, setEditingPayroll] = useState(null);
-  const [payrollInfo, setPayrollInfo] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Invitation system state
+  const [invitations, setInvitations] = useState([]);
+  const [creationMode, setCreationMode] = useState('manual'); // 'manual' or 'invite'
+  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'invitations'
 
-  const [newUser, setNewUser] = useState({
+  const initialUserState = {
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     full_name: '',
-    role: 'admin'
-  });
+    role: 'admin',
+    phone: '',
+    language: 'en',
+    deliveryMethod: 'email'
+  };
 
-  const [payrollData, setPayrollData] = useState({
-    employmentType: 'hourly',
-    hourlyRate: '',
-    overtimeRate: '',
-    salary: '',
-    payPeriodType: 'biweekly',
-  });
+  const [newUser, setNewUser] = useState(initialUserState);
+
+  const resetUserForm = () => {
+    console.log('🔄 Resetting form to:', initialUserState);
+    setNewUser(initialUserState);
+    setError('');
+    setSuccess('');
+  };
 
   useEffect(() => {
     fetchUsers();
+    fetchInvitations();
   }, []);
+
+  useEffect(() => {
+    console.log('👤 newUser state changed:', newUser);
+  }, [newUser]);
 
   const fetchUsers = async () => {
     try {
@@ -67,49 +85,173 @@ const UserManagement = ({ token, API_BASE }) => {
     }
   };
 
+  const fetchInvitations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/users/invitations`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch invitations');
+
+      const data = await response.json();
+      setInvitations(data.invitations || []);
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+      setInvitations([]);
+    }
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (newUser.password !== newUser.confirmPassword) {
-      setError(t('userManagement.passwordMismatch'));
+    if (creationMode === 'manual') {
+      // Manual creation - validate passwords
+      if (newUser.password !== newUser.confirmPassword) {
+        setError(t('userManagement.passwordMismatch'));
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: newUser.username,
+            email: newUser.email,
+            password: newUser.password,
+            full_name: newUser.full_name,
+            role: newUser.role
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || t('userManagement.created'));
+        }
+
+        setSuccess(t('userManagement.created'));
+        resetUserForm();
+        setShowAddUser(false);
+        fetchUsers();
+      } catch (error) {
+        setError(error.message);
+      }
+    } else {
+      // Invitation mode
+      handleSendInvitation(e);
+    }
+  };
+
+  const handleSendInvitation = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validate required fields
+    if (!newUser.full_name || !newUser.role) {
+      setError('Full name and role are required');
+      return;
+    }
+
+    // Email and phone are always required
+    if (!newUser.email || !newUser.email.trim()) {
+      setError('Email address is required');
+      return;
+    }
+
+    if (!newUser.phone || !newUser.phone.trim()) {
+      setError('Phone number is required');
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newUser.email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/users`, {
+      const response = await fetch(`${API_BASE}/api/users/send-invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          username: newUser.username,
-          email: newUser.email,
-          password: newUser.password,
+          email: newUser.email || null,
+          phone: newUser.phone || null,
           full_name: newUser.full_name,
-          role: newUser.role
+          role: newUser.role,
+          language: newUser.language,
+          deliveryMethod: newUser.deliveryMethod
         })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || t('userManagement.created'));
+        throw new Error(data.error || 'Failed to send invitation');
       }
 
-      setSuccess(t('userManagement.created'));
-      setNewUser({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        full_name: '',
-        role: 'admin'
-      });
+      setSuccess(`Invitation sent successfully via ${newUser.deliveryMethod}`);
+      resetUserForm();
       setShowAddUser(false);
-      fetchUsers();
+      fetchInvitations();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/users/invitations/${invitationId}/resend`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend invitation');
+      }
+
+      setSuccess('Invitation resent successfully');
+      fetchInvitations();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId) => {
+    if (!window.confirm('Are you sure you want to cancel this invitation?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/users/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel invitation');
+      }
+
+      setSuccess('Invitation cancelled successfully');
+      fetchInvitations();
     } catch (error) {
       setError(error.message);
     }
@@ -156,88 +298,6 @@ const UserManagement = ({ token, API_BASE }) => {
     }
   };
 
-  const handleEditPayroll = async (user) => {
-    setEditingPayroll(user);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await fetch(`${API_BASE}/api/timeclock/admin/payroll-info/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-      
-      if (data.success && data.payrollInfo) {
-        setPayrollData({
-          employmentType: data.payrollInfo.employment_type || 'hourly',
-          hourlyRate: data.payrollInfo.hourly_rate || '',
-          overtimeRate: data.payrollInfo.overtime_rate || '',
-          salary: data.payrollInfo.salary || '',
-          payPeriodType: data.payrollInfo.pay_period_type || 'biweekly',
-        });
-      } else {
-        // No existing payroll info, use defaults
-        setPayrollData({
-          employmentType: 'hourly',
-          hourlyRate: '',
-          overtimeRate: '',
-          salary: '',
-          payPeriodType: 'biweekly',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching payroll info:', error);
-      setError('Failed to load payroll info');
-    }
-  };
-
-  const handleSavePayroll = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!editingPayroll) return;
-
-    try {
-      const response = await fetch(`${API_BASE}/api/timeclock/admin/payroll-info`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          employeeId: editingPayroll.id,
-          employmentType: payrollData.employmentType,
-          hourlyRate: payrollData.hourlyRate ? parseFloat(payrollData.hourlyRate) : null,
-          overtimeRate: payrollData.overtimeRate ? parseFloat(payrollData.overtimeRate) : null,
-          salary: payrollData.salary ? parseFloat(payrollData.salary) : null,
-          payPeriodType: payrollData.payPeriodType,
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to save payroll info');
-      }
-
-      setSuccess('Payroll info saved successfully');
-      setEditingPayroll(null);
-      setPayrollData({
-        employmentType: 'hourly',
-        hourlyRate: '',
-        overtimeRate: '',
-        salary: '',
-        payPeriodType: 'biweekly',
-      });
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return t('userManagement.never');
     const result = formatDateTimePacific(dateString, {
@@ -247,7 +307,6 @@ const UserManagement = ({ token, API_BASE }) => {
       hour: '2-digit',
       minute: '2-digit'
     });
-    console.log('🕐 Formatting date:', dateString, '→', result);
     return result;
   };
   if (loading) {
@@ -266,13 +325,49 @@ const UserManagement = ({ token, API_BASE }) => {
           {t('userManagement.title')}
         </h2>
         <button
-          onClick={() => setShowAddUser(true)}
+          onClick={() => {
+            resetUserForm();
+            setCreationMode('manual');
+            setShowAddUser(true);
+          }}
           className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
           style={{ minHeight: '44px' }}
         >
           <UserPlus size={18} />
           {t('userManagement.addNewUser')}
         </button>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`pb-3 px-2 font-medium transition-colors ${
+              activeTab === 'users'
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Users size={18} />
+              Active Users ({users.length})
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('invitations')}
+            className={`pb-3 px-2 font-medium transition-colors ${
+              activeTab === 'invitations'
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Mail size={18} />
+              Pending Invitations ({invitations.filter(inv => !inv.used_at).length})
+            </span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -291,86 +386,239 @@ const UserManagement = ({ token, API_BASE }) => {
 
       {/* Add User Modal */}
       {showAddUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">{t('userManagement.addNewUser')}</h3>
-            <div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.username')}</label>
-                  <input
-                    type="text"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.email')}</label>
-                  <input
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.fullName')}</label>
-                  <input
-                    type="text"
-                    value={newUser.full_name}
-                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.password')}</label>
-                  <input
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.confirmPassword')}</label>
-                  <input
-                    type="password"
-                    value={newUser.confirmPassword}
-                    onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('userManagement.role')}</label>
-                  <select
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="employee">{t('userManagement.employee')}</option>
-                    <option value="admin">{t('userManagement.admin')}</option>
-                    <option value="super_admin">{t('userManagement.superAdmin')}</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mt-6 flex gap-2">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto h-half">
+          <div key={`modal-${creationMode}`} className="bg-white rounded-lg p-2 sm:my-2 max-w-md overflow-y-auto" style={{height: '80vh', width: '100%' }}>
+            <div className="p-2 sm:p-2 border-b border-gray-100">
+              <h3 className="text-lg sm:text-xl font-bold">{t('userManagement.addNewUser')}</h3>
+            </div>
+            <div className="p-2 sm:p-6 overflow-y-auto flex-1">
+            {/* Mode Toggle */}
+            <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+              <label className="block text-xs sm:text-sm font-medium mb-1.5">Creation Mode</label>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => setShowAddUser(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  {t('userManagement.cancel')}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleCreateUser(e);
+                  type="button"
+                  onClick={() => {
+                    resetUserForm();
+                    setCreationMode('manual');
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className={`flex-1 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    creationMode === 'manual'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
                 >
-                  {t('userManagement.createUser')}
+                  <span className="flex items-center justify-center gap-1">
+                    <UserCheck size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Manual Creation</span>
+                    <span className="sm:hidden">Manual</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetUserForm();
+                    setCreationMode('invite');
+                  }}
+                  className={`flex-1 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    creationMode === 'invite'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    <Send size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Send Invitation</span>
+                    <span className="sm:hidden">Invite</span>
+                  </span>
                 </button>
               </div>
+            </div>
+
+            <div>
+              <div className="space-y-1">
+                {creationMode === 'manual' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.username')}</label>
+                      <input
+                        type="text"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.email')}</label>
+                      <input
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.fullName')}</label>
+                      <input
+                        type="text"
+                        value={newUser.full_name}
+                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.password')}</label>
+                      <input
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.confirmPassword')}</label>
+                      <input
+                        type="password"
+                        value={newUser.confirmPassword}
+                        onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="new-password"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.role')}</label>
+                      <select
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="employee">{t('userManagement.employee')}</option>
+                        <option value="admin">{t('userManagement.admin')}</option>
+                        <option value="super_admin">{t('userManagement.superAdmin')}</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.fullName')} *</label>
+                      <input
+                        type="text"
+                        value={newUser.full_name}
+                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.role')} *</label>
+                      <select
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="employee">{t('userManagement.employee')}</option>
+                        <option value="admin">{t('userManagement.admin')}</option>
+                        <option value="super_admin">{t('userManagement.superAdmin')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('userManagement.email')} *</label>
+                      <input
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        autoComplete="off"
+                        placeholder="user@example.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Phone Number *</label>
+                      <input
+                        type="tel"
+                        value={newUser.phone}
+                        onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="+1234567890"
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Delivery Method *</label>
+                      <select
+                        value={newUser.deliveryMethod}
+                        onChange={(e) => setNewUser({ ...newUser, deliveryMethod: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="email">Email Only</option>
+                        <option value="sms">SMS Only</option>
+                        <option value="both">Both Email & SMS</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Language</label>
+                      <select
+                        value={newUser.language}
+                        onChange={(e) => setNewUser({ ...newUser, language: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                      </select>
+                    </div>
+                    <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-800">
+                        <strong>Note:</strong> The recipient will receive a secure link valid for 7 days. 
+                        They can choose their own username and password.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            </div>
+            
+            <div className="p-4 sm:p-6 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  resetUserForm();
+                  setShowAddUser(false);
+                  setCreationMode('manual');
+                }}
+                className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                {t('userManagement.cancel')}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCreateUser(e);
+                }}
+                className="w-full sm:flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+              >
+                {creationMode === 'manual' ? (
+                  <>
+                    <UserCheck size={16} />
+                    {t('userManagement.createUser')}
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Send Invitation
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -442,15 +690,6 @@ const UserManagement = ({ token, API_BASE }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex gap-2">
-                    {user.role === 'employee' && (
-                      <button
-                        onClick={() => handleEditPayroll(user)}
-                        className="text-green-600 hover:text-green-900"
-                        title="Manage payroll"
-                      >
-                        <DollarSign size={16} />
-                      </button>
-                    )}
                     <button
                       onClick={() => setEditingUser(user)}
                       className="text-blue-600 hover:text-blue-900"
@@ -482,9 +721,12 @@ const UserManagement = ({ token, API_BASE }) => {
         </div>
       </div>
 
-      {/* Users Cards - Mobile */}
-      <div className="lg:hidden space-y-4">
-        {users && users.length > 0 ? users.map((user) => (
+      {/* Active Users Tab Content */}
+      {activeTab === 'users' && (
+        <>
+          {/* Users Cards - Mobile */}
+          <div className="lg:hidden space-y-4">
+            {users && users.length > 0 ? users.map((user) => (
           <div key={user.id} className="bg-white rounded-lg shadow p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center flex-1">
@@ -553,18 +795,238 @@ const UserManagement = ({ token, API_BASE }) => {
               </div>
             </div>
           </div>
-        )) : (
-          <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
-            No users found
+            )) : (
+              <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
+                No users found
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Pending Invitations Tab Content */}
+      {activeTab === 'invitations' && (
+        <>
+          {/* Invitations Table - Desktop */}
+          <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Recipient
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Delivery
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {invitations && invitations.length > 0 ? invitations.map((invitation) => {
+                    const isExpired = new Date(invitation.expires_at) < new Date();
+                    const isUsed = !!invitation.used_at;
+                    const isPending = !isUsed && !isExpired;
+
+                    return (
+                      <tr key={invitation.id} className={isUsed || isExpired ? 'bg-gray-50' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{invitation.full_name}</div>
+                            <div className="text-sm text-gray-500">
+                              {invitation.email && <div className="flex items-center gap-1"><Mail size={12} /> {invitation.email}</div>}
+                              {invitation.phone && <div className="flex items-center gap-1"><MessageSquare size={12} /> {invitation.phone}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            invitation.role === 'super_admin'
+                              ? 'bg-purple-100 text-purple-800'
+                              : invitation.role === 'employee'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {invitation.role === 'super_admin' && <Shield size={12} />}
+                            {invitation.role === 'super_admin' 
+                              ? 'Super Admin' 
+                              : invitation.role === 'employee'
+                              ? 'Employee'
+                              : 'Admin'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {invitation.email && invitation.phone ? 'Email & SMS' : invitation.email ? 'Email' : 'SMS'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isUsed ? (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Completed
+                            </span>
+                          ) : isExpired ? (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 flex items-center gap-1">
+                              <Clock size={12} />
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(invitation.created_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          {isPending && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleResendInvitation(invitation.id)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Resend invitation"
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleCancelInvitation(invitation.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Cancel invitation"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                        No invitations found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Invitations Cards - Mobile */}
+          <div className="lg:hidden space-y-4">
+            {invitations && invitations.length > 0 ? invitations.map((invitation) => {
+              const isExpired = new Date(invitation.expires_at) < new Date();
+              const isUsed = !!invitation.used_at;
+              const isPending = !isUsed && !isExpired;
+
+              return (
+                <div key={invitation.id} className={`bg-white rounded-lg shadow p-4 ${isUsed || isExpired ? 'opacity-75' : ''}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">{invitation.full_name}</div>
+                      <div className="text-sm text-gray-500 mt-1 space-y-1">
+                        {invitation.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail size={12} /> {invitation.email}
+                          </div>
+                        )}
+                        {invitation.phone && (
+                          <div className="flex items-center gap-1">
+                            <MessageSquare size={12} /> {invitation.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {isPending && (
+                      <div className="flex gap-2 ml-3">
+                        <button
+                          onClick={() => handleResendInvitation(invitation.id)}
+                          className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg"
+                          title="Resend"
+                          style={{ minHeight: '44px', minWidth: '44px' }}
+                        >
+                          <RefreshCw size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg"
+                          title="Cancel"
+                          style={{ minHeight: '44px', minWidth: '44px' }}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-100">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Role</div>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        invitation.role === 'super_admin'
+                          ? 'bg-purple-100 text-purple-800'
+                          : invitation.role === 'employee'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {invitation.role === 'super_admin' && <Shield size={12} />}
+                        {invitation.role === 'super_admin' 
+                          ? 'Super Admin' 
+                          : invitation.role === 'employee'
+                          ? 'Employee'
+                          : 'Admin'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Status</div>
+                      {isUsed ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          Completed
+                        </span>
+                      ) : isExpired ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 flex items-center gap-1">
+                          <Clock size={12} />
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="col-span-2">
+                      <div className="text-xs text-gray-500 mb-1">Created</div>
+                      <div className="text-sm text-gray-700">{formatDate(invitation.created_at)}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
+                No invitations found
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Edit User Modal */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">{t('userManagement.editUser')}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md my-8 max-h-[85vh] overflow-y-auto">
+            <h3 className="text-lg sm:text-xl font-bold mb-4">{t('userManagement.editUser')}</h3>
             <div>
               <div className="space-y-4">
                 <div>
@@ -607,10 +1069,10 @@ const UserManagement = ({ token, API_BASE }) => {
                   </select>
                 </div>
               </div>
-              <div className="mt-6 flex gap-2">
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   {t('userManagement.cancel')}
                 </button>
@@ -621,158 +1083,12 @@ const UserManagement = ({ token, API_BASE }) => {
                     const role = document.getElementById('edit-role').value;
                     handleUpdateUser(editingUser.id, { email, full_name, role });
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="w-full sm:flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   {t('userManagement.updateUser')}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payroll Info Modal */}
-      {editingPayroll && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <DollarSign size={24} className="text-green-600" />
-              Payroll Info - {editingPayroll.full_name || editingPayroll.username}
-            </h3>
-            <form onSubmit={handleSavePayroll}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Employment Type</label>
-                  <select
-                    value={payrollData.employmentType}
-                    onChange={(e) => setPayrollData({ ...payrollData, employmentType: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                    required
-                  >
-                    <option value="hourly">Hourly</option>
-                    <option value="salary">Salary</option>
-                  </select>
-                </div>
-
-                {payrollData.employmentType === 'hourly' ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Hourly Rate ($) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={payrollData.hourlyRate}
-                        onChange={(e) => setPayrollData({ ...payrollData, hourlyRate: e.target.value })}
-                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g., 18.50"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Overtime Rate ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={payrollData.overtimeRate}
-                        onChange={(e) => setPayrollData({ ...payrollData, overtimeRate: e.target.value })}
-                        className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                        placeholder="e.g., 27.75 (1.5x rate)"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Leave blank to auto-calculate as 1.5× hourly rate
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Annual Salary ($)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={payrollData.salary}
-                      onChange={(e) => setPayrollData({ ...payrollData, salary: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                      placeholder="e.g., 50000"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Pay Period Type</label>
-                  <select
-                    value={payrollData.payPeriodType}
-                    onChange={(e) => setPayrollData({ ...payrollData, payPeriodType: e.target.value })}
-                    className="w-full p-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi-Weekly (Every 2 weeks)</option>
-                    <option value="semimonthly">Semi-Monthly (Twice a month)</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <h4 className="font-semibold text-sm mb-2 text-blue-900">Summary</h4>
-                  <div className="text-sm space-y-1 text-blue-800">
-                    {payrollData.employmentType === 'hourly' ? (
-                      <>
-                        <p>Base Rate: ${payrollData.hourlyRate || '0.00'}/hour</p>
-                        <p>
-                          OT Rate: ${payrollData.overtimeRate || (parseFloat(payrollData.hourlyRate || 0) * 1.5).toFixed(2)}/hour
-                        </p>
-                        {payrollData.hourlyRate && (
-                          <p className="font-semibold mt-2">
-                            Est. Weekly: ${(parseFloat(payrollData.hourlyRate) * 40).toFixed(2)} (40 hrs)
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p>Annual Salary: ${payrollData.salary || '0.00'}</p>
-                        {payrollData.salary && payrollData.payPeriodType && (
-                          <p className="font-semibold mt-2">
-                            Per Pay Period: ${(
-                              parseFloat(payrollData.salary) /
-                              (payrollData.payPeriodType === 'weekly' ? 52 :
-                               payrollData.payPeriodType === 'biweekly' ? 26 :
-                               payrollData.payPeriodType === 'semimonthly' ? 24 : 12)
-                            ).toFixed(2)}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingPayroll(null);
-                    setPayrollData({
-                      employmentType: 'hourly',
-                      hourlyRate: '',
-                      overtimeRate: '',
-                      salary: '',
-                      payPeriodType: 'biweekly',
-                    });
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Save Payroll Info
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

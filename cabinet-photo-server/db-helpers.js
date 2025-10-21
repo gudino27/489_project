@@ -951,6 +951,38 @@ const userDb = {
     return users;
   },
 
+  // Get user by email
+  async getUserByEmail(email) {
+    const db = await getDb();
+    try {
+      const user = await db.get(
+        'SELECT id, username, email, role, full_name, is_active FROM users WHERE email = ?',
+        [email]
+      );
+      await db.close();
+      return user;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get user by phone (for invitation system)
+  async getUserByPhone(phone) {
+    const db = await getDb();
+    try {
+      const user = await db.get(
+        'SELECT id, username, email, role, full_name, is_active FROM users WHERE phone = ?',
+        [phone]
+      );
+      await db.close();
+      return user;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
   // Update user
   async updateUser(userId, updates) {
     const db = await getDb();

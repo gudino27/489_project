@@ -19,21 +19,40 @@ import {
   User,
   Check,
   AlertCircle,
+  Mail,
+  MessageSquare,
+  Send,
+  Clock,
+  X,
+  RefreshCw,
+  UserCheck,
 } from 'lucide-react-native';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
+import { 
+  getUsers, 
+  createUser, 
+  updateUser, 
+  deleteUser,
+  getInvitations,
+  sendInvitation,
+  resendInvitation,
+  cancelInvitation 
+} from '../api/users';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
 
 const UserManagementScreen = () => {
-  const { t } = useLanguage();
-  const { token } = useAuth();
+  const { t, language } = useLanguage();
+  const { token, user: currentUser } = useAuth();
 
   const [users, setUsers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [creationMode, setCreationMode] = useState('manual');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -44,6 +63,9 @@ const UserManagementScreen = () => {
     confirmPassword: '',
     full_name: '',
     role: 'admin',
+    phone: '',
+    language: language || 'en',
+    deliveryMethod: 'both',
   });
 
   const [editForm, setEditForm] = useState({
@@ -54,6 +76,7 @@ const UserManagementScreen = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchInvitations();
   }, []);
 
   const fetchUsers = async () => {
@@ -70,10 +93,59 @@ const UserManagementScreen = () => {
     }
   };
 
+  const fetchInvitations = async () => {
+    try {
+      const data = await getInvitations();
+      setInvitations(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+      setInvitations([]);
+    }
+  };
+
   const handleCreateUser = async () => {
     setError('');
     setSuccess('');
 
+    if (creationMode === 'invite') {
+      // Send invitation
+      if (!newUser.email || !newUser.full_name) {
+        setError('Email and full name are required for invitations');
+        return;
+      }
+
+      try {
+        await sendInvitation({
+          email: newUser.email,
+          phone: newUser.phone || null,
+          full_name: newUser.full_name,
+          role: newUser.role,
+          language: newUser.language,
+          deliveryMethod: newUser.deliveryMethod,
+        });
+
+        setSuccess('Invitation sent successfully');
+        setNewUser({
+          username: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          full_name: '',
+          role: 'admin',
+          phone: '',
+          language: language || 'en',
+          deliveryMethod: 'both',
+        });
+        setShowAddUser(false);
+        fetchInvitations();
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (error) {
+        setError(error.message || 'Failed to send invitation');
+      }
+      return;
+    }
+
+    // Manual user creation
     if (!newUser.username || !newUser.email || !newUser.password || !newUser.full_name) {
       setError('Please fill in all required fields');
       return;
@@ -101,13 +173,66 @@ const UserManagementScreen = () => {
         confirmPassword: '',
         full_name: '',
         role: 'admin',
+        phone: '',
+        language: language || 'en',
+        deliveryMethod: 'both',
       });
       setShowAddUser(false);
-      fetchUsers();
+      fetchInvitations();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError(error.message || 'Failed to create user');
+      setError(error.message || 'Failed to send invitation');
     }
+  };
+
+  const handleResendInvitation = async (invitationId) => {
+    try {
+      await resendInvitation(invitationId);
+      setSuccess('Invitation resent successfully');
+      fetchInvitations();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to resend invitation');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId) => {
+    Alert.alert('Cancel Invitation', 'Are you sure you want to cancel this invitation?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await cancelInvitation(invitationId);
+            setSuccess('Invitation cancelled');
+            fetchInvitations();
+            setTimeout(() => setSuccess(''), 3000);
+          } catch (error) {
+            Alert.alert('Error', 'Failed to cancel invitation');
+          }
+        },
+      },
+    ]);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getInvitationStatus = (invitation) => {
+    if (invitation.status === 'completed') return { text: 'Completed', color: COLORS.success };
+    if (invitation.status === 'expired') return { text: 'Expired', color: COLORS.danger };
+    return { text: 'Pending', color: COLORS.warning };
   };
 
   const handleUpdateUser = async () => {
@@ -147,18 +272,6 @@ const UserManagementScreen = () => {
     ]);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const openEditModal = (user) => {
     setEditingUser(user);
     setEditForm({
@@ -186,9 +299,37 @@ const UserManagementScreen = () => {
             <Users size={24} color={COLORS.primary} />
             <Text style={styles.headerTitle}>User Management</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowAddUser(true)}>
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => {
+              setCreationMode('manual');
+              setShowAddUser(true);
+            }}
+          >
             <UserPlus size={18} color={COLORS.white} />
             <Text style={styles.addButtonText}>Add User</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'users' && styles.tabActive]}
+            onPress={() => setActiveTab('users')}
+          >
+            <Users size={18} color={activeTab === 'users' ? COLORS.primary : COLORS.textSecondary} />
+            <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>
+              Users ({users.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'invitations' && styles.tabActive]}
+            onPress={() => setActiveTab('invitations')}
+          >
+            <Mail size={18} color={activeTab === 'invitations' ? COLORS.primary : COLORS.textSecondary} />
+            <Text style={[styles.tabText, activeTab === 'invitations' && styles.tabTextActive]}>
+              Invitations ({invitations.filter(inv => inv.status === 'pending').length})
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -210,94 +351,163 @@ const UserManagementScreen = () => {
 
       {/* Users List */}
       <ScrollView style={styles.content}>
-        {users && users.length > 0 ? (
-          users.map((user) => (
-            <ContentGlass key={user.id} style={styles.userCard}>
-              <View style={styles.userCardHeader}>
-                <View style={styles.userInfo}>
-                  <View style={styles.userAvatar}>
-                    <User size={24} color={COLORS.textSecondary} />
+        {activeTab === 'users' ? (
+          // Users Tab
+          users && users.length > 0 ? (
+            users.map((user) => (
+              <ContentGlass key={user.id} style={styles.userCard}>
+                <View style={styles.userCardHeader}>
+                  <View style={styles.userInfo}>
+                    <View style={styles.userAvatar}>
+                      <User size={24} color={COLORS.textSecondary} />
+                    </View>
+                    <View style={styles.userDetails}>
+                      <Text style={styles.userName}>{user.full_name || user.username}</Text>
+                      <Text style={styles.userEmail}>{user.email}</Text>
+                    </View>
                   </View>
-                  <View style={styles.userDetails}>
-                    <Text style={styles.userName}>{user.full_name || user.username}</Text>
-                    <Text style={styles.userEmail}>{user.email}</Text>
-                  </View>
-                </View>
-                <View style={styles.userActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => openEditModal(user)}
-                  >
-                    <Edit2 size={18} color={COLORS.primary} />
-                  </TouchableOpacity>
-                  {user.is_active && (
+                  <View style={styles.userActions}>
                     <TouchableOpacity
                       style={styles.actionButton}
-                      onPress={() => handleDeactivateUser(user.id)}
+                      onPress={() => openEditModal(user)}
                     >
-                      <Trash2 size={18} color={COLORS.error} />
+                      <Edit2 size={18} color={COLORS.primary} />
                     </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.userCardMeta}>
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Role</Text>
-                <View
-                  style={[
-                    styles.roleBadge,
-                    user.role === 'super_admin'
-                      ? styles.roleBadgeSuperAdmin
-                      : styles.roleBadgeAdmin,
-                  ]}
-                >
-                  {user.role === 'super_admin' && <Shield size={12} color="#9333EA" />}
-                  <Text
-                    style={[
-                      styles.roleBadgeText,
-                      user.role === 'super_admin'
-                        ? styles.roleBadgeTextSuperAdmin
-                        : styles.roleBadgeTextAdmin,
-                    ]}
-                  >
-                    {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                  </Text>
+                    {user.is_active && (
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleDeactivateUser(user.id)}
+                      >
+                        <Trash2 size={18} color={COLORS.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Status</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    user.is_active ? styles.statusBadgeActive : styles.statusBadgeInactive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      user.is_active
-                        ? styles.statusBadgeTextActive
-                        : styles.statusBadgeTextInactive,
-                    ]}
-                  >
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </Text>
+                <View style={styles.userCardMeta}>
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Role</Text>
+                    <View
+                      style={[
+                        styles.roleBadge,
+                        user.role === 'super_admin' && styles.roleBadgeSuperAdmin,
+                      ]}
+                    >
+                      {user.role === 'super_admin' ? (
+                        <Shield size={14} color={COLORS.white} />
+                      ) : user.role === 'employee' ? (
+                        <User size={14} color={COLORS.white} />
+                      ) : (
+                        <User size={14} color={COLORS.white} />
+                      )}
+                      <Text style={styles.roleBadgeText}>
+                        {user.role === 'super_admin' ? 'Super Admin' : user.role === 'employee' ? 'Employee' : 'Admin'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Last Activity</Text>
+                    <Text style={styles.metaValue}>{formatDate(user.last_activity)}</Text>
+                  </View>
                 </View>
-              </View>
-
-              <View style={[styles.metaItem, styles.metaItemFull]}>
-                <Text style={styles.metaLabel}>Last Login</Text>
-                <Text style={styles.metaValue}>{formatDate(user.last_login)}</Text>
-              </View>
+              </ContentGlass>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Users size={48} color={COLORS.textSecondary} />
+              <Text style={styles.emptyStateText}>No users found</Text>
             </View>
-          </ContentGlass>
-          ))
+          )
         ) : (
-          <ContentGlass style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No users found</Text>
-          </ContentGlass>
+          // Invitations Tab
+          invitations && invitations.length > 0 ? (
+            invitations.map((invitation) => {
+              const status = getInvitationStatus(invitation);
+              return (
+                <ContentGlass key={invitation.id} style={styles.userCard}>
+                  <View style={styles.userCardHeader}>
+                    <View style={styles.userInfo}>
+                      <View style={styles.userAvatar}>
+                        <Mail size={24} color={COLORS.textSecondary} />
+                      </View>
+                      <View style={styles.userDetails}>
+                        <Text style={styles.userName}>{invitation.full_name}</Text>
+                        <Text style={styles.userEmail}>{invitation.email}</Text>
+                        {invitation.phone && (
+                          <Text style={styles.userPhone}>{invitation.phone}</Text>
+                        )}
+                      </View>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: status.color + '20' },
+                      ]}
+                    >
+                      <Text style={[styles.statusBadgeText, { color: status.color }]}>
+                        {status.text}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.userCardMeta}>
+                    <View style={styles.metaItem}>
+                      <Text style={styles.metaLabel}>Role</Text>
+                      <View
+                        style={[
+                          styles.roleBadge,
+                          invitation.role === 'super_admin' && styles.roleBadgeSuperAdmin,
+                        ]}
+                      >
+                        {invitation.role === 'super_admin' ? (
+                          <Shield size={14} color={COLORS.white} />
+                        ) : invitation.role === 'employee' ? (
+                          <User size={14} color={COLORS.white} />
+                        ) : (
+                          <User size={14} color={COLORS.white} />
+                        )}
+                        <Text style={styles.roleBadgeText}>
+                          {invitation.role === 'super_admin' ? 'Super Admin' : invitation.role === 'employee' ? 'Employee' : 'Admin'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.metaItem}>
+                      <Text style={styles.metaLabel}>Created</Text>
+                      <Text style={styles.metaValue}>{formatDate(invitation.created_at)}</Text>
+                    </View>
+                  </View>
+
+                  {invitation.status === 'pending' && (
+                    <View style={styles.invitationActions}>
+                      <TouchableOpacity
+                        style={styles.invitationActionButton}
+                        onPress={() => handleResendInvitation(invitation.id)}
+                      >
+                        <RefreshCw size={16} color={COLORS.primary} />
+                        <Text style={styles.invitationActionText}>Resend</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.invitationActionButton, styles.invitationCancelButton]}
+                        onPress={() => handleCancelInvitation(invitation.id)}
+                      >
+                        <X size={16} color={COLORS.error} />
+                        <Text style={[styles.invitationActionText, styles.invitationCancelText]}>
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </ContentGlass>
+              );
+            })
+          ) : (
+            <View style={styles.emptyState}>
+              <Mail size={48} color={COLORS.textSecondary} />
+              <Text style={styles.emptyStateText}>No invitations found</Text>
+            </View>
+          )
         )}
       </ScrollView>
 
@@ -313,21 +523,59 @@ const UserManagementScreen = () => {
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>Add New User</Text>
 
+              {/* Mode Toggle */}
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[
+                    styles.modeButton,
+                    creationMode === 'manual' && styles.modeButtonActive,
+                  ]}
+                  onPress={() => setCreationMode('manual')}
+                >
+                  <UserPlus size={16} color={creationMode === 'manual' ? COLORS.white : COLORS.primary} />
+                  <Text
+                    style={[
+                      styles.modeButtonText,
+                      creationMode === 'manual' && styles.modeButtonTextActive,
+                    ]}
+                  >
+                    Manual Creation
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modeButton,
+                    creationMode === 'invite' && styles.modeButtonActive,
+                  ]}
+                  onPress={() => setCreationMode('invite')}
+                >
+                  <Send size={16} color={creationMode === 'invite' ? COLORS.white : COLORS.primary} />
+                  <Text
+                    style={[
+                      styles.modeButtonText,
+                      creationMode === 'invite' && styles.modeButtonTextActive,
+                    ]}
+                  >
+                    Send Invitation
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <ScrollView style={styles.modalForm}>
+                {/* Common Fields */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Username</Text>
+                  <Text style={styles.formLabel}>Full Name *</Text>
                   <TextInput
                     style={styles.formInput}
-                    value={newUser.username}
-                    onChangeText={(text) => setNewUser({ ...newUser, username: text })}
-                    placeholder="Enter username"
+                    value={newUser.full_name}
+                    onChangeText={(text) => setNewUser({ ...newUser, full_name: text })}
+                    placeholder="Enter full name"
                     placeholderTextColor={COLORS.textSecondary}
-                    autoCapitalize="none"
                   />
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Email</Text>
+                  <Text style={styles.formLabel}>Email *</Text>
                   <TextInput
                     style={styles.formInput}
                     value={newUser.email}
@@ -339,44 +587,79 @@ const UserManagementScreen = () => {
                   />
                 </View>
 
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Full Name</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    value={newUser.full_name}
-                    onChangeText={(text) => setNewUser({ ...newUser, full_name: text })}
-                    placeholder="Enter full name"
-                    placeholderTextColor={COLORS.textSecondary}
-                  />
-                </View>
+                {creationMode === 'invite' && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Phone *</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={newUser.phone}
+                      onChangeText={(text) => setNewUser({ ...newUser, phone: text })}
+                      placeholder="Enter phone number"
+                      placeholderTextColor={COLORS.textSecondary}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                )}
+
+                {creationMode === 'manual' && (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>Username *</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={newUser.username}
+                        onChangeText={(text) => setNewUser({ ...newUser, username: text })}
+                        placeholder="Enter username"
+                        placeholderTextColor={COLORS.textSecondary}
+                        autoCapitalize="none"
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>Password *</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={newUser.password}
+                        onChangeText={(text) => setNewUser({ ...newUser, password: text })}
+                        placeholder="Enter password"
+                        placeholderTextColor={COLORS.textSecondary}
+                        secureTextEntry
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>Confirm Password *</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={newUser.confirmPassword}
+                        onChangeText={(text) => setNewUser({ ...newUser, confirmPassword: text })}
+                        placeholder="Confirm password"
+                        placeholderTextColor={COLORS.textSecondary}
+                        secureTextEntry
+                      />
+                    </View>
+                  </>
+                )}
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Password</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    value={newUser.password}
-                    onChangeText={(text) => setNewUser({ ...newUser, password: text })}
-                    placeholder="Enter password"
-                    placeholderTextColor={COLORS.textSecondary}
-                    secureTextEntry
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Confirm Password</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    value={newUser.confirmPassword}
-                    onChangeText={(text) => setNewUser({ ...newUser, confirmPassword: text })}
-                    placeholder="Confirm password"
-                    placeholderTextColor={COLORS.textSecondary}
-                    secureTextEntry
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Role</Text>
+                  <Text style={styles.formLabel}>Role *</Text>
                   <View style={styles.roleSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleOption,
+                        newUser.role === 'employee' && styles.roleOptionActive,
+                      ]}
+                      onPress={() => setNewUser({ ...newUser, role: 'employee' })}
+                    >
+                      <Text
+                        style={[
+                          styles.roleOptionText,
+                          newUser.role === 'employee' && styles.roleOptionTextActive,
+                        ]}
+                      >
+                        Employee
+                      </Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.roleOption,
@@ -411,6 +694,73 @@ const UserManagementScreen = () => {
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                {creationMode === 'invite' && (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>Delivery Method *</Text>
+                      <View style={styles.deliverySelector}>
+                        <TouchableOpacity
+                          style={[
+                            styles.deliveryOption,
+                            newUser.deliveryMethod === 'email' && styles.deliveryOptionActive,
+                          ]}
+                          onPress={() => setNewUser({ ...newUser, deliveryMethod: 'email' })}
+                        >
+                          <Mail size={14} color={newUser.deliveryMethod === 'email' ? COLORS.white : COLORS.textSecondary} />
+                          <Text
+                            style={[
+                              styles.deliveryOptionText,
+                              newUser.deliveryMethod === 'email' && styles.deliveryOptionTextActive,
+                            ]}
+                          >
+                            Email
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.deliveryOption,
+                            newUser.deliveryMethod === 'sms' && styles.deliveryOptionActive,
+                          ]}
+                          onPress={() => setNewUser({ ...newUser, deliveryMethod: 'sms' })}
+                        >
+                          <MessageSquare size={14} color={newUser.deliveryMethod === 'sms' ? COLORS.white : COLORS.textSecondary} />
+                          <Text
+                            style={[
+                              styles.deliveryOptionText,
+                              newUser.deliveryMethod === 'sms' && styles.deliveryOptionTextActive,
+                            ]}
+                          >
+                            SMS
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.deliveryOption,
+                            newUser.deliveryMethod === 'both' && styles.deliveryOptionActive,
+                          ]}
+                          onPress={() => setNewUser({ ...newUser, deliveryMethod: 'both' })}
+                        >
+                          <Text
+                            style={[
+                              styles.deliveryOptionText,
+                              newUser.deliveryMethod === 'both' && styles.deliveryOptionTextActive,
+                            ]}
+                          >
+                            Both
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.infoBox}>
+                      <AlertCircle size={16} color={COLORS.info} />
+                      <Text style={styles.infoBoxText}>
+                        User will receive a secure link to set up their account. Link expires in 7 days.
+                      </Text>
+                    </View>
+                  </>
+                )}
               </ScrollView>
 
               <View style={styles.modalActions}>
@@ -421,7 +771,9 @@ const UserManagementScreen = () => {
                   <Text style={styles.modalCancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSubmitButton} onPress={handleCreateUser}>
-                  <Text style={styles.modalSubmitButtonText}>Create User</Text>
+                  <Text style={styles.modalSubmitButtonText}>
+                    {creationMode === 'manual' ? 'Create User' : 'Send Invitation'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -478,6 +830,22 @@ const UserManagementScreen = () => {
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Role</Text>
                   <View style={styles.roleSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleOption,
+                        editForm.role === 'employee' && styles.roleOptionActive,
+                      ]}
+                      onPress={() => setEditForm({ ...editForm, role: 'employee' })}
+                    >
+                      <Text
+                        style={[
+                          styles.roleOptionText,
+                          editForm.role === 'employee' && styles.roleOptionTextActive,
+                        ]}
+                      >
+                        Employee
+                      </Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.roleOption,
@@ -720,28 +1088,6 @@ const styles = StyleSheet.create({
   roleBadgeTextSuperAdmin: {
     color: '#9333EA',
   },
-  statusBadge: {
-    paddingHorizontal: SPACING[2],
-    paddingVertical: 4,
-    borderRadius: 9999,
-    alignSelf: 'flex-start',
-  },
-  statusBadgeActive: {
-    backgroundColor: COLORS.success + '20',
-  },
-  statusBadgeInactive: {
-    backgroundColor: COLORS.error + '20',
-  },
-  statusBadgeText: {
-    ...TYPOGRAPHY.xs,
-    fontWeight: '600',
-  },
-  statusBadgeTextActive: {
-    color: COLORS.success,
-  },
-  statusBadgeTextInactive: {
-    color: COLORS.error,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -837,6 +1183,160 @@ const styles = StyleSheet.create({
   modalSubmitButtonText: {
     ...TYPOGRAPHY.buttonMedium,
     color: COLORS.white,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    marginTop: SPACING[4],
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING[3],
+    gap: SPACING[2],
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    gap: SPACING[2],
+    marginBottom: SPACING[4],
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[3],
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    gap: SPACING[2],
+  },
+  modeButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  modeButtonText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  modeButtonTextActive: {
+    color: COLORS.white,
+  },
+  deliverySelector: {
+    flexDirection: 'row',
+    gap: SPACING[2],
+  },
+  deliveryOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[2],
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    gap: SPACING[1],
+  },
+  deliveryOptionActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  deliveryOptionText: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  deliveryOptionTextActive: {
+    color: COLORS.white,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    gap: SPACING[2],
+    padding: SPACING[3],
+    backgroundColor: COLORS.info + '10',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.info + '30',
+  },
+  infoBoxText: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.info,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING[2],
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    alignSelf: 'flex-start',
+  },
+  statusBadgeText: {
+    ...TYPOGRAPHY.xs,
+    fontWeight: '600',
+  },
+  userPhone: {
+    ...TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
+  },
+  invitationActions: {
+    flexDirection: 'row',
+    gap: SPACING[2],
+    marginTop: SPACING[3],
+    paddingTop: SPACING[3],
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  invitationActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING[2],
+    paddingHorizontal: SPACING[3],
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary + '10',
+    gap: SPACING[1],
+  },
+  invitationCancelButton: {
+    backgroundColor: COLORS.error + '10',
+  },
+  invitationActionText: {
+    ...TYPOGRAPHY.small,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  invitationCancelText: {
+    color: COLORS.error,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING[8],
+  },
+  emptyStateText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    marginTop: SPACING[3],
   },
 });
 
