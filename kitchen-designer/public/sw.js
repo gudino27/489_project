@@ -15,7 +15,7 @@ const STATIC_ASSETS = [
   '/apple-touch-icon.png',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
-  OFFLINE_URL
+  OFFLINE_URL 
 ];
 
 // Install event - cache static assets
