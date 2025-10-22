@@ -8,32 +8,7 @@
       "ios",
       "android"
     ],
-    "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#3b82f6"
-    },
-    "ios": {
-      "bundleIdentifier": "com.gudinocustom.admin",
-      "supportsTablet": true,
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to take photos for employee profiles.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select images for employee profiles.",
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication."
-      }
-    },
-    "android": {
-      "package": "com.gudinocustom.admin",
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
-      ]
-    },
+    
     "extra": {
       "API_BASE": "https://api.gudinocustom.com",
       "API_URL": "https://api.gudinocustom.com",

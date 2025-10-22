@@ -17,6 +17,15 @@ end
 target 'GCWadmin' do
   config = use_native_modules!
 
+  # Ensure Expo native modules are found by CocoaPods in CI/cloud builds.
+  # The Expo modules podspec for ExpoModulesCore lives at the package root.
+  pod 'ExpoModulesCore', :path => '../node_modules/expo-modules-core'
+
+  # Ensure Expo autolinking helpers are enabled (required by expo packages)
+  # Load Expo autolinking helpers so `use_expo_modules!` is available.
+  require_relative '../node_modules/expo/scripts/autolinking.rb'
+  use_expo_modules!
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
