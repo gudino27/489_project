@@ -34,10 +34,28 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem('kitchen-designer-language', currentLanguage);
   }, [currentLanguage]);
 
-  // Translation function
-  const t = (key, fallback = key) => {
+  // Translation function with simple interpolation support
+  // Usage:
+  //   t('some.key') -> returns translation or key
+  //   t('some.key', 'fallback') -> returns translation or fallback string
+  //   t('some.key', { name: 'John' }) -> returns translation with {name} replaced
+  const t = (key, fallback) => {
     const translation = translations[currentLanguage]?.[key];
-    return translation || fallback;
+
+    // Decide base string: prefer translation, then if fallback is a string use it, otherwise default to key
+    const base = (translation !== undefined && translation !== null)
+      ? translation
+      : (typeof fallback === 'string' ? fallback : key);
+
+    // If fallback is an object (interpolation values) and we have a base string, perform simple replacement
+    if (base && fallback && typeof fallback === 'object' && !Array.isArray(fallback)) {
+      return String(base).replace(/\{([a-zA-Z0-9_]+)\}/g, (m, p1) => {
+        const v = fallback[p1];
+        return v === undefined || v === null ? m : String(v);
+      });
+    }
+
+    return base;
   };
 
   // Change language function

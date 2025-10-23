@@ -8,7 +8,6 @@
       "ios",
       "android"
     ],
-    
     "extra": {
       "API_BASE": "https://api.gudinocustom.com",
       "API_URL": "https://api.gudinocustom.com",
@@ -21,6 +20,9 @@
     "updates": {
       "url": "https://u.expo.dev/daeaf20a-5b3d-4456-8e9c-ce1c3bce4cbe"
     },
-    "runtimeVersion": "1.0.0"
+    "runtimeVersion": "1.0.0",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

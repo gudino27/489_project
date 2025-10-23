@@ -1138,6 +1138,10 @@ const translations = {
 
     // Time Clock
     "timeclock.title": "Time Clock",
+    "timeclock.backToDashboard": "Back to Dashboard",
+    "timeclock.employeeView": "Employee View",
+    "timeclock.adminView": "Admin View",
+    "timeclock.enterTime": "Enter Time",
     "timeclock.clock_in": "Clock In",
     "timeclock.clock_out": "Clock Out",
     "timeclock.current_status": "Current Status",
