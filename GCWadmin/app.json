@@ -25,7 +25,7 @@
       }
     },
     "android": {
-      "package": "com.gudinocustom.gcwadmin",
+      "package": "com.gudinocustom.admin",
       "versionCode": 1
     },
     "extra": {
