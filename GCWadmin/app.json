@@ -8,6 +8,26 @@
       "ios",
       "android"
     ],
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gudinocustom.gcwadmin",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true
+        },
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "RCTNewArchEnabled": false,
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.gudinocustom.gcwadmin",
+      "versionCode": 1
+    },
     "extra": {
       "API_BASE": "https://api.gudinocustom.com",
       "API_URL": "https://api.gudinocustom.com",
