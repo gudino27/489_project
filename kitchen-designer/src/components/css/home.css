@@ -236,7 +236,6 @@ body {
     left: 0;
     transform: none;
     filter: brightness(0.7) contrast(1.2);
-    border-radius: 150px 150px  280px 280px;
 }
 
 /* Ensure no gaps appear during parallax */
