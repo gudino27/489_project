@@ -10,8 +10,11 @@ import {
   Platform,
   Alert,
   Image,
+  StatusBar,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Globe, ChevronDown } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
@@ -19,12 +22,13 @@ import { ContentGlass } from '../components/GlassView';
 
 const LoginScreen = () => {
   const { login, promptEnableBiometric, enableBiometric } = useAuth();
-  const { t } = useLanguage();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
   const handleLogin = async () => {
     setError('');
@@ -81,17 +85,85 @@ const LoginScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      <StatusBar barStyle="dark-content" backgroundColor="rgb(110, 110, 110)" />
       <View style={styles.content}>
         <View style={styles.logoContainer}>
           <Image
             source={require('../assets/logo.png')}
             style={styles.logoImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
 
         <Text style={styles.title}>{t('admin.login') || 'Admin Login'}</Text>
-        <Text style={styles.subtitle}>{t('admin.title') || 'Gudino Custom Admin Panel'}</Text>
+
+        <TouchableOpacity
+          style={styles.languageSelector}
+          onPress={() => setShowLanguageMenu(!showLanguageMenu)}
+        >
+          <Globe size={16} color={COLORS.white} />
+          <Text style={styles.languageSelectorText}>
+            {currentLanguage.toUpperCase()}
+          </Text>
+          <ChevronDown size={16} color={COLORS.white} />
+        </TouchableOpacity>
+
+        <Modal
+          visible={showLanguageMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowLanguageMenu(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowLanguageMenu(false)}
+          >
+            <View style={styles.languageMenu}>
+              <TouchableOpacity
+                style={[
+                  styles.languageMenuItem,
+                  currentLanguage === 'en' && styles.languageMenuItemActive
+                ]}
+                onPress={() => {
+                  changeLanguage('en');
+                  setShowLanguageMenu(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageMenuText,
+                  currentLanguage === 'en' && styles.languageMenuTextActive
+                ]}>
+                  {t('language.english')}
+                </Text>
+                {currentLanguage === 'en' && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+              <View style={styles.languageMenuDivider} />
+              <TouchableOpacity
+                style={[
+                  styles.languageMenuItem,
+                  currentLanguage === 'es' && styles.languageMenuItemActive
+                ]}
+                onPress={() => {
+                  changeLanguage('es');
+                  setShowLanguageMenu(false);
+                }}
+              >
+                <Text style={[
+                  styles.languageMenuText,
+                  currentLanguage === 'es' && styles.languageMenuTextActive
+                ]}>
+                  {t('language.spanish')}
+                </Text>
+                {currentLanguage === 'es' && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {error ? (
           <View style={styles.errorContainer}>
@@ -163,7 +235,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary, // Admin gray background matching web
+    backgroundColor: 'rgb(110, 110, 110)', // Admin gray background matching web
   },
   content: {
     flex: 1,
@@ -172,18 +244,17 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.white,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     overflow: 'hidden',
   },
   logoImage: {
-    width: 100,
-    height: 100,
+    width: 300,
+    height: 300,
   },
   logo: {
     fontSize: 32,
@@ -194,7 +265,67 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.white,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  languageSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 6,
+    marginBottom: 20,
+  },
+  languageSelectorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  languageMenu: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    minWidth: 150,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  languageMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  languageMenuItemActive: {
+    backgroundColor: 'rgba(110, 110, 110, 0.1)',
+  },
+  languageMenuText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  languageMenuTextActive: {
+    color: 'rgb(110, 110, 110)',
+    fontWeight: '700',
+  },
+  languageMenuDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  checkmark: {
+    fontSize: 18,
+    color: 'rgb(110, 110, 110)',
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 16,

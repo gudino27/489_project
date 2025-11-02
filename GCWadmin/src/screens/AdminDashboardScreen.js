@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  StatusBar,
 } from 'react-native';
 import {
   DollarSign,
@@ -167,6 +168,7 @@ const AdminDashboardScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       {/* Header - Matches Web */}
       <NavGlass style={styles.header}>
         <View style={styles.headerContent}>
