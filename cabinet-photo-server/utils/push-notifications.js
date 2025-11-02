@@ -123,7 +123,7 @@ async function sendPushNotification(userIds, notification) {
 }
 
 /**
- * Send notification to all admin users
+ * Send notification to all admin and super_admin users
  * @param {Object} notification - Notification details
  * @returns {Promise<Object>} - Result of sending notifications
  */
@@ -131,9 +131,9 @@ async function sendToAdmins(notification) {
   try {
     const db = await getDb();
 
-    // Get all admin user IDs
+    // Get all admin and super_admin user IDs
     const admins = await db.all(
-      `SELECT id FROM users WHERE role = 'admin' AND is_active = 1`
+      `SELECT id FROM users WHERE (role = 'admin' OR role = 'super_admin') AND is_active = 1`
     );
     await db.close();
 
