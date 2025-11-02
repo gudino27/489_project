@@ -121,7 +121,7 @@ const PriceManagementScreen = () => {
             nameEn: key.charAt(0).toUpperCase() + key.slice(1),
             nameEs: key === 'laminate' ? 'Laminado' :
                     key === 'wood' ? 'Madera' :
-                    key === 'plywood' ? 'Madera Contrachapada' :
+                    key === 'plywood' ? t('pricing.plywood') :
                     key === 'maple' ? 'Arce' : key,
             multiplier: parseFloat(multiplier)
           }));
@@ -142,7 +142,7 @@ const PriceManagementScreen = () => {
       }
     } catch (error) {
       console.error('Error loading prices:', error);
-      Alert.alert('Error', 'Failed to load prices');
+      Alert.alert(t('common.error'), t('priceManagement.failedToLoad'));
     } finally {
       setLoadingPrices(false);
     }
@@ -173,7 +173,7 @@ const PriceManagementScreen = () => {
       setTimeout(() => setSaveStatus(''), 2000);
     } catch (error) {
       console.error('Error saving prices:', error);
-      Alert.alert('Error', 'Failed to save prices: ' + error.message);
+      Alert.alert(t('common.error'), t('priceManagement.failedToSave') + error.message);
       setSaveStatus('error');
     }
   };
@@ -182,17 +182,17 @@ const PriceManagementScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>{t('priceManagement.loading') || 'Loading prices...'}</Text>
+        <Text style={styles.loadingText}>{t('priceManagement.loading')}</Text>
       </View>
     );
   }
 
   const tabs = [
-    { id: 'cabinets', label: t('priceManagement.cabinets') || 'Cabinets' },
-    { id: 'materials', label: t('priceManagement.materials') || 'Materials' },
-    { id: 'colors', label: t('priceManagement.colors') || 'Colors' },
-    { id: 'walls', label: t('priceManagement.walls') || 'Walls' },
-    ...(user?.role === 'super_admin' ? [{ id: 'availability', label: t('priceManagement.availability') || 'Availability' }] : [])
+    { id: 'cabinets', label: t('priceManagement.cabinets') },
+    { id: 'materials', label: t('priceManagement.materials') },
+    { id: 'colors', label: t('priceManagement.colors') },
+    { id: 'walls', label: t('priceManagement.walls') },
+    ...(user?.role === 'super_admin' ? [{ id: 'availability', label: t('priceManagement.availability') }] : [])
   ];
 
   return (
@@ -201,7 +201,7 @@ const PriceManagementScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <DollarSign color={COLORS.primary} size={36} />
-          <Text style={styles.headerTitle}>{t('priceManagement.title') || 'Price Management'}</Text>
+          <Text style={styles.headerTitle}>{t('priceManagement.title')}</Text>
         </View>
       </View>
 
@@ -241,9 +241,9 @@ const PriceManagementScreen = () => {
         ]}>
           {saveStatus === 'saved' && <Check color={COLORS.white} size={18} />}
           <Text style={styles.statusText}>
-            {saveStatus === 'saved' ? (t('priceManagement.saved') || 'Saved successfully!') :
-              saveStatus === 'saving' ? (t('priceManagement.saving') || 'Saving...') :
-              (t('priceManagement.error') || 'Error saving')}
+            {saveStatus === 'saved' ? t('priceManagement.saved') :
+              saveStatus === 'saving' ? t('priceManagement.saving') :
+              t('priceManagement.error')}
           </Text>
         </View>
       )}
@@ -334,8 +334,8 @@ const PriceManagementScreen = () => {
             <Save color={COLORS.white} size={18} />
             <Text style={styles.saveButtonText}>
               {saveStatus === 'saving'
-                ? (t('priceManagement.saving') || 'Saving...')
-                : (t('priceManagement.saveChanges') || 'Save All Changes')}
+                ? t('priceManagement.saving')
+                : t('priceManagement.saveChanges')}
             </Text>
           </TouchableOpacity>
         </View>

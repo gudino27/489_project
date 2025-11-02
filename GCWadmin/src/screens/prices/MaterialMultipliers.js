@@ -35,7 +35,7 @@ const MaterialMultipliers = ({
 
   const handleAddMaterial = () => {
     if (!newMaterial.nameEn || !newMaterial.nameEs || parseFloat(newMaterial.multiplier) <= 0) {
-      Alert.alert('Invalid Input', 'Please enter both English and Spanish names, plus a valid multiplier');
+      Alert.alert(t('pricing.materials.invalidInput'), t('pricing.materials.namesRequired'));
       return;
     }
 
@@ -60,7 +60,7 @@ const MaterialMultipliers = ({
 
   const handleUpdateMaterial = () => {
     if (!editingMaterial || !editingMaterial.nameEn || !editingMaterial.nameEs || parseFloat(editingMaterial.multiplier) <= 0) {
-      Alert.alert('Invalid Input', 'Please enter valid values');
+      Alert.alert(t('pricing.materials.invalidInput'), t('pricing.materials.validValuesRequired'));
       return;
     }
 
@@ -85,12 +85,12 @@ const MaterialMultipliers = ({
 
   const handleDeleteMaterial = (materialId, materialName) => {
     Alert.alert(
-      'Delete Material',
-      `Delete ${materialName} material?`,
+      t('pricing.materials.deleteTitle'),
+      t('pricing.materials.deleteConfirm').replace('{materialName}', materialName),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             const updated = materialMultipliers.filter(material => material.id !== materialId);
@@ -109,42 +109,42 @@ const MaterialMultipliers = ({
       <View style={styles.headerContainer}>
         <View style={styles.headerTitleRow}>
           <Settings color={COLORS.success} size={20} />
-          <Text style={styles.headerTitle}>Material Multipliers</Text>
+          <Text style={styles.headerTitle}>{t('pricing.materials.title')}</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowMaterialForm(!showMaterialForm)}
         >
           <Plus color={COLORS.white} size={16} />
-          <Text style={styles.addButtonText}>Add Material</Text>
+          <Text style={styles.addButtonText}>{t('pricing.materials.addMaterial')}</Text>
         </TouchableOpacity>
       </View>
 
       <Text style={styles.description}>
-        Material multipliers affect the base cabinet prices. A multiplier of 1.5 means the material costs 50% more than the base price.
+        {t('pricing.materials.description')}
       </Text>
 
       {/* Add Material Form */}
       {showMaterialForm && (
         <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>Add New Material (Bilingual)</Text>
+          <Text style={styles.formTitle}>{t('pricing.materials.addNewBilingual')}</Text>
           <TextInput
             style={styles.formInput}
-            placeholder="English Name"
+            placeholder={t('pricing.materials.englishName')}
             value={newMaterial.nameEn}
             onChangeText={(value) => setNewMaterial({ ...newMaterial, nameEn: value })}
             placeholderTextColor={COLORS.textSecondary}
           />
           <TextInput
             style={styles.formInput}
-            placeholder="Spanish Name (Nombre en Español)"
+            placeholder={t('pricing.materials.spanishName')}
             value={newMaterial.nameEs}
             onChangeText={(value) => setNewMaterial({ ...newMaterial, nameEs: value })}
             placeholderTextColor={COLORS.textSecondary}
           />
           <TextInput
             style={styles.formInput}
-            placeholder="Price Multiplier"
+            placeholder={t('pricing.materials.priceMultiplier')}
             value={newMaterial.multiplier}
             onChangeText={(value) => setNewMaterial({ ...newMaterial, multiplier: value })}
             keyboardType="decimal-pad"
@@ -155,7 +155,7 @@ const MaterialMultipliers = ({
               style={[styles.formButton, styles.formButtonPrimary]}
               onPress={handleAddMaterial}
             >
-              <Text style={styles.formButtonText}>Add Material</Text>
+              <Text style={styles.formButtonText}>{t('pricing.materials.addMaterial')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.formButton, styles.formButtonSecondary]}
@@ -164,7 +164,7 @@ const MaterialMultipliers = ({
                 setNewMaterial({ nameEn: '', nameEs: '', multiplier: '1.0' });
               }}
             >
-              <Text style={styles.formButtonTextSecondary}>Cancel</Text>
+              <Text style={styles.formButtonTextSecondary}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -181,7 +181,7 @@ const MaterialMultipliers = ({
                   <View style={styles.editInputsContainer}>
                     <TextInput
                       style={styles.editInput}
-                      placeholder="English name"
+                      placeholder={t('pricing.materials.englishNamePlaceholder')}
                       value={editingMaterial.nameEn}
                       onChangeText={(value) =>
                         setEditingMaterial({ ...editingMaterial, nameEn: value })
@@ -190,7 +190,7 @@ const MaterialMultipliers = ({
                     />
                     <TextInput
                       style={styles.editInput}
-                      placeholder="Spanish name"
+                      placeholder={t('pricing.materials.spanishNamePlaceholder')}
                       value={editingMaterial.nameEs}
                       onChangeText={(value) =>
                         setEditingMaterial({ ...editingMaterial, nameEs: value })
@@ -199,7 +199,7 @@ const MaterialMultipliers = ({
                     />
                     <TextInput
                       style={styles.editInputSmall}
-                      placeholder="Multiplier"
+                      placeholder={t('pricing.materials.multiplierPlaceholder')}
                       value={editingMaterial.multiplier?.toString()}
                       onChangeText={(value) =>
                         setEditingMaterial({ ...editingMaterial, multiplier: value })
@@ -231,7 +231,7 @@ const MaterialMultipliers = ({
                       <Text style={styles.materialNameEn}>{material.nameEn}</Text>
                       {material.isTemporary && (
                         <View style={styles.unsavedBadge}>
-                          <Text style={styles.unsavedText}>Unsaved</Text>
+                          <Text style={styles.unsavedText}>{t('pricing.materials.unsaved')}</Text>
                         </View>
                       )}
                     </View>
@@ -256,7 +256,7 @@ const MaterialMultipliers = ({
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No materials configured yet.</Text>
+            <Text style={styles.emptyText}>{t('pricing.materials.noMaterials')}</Text>
           </View>
         )}
       </ScrollView>

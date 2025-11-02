@@ -32,19 +32,19 @@ const WallAvailability = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Wall Service Availability</Text>
+      <Text style={styles.sectionTitle}>{t('pricing.wallAvailability.title')}</Text>
 
       <Text style={styles.description}>
-        Control which wall modification services are available to customers.
+        {t('pricing.wallAvailability.description')}
       </Text>
 
       <View style={styles.servicesContainer}>
         {/* Add Wall Service */}
         <View style={styles.serviceCard}>
           <View style={styles.serviceInfo}>
-            <Text style={styles.serviceTitle}>Add Wall Opening Service</Text>
+            <Text style={styles.serviceTitle}>{t('pricing.wallAvailability.addWallService')}</Text>
             <Text style={styles.serviceDescription}>
-              Allow customers to request adding openings/pass-throughs between rooms
+              {t('pricing.wallAvailability.addWallDesc')}
             </Text>
           </View>
           <TouchableOpacity
@@ -55,13 +55,13 @@ const WallAvailability = ({
             onPress={() => handleAvailabilityChange('addWallEnabled', !wallAvailability.addWallEnabled)}
           >
             <Text style={styles.toggleButtonText}>
-              {wallAvailability.addWallEnabled ? '✅ Currently Enabled' : '🚫 Currently Disabled'}
+              {wallAvailability.addWallEnabled ? t('pricing.wallAvailability.enabled') : t('pricing.wallAvailability.disabled')}
             </Text>
           </TouchableOpacity>
           {!wallAvailability.addWallEnabled && (
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>
-                ⚠️ Wall addition service is disabled. Customers cannot add new walls or openings.
+                {t('pricing.wallAvailability.addDisabledWarning')}
               </Text>
             </View>
           )}
@@ -70,9 +70,9 @@ const WallAvailability = ({
         {/* Remove Wall Service */}
         <View style={styles.serviceCard}>
           <View style={styles.serviceInfo}>
-            <Text style={styles.serviceTitle}>Remove Wall Service</Text>
+            <Text style={styles.serviceTitle}>{t('pricing.wallAvailability.removeWallService')}</Text>
             <Text style={styles.serviceDescription}>
-              Allow customers to request full wall removal for open concept designs
+              {t('pricing.wallAvailability.removeWallDesc')}
             </Text>
           </View>
           <TouchableOpacity
@@ -83,13 +83,13 @@ const WallAvailability = ({
             onPress={() => handleAvailabilityChange('removeWallEnabled', !wallAvailability.removeWallEnabled)}
           >
             <Text style={styles.toggleButtonText}>
-              {wallAvailability.removeWallEnabled ? '✅ Currently Enabled' : '🚫 Currently Disabled'}
+              {wallAvailability.removeWallEnabled ? t('pricing.wallAvailability.enabled') : t('pricing.wallAvailability.disabled')}
             </Text>
           </TouchableOpacity>
           {!wallAvailability.removeWallEnabled && (
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>
-                ⚠️ Wall removal service is disabled. Customers cannot remove existing walls.
+                {t('pricing.wallAvailability.removeDisabledWarning')}
               </Text>
             </View>
           )}
@@ -97,7 +97,7 @@ const WallAvailability = ({
       </View>
 
       <Text style={styles.footerNote}>
-        These settings affect all customers immediately. Use when maintenance or high demand requires limiting services.
+        {t('pricing.wallAvailability.footerNote')}
       </Text>
 
       <SectionSaveButton

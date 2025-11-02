@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Plus, Mail, Phone, MapPin, Edit2, Trash2 } from 'lucide-react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 import { COLORS } from '../constants/colors';
 import ClientModal from '../components/ClientModal';
 import { getClients, createClient, updateClient, deleteClient } from '../api/clients';
 
 const ClientManagementScreen = () => {
+  const { t } = useLanguage();
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,7 +42,7 @@ const ClientManagementScreen = () => {
       setFilteredClients(data);
     } catch (error) {
       console.error('Error fetching clients:', error);
-      Alert.alert('Error', 'Failed to load clients');
+      Alert.alert(t('common.error'), t('clientManager.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,36 +80,36 @@ const ClientManagementScreen = () => {
     try {
       if (selectedClient) {
         await updateClient(selectedClient.id, clientData);
-        Alert.alert('Success', 'Client updated successfully');
+        Alert.alert(t('common.success'), t('clientManager.updateSuccess'));
       } else {
         await createClient(clientData);
-        Alert.alert('Success', 'Client created successfully');
+        Alert.alert(t('common.success'), t('clientManager.createSuccess'));
       }
       setModalVisible(false);
       fetchClients();
     } catch (error) {
       console.error('Error saving client:', error);
-      Alert.alert('Error', 'Failed to save client');
+      Alert.alert(t('common.error'), t('clientManager.saveError'));
     }
   };
 
   const handleDeleteClient = (client) => {
     Alert.alert(
-      'Delete Client',
-      `Are you sure you want to delete ${client.name}?`,
+      t('clientManager.deleteTitle'),
+      `${t('clientManager.deleteConfirm')} ${client.name}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteClient(client.id);
-              Alert.alert('Success', 'Client deleted successfully');
+              Alert.alert(t('common.success'), t('clientManager.deleteSuccess'));
               fetchClients();
             } catch (error) {
               console.error('Error deleting client:', error);
-              Alert.alert('Error', 'Failed to delete client');
+              Alert.alert(t('common.error'), t('clientManager.deleteError'));
             }
           },
         },
@@ -188,7 +190,7 @@ const ClientManagementScreen = () => {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={COLORS.blue} />
-        <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>Loading clients...</Text>
+        <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>{t('clientManager.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -199,14 +201,14 @@ const ClientManagementScreen = () => {
       <View style={{ padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text style={{ fontSize: 24, fontWeight: 'bold', color: COLORS.text }}>
-            Clients
+            {t('clientManager.title')}
           </Text>
           <TouchableOpacity
             onPress={handleAddClient}
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.blue, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }}
           >
             <Plus size={20} color="white" />
-            <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>Add Client</Text>
+            <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>{t('clientManager.addClient')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -215,7 +217,7 @@ const ClientManagementScreen = () => {
           <Search size={20} color={COLORS.textSecondary} />
           <TextInput
             style={{ flex: 1, padding: 12, fontSize: 16, color: COLORS.text }}
-            placeholder="Search clients..."
+            placeholder={t('clientManager.searchPlaceholder')}
             placeholderTextColor={COLORS.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -242,7 +244,7 @@ const ClientManagementScreen = () => {
         ListEmptyComponent={
           <View style={{ padding: 40, alignItems: 'center' }}>
             <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center' }}>
-              {searchQuery ? 'No clients found' : 'No clients yet. Add your first client!'}
+              {searchQuery ? t('clientManager.noClientsFound') : t('clientManager.noClients')}
             </Text>
           </View>
         }

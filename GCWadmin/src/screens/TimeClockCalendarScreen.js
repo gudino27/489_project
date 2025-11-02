@@ -226,7 +226,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
             <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
               <ChevronLeft size={24} color={COLORS.blue} />
               <Text style={styles.navButtonText}>
-                {calendarView === 'month' ? 'Previous' : 'Prev Week'}
+                {calendarView === 'month' ? t('timeclock.calendar.previous') : t('timeclock.calendar.prevWeek')}
               </Text>
             </TouchableOpacity>
             
@@ -242,7 +242,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
           
           <TouchableOpacity onPress={handleNextMonth} style={styles.navButton}>
             <Text style={styles.navButtonText}>
-              {calendarView === 'month' ? 'Next' : 'Next Week'}
+              {calendarView === 'month' ? t('timeclock.calendar.next') : t('timeclock.calendar.nextWeek')}
             </Text>
             <ChevronRight size={24} color={COLORS.blue} />
           </TouchableOpacity>
@@ -264,7 +264,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
                 calendarView === 'week' && styles.viewToggleTextActive,
               ]}
             >
-              Week
+              {t('timeclock.calendar.week')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -281,7 +281,7 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
                 calendarView === 'month' && styles.viewToggleTextActive,
               ]}
             >
-              Month
+              {t('timeclock.calendar.month')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -317,7 +317,15 @@ const TimeClockCalendarScreen = ({ navigation, route }) => {
       <ContentGlass style={styles.calendarCard}>
         {/* Day Headers */}
         <View style={styles.weekHeader}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          {[
+            t('timeclock.calendar.sun'),
+            t('timeclock.calendar.mon'),
+            t('timeclock.calendar.tue'),
+            t('timeclock.calendar.wed'),
+            t('timeclock.calendar.thu'),
+            t('timeclock.calendar.fri'),
+            t('timeclock.calendar.sat')
+          ].map((day) => (
             <View key={day} style={styles.dayHeader}>
               <Text style={styles.dayHeaderText}>{day}</Text>
             </View>

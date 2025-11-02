@@ -390,6 +390,9 @@ const translations = {
     "testimonialManager.statusSubmitted": "Submitted",
     "testimonialManager.openedCount": "Opened {count} time{plural}",
     "testimonialManager.viewTracking": "View Tracking",
+    "testimonialManager.hideTracking": "Hide Tracking",
+    "testimonialManager.device": "Device",
+    "testimonialManager.linkOpenActivity": "Link Open Activity",
 
 
     // SMS Routing Manager
@@ -1676,6 +1679,9 @@ const translations = {
     "testimonialManager.statusSubmitted": "Enviado",
     "testimonialManager.openedCount": "Abierto {count} vez{plural}",
     "testimonialManager.viewTracking": "Ver Seguimiento",
+    "testimonialManager.hideTracking": "Ocultar Seguimiento",
+    "testimonialManager.device": "Dispositivo",
+    "testimonialManager.linkOpenActivity": "Actividad de Apertura de Enlace",
 
     // SMS Routing Manager
     "smsRouting.title": "Gestor de Enrutamiento SMS",

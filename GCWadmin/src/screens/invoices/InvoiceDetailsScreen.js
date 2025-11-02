@@ -30,6 +30,7 @@ import {
   MessageCircle,
 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import * as invoiceAPI from '../../api/invoices';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../../constants';
 import { ContentGlass, TabGlass } from '../../components/GlassView';
@@ -37,6 +38,7 @@ import { ContentGlass, TabGlass } from '../../components/GlassView';
 const InvoiceDetailsScreen = ({ route, navigation }) => {
   const { invoiceId, initialTab = 'details' } = route.params;
   const { token } = useAuth();
+  const { t } = useLanguage();
   
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -470,7 +472,7 @@ const InvoiceDetailsScreen = ({ route, navigation }) => {
                       style={styles.textArea}
                       value={emailMessage}
                       onChangeText={setEmailMessage}
-                      placeholder="Add a personal message to include with the invoice..."
+                      placeholder={t('invoiceDetails.emailPlaceholder')}
                       placeholderTextColor={COLORS.textLight}
                       multiline
                       numberOfLines={4}
@@ -518,7 +520,7 @@ const InvoiceDetailsScreen = ({ route, navigation }) => {
                       style={styles.textArea}
                       value={smsMessage}
                       onChangeText={setSmsMessage}
-                      placeholder="Enter your SMS message (will include invoice link)..."
+                      placeholder={t('invoiceDetails.smsPlaceholder')}
                       placeholderTextColor={COLORS.textLight}
                       multiline
                       numberOfLines={4}
@@ -604,7 +606,7 @@ const InvoiceDetailsScreen = ({ route, navigation }) => {
                   <View style={styles.trackingItem}>
                     <Text style={styles.trackingLabel}>Tracking Link</Text>
                     <Text style={styles.trackingValue}>
-                      {trackingData.trackingEnabled ? 'Active' : 'Not Generated'}
+                      {trackingData.trackingEnabled ? t('invoiceDetails.trackingActive') : t('invoiceDetails.trackingNotGenerated')}
                     </Text>
                   </View>
                 </View>

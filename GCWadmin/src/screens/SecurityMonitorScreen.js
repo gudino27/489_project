@@ -13,32 +13,34 @@ import {
 import { COLORS } from '../constants/colors';
 import { ContentGlass } from '../components/GlassView';
 import { useAuth } from '../contexts/AuthContext';
-
-const TABS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'failed-logins', label: 'Failed Logins', icon: '⚠️' },
-  { id: 'locked-accounts', label: 'Locked', icon: '🔒' },
-  { id: 'audit-logs', label: 'Audit Logs', icon: '📋' },
-];
-
-const TIME_FILTERS = [
-  { value: 1, label: 'Last Hour' },
-  { value: 24, label: 'Last 24 Hours' },
-  { value: 168, label: 'Last Week' },
-  { value: 720, label: 'Last Month' },
-];
-
-const ACTION_FILTERS = [
-  { value: 'all', label: 'All Actions' },
-  { value: 'login_success', label: 'Login Success' },
-  { value: 'login_failed', label: 'Login Failed' },
-  { value: 'logout', label: 'Logout' },
-  { value: 'account_locked', label: 'Account Locked' },
-  { value: 'account_unlocked', label: 'Account Unlocked' },
-];
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SecurityMonitorScreen = () => {
   const { token, API_BASE, getAuthHeaders, getAuthHeadersJson } = useAuth();
+  const { t } = useLanguage();
+
+  const TABS = [
+    { id: 'overview', label: t('securityMonitor.overview'), icon: '📊' },
+    { id: 'failed-logins', label: t('securityMonitor.failedLogins'), icon: '⚠️' },
+    { id: 'locked-accounts', label: t('securityMonitor.lockedAccounts'), icon: '🔒' },
+    { id: 'audit-logs', label: t('securityMonitor.auditLogs'), icon: '📋' },
+  ];
+
+  const TIME_FILTERS = [
+    { value: 1, label: t('securityMonitor.lastHour') },
+    { value: 24, label: t('securityMonitor.last24Hours') },
+    { value: 168, label: t('securityMonitor.lastWeek') },
+    { value: 720, label: t('securityMonitor.lastMonth') },
+  ];
+
+  const ACTION_FILTERS = [
+    { value: 'all', label: t('securityMonitor.allActions') },
+    { value: 'login_success', label: t('securityMonitor.loginSuccess') },
+    { value: 'login_failed', label: t('securityMonitor.loginFailed') },
+    { value: 'logout', label: t('securityMonitor.logout') },
+    { value: 'account_locked', label: t('securityMonitor.accountLocked') },
+    { value: 'account_unlocked', label: t('securityMonitor.accountUnlocked') },
+  ];
   
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
@@ -98,10 +100,10 @@ const SecurityMonitorScreen = () => {
         const data = await response.json();
         setFailedLogins(data);
       } else {
-        console.error('Failed to fetch failed logins:', response.status);
+        console.error(t('securityMonitor.errors.fetchFailedLogins'), response.status);
       }
     } catch (error) {
-      console.error('Error fetching failed logins:', error);
+      console.error(t('securityMonitor.errors.fetchFailedLogins'), error);
     }
   };
 
@@ -115,10 +117,10 @@ const SecurityMonitorScreen = () => {
         const data = await response.json();
         setLockedAccounts(data);
       } else {
-        console.error('Failed to fetch locked accounts:', response.status);
+        console.error(t('securityMonitor.errors.fetchLockedAccounts'), response.status);
       }
     } catch (error) {
-      console.error('Error fetching locked accounts:', error);
+      console.error(t('securityMonitor.errors.fetchLockedAccounts'), error);
     }
   };
 
@@ -133,21 +135,21 @@ const SecurityMonitorScreen = () => {
         const data = await response.json();
         setActivityLogs(data);
       } else {
-        console.error('Failed to fetch activity logs:', response.status);
+        console.error(t('securityMonitor.errors.fetchActivityLogs'), response.status);
       }
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      console.error(t('securityMonitor.errors.fetchActivityLogs'), error);
     }
   };
 
   const unlockAccount = async (userId) => {
     Alert.alert(
-      'Unlock Account',
-      'Are you sure you want to unlock this account?',
+      t('securityMonitor.unlockAccount'),
+      t('securityMonitor.unlockConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Unlock',
+          text: t('securityMonitor.unlock'),
           onPress: async () => {
             if (!token) return;
             setLoading(true);
@@ -314,7 +316,7 @@ const SecurityMonitorScreen = () => {
                 <Text style={styles.logUser}>👤 {item.user_name}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
                   <Text style={[styles.statusBadgeText, { color: colors.text }]}>
-                    {item.action === 'account_locked' ? 'Account Locked' : 'Failed'}
+                    {item.action === 'account_locked' ? t('securityMonitor.accountLocked') : t('securityMonitor.failed')}
                   </Text>
                 </View>
               </View>

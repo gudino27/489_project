@@ -39,7 +39,7 @@ const LoginScreen = () => {
     try {
       const result = await login(username, password);
       if (!result.success) {
-        setError(result.error || 'Invalid credentials');
+        setError(result.error || t('login.invalidCredentials'));
       } else {
         // Login successful - prompt for biometric if available
         const biometricPrompt = await promptEnableBiometric();

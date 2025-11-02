@@ -825,7 +825,12 @@ router.delete("/admin/delete-entry/:id", authenticateUser, isAdminOrSuperAdmin, 
   try {
     const entryId = req.params.id;
     const adminId = req.user.id;
-    const { reason } = req.body;
+    // Accept `reason` from the request body or as a query parameter. Some
+    // clients (notably certain mobile/axios configurations) may not include a
+    // body for DELETE requests, which would make `req.body` undefined and
+    // cause a server error when destructuring. Use a safe fallback.
+    const { reason: bodyReason } = req.body || {};
+    const reason = bodyReason || req.query?.reason || 'Deleted by admin';
 
     await withDb(async (db) => {
       // Get admin name

@@ -63,13 +63,13 @@ const TestimonialsScreen = () => {
   });
 
   const projectTypes = [
-    'Kitchen Remodeling',
-    'Bathroom Renovation',
-    'Custom Carpentry',
-    'Cabinet Installation',
-    'Home Remodeling',
-    'Commercial Project',
-    'Other',
+    t('testimonials.projectTypes.kitchenRemodeling'),
+    t('testimonials.projectTypes.bathroomRenovation'),
+    t('testimonials.projectTypes.customCarpentry'),
+    t('testimonials.projectTypes.cabinetInstallation'),
+    t('testimonials.projectTypes.homeRemodeling'),
+    t('testimonials.projectTypes.commercialProject'),
+    t('testimonials.projectTypes.other'),
   ];
 
   useEffect(() => {
@@ -462,7 +462,7 @@ const TestimonialsScreen = () => {
                 onChangeText={(text) =>
                   setSendLinkForm({ ...sendLinkForm, client_phone: text })
                 }
-                placeholder="Enter phone"
+                placeholder={t('testimonials.placeholders.enterPhone')}
                 placeholderTextColor={COLORS.textSecondary}
                 keyboardType="phone-pad"
               />

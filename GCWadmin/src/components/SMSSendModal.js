@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SMSSendModal = ({
   visible,
@@ -18,6 +19,7 @@ const SMSSendModal = ({
   onSend,
   sending,
 }) => {
+  const { t } = useLanguage();
   const [useCustomPhone, setUseCustomPhone] = React.useState(false);
   const [customPhoneNumber, setCustomPhoneNumber] = React.useState('');
   const [message, setMessage] = React.useState('');
@@ -49,7 +51,7 @@ const SMSSendModal = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>💬 Send Invoice via SMS</Text>
+            <Text style={styles.modalTitle}>{t('modals.sms.title')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -58,21 +60,21 @@ const SMSSendModal = ({
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             {/* Invoice Info */}
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Invoice: <Text style={styles.infoValue}>{invoice.invoice_number}</Text></Text>
-              <Text style={styles.infoLabel}>Client: <Text style={styles.infoValue}>{clientName}</Text></Text>
-              <Text style={styles.infoLabel}>Phone: <Text style={styles.infoValue}>{invoice.phone || 'Not provided'}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.sms.invoice')} <Text style={styles.infoValue}>{invoice.invoice_number}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.sms.client')} <Text style={styles.infoValue}>{clientName}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.sms.phone')} <Text style={styles.infoValue}>{invoice.phone || t('modals.sms.notProvided')}</Text></Text>
             </View>
 
             {/* Phone Number Selection */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Phone Number</Text>
+              <Text style={styles.sectionTitle}>{t('modals.sms.phoneNumber')}</Text>
               <View style={styles.phoneCard}>
                 <TouchableOpacity
                   style={styles.radioOption}
                   onPress={() => setUseCustomPhone(false)}
                 >
                   <View style={[styles.radio, !useCustomPhone && styles.radioSelected]} />
-                  <Text style={styles.radioLabel}>Client Phone: {invoice.phone || 'None'}</Text>
+                  <Text style={styles.radioLabel}>{t('modals.sms.clientPhone')} {invoice.phone || t('modals.sms.none')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -80,17 +82,17 @@ const SMSSendModal = ({
                   onPress={() => setUseCustomPhone(true)}
                 >
                   <View style={[styles.radio, useCustomPhone && styles.radioSelected]} />
-                  <Text style={styles.radioLabel}>Use Custom Phone Number</Text>
+                  <Text style={styles.radioLabel}>{t('modals.sms.useCustomPhone')}</Text>
                 </TouchableOpacity>
 
                 {useCustomPhone && (
                   <View style={styles.customPhoneContainer}>
-                    <Text style={styles.helperText}>Enter a different phone number to send SMS</Text>
+                    <Text style={styles.helperText}>{t('modals.sms.customPhoneHelper')}</Text>
                     <TextInput
                       style={styles.input}
                       value={customPhoneNumber}
                       onChangeText={setCustomPhoneNumber}
-                      placeholder="e.g., (509) 790-3516"
+                      placeholder={t('modals.sms.phonePlaceholder')}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -101,7 +103,7 @@ const SMSSendModal = ({
             {/* Message */}
             <View style={styles.section}>
               <View style={styles.messageHeader}>
-                <Text style={styles.sectionTitle}>Message</Text>
+                <Text style={styles.sectionTitle}>{t('modals.sms.message')}</Text>
                 <Text style={[styles.charCount, characterCount > 140 && styles.charCountWarning]}>
                   {characterCount}/{maxCharacters}
                 </Text>
@@ -110,24 +112,24 @@ const SMSSendModal = ({
                 style={styles.textArea}
                 value={message}
                 onChangeText={setMessage}
-                placeholder="Add a personal message..."
+                placeholder={t('modals.sms.messagePlaceholder')}
                 multiline
                 numberOfLines={4}
                 maxLength={maxCharacters}
                 textAlignVertical="top"
               />
               <Text style={styles.helperText}>
-                SMS messages are limited to {maxCharacters} characters
+                {t('modals.sms.characterLimit').replace('{max}', maxCharacters)}
               </Text>
             </View>
 
             {/* Preview */}
             {message.trim() && (
               <View style={styles.previewCard}>
-                <Text style={styles.previewTitle}>📱 Message Preview:</Text>
+                <Text style={styles.previewTitle}>{t('modals.sms.messagePreview')}</Text>
                 <View style={styles.previewBubble}>
                   <Text style={styles.previewText}>{message}</Text>
-                  <Text style={styles.previewLink}>View invoice: [Link will be inserted]</Text>
+                  <Text style={styles.previewLink}>{t('modals.sms.linkPlaceholder')}</Text>
                 </View>
               </View>
             )}
@@ -135,9 +137,9 @@ const SMSSendModal = ({
             {/* Warning if no phone */}
             {!invoice.phone && !useCustomPhone && (
               <View style={styles.warningCard}>
-                <Text style={styles.warningTitle}>⚠️ No Phone Number</Text>
+                <Text style={styles.warningTitle}>{t('modals.sms.noPhoneTitle')}</Text>
                 <Text style={styles.warningText}>
-                  This client has no phone number on file. Please select "Use Custom Phone Number" to send SMS.
+                  {t('modals.sms.noPhoneMessage')}
                 </Text>
               </View>
             )}
@@ -150,7 +152,7 @@ const SMSSendModal = ({
               onPress={onClose}
               disabled={sending}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.sendButton]}
@@ -160,7 +162,7 @@ const SMSSendModal = ({
               {sending ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.sendButtonText}>📤 Send SMS</Text>
+                <Text style={styles.sendButtonText}>{t('modals.sms.sendButton')}</Text>
               )}
             </TouchableOpacity>
           </View>

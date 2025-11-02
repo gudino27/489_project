@@ -14,6 +14,7 @@ import {
 import { COLORS } from '../constants/colors';
 import { ContentGlass } from '../components/GlassView';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TABS = [
   { id: 'settings', label: 'Settings', icon: '⚙️' },
@@ -21,13 +22,14 @@ const TABS = [
   { id: 'history', label: 'History', icon: '📜' },
 ];
 
-const MESSAGE_TYPES = [
-  { value: 'design_submission', label: 'Design Submissions', description: 'New design submission notifications' },
-  { value: 'test_sms', label: 'Test SMS', description: 'Test SMS messages for routing' },
-];
-
 const SmsRoutingScreen = () => {
   const { token, API_BASE, getAuthHeaders, getAuthHeadersJson } = useAuth();
+  const { t } = useLanguage();
+
+  const MESSAGE_TYPES = [
+    { value: 'design_submission', label: t('smsRouting.messageTypes.designSubmissions'), description: t('smsRouting.messageTypes.designSubmissionsDesc') },
+    { value: 'test_sms', label: t('smsRouting.messageTypes.testSms'), description: t('smsRouting.messageTypes.testSmsDesc') },
+  ];
   
   const [activeTab, setActiveTab] = useState('settings');
   const [loading, setLoading] = useState(false);
@@ -95,7 +97,7 @@ const SmsRoutingScreen = () => {
         const data = await response.json();
         setSmsSettings(data);
       } else {
-        console.error('Failed to fetch SMS settings:', response.status);
+        console.error(t('smsRouting.errors.fetchSettings'), response.status);
       }
     } catch (error) {
       console.error('Error fetching SMS settings:', error);
@@ -112,7 +114,7 @@ const SmsRoutingScreen = () => {
         const data = await response.json();
         setRecipients(data);
       } else {
-        console.error('Failed to fetch recipients:', response.status);
+        console.error(t('smsRouting.errors.fetchRecipients'), response.status);
       }
     } catch (error) {
       console.error('Error fetching recipients:', error);
@@ -129,7 +131,7 @@ const SmsRoutingScreen = () => {
         const data = await response.json();
         setEmployees(data);
       } else {
-        console.error('Failed to fetch employees:', response.status);
+        console.error(t('smsRouting.errors.fetchEmployees'), response.status);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -146,7 +148,7 @@ const SmsRoutingScreen = () => {
         const data = await response.json();
         setHistory(data);
       } else {
-        console.error('Failed to fetch history:', response.status);
+        console.error(t('smsRouting.errors.fetchHistory'), response.status);
       }
     } catch (error) {
       console.error('Error fetching history:', error);
@@ -448,7 +450,7 @@ const SmsRoutingScreen = () => {
             style={styles.input}
             value={newRecipient.name}
             onChangeText={(text) => setNewRecipient({ ...newRecipient, name: text })}
-            placeholder="Recipient name"
+            placeholder={t('smsRouting.placeholders.recipientName')}
           />
 
           <Text style={styles.label}>Phone Number *</Text>
@@ -456,7 +458,7 @@ const SmsRoutingScreen = () => {
             style={styles.input}
             value={newRecipient.phone_number}
             onChangeText={(text) => setNewRecipient({ ...newRecipient, phone_number: text })}
-            placeholder="(509) 555-0100"
+            placeholder={t('smsRouting.placeholders.phone')}
             keyboardType="phone-pad"
           />
 
@@ -493,7 +495,7 @@ const SmsRoutingScreen = () => {
                   const updated = recipients.map((r) => (r.id === recipient.id ? { ...r, name: text } : r));
                   setRecipients(updated);
                 }}
-                placeholder="Name"
+                placeholder={t('smsRouting.placeholders.name')}
               />
               <TextInput
                 style={styles.input}
@@ -502,7 +504,7 @@ const SmsRoutingScreen = () => {
                   const updated = recipients.map((r) => (r.id === recipient.id ? { ...r, phone_number: text } : r));
                   setRecipients(updated);
                 }}
-                placeholder="Phone"
+                placeholder={t('smsRouting.placeholders.phoneShort')}
                 keyboardType="phone-pad"
               />
               <View style={styles.recipientActions}>

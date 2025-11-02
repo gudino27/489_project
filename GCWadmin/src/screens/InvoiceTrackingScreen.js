@@ -10,8 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart3, TrendingUp, DollarSign, Users } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const InvoiceTrackingScreen = () => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -39,10 +41,10 @@ const InvoiceTrackingScreen = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <View style={{ padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
         <Text style={{ fontSize: 24, fontWeight: 'bold', color: COLORS.text }}>
-          Invoice Tracking
+          {t('invoiceTracking.title')}
         </Text>
         <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginTop: 4 }}>
-          Real-time invoice analytics and monitoring
+          {t('invoiceTracking.subtitle')}
         </Text>
       </View>
 
@@ -53,17 +55,17 @@ const InvoiceTrackingScreen = () => {
         }
       >
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-          <StatCard icon={BarChart3} title="Total" value={stats.totalInvoices} color={COLORS.blue} />
-          <StatCard icon={TrendingUp} title="Paid" value={stats.paidInvoices} color={COLORS.green} />
+          <StatCard icon={BarChart3} title={t('invoiceTracking.total')} value={stats.totalInvoices} color={COLORS.blue} />
+          <StatCard icon={TrendingUp} title={t('invoiceTracking.paid')} value={stats.paidInvoices} color={COLORS.green} />
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <StatCard icon={DollarSign} title="Revenue" value={`$${stats.totalRevenue}`} color={COLORS.amber} />
-          <StatCard icon={Users} title="Pending" value={stats.pendingInvoices} color={COLORS.textSecondary} />
+          <StatCard icon={DollarSign} title={t('invoiceTracking.revenue')} value={`$${stats.totalRevenue}`} color={COLORS.amber} />
+          <StatCard icon={Users} title={t('invoiceTracking.pending')} value={stats.pendingInvoices} color={COLORS.textSecondary} />
         </View>
 
         <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 20, marginTop: 16, alignItems: 'center' }}>
           <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center' }}>
-            Live tracking data will appear here
+            {t('invoiceTracking.liveData')}
           </Text>
         </View>
       </ScrollView>

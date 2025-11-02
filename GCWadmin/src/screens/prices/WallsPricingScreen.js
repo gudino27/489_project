@@ -9,14 +9,16 @@ import {
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const WallsPricingScreen = () => {
+  const { t } = useLanguage();
   const [wallTypes, setWallTypes] = useState([
-    { id: 1, type: 'Standard Drywall', price: '45', unit: 'per sq ft', description: 'Basic installation' },
-    { id: 2, type: 'Backsplash Tile', price: '85', unit: 'per sq ft', description: 'Ceramic or porcelain' },
-    { id: 3, type: 'Glass Backsplash', price: '120', unit: 'per sq ft', description: 'Premium glass' },
-    { id: 4, type: 'Stone Backsplash', price: '150', unit: 'per sq ft', description: 'Natural stone' },
-    { id: 5, type: 'Accent Wall', price: '65', unit: 'per sq ft', description: 'Feature wall finish' },
+    { id: 1, type: t('priceManagement.wallTypes.standardDrywall'), price: '45', unit: 'per sq ft', description: t('priceManagement.wallTypes.standardDrywallDesc') },
+    { id: 2, type: t('priceManagement.wallTypes.backsplashTile'), price: '85', unit: 'per sq ft', description: t('priceManagement.wallTypes.backsplashTileDesc') },
+    { id: 3, type: t('priceManagement.wallTypes.glassBacksplash'), price: '120', unit: 'per sq ft', description: t('priceManagement.wallTypes.glassBacksplashDesc') },
+    { id: 4, type: t('priceManagement.wallTypes.stoneBacksplash'), price: '150', unit: 'per sq ft', description: t('priceManagement.wallTypes.stoneBacksplashDesc') },
+    { id: 5, type: t('priceManagement.wallTypes.accentWall'), price: '65', unit: 'per sq ft', description: t('priceManagement.wallTypes.accentWallDesc') },
   ]);
 
   const [editingId, setEditingId] = useState(null);
@@ -77,7 +79,7 @@ const WallsPricingScreen = () => {
                     value={editPrice}
                     onChangeText={setEditPrice}
                     keyboardType="decimal-pad"
-                    placeholder="0.00"
+                    placeholder={t('priceManagement.placeholders.price')}
                     autoFocus
                   />
                   <Text style={styles.unitText}>/ {item.unit}</Text>

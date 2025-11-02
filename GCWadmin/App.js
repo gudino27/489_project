@@ -1,6 +1,6 @@
 /**
  * GCWadmin - Gudino Custom Admin Panel
- * iOS Admin App for Kitchen/Bathroom Design Business
+ * iOS/Android Admin App for Kitchen/Bathroom Design Business
  */
 
 import React, { useEffect } from 'react';

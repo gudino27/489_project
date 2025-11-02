@@ -24,12 +24,14 @@ import {
   Send,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { analyticsApi } from '../api/analytics';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
 
 const AnalyticsScreen = () => {
   const { token } = useAuth();
+  const { t } = useLanguage();
 
   const [stats, setStats] = useState(null);
   const [realtimeStats, setRealtimeStats] = useState(null);
@@ -112,7 +114,7 @@ const AnalyticsScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading analytics...</Text>
+        <Text style={styles.loadingText}>{t('analytics.loading')}</Text>
       </View>
     );
   }
@@ -121,10 +123,10 @@ const AnalyticsScreen = () => {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Error Loading Analytics</Text>
+          <Text style={styles.errorTitle}>{t('analytics.errorTitle')}</Text>
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchStats()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('analytics.retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -141,8 +143,8 @@ const AnalyticsScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Analytics Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Website traffic and insights</Text>
+          <Text style={styles.headerTitle}>{t('analytics.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('analytics.subtitle')}</Text>
         </View>
         <View style={styles.headerActions}>
           <View style={styles.dateRangeSelector}>
@@ -179,21 +181,21 @@ const AnalyticsScreen = () => {
         {realtimeStats && realtimeStats.activeSessions > 0 && (
           <View style={styles.realtimeCard}>
             <View style={styles.realtimePulse} />
-            <Text style={styles.realtimeTitle}>Live Stats</Text>
+            <Text style={styles.realtimeTitle}>{t('analytics.liveStats')}</Text>
             <Text style={styles.realtimeText}>
-              <Text style={styles.realtimeCount}>{realtimeStats.activeSessions}</Text> active users in the last 30 minutes
+              <Text style={styles.realtimeCount}>{realtimeStats.activeSessions}</Text> {t('analytics.activeUsers')}
             </Text>
           </View>
         )}
 
         {/* Key Metrics */}
-        <Text style={styles.sectionTitle}>Key Metrics</Text>
+        <Text style={styles.sectionTitle}>{t('analytics.keyMetrics')}</Text>
         <View style={styles.metricsGrid}>
           <ContentGlass style={styles.metricCard}>
             <View style={[styles.metricIcon, { backgroundColor: COLORS.primary + '20' }]}>
               <Eye size={24} color={COLORS.primary} />
             </View>
-            <Text style={styles.metricLabel}>Total Page Views</Text>
+            <Text style={styles.metricLabel}>{t('analytics.totalPageViews')}</Text>
             <Text style={styles.metricValue}>{totalPageViews}</Text>
           </ContentGlass>
 
@@ -201,7 +203,7 @@ const AnalyticsScreen = () => {
             <View style={[styles.metricIcon, { backgroundColor: COLORS.success + '20' }]}>
               <Users size={24} color={COLORS.success} />
             </View>
-            <Text style={styles.metricLabel}>Unique Sessions</Text>
+            <Text style={styles.metricLabel}>{t('analytics.uniqueSessions')}</Text>
             <Text style={styles.metricValue}>{totalSessions}</Text>
           </ContentGlass>
 
@@ -209,7 +211,7 @@ const AnalyticsScreen = () => {
             <View style={[styles.metricIcon, { backgroundColor: '#9333EA20' }]}>
               <Clock size={24} color="#9333EA" />
             </View>
-            <Text style={styles.metricLabel}>Avg. Time on Site</Text>
+            <Text style={styles.metricLabel}>{t('analytics.avgTimeOnSite')}</Text>
             <Text style={styles.metricValue}>{formatTime(avgTimeOnSite)}</Text>
           </ContentGlass>
 
@@ -217,7 +219,7 @@ const AnalyticsScreen = () => {
             <View style={[styles.metricIcon, { backgroundColor: COLORS.warning + '20' }]}>
               <TrendingUp size={24} color={COLORS.warning} />
             </View>
-            <Text style={styles.metricLabel}>Popular Page</Text>
+            <Text style={styles.metricLabel}>{t('analytics.popularPage')}</Text>
             <Text style={styles.metricPopularPage}>{mostPopularPage}</Text>
           </ContentGlass>
         </View>

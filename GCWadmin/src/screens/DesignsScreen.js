@@ -216,21 +216,21 @@ const DesignsScreen = () => {
         style={styles.statsContainer}
         contentContainerStyle={styles.statsContent}
       >
-        <ContentGlass style={styles.statCard}>
+            <ContentGlass style={styles.statCard}>
           <View style={styles.statContent}>
             <View>
-              <Text style={styles.statLabel}>Total Designs</Text>
+              <Text style={styles.statLabel}>{t('designsManager.totalDesigns')}</Text>
               <Text style={styles.statValue}>{stats.totalDesigns || 0}</Text>
             </View>
             <FileText size={32} color={COLORS.textSecondary} />
           </View>
         </ContentGlass>
 
-        <ContentGlass style={styles.statCard}>
+            <ContentGlass style={styles.statCard}>
           <View style={styles.statContent}>
             <View>
-              <Text style={styles.statLabel}>New Designs</Text>
-              <Text style={[styles.statValue, { color: COLORS.primary }]}>
+              <Text style={styles.statLabel}>{t('designsManager.new')}</Text>
+              <Text style={[styles.statValue, { color: COLORS.primary }]}> 
                 {(stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.new || 0)}
               </Text>
             </View>
@@ -238,11 +238,11 @@ const DesignsScreen = () => {
           </View>
         </ContentGlass>
 
-        <ContentGlass style={styles.statCard}>
+            <ContentGlass style={styles.statCard}>
           <View style={styles.statContent}>
             <View>
-              <Text style={styles.statLabel}>Viewed</Text>
-              <Text style={[styles.statValue, { color: COLORS.success }]}>
+              <Text style={styles.statLabel}>{t('designsManager.viewed')}</Text>
+              <Text style={[styles.statValue, { color: COLORS.success }]}> 
                 {stats.statusBreakdown?.viewed || 0}
               </Text>
             </View>
@@ -261,13 +261,13 @@ const DesignsScreen = () => {
               filter === 'all' && styles.filterTabActive,
             ]}
           >
-            <Text
+              <Text
               style={[
                 styles.filterTabText,
                 filter === 'all' && styles.filterTabTextActive,
               ]}
             >
-              All Designs
+              {t('designsManager.all')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -277,13 +277,13 @@ const DesignsScreen = () => {
               filter === 'new' && styles.filterTabActive,
             ]}
           >
-            <Text
+              <Text
               style={[
                 styles.filterTabText,
                 filter === 'new' && styles.filterTabTextActive,
               ]}
             >
-              New{' '}
+              {t('designsManager.new')}{' '}
               {stats.statusBreakdown &&
               (stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0) > 0
                 ? `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})`
@@ -297,13 +297,13 @@ const DesignsScreen = () => {
               filter === 'viewed' && styles.filterTabActive,
             ]}
           >
-            <Text
+              <Text
               style={[
                 styles.filterTabText,
                 filter === 'viewed' && styles.filterTabTextActive,
               ]}
             >
-              Viewed{' '}
+              {t('designsManager.viewed')}{' '}
               {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0
                 ? `(${stats.statusBreakdown.viewed})`
                 : ''}
@@ -316,7 +316,7 @@ const DesignsScreen = () => {
       {selectedDesigns.size > 0 && (
         <View style={styles.bulkActions}>
           <Text style={styles.bulkActionsText}>
-            {selectedDesigns.size} design(s) selected
+            {`${selectedDesigns.size}${t('designViewer.designsSelected')}`}
           </Text>
           <TouchableOpacity
             onPress={bulkDeleteDesigns}
@@ -326,15 +326,15 @@ const DesignsScreen = () => {
               bulkActionLoading && styles.bulkDeleteButtonDisabled,
             ]}
           >
-            {bulkActionLoading ? (
+                {bulkActionLoading ? (
               <>
                 <ActivityIndicator size="small" color={COLORS.white} />
-                <Text style={styles.bulkDeleteText}>Deleting...</Text>
+                <Text style={styles.bulkDeleteText}>{t('designViewer.deleting')}</Text>
               </>
             ) : (
               <>
                 <Trash2 size={16} color={COLORS.white} />
-                <Text style={styles.bulkDeleteText}>Delete Selected</Text>
+                <Text style={styles.bulkDeleteText}>{t('designViewer.deleteSelected')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -346,7 +346,7 @@ const DesignsScreen = () => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading designs...</Text>
+            <Text style={styles.loadingText}>{t('designViewer.loadingDesigns')}</Text>
           </View>
         ) : (
           <View style={styles.designsList}>
@@ -379,7 +379,7 @@ const DesignsScreen = () => {
                     ]}
                   >
                     <Text style={styles.statusBadgeText}>
-                      {design.status === 'new' ? 'NEW' : 'VIEWED'}
+                      {design.status === 'new' ? t('designsManager.new') : t('designsManager.viewed')}
                     </Text>
                   </View>
                 </View>
@@ -387,12 +387,12 @@ const DesignsScreen = () => {
                 <View style={styles.designCardContact}>
                   <View style={styles.contactRow}>
                     <Phone size={12} color={COLORS.textSecondary} />
-                    {design.phone ? (
+                      {design.phone ? (
                       <TouchableOpacity onPress={() => Linking.openURL(`tel:${design.phone}`)}>
                         <Text style={styles.contactLink}>{formatPhone(design.phone)}</Text>
                       </TouchableOpacity>
                     ) : (
-                      <Text style={styles.contactText}>Open to see number</Text>
+                      <Text style={styles.contactText}>{t('designViewer.openToSeeNumber')}</Text>
                     )}
                   </View>
                   <View style={styles.contactRow}>
@@ -453,22 +453,22 @@ const DesignsScreen = () => {
 
             <ScrollView style={styles.modalBody}>
               {/* Client Info */}
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Client Information</Text>
+                <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>{t('designViewer.clientInformation')}</Text>
                 <View style={styles.infoGrid}>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Name</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.name')}</Text>
                     <Text style={styles.infoGridValue}>{selectedDesign.client_name}</Text>
                   </View>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Contact Preference</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.contactPreference')}</Text>
                     <View style={styles.preferenceRow}>
                       {getContactIcon(selectedDesign.contact_preference)}
                       <Text style={styles.infoGridValue}>{selectedDesign.contact_preference}</Text>
                     </View>
                   </View>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Contact Information</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.contactInformation')}</Text>
                     <TouchableOpacity onPress={() => Linking.openURL(`mailto:${selectedDesign.client_email}`)}>
                       <Text style={styles.infoGridValue}>email: {selectedDesign.client_email}</Text>
                     </TouchableOpacity>
@@ -477,24 +477,24 @@ const DesignsScreen = () => {
                     </TouchableOpacity>
                   </View>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Submitted</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.submitted')}</Text>
                     <Text style={styles.infoGridValue}>{formatDate(selectedDesign.created_at)}</Text>
                   </View>
                 </View>
               </View>
 
               {/* Design Summary */}
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Design Summary</Text>
+                <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>{t('designViewer.designSummary')}</Text>
                 <View style={styles.infoGrid}>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Total Estimate</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.totalEstimate')}</Text>
                     <Text style={styles.totalEstimate}>
                       ${parseFloat(selectedDesign.total_price).toFixed(2)}
                     </Text>
                   </View>
                   <View style={styles.infoGridItem}>
-                    <Text style={styles.infoGridLabel}>Rooms Included</Text>
+                    <Text style={styles.infoGridLabel}>{t('designViewer.roomsIncluded')}</Text>
                     <View style={styles.roomBadges}>
                       {selectedDesign.include_kitchen && (
                         <View style={styles.roomBadgeKitchen}>
@@ -514,8 +514,8 @@ const DesignsScreen = () => {
               </View>
 
               {/* Design Preview */}
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Design Visualization</Text>
+                <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>{t('designViewer.designVisualization')}</Text>
                 <DesignPreview
                   designData={selectedDesign}
                   hasKitchen={selectedDesign.include_kitchen && selectedDesign.kitchen_data}
@@ -526,20 +526,20 @@ const DesignsScreen = () => {
               {/* Kitchen Details */}
               {selectedDesign.kitchen_data && selectedDesign.include_kitchen && (
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Kitchen Details</Text>
+                  <Text style={styles.modalSectionTitle}>{t('designViewer.kitchenDetails')}</Text>
                   <Text style={styles.roomDetailText}>
-                    Room Dimensions: {selectedDesign.kitchen_data.dimensions.width}' × {selectedDesign.kitchen_data.dimensions.height}' × {selectedDesign.kitchen_data.dimensions.wallHeight}" height
+                    {`${t('designViewer.roomDimensions')}: ${selectedDesign.kitchen_data.dimensions.width}' × ${selectedDesign.kitchen_data.dimensions.height}' × ${selectedDesign.kitchen_data.dimensions.wallHeight}" ${t('designViewer.height')}`}
                   </Text>
                   <Text style={styles.roomDetailText}>
                     Total Items: {selectedDesign.kitchen_data.elements.length}
                   </Text>
                   <View style={styles.cabinetSummary}>
-                    <Text style={styles.cabinetSummaryTitle}>Cabinet Summary:</Text>
+                          <Text style={styles.cabinetSummaryTitle}>{t('designViewer.cabinetSummary')}</Text>
                     {selectedDesign.kitchen_data.elements
                       .filter(el => el.category === 'cabinet')
                       .map((cabinet, idx) => (
-                        <Text key={idx} style={styles.cabinetItem}>
-                          • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") - Material: {selectedDesign.kitchen_data.materials?.[cabinet.id] || 'laminate'}
+                          <Text key={idx} style={styles.cabinetItem}>
+                          • {cabinet.type} ({cabinet.width}" × {cabinet.depth}") - {t('designViewer.material')}: {selectedDesign.kitchen_data.materials?.[cabinet.id] || 'laminate'}
                         </Text>
                       ))
                     }

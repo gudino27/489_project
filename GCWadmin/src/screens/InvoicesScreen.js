@@ -64,7 +64,7 @@ const InvoicesScreen = () => {
 
   const loadInvoices = async () => {
     if (!token) {
-      console.log('No auth token available');
+      console.log(t('invoiceManager.noAuthToken'));
       return;
     }
 
@@ -239,7 +239,7 @@ const InvoicesScreen = () => {
             <View>
               <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
               {item.due_date && (
-                <Text style={styles.dueDate}>Due: {formatDate(item.due_date)}</Text>
+                <Text style={styles.dueDate}>{t('invoiceManager.due')} {formatDate(item.due_date)}</Text>
               )}
             </View>
             <Text style={styles.date}>{formatDate(item.invoice_date || item.created_at)}</Text>
@@ -302,15 +302,15 @@ const InvoicesScreen = () => {
 
       {/* Stats Summary */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsContainer}>
-        {renderStatsCard(InvoiceIcon, 'Total Invoices', stats.total.toString(), COLORS.primary)}
+        {renderStatsCard(InvoiceIcon, t('invoiceManager.totalInvoices'), stats.total.toString(), COLORS.primary)}
         {renderStatsCard(
           Clock,
-          'Pending',
+          t('invoiceManager.statusPending'),
           formatCurrency(stats.pendingAmount),
           COLORS.warning
         )}
-        {renderStatsCard(CheckCircle, 'Paid', formatCurrency(stats.paidAmount), COLORS.success)}
-        {renderStatsCard(AlertCircle, 'Overdue', stats.overdueCount.toString(), COLORS.error)}
+        {renderStatsCard(CheckCircle, t('invoiceManager.statusPaid'), formatCurrency(stats.paidAmount), COLORS.success)}
+        {renderStatsCard(AlertCircle, t('invoiceManager.statusOverdue'), stats.overdueCount.toString(), COLORS.error)}
       </ScrollView>
 
       {/* Search Bar */}
@@ -318,7 +318,7 @@ const InvoicesScreen = () => {
         <Search size={20} color={COLORS.textLight} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by invoice number or client..."
+          placeholder={t('invoiceManager.searchPlaceholder')}
           placeholderTextColor={COLORS.textLight}
           value={searchTerm}
           onChangeText={setSearchTerm}
@@ -339,10 +339,10 @@ const InvoicesScreen = () => {
         style={styles.filtersContainer}
         contentContainerStyle={styles.filtersContent}
       >
-        {renderFilterButton('all', 'All')}
-        {renderFilterButton('pending', 'Pending')}
-        {renderFilterButton('paid', 'Paid')}
-        {renderFilterButton('overdue', 'Overdue')}
+        {renderFilterButton('all', t('invoiceManager.filterAll'))}
+        {renderFilterButton('pending', t('invoiceManager.filterPending'))}
+        {renderFilterButton('paid', t('invoiceManager.filterPaid'))}
+        {renderFilterButton('overdue', t('invoiceManager.filterOverdue'))}
       </ScrollView>
 
       {/* Invoice List */}
@@ -356,12 +356,12 @@ const InvoicesScreen = () => {
           <ContentGlass style={styles.emptyContainer}>
             <InvoiceIcon size={48} color={COLORS.textLight} style={styles.emptyIcon} />
             <Text style={styles.emptyText}>
-              {searchTerm ? 'No invoices found' : 'No invoices created yet'}
+              {searchTerm ? t('invoiceManager.noInvoicesFound') : t('invoiceManager.noInvoices')}
             </Text>
             <Text style={styles.emptySubtext}>
               {searchTerm
-                ? 'Try adjusting your search criteria'
-                : 'Create your first invoice to get started'}
+                ? t('invoiceManager.adjustSearch')
+                : t('invoiceManager.createFirst')}
             </Text>
           </ContentGlass>
         }
@@ -385,7 +385,7 @@ const InvoicesScreen = () => {
               {/* Header */}
               <View style={styles.sidePanelHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sidePanelTitle}>Invoice Actions</Text>
+                  <Text style={styles.sidePanelTitle}>{t('invoiceManager.invoiceActions')}</Text>
                   <Text style={styles.sidePanelSubtitle}>{selectedInvoice.invoice_number}</Text>
                   <Text style={styles.sidePanelClient}>
                     {selectedInvoice.is_business
@@ -415,7 +415,7 @@ const InvoicesScreen = () => {
                   }}
                 >
                   <Eye size={20} color={COLORS.primary} />
-                  <Text style={styles.sidePanelButtonText}>Invoice Details</Text>
+                  <Text style={styles.sidePanelButtonText}>{t('invoiceManager.invoiceDetails')}</Text>
                 </TouchableOpacity>
 
                   <TouchableOpacity
@@ -426,7 +426,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <DollarSign size={20} color={COLORS.success} />
-                    <Text style={styles.sidePanelButtonText}>Payments</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.payments')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -437,7 +437,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <Edit size={20} color="#9333EA" />
-                    <Text style={styles.sidePanelButtonText}>Edit Invoice</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.editInvoice')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -448,7 +448,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <Send size={20} color={COLORS.success} />
-                    <Text style={styles.sidePanelButtonText}>Send Email / SMS</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.sendEmailSms')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -459,7 +459,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <Download size={20} color={COLORS.textLight} />
-                    <Text style={styles.sidePanelButtonText}>Download PDF</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.downloadPdf')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -470,7 +470,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <Bell size={20} color="#F59E0B" />
-                    <Text style={styles.sidePanelButtonText}>Manage Reminders</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.manageReminders')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.sidePanelButton, styles.sidePanelButtonDanger]}
@@ -480,7 +480,7 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <Trash2 size={20} color={COLORS.error} />
-                    <Text style={[styles.sidePanelButtonText, { color: COLORS.error }]}>Delete Invoice</Text>
+                    <Text style={[styles.sidePanelButtonText, { color: COLORS.error }]}>{t('invoiceManager.deleteInvoice')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -491,24 +491,24 @@ const InvoicesScreen = () => {
                     }}
                   >
                     <FileText size={20} color={COLORS.primary} />
-                    <Text style={styles.sidePanelButtonText}>Analytics</Text>
+                    <Text style={styles.sidePanelButtonText}>{t('invoiceManager.analytics')}</Text>
                   </TouchableOpacity>
                 </ScrollView>
 
                 {/* Footer with invoice details */}
                 <View style={styles.sidePanelFooter}>
                   <View style={styles.sidePanelFooterRow}>
-                    <Text style={styles.sidePanelFooterLabel}>Amount:</Text>
+                    <Text style={styles.sidePanelFooterLabel}>{t('invoiceManager.amountLabel')}</Text>
                     <Text style={styles.sidePanelFooterValue}>{formatCurrency(selectedInvoice.total_amount)}</Text>
                   </View>
                   <View style={styles.sidePanelFooterRow}>
-                    <Text style={styles.sidePanelFooterLabel}>Status:</Text>
+                    <Text style={styles.sidePanelFooterLabel}>{t('invoiceManager.statusLabel')}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedInvoice.status) }]}>
                       <Text style={styles.statusText}>{selectedInvoice.status?.toUpperCase()}</Text>
                     </View>
                   </View>
                   <View style={styles.sidePanelFooterRow}>
-                    <Text style={styles.sidePanelFooterLabel}>Date:</Text>
+                    <Text style={styles.sidePanelFooterLabel}>{t('invoiceManager.dateLabel')}</Text>
                     <Text style={styles.sidePanelFooterValue}>{formatDate(selectedInvoice.invoice_date)}</Text>
                   </View>
                 </View>

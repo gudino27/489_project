@@ -4,12 +4,12 @@
     "slug": "gcwadmin",
     "version": "1.0.0",
     "owner": "gudino27",
+    "icon": "./assets/icon.png",
     "platforms": [
       "ios",
       "android"
     ],
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gudinocustom.gcwadmin",
@@ -26,7 +26,11 @@
     },
     "android": {
       "package": "com.gudinocustom.admin",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "extra": {
       "API_BASE": "https://api.gudinocustom.com",
@@ -42,7 +46,27 @@
     },
     "runtimeVersion": "1.0.0",
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow GCWadmin to use Face ID for secure authentication"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GCWadmin to access your photos"
+        }
+      ]
     ]
   }
 }

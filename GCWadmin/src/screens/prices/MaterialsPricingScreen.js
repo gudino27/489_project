@@ -9,14 +9,17 @@ import {
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const MaterialsPricingScreen = () => {
+  const { t } = useLanguage();
+
   const [materials, setMaterials] = useState([
-    { id: 1, name: 'MDF', multiplier: '1.0', description: 'Base material' },
-    { id: 2, name: 'Plywood', multiplier: '1.15', description: 'Premium durability' },
-    { id: 3, name: 'Solid Wood', multiplier: '1.35', description: 'Highest quality' },
-    { id: 4, name: 'Thermofoil', multiplier: '1.05', description: 'Easy maintenance' },
-    { id: 5, name: 'Laminate', multiplier: '0.95', description: 'Budget friendly' },
+    { id: 1, name: 'MDF', multiplier: '1.0', description: t('materials.descriptions.baseMaterial') },
+    { id: 2, name: 'Plywood', multiplier: '1.15', description: t('materials.descriptions.premiumDurability') },
+    { id: 3, name: 'Solid Wood', multiplier: '1.35', description: t('materials.descriptions.highestQuality') },
+    { id: 4, name: 'Thermofoil', multiplier: '1.05', description: t('materials.descriptions.easyMaintenance') },
+    { id: 5, name: 'Laminate', multiplier: '0.95', description: t('materials.descriptions.budgetFriendly') },
   ]);
 
   const [editingId, setEditingId] = useState(null);
@@ -77,7 +80,7 @@ const MaterialsPricingScreen = () => {
                     value={editMultiplier}
                     onChangeText={setEditMultiplier}
                     keyboardType="decimal-pad"
-                    placeholder="1.0"
+                    placeholder={t('pricing.common.multiplierPlaceholder')}
                     autoFocus
                   />
                 </View>

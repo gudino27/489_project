@@ -16,8 +16,10 @@ import { ContentGlass } from '../components/GlassView';
 import TaxCalculatorModal from '../components/TaxCalculatorModal';
 import ManualEntryModal from '../components/ManualEntryModal';
 import EditEntryModal from '../components/EditEntryModal';
+
 import api from '../api/client';
 import {
+  parsePSTTimestamp,
   formatTimePST,
   formatDatePST,
   getTodayPST,
@@ -108,6 +110,9 @@ const TimeClockScreen = ({ navigation }) => {
       console.log('⏰ Status response:', response.data);
       if (response.data.success) {
         setStatus(response.data);
+        // Keep the client's currentTime synced to the moment we refreshed status to avoid
+        // transient negative/incorrect elapsed calculations caused by parsing or small time skew.
+        setCurrentTime(new Date());
       }
     } catch (error) {
       console.error('❌ Error fetching status:', error);
@@ -186,7 +191,7 @@ const TimeClockScreen = ({ navigation }) => {
 
   const saveTaxRate = async () => {
     if (!employeeTaxRate || employeeTaxRate < 0 || employeeTaxRate > 100) {
-      Alert.alert(t('common.error'), 'Please enter a valid tax rate between 0 and 100');
+      Alert.alert(t('common.error'), t('timeClock.invalidTaxRate'));
       return;
     }
 
@@ -197,13 +202,13 @@ const TimeClockScreen = ({ navigation }) => {
       });
 
       if (response.data.success) {
-        Alert.alert(t('common.success'), 'Tax rate saved successfully!');
+        Alert.alert(t('common.success'), t('timeClock.taxRateSaved'));
         await fetchPayrollInfo();
       }
     } catch (error) {
       Alert.alert(
         t('common.error'),
-        error.response?.data?.message || 'Failed to save tax rate'
+        error.response?.data?.message || t('timeClock.failedToSaveTaxRate')
       );
     } finally {
       setSavingTaxRate(false);
@@ -284,11 +289,13 @@ const TimeClockScreen = ({ navigation }) => {
             setActionLoading(true);
             try {
               const response = await api.post('/api/timeclock/clock-in', {
-                location: 'Mobile App',
+                location: t('timeClock.mobileApp'),
               });
               if (response.data.success) {
                 Alert.alert(t('common.success'), t('timeclock.clocked_in_success'));
-                await fetchStatus();
+                  // Fetch latest status and immediately sync our current time so elapsed shows >= 0
+                  await fetchStatus();
+                  setCurrentTime(new Date());
                 await fetchCurrentPeriod();
                 await fetchWeeklyHours();
               }
@@ -499,19 +506,47 @@ const TimeClockScreen = ({ navigation }) => {
   };
 
   const handleDeleteEntry = async () => {
+    // Guard: make sure we have an entry to delete
+    if (!editingEntry || !editingEntry.id) {
+      Alert.alert(t('common.error'), t('timeclock.entry_delete_error'));
+      return;
+    }
+
     setActionLoading(true);
     try {
-      const response = await api.delete(`/api/timeclock/admin/delete-entry/${editingEntry.id}`);
+      const reason = 'Deleted via mobile app';
+      const url = `/api/timeclock/admin/delete-entry/${editingEntry.id}?reason=${encodeURIComponent(reason)}`;
 
-      if (response.data.success) {
+      // Log the outgoing request details for debugging server-side 500s.
+      console.log('⏱ Deleting entry:', { url, id: editingEntry.id, reason });
+
+      // Send reason both as a query param and as the DELETE body. Some axios
+      // adapters (particularly in React Native) have historically behaved
+      // inconsistently with `axios.delete(url, { data })`. Use `api.request`
+      // with method:'delete' to ensure the `data` payload is sent.
+      const requestConfig = {
+        url,
+        method: 'delete',
+        data: { reason },
+        headers: { 'Content-Type': 'application/json' },
+      };
+      console.log('⏱ Delete request config:', requestConfig);
+      const response = await api.request(requestConfig);
+
+      console.log('⏱ Delete response:', response?.status, response?.data);
+
+      if (response.data && response.data.success) {
         Alert.alert(t('common.success'), t('timeclock.entry_deleted'));
         setEditingEntry(null);
         setEditForm({ clockInTime: '', clockOutTime: '', breakMinutes: 0, notes: '' });
         setAuditLog([]);
-        await fetchWeeklyHours();
-        await fetchCurrentPeriod();
+        // Refresh the derived data concurrently to speed up UI update.
+        await Promise.all([fetchWeeklyHours(), fetchCurrentPeriod()]);
+      } else {
+        Alert.alert(t('common.error'), response.data?.message || t('timeclock.entry_delete_error'));
       }
     } catch (error) {
+      console.error('Error deleting entry:', error);
       Alert.alert(
         t('common.error'),
         error.response?.data?.message || t('timeclock.entry_delete_error')
@@ -523,14 +558,67 @@ const TimeClockScreen = ({ navigation }) => {
 
   const calculateElapsedTime = () => {
     if (!status.isClockedIn || !status.clockInTime) return '0h 0m';
-    
-    const clockIn = new Date(status.clockInTime);
-    const now = new Date();
-    const diffMs = now - clockIn;
-    const diffMins = Math.floor(diffMs / 60000) - status.breakMinutes;
+
+    // Use the component's `currentTime` state (updated on an interval and when status is fetched)
+    // to calculate elapsed time so the UI remains consistent.
+    const now = currentTime || new Date();
+
+    // If the server provides the PST DB format "YYYY-MM-DD HH:MM:SS" use the
+    // dedicated parser so we compare instants in the same PST-derived timeline.
+    let clockIn;
+    if (typeof status.clockInTime === 'string' && status.clockInTime.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+      clockIn = parsePSTTimestamp(status.clockInTime);
+
+      // Build `now` in the same PST-derived representation so subtraction is meaningful.
+      const nowDate = now instanceof Date ? now : new Date(now);
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).formatToParts(nowDate);
+
+      const get = (type) => (parts.find(p => p.type === type) || {}).value || '00';
+      const nowPstString = `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+      const nowPstDate = parsePSTTimestamp(nowPstString);
+
+      if (!clockIn || !nowPstDate) return '0h 0m';
+      let diffMs = nowPstDate.getTime() - clockIn.getTime();
+      if (diffMs < 0) diffMs = 0;
+      const totalMinutes = Math.floor(diffMs / 60000);
+      const breakMinutes = parseInt(status.breakMinutes || 0, 10) || 0;
+      let diffMins = totalMinutes - breakMinutes;
+      if (diffMins < 0) diffMins = 0;
+      const hours = Math.floor(diffMins / 60);
+      const minutes = diffMins % 60;
+      return `${hours}h ${minutes}m`;
+    }
+
+    // Fallback: try generic parsing for other formats (ISO, numeric timestamp, etc.)
+    clockIn = new Date(status.clockInTime);
+    if (isNaN(clockIn.getTime())) {
+      clockIn = new Date(String(status.clockInTime).replace(' ', 'T'));
+    }
+    if (isNaN(clockIn.getTime())) {
+      return '0h 0m';
+    }
+
+    let diffMs = now.getTime() - clockIn.getTime();
+    // If for any reason the diff is negative (parsing/time skew), clamp to zero.
+    if (diffMs < 0) diffMs = 0;
+
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const breakMinutes = parseInt(status.breakMinutes || 0, 10) || 0;
+    let diffMins = totalMinutes - breakMinutes;
+    if (diffMins < 0) diffMins = 0;
+
     const hours = Math.floor(diffMins / 60);
     const minutes = diffMins % 60;
-    
+
     return `${hours}h ${minutes}m`;
   };
 
@@ -550,7 +638,7 @@ const TimeClockScreen = ({ navigation }) => {
       {/* Header with Time Clock Title */}
       <View style={styles.header}>
         <Clock size={28} color={COLORS.blue} />
-        <Text style={styles.headerTitle}>Time Clock</Text>
+        <Text style={styles.headerTitle}>{t('timeClock.title')}</Text>
       </View>
 
       {/* View Toggle for Admins - Three Buttons */}
@@ -565,7 +653,7 @@ const TimeClockScreen = ({ navigation }) => {
           >
             <Calendar size={16} color={COLORS.background} />
             <Text style={[styles.viewToggleText, styles.calendarViewText]}>
-              Calendar View
+              {t('timeClock.calendarView')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -581,7 +669,7 @@ const TimeClockScreen = ({ navigation }) => {
                 activeView === 'employee' && styles.viewToggleTextActive,
               ]}
             >
-              Employee View
+              {t('timeClock.employeeView')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -598,7 +686,7 @@ const TimeClockScreen = ({ navigation }) => {
                 activeView === 'admin' && styles.viewToggleTextActive,
               ]}
             >
-              Admin View
+              {t('timeClock.adminView')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -610,8 +698,8 @@ const TimeClockScreen = ({ navigation }) => {
           {/* Workday-style Interface */}
           {/* Enter Time Section */}
           <ContentGlass style={styles.workdaySection}>
-        <Text style={styles.workdaySectionTitle}>Enter Time</Text>
-        
+        <Text style={styles.workdaySectionTitle}>{t('timeClock.enterTime')}</Text>
+
         {/* Week Summary Buttons */}
         <View style={styles.weekButtons}>
           <TouchableOpacity
@@ -619,56 +707,58 @@ const TimeClockScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('TimeClockCalendar')}
           >
             <Text style={styles.weekButtonLabel}>
-              This Week ({thisWeekHours.toFixed(6)} Hours)
+              {t('timeClock.thisWeek')} ({thisWeekHours.toFixed(6)} {t('timeClock.hours')})
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.weekButton}
             onPress={() => navigation.navigate('TimeClockCalendar')}
           >
             <Text style={styles.weekButtonLabel}>
-              Last Week ({lastWeekHours.toFixed(6)} Hours)
+              {t('timeClock.lastWeek')} ({lastWeekHours.toFixed(6)} {t('timeClock.hours')})
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.weekButton}
             onPress={() => navigation.navigate('TimeClockCalendar')}
           >
-            <Text style={styles.weekButtonLabel}>Select Week</Text>
+            <Text style={styles.weekButtonLabel}>{t('timeClock.selectWeek')}</Text>
           </TouchableOpacity>
         </View>
       </ContentGlass>
 
       {/* Time Clock Section */}
       <ContentGlass style={styles.workdaySection}>
-        <Text style={styles.workdaySectionTitle}>Time Clock</Text>
+        <Text style={styles.workdaySectionTitle}>{t('timeClock.title')}</Text>
         
         {/* Clock Status Info */}
         {status.isClockedIn && (
           <View style={styles.clockStatus}>
             <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Clocked In:</Text>
+              <Text style={styles.statusLabel}>{t('timeClock.clockedIn')}</Text>
               <Text style={styles.statusValue}>{formatTimePST(status.clockInTime)}</Text>
             </View>
             <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Elapsed:</Text>
+              <Text style={styles.statusLabel}>{t('timeClock.elapsed')}</Text>
               <Text style={styles.statusValue}>{calculateElapsedTime()}</Text>
             </View>
-            {status.breakMinutes > 0 && (
+            {/* Show break minutes only if not currently on break and breakMinutes > 0 */}
+            {!status.isOnBreak && status.breakMinutes > 0 && (
               <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Break:</Text>
+                <Text style={styles.statusLabel}>{t('timeClock.break')}</Text>
                 <Text style={styles.statusValue}>
                   {status.breakMinutes} {t('timeclock.minutes')}
                 </Text>
               </View>
             )}
+            {/* Show "On Break" indicator if currently on break */}
             {status.isOnBreak && (
               <View style={[styles.statusRow, styles.breakIndicator]}>
                 <Coffee size={16} color={COLORS.warning} />
                 <Text style={[styles.statusValue, { color: COLORS.warning }]}>
-                  On Break
+                  {t('timeClock.onBreak')}
                 </Text>
               </View>
             )}
@@ -688,7 +778,7 @@ const TimeClockScreen = ({ navigation }) => {
               ) : (
                 <>
                   <Play size={20} color={COLORS.background} fill={COLORS.background} />
-                  <Text style={styles.clockButtonText}>Check In</Text>
+                  <Text style={styles.clockButtonText}>{t('timeClock.checkIn')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -704,7 +794,7 @@ const TimeClockScreen = ({ navigation }) => {
                 ) : (
                   <>
                     <Square size={20} color={COLORS.background} fill={COLORS.background} />
-                    <Text style={styles.clockButtonText}>Check Out</Text>
+                    <Text style={styles.clockButtonText}>{t('timeClock.checkOut')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -732,7 +822,7 @@ const TimeClockScreen = ({ navigation }) => {
                         !status.isOnBreak && styles.breakButtonText,
                       ]}
                     >
-                      {status.isOnBreak ? 'End Break' : 'Start Break'}
+                      {status.isOnBreak ? t('timeClock.endBreak') : t('timeClock.startBreak')}
                     </Text>
                   </>
                 )}
@@ -816,17 +906,17 @@ const TimeClockScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('TimeClockCalendar')}
           >
             <Text style={styles.hoursReportIcon}>📊</Text>
-            <Text style={styles.hoursReportText}>View Hours Report & Export</Text>
+            <Text style={styles.hoursReportText}>{t('timeClock.viewHoursReport')}</Text>
           </TouchableOpacity>
 
           {/* Currently Clocked In Section */}
           <ContentGlass style={styles.adminSection}>
             <View style={styles.liveSectionHeader}>
-              <Text style={styles.adminSectionTitle}>Currently Clocked In</Text>
+              <Text style={styles.adminSectionTitle}>{t('timeClock.currentlyClocked')}</Text>
               <View style={styles.liveCount}>
                 <Users size={20} color={COLORS.blue} />
                 <Text style={styles.liveCountText}>
-                  {liveEmployees.length} {liveEmployees.length === 1 ? 'Employee' : 'Employees'}
+                  {liveEmployees.length} {liveEmployees.length === 1 ? t('timeClock.employee') : t('timeClock.employees')}
                 </Text>
               </View>
             </View>
@@ -834,7 +924,7 @@ const TimeClockScreen = ({ navigation }) => {
             {liveEmployees.length === 0 ? (
               <View style={styles.emptyState}>
                 <Clock size={48} color={COLORS.textLight} />
-                <Text style={styles.emptyStateText}>No employees currently clocked in</Text>
+                <Text style={styles.emptyStateText}>{t('timeClock.noEmployees')}</Text>
               </View>
             ) : (
               <View style={styles.employeeList}>
@@ -844,19 +934,19 @@ const TimeClockScreen = ({ navigation }) => {
                       <Text style={styles.employeeName}>{entry.employee_name}</Text>
                       <View style={styles.employeeDetails}>
                         <Text style={styles.employeeDetailText}>
-                          Clocked in at: {formatTimePST(entry.clock_in_time)}
+                          {t('timeClock.clockedInAt')} {formatTimePST(entry.clock_in_time)}
                         </Text>
                         {entry.isOnBreak && (
                           <View style={styles.breakBadge}>
                             <Coffee size={14} color={COLORS.warning} />
-                            <Text style={styles.breakBadgeText}>On Break</Text>
+                            <Text style={styles.breakBadgeText}>{t('timeClock.onBreak')}</Text>
                           </View>
                         )}
                       </View>
                     </View>
                     <View style={styles.employeeHours}>
                       <Text style={styles.hoursValue}>{entry.currentHours}</Text>
-                      <Text style={styles.hoursLabel}>Hours Today</Text>
+                      <Text style={styles.hoursLabel}>{t('timeClock.hoursToday')}</Text>
                     </View>
                   </View>
                 ))}
@@ -867,13 +957,13 @@ const TimeClockScreen = ({ navigation }) => {
           {/* Employee Payroll Management Section */}
           <ContentGlass style={styles.adminSection}>
             <View style={styles.sectionToggle}>
-              <Text style={styles.adminSectionTitle}>Employee Payroll Management</Text>
+              <Text style={styles.adminSectionTitle}>{t('timeClock.employeePayroll')}</Text>
               <TouchableOpacity
                 style={styles.toggleButton}
                 onPress={() => setShowPayrollSection(!showPayrollSection)}
               >
                 <Text style={styles.toggleButtonText}>
-                  {showPayrollSection ? 'Hide' : 'Show'}
+                  {showPayrollSection ? t('timeClock.hide') : t('timeClock.show')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -881,12 +971,12 @@ const TimeClockScreen = ({ navigation }) => {
             {showPayrollSection && (
               <View style={styles.payrollManagement}>
                 <Text style={styles.sectionDescription}>
-                  Set hourly rates and employment details for employees
+                  {t('timeClock.payrollDescription')}
                 </Text>
                 {allEmployees.length === 0 ? (
                   <View style={styles.emptyState}>
                     <ActivityIndicator size="large" color={COLORS.blue} />
-                    <Text style={styles.emptyStateText}>Loading employees...</Text>
+                    <Text style={styles.emptyStateText}>{t('timeClock.loadingEmployees')}</Text>
                   </View>
                 ) : (
                   <View style={styles.employeePayrollList}>
@@ -908,21 +998,21 @@ const TimeClockScreen = ({ navigation }) => {
                               {payrollInfo ? (
                                 <View style={styles.payrollSummary}>
                                   <View style={styles.payrollDetail}>
-                                    <Text style={styles.payrollLabel}>Type:</Text>
+                                    <Text style={styles.payrollLabel}>{t('timeClock.type')}</Text>
                                     <Text style={styles.payrollValue}>
-                                      {payrollInfo.employment_type === 'hourly' ? '⏰ Hourly' : '💼 Salary'}
+                                      {payrollInfo.employment_type === 'hourly' ? t('timeClock.hourly') : t('timeClock.salary')}
                                     </Text>
                                   </View>
                                   {payrollInfo.employment_type === 'hourly' ? (
                                     <>
                                       <View style={styles.payrollDetail}>
-                                        <Text style={styles.payrollLabel}>Rate:</Text>
+                                        <Text style={styles.payrollLabel}>{t('timeClock.rate')}</Text>
                                         <Text style={styles.payrollValue}>
                                           ${payrollInfo.hourly_rate?.toFixed(2)}/hr
                                         </Text>
                                       </View>
                                       <View style={styles.payrollDetail}>
-                                        <Text style={styles.payrollLabel}>OT Rate:</Text>
+                                        <Text style={styles.payrollLabel}>{t('timeClock.otRate')}</Text>
                                         <Text style={styles.payrollValue}>
                                           ${payrollInfo.overtime_rate?.toFixed(2)}/hr
                                         </Text>
@@ -930,26 +1020,26 @@ const TimeClockScreen = ({ navigation }) => {
                                     </>
                                   ) : (
                                     <View style={styles.payrollDetail}>
-                                      <Text style={styles.payrollLabel}>Salary:</Text>
+                                      <Text style={styles.payrollLabel}>{t('timeClock.salaryLabel')}</Text>
                                       <Text style={styles.payrollValue}>
                                         ${payrollInfo.salary?.toFixed(2)}/yr
                                       </Text>
                                     </View>
                                   )}
                                   <View style={styles.payrollDetail}>
-                                    <Text style={styles.payrollLabel}>Period:</Text>
+                                    <Text style={styles.payrollLabel}>{t('timeClock.period')}</Text>
                                     <Text style={styles.payrollValue}>
-                                      {payrollInfo.pay_period_type === 'weekly' && '📅 Weekly'}
-                                      {payrollInfo.pay_period_type === 'biweekly' && '📅 Bi-Weekly'}
-                                      {payrollInfo.pay_period_type === 'semimonthly' && '📅 Semi-Monthly'}
-                                      {payrollInfo.pay_period_type === 'monthly' && '📅 Monthly'}
+                                      {payrollInfo.pay_period_type === 'weekly' && t('timeClock.weekly')}
+                                      {payrollInfo.pay_period_type === 'biweekly' && t('timeClock.biweekly')}
+                                      {payrollInfo.pay_period_type === 'semimonthly' && t('timeClock.semimonthly')}
+                                      {payrollInfo.pay_period_type === 'monthly' && t('timeClock.monthly')}
                                     </Text>
                                   </View>
                                 </View>
                               ) : (
                                 <View style={styles.noPayrollInfo}>
                                   <Text style={styles.warningIcon}>⚠️</Text>
-                                  <Text style={styles.noPayrollText}>No payroll info set</Text>
+                                  <Text style={styles.noPayrollText}>{t('timeClock.noPayrollInfo')}</Text>
                                 </View>
                               )}
                             </View>
@@ -957,14 +1047,14 @@ const TimeClockScreen = ({ navigation }) => {
                               style={styles.btnSetPayroll}
                               onPress={() => {
                                 Alert.alert(
-                                  'Payroll Management',
-                                  'Payroll editing is available on the web app. Navigate to the desktop site to manage employee payroll.',
+                                  t('timeClock.payrollManagement'),
+                                  t('timeClock.payrollMessage'),
                                   [{ text: 'OK' }]
                                 );
                               }}
                             >
                               <Text style={styles.btnSetPayrollText}>
-                                {payrollInfo ? 'Edit' : 'Set'} Payroll Info
+                                {payrollInfo ? t('timeClock.edit') : t('timeClock.set')} {t('timeClock.payrollInfo')}
                               </Text>
                             </TouchableOpacity>
                           </View>

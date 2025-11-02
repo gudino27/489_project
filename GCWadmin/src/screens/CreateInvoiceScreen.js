@@ -15,9 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import * as invoiceAPI from '../api/invoices';
 import { COLORS } from '../constants/colors';
 import { ContentGlass, NavGlass } from '../components/GlassView';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CreateInvoiceScreen = () => {
   const navigation = useNavigation();
+  const { t } = useLanguage();
 
   // Form state
   const [clientSearch, setClientSearch] = useState('');
@@ -100,7 +102,7 @@ const CreateInvoiceScreen = () => {
 
   const addLineItem = () => {
     if (!newLineItem.title.trim()) {
-      Alert.alert('Error', 'Please enter a title for the line item');
+      Alert.alert(t('common.error'), t('createInvoice.titleRequired'));
       return;
     }
 
@@ -141,12 +143,12 @@ const CreateInvoiceScreen = () => {
 
   const handleCreateInvoice = async () => {
     if (!selectedClient) {
-      Alert.alert('Error', 'Please select a client');
+      Alert.alert(t('common.error'), t('createInvoice.clientRequired'));
       return;
     }
 
     if (lineItems.length === 0) {
-      Alert.alert('Error', 'Please add at least one line item');
+      Alert.alert(t('common.error'), t('createInvoice.lineItemRequired'));
       return;
     }
 
@@ -176,15 +178,15 @@ const CreateInvoiceScreen = () => {
     try {
       setLoading(true);
       await invoiceAPI.createInvoice(invoiceData);
-      Alert.alert('Success', 'Invoice created successfully', [
+      Alert.alert(t('common.success'), t('createInvoice.createSuccess'), [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error) {
       console.error('Error creating invoice:', error);
-      Alert.alert('Error', error.error || 'Failed to create invoice');
+      Alert.alert(t('common.error'), error.error || t('createInvoice.createError'));
     } finally {
       setLoading(false);
     }
@@ -204,11 +206,11 @@ const CreateInvoiceScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Client Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Client *</Text>
+          <Text style={styles.sectionTitle}>{t('createInvoice.clientLabel')}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Search for client..."
+              placeholder={t('createInvoice.searchPlaceholder')}
               value={clientSearch}
               onChangeText={setClientSearch}
               autoCapitalize="words"
@@ -239,48 +241,48 @@ const CreateInvoiceScreen = () => {
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Alert.alert('Create Client', 'Client creation coming soon')}
+            onPress={() => Alert.alert(t('createInvoice.createClient'), t('createInvoice.clientComingSoon'))}
           >
-            <Text style={styles.linkButtonText}>+ Create New Client</Text>
+            <Text style={styles.linkButtonText}>{t('createInvoice.createNewClient')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Invoice Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Invoice Details</Text>
+          <Text style={styles.sectionTitle}>{t('createInvoice.invoiceDetails')}</Text>
 
-          <Text style={styles.label}>Invoice Number</Text>
+          <Text style={styles.label}>{t('createInvoice.invoiceNumber')}</Text>
           <TextInput
             style={styles.input}
             value={invoiceNumber}
             onChangeText={setInvoiceNumber}
-            placeholder="INV-000000"
+            placeholder={t('createInvoice.invoiceNumberPlaceholder')}
           />
 
-          <Text style={styles.label}>Due Date (Optional)</Text>
+          <Text style={styles.label}>{t('createInvoice.dueDate')}</Text>
           <TextInput
             style={styles.input}
             value={dueDate}
             onChangeText={setDueDate}
-            placeholder="YYYY-MM-DD"
+            placeholder={t('createInvoice.dueDatePlaceholder')}
           />
 
-          <Text style={styles.label}>Project Description</Text>
+          <Text style={styles.label}>{t('createInvoice.projectDescription')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Brief description of the project..."
+            placeholder={t('createInvoice.projectPlaceholder')}
             multiline
             numberOfLines={3}
           />
 
-          <Text style={styles.label}>Notes (Optional)</Text>
+          <Text style={styles.label}>{t('createInvoice.notes')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Additional notes..."
+            placeholder={t('createInvoice.notesPlaceholder')}
             multiline
             numberOfLines={2}
           />
@@ -288,7 +290,7 @@ const CreateInvoiceScreen = () => {
 
         {/* Line Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Line Items</Text>
+          <Text style={styles.sectionTitle}>{t('createInvoice.lineItems')}</Text>
 
           {lineItems.map((item) => (
             <ContentGlass key={item.id} style={styles.lineItemCard}>
@@ -303,7 +305,7 @@ const CreateInvoiceScreen = () => {
               ) : null}
               <View style={styles.lineItemFooter}>
                 <Text style={styles.lineItemQty}>
-                  Qty: {item.quantity} × {formatCurrency(item.unit_price)}
+                  {t('createInvoice.qty')} {item.quantity} × {formatCurrency(item.unit_price)}
                 </Text>
                 <Text style={styles.lineItemTotal}>
                   {formatCurrency(item.total_price)}
@@ -314,76 +316,76 @@ const CreateInvoiceScreen = () => {
 
           {/* Add Line Item Form */}
           <View style={styles.addItemForm}>
-            <Text style={styles.label}>Title *</Text>
+            <Text style={styles.label}>{t('createInvoice.titleLabel')}</Text>
             <TextInput
               style={styles.input}
               value={newLineItem.title}
               onChangeText={(text) => setNewLineItem({ ...newLineItem, title: text })}
-              placeholder="Item title"
+              placeholder={t('createInvoice.titlePlaceholder')}
             />
 
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('createInvoice.descriptionLabel')}</Text>
             <TextInput
               style={styles.input}
               value={newLineItem.description}
               onChangeText={(text) => setNewLineItem({ ...newLineItem, description: text })}
-              placeholder="Item description"
+              placeholder={t('createInvoice.descriptionPlaceholder')}
             />
 
             <View style={styles.row}>
               <View style={styles.halfInput}>
-                <Text style={styles.label}>Quantity</Text>
+                <Text style={styles.label}>{t('createInvoice.quantityLabel')}</Text>
                 <TextInput
                   style={styles.input}
                   value={newLineItem.quantity}
                   onChangeText={(text) => setNewLineItem({ ...newLineItem, quantity: text })}
                   keyboardType="numeric"
-                  placeholder="1"
+                  placeholder={t('createInvoice.quantityPlaceholder')}
                 />
               </View>
 
               <View style={styles.halfInput}>
-                <Text style={styles.label}>Unit Price</Text>
+                <Text style={styles.label}>{t('createInvoice.unitPriceLabel')}</Text>
                 <TextInput
                   style={styles.input}
                   value={newLineItem.unit_price}
                   onChangeText={(text) => setNewLineItem({ ...newLineItem, unit_price: text })}
                   keyboardType="numeric"
-                  placeholder="75.00"
+                  placeholder={t('createInvoice.unitPricePlaceholder')}
                 />
               </View>
             </View>
 
             <TouchableOpacity style={styles.addButton} onPress={addLineItem}>
-              <Text style={styles.addButtonText}>+ Add Line Item</Text>
+              <Text style={styles.addButtonText}>{t('createInvoice.addLineItem')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tax and Discount */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tax & Discount</Text>
+          <Text style={styles.sectionTitle}>{t('createInvoice.taxDiscount')}</Text>
 
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Tax Rate (%)</Text>
+              <Text style={styles.label}>{t('createInvoice.taxRateLabel')}</Text>
               <TextInput
                 style={styles.input}
                 value={taxRate}
                 onChangeText={setTaxRate}
                 keyboardType="numeric"
-                placeholder="0"
+                placeholder={t('createInvoice.taxRatePlaceholder')}
               />
             </View>
 
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Discount ($)</Text>
+              <Text style={styles.label}>{t('createInvoice.discountLabel')}</Text>
               <TextInput
                 style={styles.input}
                 value={discountAmount}
                 onChangeText={setDiscountAmount}
                 keyboardType="numeric"
-                placeholder="0.00"
+                placeholder={t('createInvoice.discountPlaceholder')}
               />
             </View>
           </View>
@@ -392,23 +394,23 @@ const CreateInvoiceScreen = () => {
         {/* Totals Summary */}
         <ContentGlass style={styles.totalsSection}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal:</Text>
+            <Text style={styles.totalLabel}>{t('createInvoice.subtotal')}</Text>
             <Text style={styles.totalValue}>{formatCurrency(totals.subtotal)}</Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tax ({taxRate}%):</Text>
+            <Text style={styles.totalLabel}>{t('createInvoice.tax')} ({taxRate}%):</Text>
             <Text style={styles.totalValue}>{formatCurrency(totals.tax)}</Text>
           </View>
           {totals.discount > 0 && (
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Discount:</Text>
+              <Text style={styles.totalLabel}>{t('createInvoice.discount')}</Text>
               <Text style={[styles.totalValue, { color: COLORS.success }]}>
                 -{formatCurrency(totals.discount)}
               </Text>
             </View>
           )}
           <View style={styles.totalRowFinal}>
-            <Text style={styles.totalLabelFinal}>Total:</Text>
+            <Text style={styles.totalLabelFinal}>{t('createInvoice.total')}</Text>
             <Text style={styles.totalValueFinal}>{formatCurrency(totals.total)}</Text>
           </View>
         </ContentGlass>
@@ -426,7 +428,7 @@ const CreateInvoiceScreen = () => {
           {loading ? (
             <ActivityIndicator color={COLORS.white} />
           ) : (
-            <Text style={styles.createButtonText}>Create Invoice</Text>
+            <Text style={styles.createButtonText}>{t('createInvoice.createButton')}</Text>
           )}
         </TouchableOpacity>
       </NavGlass>

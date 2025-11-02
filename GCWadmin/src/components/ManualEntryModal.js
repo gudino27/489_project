@@ -96,7 +96,7 @@ const ManualEntryModal = ({
                   style={styles.input}
                   value={manualEntry.date}
                   onChangeText={(text) => onEntryChange('date', text)}
-                  placeholder="YYYY-MM-DD"
+                  placeholder={t('timeEntry.placeholders.dateFormat')}
                   placeholderTextColor={COLORS.textLight}
                 />
                 <Text style={styles.helperText}>{t('timeclock.date_format_helper')}</Text>
@@ -111,7 +111,7 @@ const ManualEntryModal = ({
                   style={styles.input}
                   value={manualEntry.timeIn}
                   onChangeText={(text) => onEntryChange('timeIn', text)}
-                  placeholder="HH:MM (24-hour format)"
+                  placeholder={t('timeEntry.placeholders.timeFormat')}
                   placeholderTextColor={COLORS.textLight}
                   keyboardType="numbers-and-punctuation"
                 />
@@ -127,7 +127,7 @@ const ManualEntryModal = ({
                   style={styles.input}
                   value={manualEntry.timeOut}
                   onChangeText={(text) => onEntryChange('timeOut', text)}
-                  placeholder="HH:MM (24-hour format)"
+                  placeholder={t('timeEntry.placeholders.timeFormat')}
                   placeholderTextColor={COLORS.textLight}
                   keyboardType="numbers-and-punctuation"
                 />

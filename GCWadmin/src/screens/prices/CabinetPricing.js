@@ -53,7 +53,7 @@ const CabinetPricing = ({
   const handlePriceChange = (type, newValue) => {
     const price = parseFloat(newValue) || 0;
     if (price < 0) {
-      Alert.alert('Invalid Price', 'Price cannot be negative. Please enter a positive value.');
+      Alert.alert(t('pricing.cabinets.invalidPrice'), t('pricing.cabinets.negativeError'));
       return;
     }
     setBasePrices({ ...basePrices, [type]: price });
@@ -99,7 +99,7 @@ const CabinetPricing = ({
             styles.tabText,
             activeTab === 'kitchen' && styles.tabTextActiveKitchen
           ]}>
-            Kitchen
+            {t('pricing.cabinets.kitchen')}
           </Text>
         </TouchableOpacity>
 
@@ -118,7 +118,7 @@ const CabinetPricing = ({
             styles.tabText,
             activeTab === 'bathroom' && styles.tabTextActiveBathroom
           ]}>
-            Bathroom
+            {t('pricing.cabinets.bathroom')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -129,7 +129,7 @@ const CabinetPricing = ({
           <View style={styles.sectionHeader}>
             <Home color={COLORS.info} size={16} />
             <Text style={[styles.sectionTitle, { color: COLORS.info }]}>
-              Kitchen Cabinets & Appliances
+              {t('pricing.cabinets.kitchenCabinets')}
             </Text>
           </View>
           <View style={styles.priceGrid}>
@@ -144,7 +144,7 @@ const CabinetPricing = ({
           <View style={styles.sectionHeader}>
             <Bath color={COLORS.purple} size={16} />
             <Text style={[styles.sectionTitle, { color: COLORS.purple }]}>
-              Bathroom Cabinets & Fixtures
+              {t('pricing.cabinets.bathroomCabinets')}
             </Text>
           </View>
           <View style={styles.priceGrid}>

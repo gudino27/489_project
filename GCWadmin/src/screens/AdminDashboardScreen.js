@@ -55,12 +55,12 @@ const AdminDashboardScreen = ({ navigation }) => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('admin.logout'),
+      t('admin.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Logout',
+          text: t('admin.logout'),
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -94,11 +94,11 @@ const AdminDashboardScreen = ({ navigation }) => {
   // Note: 'prices' and 'photos' sections removed because they manage their own tabs internally
   const sectionTabs = {
     invoices: [
-      { key: 'list', label: 'All Invoices' },
-      { key: 'clients', label: 'Clients' },
-      { key: 'tax-rates', label: 'Tax Rates' },
-      { key: 'labels', label: 'Line Items' },
-      { key: 'tracking', label: 'Tracking' },
+      { key: 'list', label: t('admin.tabs.allInvoices') },
+      { key: 'clients', label: t('admin.tabs.clients') },
+      { key: 'tax-rates', label: t('admin.tabs.taxRates') },
+      { key: 'labels', label: t('admin.tabs.lineItems') },
+      { key: 'tracking', label: t('admin.tabs.tracking') },
     ],
   };
 
@@ -158,7 +158,7 @@ const AdminDashboardScreen = ({ navigation }) => {
               {sections.find(s => s.key === activeSection)?.label}
             </Text>
             <Text style={styles.placeholderSubtext}>
-              Implementation coming soon
+              {t('admin.implementationComingSoon')}
             </Text>
           </View>
         );
@@ -170,11 +170,11 @@ const AdminDashboardScreen = ({ navigation }) => {
       {/* Header - Matches Web */}
       <NavGlass style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Admin Panel</Text>
+          <Text style={styles.headerTitle}>{t('admin.panel')}</Text>
           <View style={styles.headerRight}>
             <View style={styles.userInfo}>
               <Text style={styles.welcomeText}>{t('admin.welcome')}</Text>
-              <Text style={styles.username}>{user?.username || 'Admin'}</Text>
+              <Text style={styles.username}>{user?.username || t('admin.defaultUsername')}</Text>
               {user?.role === 'super_admin' && (
                 <Shield size={16} color={COLORS.accent} style={styles.badgeIcon} />
               )}
@@ -226,7 +226,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 styles.languageMenuText,
                 currentLanguage === 'en' && styles.languageMenuTextActive
               ]}>
-                English
+                {t('language.english')}
               </Text>
               {currentLanguage === 'en' && (
                 <Text style={styles.checkmark}>✓</Text>
@@ -247,7 +247,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 styles.languageMenuText,
                 currentLanguage === 'es' && styles.languageMenuTextActive
               ]}>
-                Español
+                {t('language.spanish')}
               </Text>
               {currentLanguage === 'es' && (
                 <Text style={styles.checkmark}>✓</Text>
@@ -363,16 +363,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING[1],
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY.l,
+    fontSize: TYPOGRAPHY.md,
     fontWeight: TYPOGRAPHY.bold,
     color: COLORS.text,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING[3],
+    gap: SPACING[2],
   },
   userInfo: {
     alignItems: 'flex-end',
@@ -384,12 +385,12 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   username: {
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.xs,
     fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
   },
   badgeIcon: {
-    marginLeft: SPACING[1],
+    marginLeft: SPACING[0],
   },
   logoutButton: {
     width: 36,

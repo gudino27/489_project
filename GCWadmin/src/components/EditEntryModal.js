@@ -116,7 +116,7 @@ const EditEntryModal = ({
                     style={styles.input}
                     value={editForm.clockInTime}
                     onChangeText={(text) => onFormChange('clockInTime', text)}
-                    placeholder="YYYY-MM-DD HH:MM:SS"
+                    placeholder={t('timeEntry.placeholders.datetimeFormat')}
                     placeholderTextColor={COLORS.textLight}
                   />
                   <Text style={styles.helperText}>
@@ -131,7 +131,7 @@ const EditEntryModal = ({
                     style={styles.input}
                     value={editForm.clockOutTime}
                     onChangeText={(text) => onFormChange('clockOutTime', text)}
-                    placeholder="YYYY-MM-DD HH:MM:SS"
+                    placeholder={t('timeEntry.placeholders.datetimeFormat')}
                     placeholderTextColor={COLORS.textLight}
                   />
                 </View>

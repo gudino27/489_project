@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Save } from 'lucide-react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../../constants';
 
 const SectionSaveButton = ({
@@ -9,6 +10,7 @@ const SectionSaveButton = ({
   saveStatus,
   onSave,
 }) => {
+  const { t } = useLanguage();
   const hasChanges = sectionChanges[sectionKey];
 
   if (!hasChanges) return null;
@@ -17,7 +19,7 @@ const SectionSaveButton = ({
     <View style={styles.container}>
       <View style={styles.warningContainer}>
         <Text style={styles.warningText}>
-          ⚠️ You have unsaved changes in this section
+          {t('sectionSave.unsavedWarning')}
         </Text>
       </View>
       <TouchableOpacity
@@ -30,7 +32,7 @@ const SectionSaveButton = ({
       >
         <Save color={COLORS.white} size={16} />
         <Text style={styles.buttonText}>
-          {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+          {saveStatus === 'saving' ? t('priceManagement.saving') : t('sectionSave.saveChanges')}
         </Text>
       </TouchableOpacity>
     </View>

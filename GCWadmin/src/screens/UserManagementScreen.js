@@ -110,7 +110,7 @@ const UserManagementScreen = () => {
     if (creationMode === 'invite') {
       // Send invitation
       if (!newUser.email || !newUser.full_name) {
-        setError('Email and full name are required for invitations');
+        setError(t('userManagement.messages.invitationRequired'));
         return;
       }
 
@@ -124,7 +124,7 @@ const UserManagementScreen = () => {
           deliveryMethod: newUser.deliveryMethod,
         });
 
-        setSuccess('Invitation sent successfully');
+        setSuccess(t('userManagement.messages.invitationSent'));
         setNewUser({
           username: '',
           email: '',
@@ -140,19 +140,19 @@ const UserManagementScreen = () => {
         fetchInvitations();
         setTimeout(() => setSuccess(''), 3000);
       } catch (error) {
-        setError(error.message || 'Failed to send invitation');
+        setError(error.message || t('userManagement.messages.invitationFailed'));
       }
       return;
     }
 
     // Manual user creation
     if (!newUser.username || !newUser.email || !newUser.password || !newUser.full_name) {
-      setError('Please fill in all required fields');
+      setError(t('userManagement.messages.requiredFields'));
       return;
     }
 
     if (newUser.password !== newUser.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('userManagement.passwordMismatch'));
       return;
     }
 
@@ -165,7 +165,7 @@ const UserManagementScreen = () => {
         role: newUser.role,
       });
 
-      setSuccess('User created successfully');
+      setSuccess(t('userManagement.created'));
       setNewUser({
         username: '',
         email: '',
@@ -181,18 +181,18 @@ const UserManagementScreen = () => {
       fetchInvitations();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError(error.message || 'Failed to send invitation');
+      setError(error.message || t('userManagement.messages.invitationFailed'));
     }
   };
 
   const handleResendInvitation = async (invitationId) => {
     try {
       await resendInvitation(invitationId);
-      setSuccess('Invitation resent successfully');
+      setSuccess(t('userManagement.messages.invitationResent'));
       fetchInvitations();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Failed to resend invitation');
+      setError(t('userManagement.messages.invitationResendFailed'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -206,11 +206,11 @@ const UserManagementScreen = () => {
         onPress: async () => {
           try {
             await cancelInvitation(invitationId);
-            setSuccess('Invitation cancelled');
+            setSuccess(t('userManagement.messages.invitationCancelled'));
             fetchInvitations();
             setTimeout(() => setSuccess(''), 3000);
           } catch (error) {
-            Alert.alert('Error', 'Failed to cancel invitation');
+            Alert.alert(t('common.error'), t('userManagement.messages.invitationFailed'));
           }
         },
       },
@@ -243,12 +243,12 @@ const UserManagementScreen = () => {
         role: editForm.role,
       });
 
-      setSuccess('User updated successfully');
+      setSuccess(t('userManagement.updated'));
       setEditingUser(null);
       fetchUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Failed to update user');
+      setError(t('userManagement.messages.updateFailed'));
     }
   };
 
@@ -285,7 +285,7 @@ const UserManagementScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading users...</Text>
+        <Text style={styles.loadingText}>{t('userManagement.loadingUsers')}</Text>
       </View>
     );
   }
@@ -297,17 +297,17 @@ const UserManagementScreen = () => {
         <View style={styles.headerTop}>
           <View style={styles.headerTitleRow}>
             <Users size={24} color={COLORS.primary} />
-            <Text style={styles.headerTitle}>User Management</Text>
+            <Text style={styles.headerTitle}>{t('userManagement.title')}</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.addButton} 
+          <TouchableOpacity
+            style={styles.addButton}
             onPress={() => {
               setCreationMode('manual');
               setShowAddUser(true);
             }}
           >
             <UserPlus size={18} color={COLORS.white} />
-            <Text style={styles.addButtonText}>Add User</Text>
+            <Text style={styles.addButtonText}>{t('userManagement.addUser')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -319,7 +319,7 @@ const UserManagementScreen = () => {
           >
             <Users size={18} color={activeTab === 'users' ? COLORS.primary : COLORS.textSecondary} />
             <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>
-              Users ({users.length})
+              {t('userManagement.users')} ({users.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -328,7 +328,7 @@ const UserManagementScreen = () => {
           >
             <Mail size={18} color={activeTab === 'invitations' ? COLORS.primary : COLORS.textSecondary} />
             <Text style={[styles.tabText, activeTab === 'invitations' && styles.tabTextActive]}>
-              Invitations ({invitations.filter(inv => inv.status === 'pending').length})
+              {t('userManagement.invitations')} ({invitations.filter(inv => inv.status === 'pending').length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -401,7 +401,7 @@ const UserManagementScreen = () => {
                         <User size={14} color={COLORS.white} />
                       )}
                       <Text style={styles.roleBadgeText}>
-                        {user.role === 'super_admin' ? 'Super Admin' : user.role === 'employee' ? 'Employee' : 'Admin'}
+                        {user.role === 'super_admin' ? t('userManagement.superAdmin') : user.role === 'employee' ? 'Employee' : t('userManagement.admin')}
                       </Text>
                     </View>
                   </View>
@@ -416,7 +416,7 @@ const UserManagementScreen = () => {
           ) : (
             <View style={styles.emptyState}>
               <Users size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyStateText}>No users found</Text>
+              <Text style={styles.emptyStateText}>{t('userManagement.noUsers')}</Text>
             </View>
           )
         ) : (
@@ -468,7 +468,7 @@ const UserManagementScreen = () => {
                           <User size={14} color={COLORS.white} />
                         )}
                         <Text style={styles.roleBadgeText}>
-                          {invitation.role === 'super_admin' ? 'Super Admin' : invitation.role === 'employee' ? 'Employee' : 'Admin'}
+                          {invitation.role === 'super_admin' ? t('userManagement.superAdmin') : invitation.role === 'employee' ? 'Employee' : t('userManagement.admin')}
                         </Text>
                       </View>
                     </View>
@@ -505,7 +505,7 @@ const UserManagementScreen = () => {
           ) : (
             <View style={styles.emptyState}>
               <Mail size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyStateText}>No invitations found</Text>
+              <Text style={styles.emptyStateText}>{t('userManagement.noInvitations')}</Text>
             </View>
           )
         )}
@@ -569,7 +569,7 @@ const UserManagementScreen = () => {
                     style={styles.formInput}
                     value={newUser.full_name}
                     onChangeText={(text) => setNewUser({ ...newUser, full_name: text })}
-                    placeholder="Enter full name"
+                    placeholder={t('userManagement.placeholders.fullName')}
                     placeholderTextColor={COLORS.textSecondary}
                   />
                 </View>
@@ -580,7 +580,7 @@ const UserManagementScreen = () => {
                     style={styles.formInput}
                     value={newUser.email}
                     onChangeText={(text) => setNewUser({ ...newUser, email: text })}
-                    placeholder="Enter email"
+                    placeholder={t('userManagement.placeholders.email')}
                     placeholderTextColor={COLORS.textSecondary}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -594,7 +594,7 @@ const UserManagementScreen = () => {
                       style={styles.formInput}
                       value={newUser.phone}
                       onChangeText={(text) => setNewUser({ ...newUser, phone: text })}
-                      placeholder="Enter phone number"
+                      placeholder={t('userManagement.placeholders.phone')}
                       placeholderTextColor={COLORS.textSecondary}
                       keyboardType="phone-pad"
                     />
@@ -609,7 +609,7 @@ const UserManagementScreen = () => {
                         style={styles.formInput}
                         value={newUser.username}
                         onChangeText={(text) => setNewUser({ ...newUser, username: text })}
-                        placeholder="Enter username"
+                        placeholder={t('userManagement.placeholders.username')}
                         placeholderTextColor={COLORS.textSecondary}
                         autoCapitalize="none"
                       />
@@ -621,7 +621,7 @@ const UserManagementScreen = () => {
                         style={styles.formInput}
                         value={newUser.password}
                         onChangeText={(text) => setNewUser({ ...newUser, password: text })}
-                        placeholder="Enter password"
+                        placeholder={t('userManagement.placeholders.password')}
                         placeholderTextColor={COLORS.textSecondary}
                         secureTextEntry
                       />
@@ -633,7 +633,7 @@ const UserManagementScreen = () => {
                         style={styles.formInput}
                         value={newUser.confirmPassword}
                         onChangeText={(text) => setNewUser({ ...newUser, confirmPassword: text })}
-                        placeholder="Confirm password"
+                        placeholder={t('userManagement.placeholders.confirmPassword')}
                         placeholderTextColor={COLORS.textSecondary}
                         secureTextEntry
                       />
@@ -772,7 +772,7 @@ const UserManagementScreen = () => {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSubmitButton} onPress={handleCreateUser}>
                   <Text style={styles.modalSubmitButtonText}>
-                    {creationMode === 'manual' ? 'Create User' : 'Send Invitation'}
+                    {creationMode === 'manual' ? t('userManagement.createUser') : t('userManagement.actions.sendInvitation')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -809,7 +809,7 @@ const UserManagementScreen = () => {
                     style={styles.formInput}
                     value={editForm.email}
                     onChangeText={(text) => setEditForm({ ...editForm, email: text })}
-                    placeholder="Enter email"
+                    placeholder={t('userManagement.placeholders.email')}
                     placeholderTextColor={COLORS.textSecondary}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -822,7 +822,7 @@ const UserManagementScreen = () => {
                     style={styles.formInput}
                     value={editForm.full_name}
                     onChangeText={(text) => setEditForm({ ...editForm, full_name: text })}
-                    placeholder="Enter full name"
+                    placeholder={t('userManagement.placeholders.fullName')}
                     placeholderTextColor={COLORS.textSecondary}
                   />
                 </View>

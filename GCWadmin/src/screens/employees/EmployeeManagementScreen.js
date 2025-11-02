@@ -62,7 +62,7 @@ const EmployeeManagementScreen = () => {
       const data = await employeesApi.getEmployees(token);
       setEmployees(data);
     } catch (error) {
-      console.error('Failed to load employees:', error);
+      console.error(t('employeeManager.loadError'), error);
       Alert.alert(t('common.error'), t('employeeManager.loadError'));
     } finally {
       setLoading(false);
@@ -254,7 +254,7 @@ const EmployeeManagementScreen = () => {
       setIsReordering(false);
       Alert.alert(t('common.success'), t('employeeManager.orderSaved'));
     } catch (error) {
-      console.error('Save order error:', error);
+      console.error(t('employeeManager.saveOrderError'), error);
       Alert.alert(t('common.error'), t('employeeManager.saveOrderError'));
     }
   };
@@ -546,7 +546,7 @@ const EmployeeManagementScreen = () => {
                 onPress={() => setIsAddingNew(true)}
               >
                 <Plus size={20} color={COLORS.white} />
-                <Text style={styles.addButtonText}>Add</Text>
+                <Text style={styles.addButtonText}>{t('employeeManager.add')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -587,7 +587,7 @@ const EmployeeManagementScreen = () => {
                   onChangeText={(text) =>
                     setNewEmployee({ ...newEmployee, name: text })
                   }
-                  placeholder="John Doe"
+                  placeholder={t('employeeManager.namePlaceholder')}
                 />
               </View>
               <View style={styles.field}>
@@ -598,7 +598,7 @@ const EmployeeManagementScreen = () => {
                   onChangeText={(text) =>
                     setNewEmployee({ ...newEmployee, position: text })
                   }
-                  placeholder="Senior Designer"
+                  placeholder={t('employeeManager.positionPlaceholder')}
                 />
               </View>
             </View>
@@ -612,7 +612,7 @@ const EmployeeManagementScreen = () => {
                   onChangeText={(text) =>
                     setNewEmployee({ ...newEmployee, email: text })
                   }
-                  placeholder="john@company.com"
+                  placeholder={t('employeeManager.emailPlaceholder')}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -625,7 +625,7 @@ const EmployeeManagementScreen = () => {
                   onChangeText={(text) =>
                     setNewEmployee({ ...newEmployee, phone: text })
                   }
-                  placeholder="(555) 123-4567"
+                  placeholder={t('employeeManager.phonePlaceholder')}
                   keyboardType="phone-pad"
                 />
               </View>
@@ -639,7 +639,7 @@ const EmployeeManagementScreen = () => {
                 onChangeText={(text) =>
                   setNewEmployee({ ...newEmployee, joined_date: text })
                 }
-                placeholder="YYYY-MM-DD"
+                placeholder={t('employeeManager.datePlaceholder')}
               />
             </View>
 
@@ -651,7 +651,7 @@ const EmployeeManagementScreen = () => {
                 onChangeText={(text) =>
                   setNewEmployee({ ...newEmployee, bio: text })
                 }
-                placeholder="Brief description about the employee..."
+                placeholder={t('employeeManager.bioPlaceholder')}
                 multiline
                 numberOfLines={3}
               />

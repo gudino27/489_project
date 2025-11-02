@@ -17,7 +17,7 @@ const PortfolioScreen = () => {
   const [portfolioItems, setPortfolioItems] = useState([
     {
       id: 1,
-      title: 'Modern Kitchen Remodel',
+      title: t('designPreview.modernKitchen'),
       category: 'Kitchen',
       featured: true,
       views: 1234,
@@ -25,7 +25,7 @@ const PortfolioScreen = () => {
     },
     {
       id: 2,
-      title: 'Classic White Cabinets',
+      title: t('designPreview.classicWhite'),
       category: 'Kitchen',
       featured: true,
       views: 892,
@@ -33,7 +33,7 @@ const PortfolioScreen = () => {
     },
     {
       id: 3,
-      title: 'Contemporary Bathroom',
+      title: t('designPreview.contemporaryBath'),
       category: 'Bathroom',
       featured: false,
       views: 567,

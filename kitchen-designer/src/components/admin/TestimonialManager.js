@@ -539,12 +539,12 @@ const TestimonialManager = ({ token, API_BASE, userRole }) => {
         <div className="bg-white rounded-lg shadow-md mb-8">
           {/* Status Tabs */}
           <div className="border-b border-gray-200">
-            <div className="flex gap-4 px-6 pt-4">
+            <div className="flex gap-2 px-6 pt-4 overflow-x-auto scrollbar-hide">
               {['all', 'sent', 'opened', 'submitted'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                  className={`flex-shrink-0 px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${
                     statusFilter === status
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'

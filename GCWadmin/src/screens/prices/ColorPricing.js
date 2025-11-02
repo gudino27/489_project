@@ -24,7 +24,7 @@ const ColorPricing = ({
   const handleColorPriceChange = (count, newValue) => {
     const price = parseFloat(newValue) || 0;
     if (price < 0) {
-      Alert.alert('Invalid Price', 'Color pricing cannot be negative. Please enter a positive value.');
+      Alert.alert(t('pricing.colors.invalidPrice'), t('pricing.colors.negativeError'));
       return;
     }
     setColorPricing({ ...colorPricing, [count]: price });
@@ -33,30 +33,30 @@ const ColorPricing = ({
 
   const getColorLabel = (count) => {
     switch (count) {
-      case '1': return 'Standard (1 Color)';
-      case '2': return 'Two-Tone (2 Colors)';
-      case '3': return 'Multi-Color (3+ Colors)';
-      case 'custom': return 'Custom Colors';
+      case '1': return t('pricing.colors.standard');
+      case '2': return t('pricing.colors.twoTone');
+      case '3': return t('pricing.colors.multiColor');
+      case 'custom': return t('pricing.colors.custom');
       default: return `${count} Colors`;
     }
   };
 
   const getColorDescription = (count) => {
     switch (count) {
-      case '1': return 'Single color finish - no additional charge';
-      case '2': return 'Two different colors/finishes';
-      case '3': return 'Three or more colors/finishes';
-      case 'custom': return 'Special custom color matching';
+      case '1': return t('pricing.colors.standardDesc');
+      case '2': return t('pricing.colors.twoToneDesc');
+      case '3': return t('pricing.colors.multiColorDesc');
+      case 'custom': return t('pricing.colors.customDesc');
       default: return '';
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Color Pricing</Text>
+      <Text style={styles.sectionTitle}>{t('pricing.colors.title')}</Text>
 
       <Text style={styles.description}>
-        Set additional charges for color upgrades. Standard single-color finish is usually included in base price.
+        {t('pricing.colors.description')}
       </Text>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -82,11 +82,11 @@ const ColorPricing = ({
         </View>
 
         <View style={styles.examplesBox}>
-          <Text style={styles.examplesTitle}>Color Pricing Examples:</Text>
-          <Text style={styles.exampleItem}>• Standard: Natural wood finish - included in base price</Text>
-          <Text style={styles.exampleItem}>• Two-Tone: Different color for island vs. perimeter cabinets</Text>
-          <Text style={styles.exampleItem}>• Multi-Color: Multiple accent colors or special finishes</Text>
-          <Text style={styles.exampleItem}>• Custom: Color matching to specific paint samples or unique finishes</Text>
+          <Text style={styles.examplesTitle}>{t('pricing.colors.examplesTitle')}</Text>
+          <Text style={styles.exampleItem}>{t('pricing.colors.example1')}</Text>
+          <Text style={styles.exampleItem}>{t('pricing.colors.example2')}</Text>
+          <Text style={styles.exampleItem}>{t('pricing.colors.example3')}</Text>
+          <Text style={styles.exampleItem}>{t('pricing.colors.example4')}</Text>
         </View>
       </ScrollView>
 

@@ -18,6 +18,7 @@ import { COLORS } from '../constants/colors';
 import { ContentGlass, NavGlass } from '../components/GlassView';
 import EmailSendModal from '../components/EmailSendModal';
 import SMSSendModal from '../components/SMSSendModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const TABS = [
   { id: 'details', label: 'Details', icon: '📋' },
@@ -32,6 +33,7 @@ const TABS = [
 ];
 
 const InvoiceDetailsScreen = () => {
+  const { t } = useLanguage();
   const route = useRoute();
   const navigation = useNavigation();
   const { invoiceId, initialTab } = route.params;
@@ -499,7 +501,7 @@ const InvoiceDetailsScreen = () => {
             return (
               <ContentGlass key={index} style={styles.lineItem}>
                 <View style={styles.lineItemHeader}>
-                  <Text style={styles.lineItemName}>{item.title || item.description || item.label || 'Unnamed Item'}</Text>
+                  <Text style={styles.lineItemName}>{item.title || item.description || item.label || t('invoiceDetails.unnamedItem')}</Text>
                   <Text style={styles.lineItemAmount}>{formatCurrency(total)}</Text>
                 </View>
                 <Text style={styles.lineItemDetails}>
@@ -630,7 +632,7 @@ const InvoiceDetailsScreen = () => {
                 style={[styles.input, styles.textArea]}
                 value={editForm.project_description}
                 onChangeText={(text) => setEditForm(prev => ({ ...prev, project_description: text }))}
-                placeholder="Enter project description..."
+                placeholder={t('invoiceDetails.placeholders.projectDescription')}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -644,7 +646,7 @@ const InvoiceDetailsScreen = () => {
                 style={styles.input}
                 value={editForm.due_date}
                 onChangeText={(text) => setEditForm(prev => ({ ...prev, due_date: text }))}
-                placeholder="2024-12-31"
+                placeholder={t('invoiceDetails.placeholders.dueDate')}
               />
             </View>
 
@@ -672,7 +674,7 @@ const InvoiceDetailsScreen = () => {
                 style={styles.input}
                 value={editForm.discount_amount}
                 onChangeText={(text) => setEditForm(prev => ({ ...prev, discount_amount: text }))}
-                placeholder="0.00"
+                placeholder={t('invoiceDetails.placeholders.amount')}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -695,7 +697,7 @@ const InvoiceDetailsScreen = () => {
               style={styles.lineItemTitleInput}
               value={newLineItem.title}
               onChangeText={(text) => setNewLineItem(prev => ({ ...prev, title: text }))}
-              placeholder="Item title *"
+              placeholder={t('invoiceDetails.placeholders.itemTitle')}
               editable={!isEditingInvoice}
             />
 
@@ -719,7 +721,7 @@ const InvoiceDetailsScreen = () => {
                   value={newLineItem.unit_price}
                   onChangeText={(text) => setNewLineItem(prev => ({ ...prev, unit_price: text }))}
                   keyboardType="decimal-pad"
-                  placeholder="0.00"
+                  placeholder={t('invoiceDetails.placeholders.amount')}
                   editable={!isEditingInvoice}
                 />
               </View>
@@ -738,7 +740,7 @@ const InvoiceDetailsScreen = () => {
               style={[styles.input, { marginTop: 8 }]}
               value={newLineItem.description}
               onChangeText={(text) => setNewLineItem(prev => ({ ...prev, description: text }))}
-              placeholder="Item description (optional)"
+              placeholder={t('invoiceDetails.placeholders.itemDescription')}
               editable={!isEditingInvoice}
             />
 
@@ -759,7 +761,7 @@ const InvoiceDetailsScreen = () => {
                   style={styles.lineItemTitleInput}
                   value={item.title || item.description}
                   onChangeText={(text) => handleUpdateLineItem(index, 'title', text)}
-                  placeholder="Item title"
+                  placeholder={t('invoiceDetails.placeholders.itemTitleOptional')}
                   editable={!isEditingInvoice}
                 />
                 <TouchableOpacity
@@ -791,7 +793,7 @@ const InvoiceDetailsScreen = () => {
                     value={item.unit_price === '' ? '' : String(item.unit_price)}
                     onChangeText={(text) => handleUpdateLineItem(index, 'unit_price', text)}
                     keyboardType="decimal-pad"
-                    placeholder="0.00"
+                    placeholder={t('invoiceDetails.placeholders.amount')}
                     editable={!isEditingInvoice}
                   />
                 </View>
@@ -810,7 +812,7 @@ const InvoiceDetailsScreen = () => {
                 style={[styles.input, { marginTop: 8 }]}
                 value={item.description || ''}
                 onChangeText={(text) => handleUpdateLineItem(index, 'description', text)}
-                placeholder="Item description (optional)"
+                placeholder={t('invoiceDetails.placeholders.itemDescription')}
                 editable={!isEditingInvoice}
               />
             </ContentGlass>
@@ -859,7 +861,7 @@ const InvoiceDetailsScreen = () => {
                 style={[styles.input, styles.textArea]}
                 value={editForm.notes}
                 onChangeText={(text) => setEditForm(prev => ({ ...prev, notes: text }))}
-                placeholder="Add any additional notes..."
+                placeholder={t('invoiceDetails.placeholders.notes')}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -1025,7 +1027,7 @@ const InvoiceDetailsScreen = () => {
                     styles.trackingValue,
                     { color: trackingData.has_token ? COLORS.success : COLORS.textLight }
                   ]}>
-                    {trackingData.has_token ? 'Active Link' : 'No Link Generated'}
+                    {trackingData.has_token ? t('invoiceDetails.activeLink') : t('invoiceDetails.noLinkGenerated')}
                   </Text>
                 </View>
               </View>
@@ -1407,7 +1409,7 @@ const InvoiceDetailsScreen = () => {
               style={styles.searchInput}
               value={taxSearchTerm}
               onChangeText={setTaxSearchTerm}
-              placeholder="Search by city, state, or description..."
+              placeholder={t('invoiceDetails.placeholders.searchTaxRate')}
               placeholderTextColor={COLORS.textLight}
             />
 
@@ -1448,7 +1450,7 @@ const InvoiceDetailsScreen = () => {
               ListEmptyComponent={
                 <View style={styles.emptyTaxList}>
                   <Text style={styles.emptyTaxText}>
-                    {taxSearchTerm ? 'No tax rates found' : 'No tax rates available'}
+                    {taxSearchTerm ? t('invoiceDetails.noTaxRatesFound') : t('invoiceDetails.noTaxRatesAvailable')}
                   </Text>
                 </View>
               }
@@ -1524,7 +1526,7 @@ const InvoiceDetailsScreen = () => {
                   style={styles.input}
                   value={newTaxRate.city}
                   onChangeText={(text) => setNewTaxRate(prev => ({ ...prev, city: text }))}
-                  placeholder="Sunnyside"
+                  placeholder={t('invoiceDetails.placeholders.cityName')}
                 />
               </View>
 
@@ -1534,7 +1536,7 @@ const InvoiceDetailsScreen = () => {
                   style={styles.input}
                   value={newTaxRate.tax_rate}
                   onChangeText={(text) => setNewTaxRate(prev => ({ ...prev, tax_rate: text }))}
-                  placeholder="8.3"
+                  placeholder={t('invoiceDetails.placeholders.taxRate')}
                   keyboardType="decimal-pad"
                 />
                 <Text style={styles.helperText}>Enter as percentage (e.g., 8.3 for 8.3%)</Text>
@@ -1546,7 +1548,7 @@ const InvoiceDetailsScreen = () => {
                   style={[styles.input, styles.textArea]}
                   value={newTaxRate.description}
                   onChangeText={(text) => setNewTaxRate(prev => ({ ...prev, description: text }))}
-                  placeholder="Combined city and state tax"
+                  placeholder={t('invoiceDetails.placeholders.taxDescription')}
                   multiline
                   numberOfLines={3}
                   textAlignVertical="top"

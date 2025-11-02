@@ -10,14 +10,17 @@ import {
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const CabinetsPricingScreen = () => {
+  const { t } = useLanguage();
+
   const [priceData, setPriceData] = useState([
-    { id: 1, type: 'Base Cabinets', price: '350', unit: 'per linear foot' },
-    { id: 2, type: 'Wall Cabinets', price: '280', unit: 'per linear foot' },
-    { id: 3, type: 'Tall Cabinets', price: '450', unit: 'per linear foot' },
-    { id: 4, type: 'Island Base', price: '400', unit: 'per linear foot' },
-    { id: 5, type: 'Corner Units', price: '500', unit: 'per unit' },
+    { id: 1, type: t('pricing.cabinets.types.base'), price: '350', unit: 'per linear foot' },
+    { id: 2, type: t('pricing.cabinets.types.wall'), price: '280', unit: 'per linear foot' },
+    { id: 3, type: t('pricing.cabinets.types.tall'), price: '450', unit: 'per linear foot' },
+    { id: 4, type: t('pricing.cabinets.types.island'), price: '400', unit: 'per linear foot' },
+    { id: 5, type: t('pricing.cabinets.types.corner'), price: '500', unit: 'per unit' },
   ]);
 
   const [editingId, setEditingId] = useState(null);
@@ -75,7 +78,7 @@ const CabinetsPricingScreen = () => {
                     value={editPrice}
                     onChangeText={setEditPrice}
                     keyboardType="decimal-pad"
-                    placeholder="0.00"
+                    placeholder={t('pricing.common.placeholder')}
                     autoFocus
                   />
                   <Text style={styles.unitText}>/ {item.unit}</Text>

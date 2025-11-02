@@ -23,7 +23,7 @@ const VideosScreen = () => {
     },
     {
       id: 2,
-      title: 'Cabinet Installation Process',
+      title: t('videos.mockTitle'),
       duration: '5:12',
       views: 3210,
       uploadDate: '2024-03-10',

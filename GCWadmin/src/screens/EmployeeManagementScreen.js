@@ -30,7 +30,7 @@ const EmployeeManagementScreen = () => {
     try {
       setLoading(true);
       if (!token) {
-        throw new Error('Authentication token not found');
+        throw new Error(t('common.authTokenNotFound'));
       }
       const data = await employeesApi.getEmployees(token);
       setEmployees(data);
@@ -54,7 +54,7 @@ const EmployeeManagementScreen = () => {
             {item.name}
           </Text>
           <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginTop: 2 }}>
-            {item.role || 'Employee'}
+            {item.role || t('employeeManager.defaultRole')}
           </Text>
           {item.email && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
@@ -81,7 +81,7 @@ const EmployeeManagementScreen = () => {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={COLORS.blue} />
-        <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>Loading employees...</Text>
+        <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>{t('employeeManager.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -90,14 +90,14 @@ const EmployeeManagementScreen = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <View style={{ padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: COLORS.text }}>
-            Team Management
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.text }}>
+            {t('employeeManager.title')}
           </Text>
           <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.blue, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }}
           >
             <Plus size={20} color="white" />
-            <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>Add Employee</Text>
+            <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>{t('employeeManager.addEmployee')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -121,7 +121,7 @@ const EmployeeManagementScreen = () => {
         ListEmptyComponent={
           <View style={{ padding: 40, alignItems: 'center' }}>
             <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center' }}>
-              No employees yet. Add your team members!
+              {t('employeeManager.noEmployees')}
             </Text>
           </View>
         }

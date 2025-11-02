@@ -8,15 +8,17 @@ import {
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const PaymentsScreen = () => {
+  const { t } = useLanguage();
   const [payments, setPayments] = useState([
     {
       id: 1,
       invoiceId: 'INV-001',
-      customerName: 'John Smith',
+      customerName: t('payments.mockData.johnSmith'),
       amount: 5000,
-      method: 'Credit Card',
+      method: t('payments.mockData.creditCard'),
       status: 'completed',
       date: '2024-03-15',
       transactionId: 'TXN-12345',
@@ -24,9 +26,9 @@ const PaymentsScreen = () => {
     {
       id: 2,
       invoiceId: 'INV-002',
-      customerName: 'Sarah Johnson',
+      customerName: t('payments.mockData.sarahJohnson'),
       amount: 3500,
-      method: 'Bank Transfer',
+      method: t('payments.mockData.bankTransfer'),
       status: 'completed',
       date: '2024-03-14',
       transactionId: 'TXN-12346',
@@ -34,9 +36,9 @@ const PaymentsScreen = () => {
     {
       id: 3,
       invoiceId: 'INV-003',
-      customerName: 'Mike Davis',
+      customerName: t('payments.mockData.mikeDavis'),
       amount: 2000,
-      method: 'Check',
+      method: t('payments.mockData.check'),
       status: 'pending',
       date: '2024-03-13',
       transactionId: 'TXN-12347',
@@ -44,9 +46,9 @@ const PaymentsScreen = () => {
     {
       id: 4,
       invoiceId: 'INV-004',
-      customerName: 'Emily Brown',
+      customerName: t('payments.mockData.emilyBrown'),
       amount: 1500,
-      method: 'Cash',
+      method: t('payments.mockData.cash'),
       status: 'failed',
       date: '2024-03-12',
       transactionId: 'TXN-12348',
@@ -91,9 +93,9 @@ const PaymentsScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Info Card */}
         <ContentGlass style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Payment Management</Text>
+          <Text style={styles.infoTitle}>{t('payments.title')}</Text>
           <Text style={styles.infoText}>
-            Track all customer payments, process transactions, and manage payment methods.
+            {t('payments.description')}
           </Text>
         </ContentGlass>
 
@@ -101,11 +103,11 @@ const PaymentsScreen = () => {
         <View style={styles.statsRow}>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>{formatCurrency(totalRevenue)}</Text>
-            <Text style={styles.statLabel}>Total Revenue</Text>
+            <Text style={styles.statLabel}>{t('payments.totalRevenue')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>{formatCurrency(pendingAmount)}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>{t('payments.pending')}</Text>
           </ContentGlass>
         </View>
 
@@ -114,19 +116,19 @@ const PaymentsScreen = () => {
             <Text style={styles.statValue}>
               {payments.filter(p => p.status === 'completed').length}
             </Text>
-            <Text style={styles.statLabel}>Completed</Text>
+            <Text style={styles.statLabel}>{t('payments.completed')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>
               {payments.filter(p => p.status === 'pending').length}
             </Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>{t('payments.pending')}</Text>
           </ContentGlass>
           <ContentGlass style={styles.statCard}>
             <Text style={styles.statValue}>
               {payments.filter(p => p.status === 'failed').length}
             </Text>
-            <Text style={styles.statLabel}>Failed</Text>
+            <Text style={styles.statLabel}>{t('payments.failed')}</Text>
           </ContentGlass>
         </View>
 
@@ -136,7 +138,7 @@ const PaymentsScreen = () => {
             <View style={styles.paymentHeader}>
               <View style={styles.paymentInfo}>
                 <Text style={styles.customerName}>{payment.customerName}</Text>
-                <Text style={styles.invoiceId}>Invoice: {payment.invoiceId}</Text>
+                <Text style={styles.invoiceId}>{t('payments.invoice')} {payment.invoiceId}</Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(payment.status) }]}>
                 <Text style={styles.statusText}>
@@ -149,15 +151,15 @@ const PaymentsScreen = () => {
               <Text style={styles.amount}>{formatCurrency(payment.amount)}</Text>
               <View style={styles.paymentMeta}>
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Method:</Text>
+                  <Text style={styles.metaLabel}>{t('payments.method')}</Text>
                   <Text style={styles.metaValue}>{payment.method}</Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Date:</Text>
+                  <Text style={styles.metaLabel}>{t('payments.date')}</Text>
                   <Text style={styles.metaValue}>{formatDate(payment.date)}</Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Transaction ID:</Text>
+                  <Text style={styles.metaLabel}>{t('payments.transactionId')}</Text>
                   <Text style={styles.metaValue}>{payment.transactionId}</Text>
                 </View>
               </View>
@@ -165,16 +167,16 @@ const PaymentsScreen = () => {
 
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.viewButton}>
-                <Text style={styles.viewButtonText}>View Details</Text>
+                <Text style={styles.viewButtonText}>{t('payments.viewDetails')}</Text>
               </TouchableOpacity>
               {payment.status === 'pending' && (
                 <TouchableOpacity style={styles.processButton}>
-                  <Text style={styles.processButtonText}>Process</Text>
+                  <Text style={styles.processButtonText}>{t('payments.process')}</Text>
                 </TouchableOpacity>
               )}
               {payment.status === 'failed' && (
                 <TouchableOpacity style={styles.retryButton}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
+                  <Text style={styles.retryButtonText}>{t('payments.retry')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -184,7 +186,7 @@ const PaymentsScreen = () => {
         {/* Record Payment Button */}
         <TouchableOpacity style={styles.addButton}>
           <ContentGlass style={styles.addButtonInner}>
-            <Text style={styles.addButtonText}>+ Record Payment</Text>
+            <Text style={styles.addButtonText}>{t('payments.recordPayment')}</Text>
           </ContentGlass>
         </TouchableOpacity>
       </ScrollView>

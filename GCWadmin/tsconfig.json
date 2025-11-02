@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0"
   },
   "extends": "./node_modules/expo/tsconfig.base.json",
   "exclude": [

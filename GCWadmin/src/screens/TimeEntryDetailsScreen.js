@@ -59,7 +59,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error fetching entries:', error);
-      Alert.alert(t('common.error'), 'Failed to load time entries');
+      Alert.alert(t('common.error'), t('timeclock.entryDetails.loadError'));
     } finally {
       setLoading(false);
     }
@@ -89,12 +89,12 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
 
   const handleSaveEdit = async () => {
     if (!editForm.clockInTime) {
-      Alert.alert(t('common.error'), 'Clock in time is required');
+      Alert.alert(t('common.error'), t('timeclock.entryDetails.clockInRequired'));
       return;
     }
 
     if (!isAdmin) {
-      Alert.alert(t('common.error'), 'Only admins can edit time entries');
+      Alert.alert(t('common.error'), t('timeclock.entryDetails.adminOnly'));
       return;
     }
 
@@ -107,19 +107,19 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
           clockOutTime: editForm.clockOutTime ? `${date} ${editForm.clockOutTime}:00` : null,
           breakMinutes: parseInt(editForm.breakMinutes) || 0,
           notes: editForm.notes,
-          reason: 'Edited via mobile app',
+          reason: t('timeEntry.editedViaMobileApp'),
         }
       );
 
       if (response.data.success) {
-        Alert.alert(t('common.success'), 'Entry updated successfully');
+        Alert.alert(t('common.success'), t('timeclock.entryDetails.updateSuccess'));
         setEditingEntry(null);
         fetchDayEntries();
       }
     } catch (error) {
       Alert.alert(
         t('common.error'),
-        error.response?.data?.message || 'Failed to update entry'
+        error.response?.data?.message || t('timeclock.entryDetails.updateError')
       );
     } finally {
       setSaving(false);
@@ -128,17 +128,17 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
 
   const handleDelete = async () => {
     if (!isAdmin) {
-      Alert.alert(t('common.error'), 'Only admins can delete time entries');
+      Alert.alert(t('common.error'), t('timeclock.entryDetails.adminDeleteOnly'));
       return;
     }
 
     Alert.alert(
-      'Delete Entry',
-      'Are you sure you want to delete this time entry? This action cannot be undone.',
+      t('timeclock.entryDetails.deleteTitle'),
+      t('timeclock.entryDetails.deleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -148,7 +148,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
               );
 
               if (response.data.success) {
-                Alert.alert(t('common.success'), 'Entry deleted successfully');
+                Alert.alert(t('common.success'), t('timeclock.entryDetails.deleteSuccess'));
                 setEditingEntry(null);
                 fetchDayEntries();
                 // If no more entries, go back
@@ -159,7 +159,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
             } catch (error) {
               Alert.alert(
                 t('common.error'),
-                error.response?.data?.message || 'Failed to delete entry'
+                error.response?.data?.message || t('timeclock.entryDetails.deleteError')
               );
             } finally {
               setDeleting(false);
@@ -171,7 +171,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
   };
 
   const calculateDuration = (entry) => {
-    if (!entry.clock_out_time) return 'In Progress';
+    if (!entry.clock_out_time) return t('timeclock.entryDetails.inProgress');
     return `${parseFloat(entry.total_hours || 0).toFixed(2)} hrs`;
   };
 
@@ -197,7 +197,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
           <X size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Time Entries</Text>
+          <Text style={styles.headerTitle}>{t('timeclock.entryDetails.title')}</Text>
           <Text style={styles.headerSubtitle}>{formatDatePST(date)}</Text>
         </View>
         {isAdmin && (
@@ -217,7 +217,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
         {entries.length === 0 ? (
           <ContentGlass style={styles.emptyState}>
             <Clock size={48} color={COLORS.textLight} />
-            <Text style={styles.emptyStateText}>No entries for this day</Text>
+            <Text style={styles.emptyStateText}>{t('timeclock.entryDetails.noEntries')}</Text>
           </ContentGlass>
         ) : (
           entries.map((entry, index) => (
@@ -225,57 +225,57 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
               {editingEntry && editingEntry.id === entry.id ? (
                 /* Edit Mode */
                 <View>
-                  <Text style={styles.entryTitle}>Edit Entry #{index + 1}</Text>
+                  <Text style={styles.entryTitle}>{t('timeclock.entryDetails.editEntry')}{index + 1}</Text>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.label}>Clock In Time *</Text>
+                    <Text style={styles.label}>{t('timeclock.entryDetails.clockInLabel')}</Text>
                     <TextInput
                       style={styles.input}
                       value={editForm.clockInTime}
                       onChangeText={(text) =>
                         setEditForm({ ...editForm, clockInTime: text })
                       }
-                      placeholder="HH:MM (24-hour)"
+                      placeholder={t('timeclock.entryDetails.clockInPlaceholder')}
                       placeholderTextColor={COLORS.textLight}
                     />
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.label}>Clock Out Time</Text>
+                    <Text style={styles.label}>{t('timeclock.entryDetails.clockOutLabel')}</Text>
                     <TextInput
                       style={styles.input}
                       value={editForm.clockOutTime}
                       onChangeText={(text) =>
                         setEditForm({ ...editForm, clockOutTime: text })
                       }
-                      placeholder="HH:MM (24-hour)"
+                      placeholder={t('timeclock.entryDetails.clockOutPlaceholder')}
                       placeholderTextColor={COLORS.textLight}
                     />
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.label}>Break Minutes</Text>
+                    <Text style={styles.label}>{t('timeclock.entryDetails.breakLabel')}</Text>
                     <TextInput
                       style={styles.input}
                       value={editForm.breakMinutes}
                       onChangeText={(text) =>
                         setEditForm({ ...editForm, breakMinutes: text })
                       }
-                      placeholder="0"
+                      placeholder={t('timeclock.entryDetails.breakPlaceholder')}
                       keyboardType="numeric"
                       placeholderTextColor={COLORS.textLight}
                     />
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.label}>Notes</Text>
+                    <Text style={styles.label}>{t('timeclock.entryDetails.notesLabel')}</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={editForm.notes}
                       onChangeText={(text) =>
                         setEditForm({ ...editForm, notes: text })
                       }
-                      placeholder="Add notes..."
+                      placeholder={t('timeclock.entryDetails.notesPlaceholder')}
                       multiline
                       numberOfLines={3}
                       placeholderTextColor={COLORS.textLight}
@@ -285,7 +285,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
                   {/* Audit Log */}
                   {auditLog.length > 0 && (
                     <View style={styles.auditSection}>
-                      <Text style={styles.auditTitle}>Change History</Text>
+                      <Text style={styles.auditTitle}>{t('timeclock.entryDetails.changeHistory')}</Text>
                       {auditLog.map((log, idx) => (
                         <View key={idx} style={styles.auditEntry}>
                           <Text style={styles.auditUser}>
@@ -308,7 +308,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
                       style={[styles.actionButton, styles.cancelButton]}
                       onPress={() => setEditingEntry(null)}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.deleteButton]}
@@ -320,7 +320,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
                       ) : (
                         <>
                           <Trash2 size={16} color={COLORS.white} />
-                          <Text style={styles.deleteButtonText}>Delete</Text>
+                          <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -334,7 +334,7 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
                       ) : (
                         <>
                           <Save size={16} color={COLORS.white} />
-                          <Text style={styles.saveButtonText}>Save</Text>
+                          <Text style={styles.saveButtonText}>{t('common.save')}</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -344,36 +344,36 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
                 /* View Mode */
                 <View>
                   <View style={styles.entryHeader}>
-                    <Text style={styles.entryTitle}>Entry #{index + 1}</Text>
+                    <Text style={styles.entryTitle}>{t('timeclock.entryDetails.entry')}{index + 1}</Text>
                     {isAdmin && (
                       <TouchableOpacity
                         style={styles.editButton}
                         onPress={() => handleEditPress(entry)}
                       >
                         <Edit2 size={18} color={COLORS.blue} />
-                        <Text style={styles.editButtonText}>Edit</Text>
+                        <Text style={styles.editButtonText}>{t('common.edit')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Clock In:</Text>
+                    <Text style={styles.detailLabel}>{t('timeclock.entryDetails.clockIn')}</Text>
                     <Text style={styles.detailValue}>
                       {formatTimePST(entry.clock_in_time)}
                     </Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Clock Out:</Text>
+                    <Text style={styles.detailLabel}>{t('timeclock.entryDetails.clockOut')}</Text>
                     <Text style={styles.detailValue}>
                       {entry.clock_out_time
                         ? formatTimePST(entry.clock_out_time)
-                        : 'Still clocked in'}
+                        : t('timeclock.entryDetails.stillClockedIn')}
                     </Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Duration:</Text>
+                    <Text style={styles.detailLabel}>{t('timeclock.entryDetails.duration')}</Text>
                     <Text style={[styles.detailValue, styles.durationValue]}>
                       {calculateDuration(entry)}
                     </Text>
@@ -381,16 +381,16 @@ const TimeEntryDetailsScreen = ({ navigation, route }) => {
 
                   {entry.break_minutes > 0 && (
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Break:</Text>
+                      <Text style={styles.detailLabel}>{t('timeclock.entryDetails.break')}</Text>
                       <Text style={styles.detailValue}>
-                        {entry.break_minutes} minutes
+                        {entry.break_minutes}{t('timeclock.entryDetails.minutes')}
                       </Text>
                     </View>
                   )}
 
                   {entry.is_manual_entry && (
                     <View style={styles.manualBadge}>
-                      <Text style={styles.manualBadgeText}>📝 Manual Entry</Text>
+                      <Text style={styles.manualBadgeText}>{t('timeclock.entryDetails.manualEntry')}</Text>
                     </View>
                   )}
                 </View>

@@ -98,8 +98,8 @@ const PhotoManagementScreen = () => {
       const { status } = await permissionMethod();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          `Please allow access to your ${useCamera ? 'camera' : 'photo library'}`,
+          t('photoManagement.permissionRequired'),
+          useCamera ? t('photoManagement.cameraPermission') : t('photoManagement.libraryPermission'),
         );
         return;
       }
@@ -119,25 +119,25 @@ const PhotoManagementScreen = () => {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick images');
+      Alert.alert(t('common.error'), t('photoManagement.pickImagesError'));
     }
   };
 
   const showImageSourcePicker = (isVideoUpload = false) => {
     Alert.alert(
-      isVideoUpload ? 'Add Video' : 'Add Photo',
-      'Choose source',
+      isVideoUpload ? t('photoManagement.addVideo') : t('photoManagement.addPhoto'),
+      t('photoManagement.chooseSource'),
       [
         {
-          text: 'Camera',
+          text: t('photoManagement.camera'),
           onPress: () => handleImagePick(isVideoUpload, true),
         },
         {
-          text: 'Gallery',
+          text: t('photoManagement.gallery'),
           onPress: () => handleImagePick(isVideoUpload, false),
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ],
@@ -146,7 +146,7 @@ const PhotoManagementScreen = () => {
 
   const handlePhotoUpload = async assets => {
     if (!token) {
-      Alert.alert('Error', 'Authentication required');
+      Alert.alert(t('common.error'), t('photoManagement.authRequired'));
       return;
     }
 
@@ -173,12 +173,14 @@ const PhotoManagementScreen = () => {
 
       await loadPhotos();
       Alert.alert(
-        'Success',
-        `${assets.length} item(s) uploaded to ${selectedCategory}!`,
+        t('common.success'),
+        t('photoManagement.uploadSuccess')
+          .replace('{count}', assets.length)
+          .replace('{category}', selectedCategory),
       );
     } catch (error) {
-      console.error('Upload error:', error);
-      Alert.alert('Error', 'Failed to upload items');
+      console.error(t('photoManagement.uploadErrorPrefix'), error);
+      Alert.alert(t('common.error'), t('photoManagement.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -219,7 +221,7 @@ const PhotoManagementScreen = () => {
       await photosApi.updatePhoto(token, photoId, { category: newCategory });
       await loadPhotos();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update category');
+      Alert.alert(t('common.error'), t('photoManagement.updateCategoryError'));
     }
   };
 
@@ -234,10 +236,10 @@ const PhotoManagementScreen = () => {
     try {
       await photosApi.reorderPhotos(token, photoIds);
       setHasOrderChanges(false);
-      Alert.alert('Success', 'Photo order saved!');
+      Alert.alert(t('common.success'), t('photoManagement.photoOrderSaved'));
       await loadPhotos();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save order');
+      Alert.alert(t('common.error'), t('photoManagement.saveOrderError'));
     }
   };
 
@@ -333,7 +335,7 @@ const PhotoManagementScreen = () => {
                 style={styles.titleInput}
                 value={editingTitle}
                 onChangeText={setEditingTitle}
-                placeholder="Photo title"
+                placeholder={t('photoManagement.photoTitle')}
                 autoFocus
               />
               <View style={styles.editButtons}>
@@ -374,13 +376,13 @@ const PhotoManagementScreen = () => {
           {!isReordering && (
             <View style={styles.actions}>
               <View style={styles.categorySelector}>
-                <Text style={styles.categorySelectorLabel}>Category:</Text>
+                <Text style={styles.categorySelectorLabel}>{t('photoManagement.category')}</Text>
                 <TouchableOpacity
                   style={styles.categoryButton}
                   onPress={() => {
                     // Show category picker modal
                     Alert.alert(
-                      'Change Category',
+                      t('photoManagement.changeCategory'),
                       '',
                       categories.map(cat => ({
                         text: `${cat.icon} ${cat.name}`,
@@ -407,7 +409,7 @@ const PhotoManagementScreen = () => {
           {/* Manual Position Input - visible in reorder mode */}
           {isReordering && (
             <View style={styles.positionInput}>
-              <Text style={styles.positionLabel}>Move to:</Text>
+              <Text style={styles.positionLabel}>{t('photoManagement.moveTo')}</Text>
               <TextInput
                 style={styles.positionTextInput}
                 value={reorderingPhotoId === item.id ? manualPosition : ''}
@@ -415,7 +417,7 @@ const PhotoManagementScreen = () => {
                   setReorderingPhotoId(item.id);
                   setManualPosition(text);
                 }}
-                placeholder="#"
+                placeholder={t('photoManagement.number')}
                 keyboardType="number-pad"
                 maxLength={3}
               />
@@ -437,7 +439,7 @@ const PhotoManagementScreen = () => {
                   setManualPosition('');
                 }}
               >
-                <Text style={styles.positionGoText}>Go</Text>
+                <Text style={styles.positionGoText}>{t('photoManagement.go')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -466,7 +468,7 @@ const PhotoManagementScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.blue} />
-        <Text style={styles.loadingText}>Loading photos...</Text>
+        <Text style={styles.loadingText}>{t('photoManagement.loadingPhotos')}</Text>
       </View>
     );
   }
@@ -475,7 +477,7 @@ const PhotoManagementScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Photo Manager</Text>
+        <Text style={styles.headerTitle}>{t('photoManagement.photoManager')}</Text>
         <TouchableOpacity
           style={[
             styles.reorderButton,
@@ -484,13 +486,13 @@ const PhotoManagementScreen = () => {
           onPress={() => {
             if (isReordering && hasOrderChanges) {
               Alert.alert(
-                'Save Changes?',
-                'Do you want to save the new photo order?',
+                t('photoManagement.saveChanges'),
+                t('photoManagement.saveOrderPrompt'),
                 [
-                  { text: 'Cancel', onPress: () => loadPhotos() },
-                  { text: 'Save', onPress: saveOrder },
+                  { text: t('common.cancel'), onPress: () => loadPhotos() },
+                  { text: t('photoManagement.save'), onPress: saveOrder },
                   {
-                    text: 'Discard',
+                    text: t('photoManagement.discard'),
                     onPress: () => {
                       setIsReordering(false);
                       setHasOrderChanges(false);
@@ -563,8 +565,8 @@ const PhotoManagementScreen = () => {
       {isReordering && (
         <View style={styles.reorderingInfo}>
           <Text style={styles.reorderingText}>
-            <Text style={styles.reorderingBold}>Reordering Mode: </Text>
-            Long press and drag photos to reorder them
+            <Text style={styles.reorderingBold}>{t('photoManagement.reorderingMode')}</Text>
+            {t('photoManagement.reorderInstructions')}
           </Text>
           {hasOrderChanges && (
             <TouchableOpacity
@@ -572,7 +574,7 @@ const PhotoManagementScreen = () => {
               onPress={saveOrder}
             >
               <Save size={16} color={COLORS.white} />
-              <Text style={styles.saveOrderText}>Save Order</Text>
+              <Text style={styles.saveOrderText}>{t('photoManagement.saveOrder')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -609,9 +611,9 @@ const PhotoManagementScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <ImageIcon size={48} color={COLORS.textLight} />
-              <Text style={styles.emptyText}>No photos in this category</Text>
+              <Text style={styles.emptyText}>{t('photoManagement.noCategoryPhotos')}</Text>
               <Text style={styles.emptySubtext}>
-                Upload some photos to get started
+                {t('photoManagement.uploadToStart')}
               </Text>
             </View>
           }

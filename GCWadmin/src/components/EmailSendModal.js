@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const EmailSendModal = ({
   visible,
@@ -18,6 +19,7 @@ const EmailSendModal = ({
   onSend,
   sending,
 }) => {
+  const { t } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = React.useState('english');
   const [sendToSelf, setSendToSelf] = React.useState(false);
   const [selfEmail, setSelfEmail] = React.useState('');
@@ -72,7 +74,7 @@ const EmailSendModal = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Send Invoice via Email</Text>
+            <Text style={styles.modalTitle}>{t('modals.email.title')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -81,21 +83,21 @@ const EmailSendModal = ({
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             {/* Invoice Info */}
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Invoice: <Text style={styles.infoValue}>{invoice.invoice_number}</Text></Text>
-              <Text style={styles.infoLabel}>Client: <Text style={styles.infoValue}>{clientName}</Text></Text>
-              <Text style={styles.infoLabel}>Email: <Text style={styles.infoValue}>{invoice.email}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.email.invoice')} <Text style={styles.infoValue}>{invoice.invoice_number}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.email.client')} <Text style={styles.infoValue}>{clientName}</Text></Text>
+              <Text style={styles.infoLabel}>{t('modals.email.email')} <Text style={styles.infoValue}>{invoice.email}</Text></Text>
             </View>
 
             {/* Primary Recipient */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Primary Recipient (Client)</Text>
+              <Text style={styles.sectionTitle}>{t('modals.email.primaryRecipient')}</Text>
               <View style={styles.recipientCard}>
                 <TouchableOpacity
                   style={styles.radioOption}
                   onPress={() => setUseCustomClientEmail(false)}
                 >
                   <View style={[styles.radio, !useCustomClientEmail && styles.radioSelected]} />
-                  <Text style={styles.radioLabel}>Client Email: {invoice.email}</Text>
+                  <Text style={styles.radioLabel}>{t('modals.email.clientEmail')} {invoice.email}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -103,7 +105,7 @@ const EmailSendModal = ({
                   onPress={() => setUseCustomClientEmail(true)}
                 >
                   <View style={[styles.radio, useCustomClientEmail && styles.radioSelected]} />
-                  <Text style={styles.radioLabel}>Use Custom Email</Text>
+                  <Text style={styles.radioLabel}>{t('modals.email.useCustomEmail')}</Text>
                 </TouchableOpacity>
 
                 {useCustomClientEmail && (
@@ -111,7 +113,7 @@ const EmailSendModal = ({
                     style={styles.input}
                     value={customClientEmail}
                     onChangeText={setCustomClientEmail}
-                    placeholder="Enter custom email"
+                    placeholder={t('modals.email.enterCustomEmail')}
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
@@ -128,7 +130,7 @@ const EmailSendModal = ({
                 <View style={[styles.checkbox, sendToSelf && styles.checkboxSelected]}>
                   {sendToSelf && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={styles.checkboxLabel}>Send copy to myself</Text>
+                <Text style={styles.checkboxLabel}>{t('modals.email.sendToSelf')}</Text>
               </TouchableOpacity>
 
               {sendToSelf && (
@@ -136,7 +138,7 @@ const EmailSendModal = ({
                   style={[styles.input, { marginTop: 8 }]}
                   value={selfEmail}
                   onChangeText={setSelfEmail}
-                  placeholder="Your email address"
+                  placeholder={t('modals.email.yourEmail')}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -145,14 +147,14 @@ const EmailSendModal = ({
 
             {/* Additional Recipients */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Additional Recipients</Text>
+              <Text style={styles.sectionTitle}>{t('modals.email.additionalRecipients')}</Text>
               {additionalEmails.map((email, index) => (
                 <View key={index} style={styles.additionalEmailRow}>
                   <TextInput
                     style={[styles.input, { flex: 1 }]}
                     value={email}
                     onChangeText={(text) => updateAdditionalEmail(index, text)}
-                    placeholder="Additional email"
+                    placeholder={t('modals.email.additionalEmail')}
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
@@ -171,14 +173,14 @@ const EmailSendModal = ({
                   onPress={addAdditionalEmail}
                   style={styles.addButton}
                 >
-                  <Text style={styles.addButtonText}>+ Add Email</Text>
+                  <Text style={styles.addButtonText}>{t('modals.email.addEmail')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {/* Language Selection */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🌐 Language</Text>
+              <Text style={styles.sectionTitle}>{t('modals.email.language')}</Text>
               <View style={styles.languageButtons}>
                 <TouchableOpacity
                   style={[
@@ -193,7 +195,7 @@ const EmailSendModal = ({
                       selectedLanguage === 'english' && styles.languageButtonTextSelected,
                     ]}
                   >
-                    English
+                    {t('modals.email.english')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -209,7 +211,7 @@ const EmailSendModal = ({
                       selectedLanguage === 'spanish' && styles.languageButtonTextSelected,
                     ]}
                   >
-                    Español
+                    {t('modals.email.spanish')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -217,15 +219,15 @@ const EmailSendModal = ({
 
             {/* Message */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Message (Optional)</Text>
+              <Text style={styles.sectionTitle}>{t('modals.email.messageOptional')}</Text>
               <TextInput
                 style={styles.textArea}
                 value={message}
                 onChangeText={setMessage}
                 placeholder={
                   selectedLanguage === 'spanish'
-                    ? 'Agregue un mensaje personal para incluir con la factura...'
-                    : 'Add a personal message to include with the invoice...'
+                    ? t('modals.email.messagePlaceholderEs')
+                    : t('modals.email.messagePlaceholderEn')
                 }
                 multiline
                 numberOfLines={4}
@@ -241,7 +243,7 @@ const EmailSendModal = ({
               onPress={onClose}
               disabled={sending}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerButton, styles.sendButton]}
@@ -251,7 +253,7 @@ const EmailSendModal = ({
               {sending ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.sendButtonText}>📧 Send Email</Text>
+                <Text style={styles.sendButtonText}>{t('modals.email.sendButton')}</Text>
               )}
             </TouchableOpacity>
           </View>

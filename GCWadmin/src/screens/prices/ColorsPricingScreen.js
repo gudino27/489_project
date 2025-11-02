@@ -9,14 +9,17 @@ import {
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { ContentGlass } from '../../components/GlassView';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ColorsPricingScreen = () => {
+  const { t } = useLanguage();
+
   const [colors, setColors] = useState([
     { id: 1, name: 'White', hex: '#FFFFFF', multiplier: '1.0', category: 'Standard' },
     { id: 2, name: 'Black', hex: '#000000', multiplier: '1.05', category: 'Standard' },
     { id: 3, name: 'Gray', hex: '#808080', multiplier: '1.0', category: 'Standard' },
-    { id: 4, name: 'Navy Blue', hex: '#000080', multiplier: '1.10', category: 'Premium' },
-    { id: 5, name: 'Forest Green', hex: '#228B22', multiplier: '1.15', category: 'Premium' },
+    { id: 4, name: t('pricing.colors.navyBlue'), hex: '#000080', multiplier: '1.10', category: 'Premium' },
+    { id: 5, name: t('pricing.colors.forestGreen'), hex: '#228B22', multiplier: '1.15', category: 'Premium' },
     { id: 6, name: 'Espresso', hex: '#4B2E2A', multiplier: '1.08', category: 'Standard' },
   ]);
 
@@ -85,7 +88,7 @@ const ColorsPricingScreen = () => {
                     value={editMultiplier}
                     onChangeText={setEditMultiplier}
                     keyboardType="decimal-pad"
-                    placeholder="1.0"
+                    placeholder={t('pricing.common.multiplierPlaceholder')}
                     autoFocus
                   />
                 </View>

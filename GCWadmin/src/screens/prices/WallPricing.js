@@ -23,7 +23,7 @@ const WallPricing = ({
   const handleWallPriceChange = (type, newValue) => {
     const price = parseFloat(newValue) || 0;
     if (price < 0) {
-      Alert.alert('Invalid Price', 'Wall pricing cannot be negative. Please enter a positive value.');
+      Alert.alert(t('pricing.walls.invalidPrice'), t('pricing.walls.negativeError'));
       return;
     }
     setWallPricing({ ...wallPricing, [type]: price });
@@ -32,15 +32,15 @@ const WallPricing = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Wall Modification Pricing</Text>
+      <Text style={styles.sectionTitle}>{t('pricing.walls.title')}</Text>
 
       <Text style={styles.description}>
-        Set pricing for custom wall configurations. These costs apply when customers add or remove walls for open floor plans.
+        {t('pricing.walls.description')}
       </Text>
 
       <View style={styles.priceGrid}>
         <View style={styles.inputRow}>
-          <Text style={styles.label}>Add Wall Opening:</Text>
+          <Text style={styles.label}>{t('pricing.walls.addWallOpening')}</Text>
           <View style={styles.inputContainer}>
             <Text style={styles.dollarSign}>$</Text>
             <TextInput
@@ -54,7 +54,7 @@ const WallPricing = ({
         </View>
 
         <View style={styles.inputRow}>
-          <Text style={styles.label}>Remove Wall:</Text>
+          <Text style={styles.label}>{t('pricing.walls.removeWall')}</Text>
           <View style={styles.inputContainer}>
             <Text style={styles.dollarSign}>$</Text>
             <TextInput
@@ -69,9 +69,9 @@ const WallPricing = ({
       </View>
 
       <View style={styles.examplesBox}>
-        <Text style={styles.examplesTitle}>Wall Modification Examples:</Text>
-        <Text style={styles.exampleItem}>• Add Wall Opening: Creating a pass-through between kitchen and other rooms</Text>
-        <Text style={styles.exampleItem}>• Remove Wall: Full wall removal for open concept design</Text>
+        <Text style={styles.examplesTitle}>{t('pricing.walls.examplesTitle')}</Text>
+        <Text style={styles.exampleItem}>{t('pricing.walls.example1')}</Text>
+        <Text style={styles.exampleItem}>{t('pricing.walls.example2')}</Text>
       </View>
 
       <SectionSaveButton

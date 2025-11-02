@@ -51,14 +51,14 @@ const PhotosScreen = () => {
     try {
       setLoading(true);
       if (!token) {
-        throw new Error('Authentication token not found');
+        throw new Error(t('common.authTokenNotFound'));
       }
       const data = await photosApi.getPhotos(token);
       setAllPhotos(data);
       filterPhotosByCategory(currentCategory, data);
     } catch (error) {
       console.error('Error loading photos:', error);
-      Alert.alert('Error', 'Failed to load photos. Please try again.');
+      Alert.alert(t('common.error'), t('photoManager.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,7 +149,7 @@ const PhotosScreen = () => {
     <View style={styles.container}>
       {/* Category Tabs */}
       <View style={styles.categoriesContainer}>
-        <Text style={styles.categoryTitle}>Categories</Text>
+        <Text style={styles.categoryTitle}>{t('photoManager.categories')}</Text>
         <FlatList
           horizontal
           data={categories}
@@ -163,17 +163,17 @@ const PhotosScreen = () => {
         <View style={styles.statsBar}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{photoStats.photos}</Text>
-            <Text style={styles.statLabel}>Photos</Text>
+            <Text style={styles.statLabel}>{t('photoManager.photos')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{photoStats.videos}</Text>
-            <Text style={styles.statLabel}>Videos</Text>
+            <Text style={styles.statLabel}>{t('photoManager.videos')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{filteredPhotos.length}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={styles.statLabel}>{t('photoManager.total')}</Text>
           </View>
         </View>
       </View>
@@ -202,7 +202,7 @@ const PhotosScreen = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No photos found in this category</Text>
+              <Text style={styles.emptyText}>{t('photoManager.noPhotos')}</Text>
             </View>
           }
         />
@@ -231,10 +231,10 @@ const PhotosScreen = () => {
                   {selectedItem.mime_type && selectedItem.mime_type.startsWith('video/') ? (
                     <View style={styles.videoPlaceholder}>
                       <Text style={styles.videoPlaceholderText}>
-                        Video Player Coming Soon
+                        {t('photoManager.videoPlayerComingSoon')}
                       </Text>
                       <Text style={styles.videoSubtext}>
-                        Tap to close and view thumbnail
+                        {t('photoManager.tapToClose')}
                       </Text>
                       <Image 
                         source={{ uri: `${API_BASE}${selectedItem.thumbnail || selectedItem.url}` }}
