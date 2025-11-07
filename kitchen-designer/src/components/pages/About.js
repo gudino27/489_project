@@ -22,9 +22,10 @@ const About = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
+    const [imageOrientations, setImageOrientations] = useState({}); // Track orientation for each image
 
     // API base URL
-     const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
+    const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
     const icons = {
         user: (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -156,6 +157,45 @@ const About = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [modalImage, currentImageIndex]);
 
+    // Handle image load to detect orientation and set appropriate sizing
+    const handleTestimonialImageLoad = (e, testimonialId, photoIndex) => {
+        const img = e.target;
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        const aspectRatio = width / height;
+
+        let orientation, containerClass;
+
+        if (aspectRatio < 0.8) {
+            orientation = "portrait";
+            containerClass = "testimonial-photo-portrait";
+        } else if (aspectRatio < 1.2) {
+            orientation = "square";
+            containerClass = "testimonial-photo-square";
+        } else if (aspectRatio < 1.8) {
+            orientation = "landscape";
+            containerClass = "testimonial-photo-landscape";
+        } else {
+            orientation = "panoramic";
+            containerClass = "testimonial-photo-panoramic";
+        }
+
+        // Store orientation info
+        setImageOrientations(prev => ({
+            ...prev,
+            [`${testimonialId}-${photoIndex}`]: { orientation, containerClass }
+        }));
+
+        // Apply the class to the container
+        const container = img.closest('.testimonial-photo');
+        if (container) {
+            container.className = `testimonial-photo ${containerClass}`;
+        }
+
+        // Mark image as loaded
+        img.setAttribute('data-loaded', 'true');
+    };
+
     return (
         <>
             <Navigation />
@@ -263,11 +303,15 @@ const About = () => {
                                     {testimonial.photos && testimonial.photos.length > 0 && (
                                         <div className="testimonial-photos">
                                             {testimonial.photos.map((photo, photoIndex) => (
-                                                <div key={photoIndex} className="testimonial-photo">
+                                                <div 
+                                                    key={photoIndex} 
+                                                    className="testimonial-photo"
+                                                >
                                                     <img
                                                         src={`${API_BASE}${photo.thumbnail_path || photo.file_path}`}
                                                         alt={`${t('about.projectPhoto')} ${photoIndex + 1}`}
                                                         onClick={() => openImageModal(testimonial.photos, photoIndex)}
+                                                        onLoad={(e) => handleTestimonialImageLoad(e, testimonial.id, photoIndex)}
                                                         style={{ cursor: 'pointer' }}
                                                     />
                                                 </div>

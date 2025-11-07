@@ -283,11 +283,9 @@
 
  .testimonial-photos {
      display: grid;
-     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
      gap: 10px;
      margin-bottom: 20px;
-     max-height: 200px;
-     overflow: hidden;
  }
 
  .testimonial-photo {
@@ -296,18 +294,84 @@
      overflow: hidden;
      cursor: pointer;
      transition: transform 0.3s ease;
-     aspect-ratio: 1;
+     background: #f3f4f6;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+ }
+
+ /* Portrait images - taller than wide */
+ .testimonial-photo-portrait {
+     aspect-ratio: 3 / 4;
+     grid-column: span 1;
+ }
+
+ /* Square images */
+ .testimonial-photo-square {
+     aspect-ratio: 1 / 1;
+     grid-column: span 1;
+ }
+
+ /* Landscape images - wider than tall */
+ .testimonial-photo-landscape {
+     aspect-ratio: 16 / 9;
+     grid-column: span 2;
+ }
+
+ /* Panoramic images - very wide */
+ .testimonial-photo-panoramic {
+     aspect-ratio: 21 / 9;
+     grid-column: span 3;
  }
 
  .testimonial-photo:hover {
      transform: scale(1.05);
+     z-index: 1;
  }
 
  .testimonial-photo img {
      width: 100%;
      height: 100%;
      object-fit: cover;
+     object-position: center;
      display: block;
+     transition: opacity 0.3s ease;
+ }
+
+ .testimonial-photo img[data-loading="true"] {
+     opacity: 0.5;
+ }
+
+ /* Add a subtle shimmer effect while loading */
+ .testimonial-photo::before {
+     content: '';
+     position: absolute;
+     top: 0;
+     left: 0;
+     right: 0;
+     bottom: 0;
+     background: linear-gradient(
+         90deg,
+         transparent 0%,
+         rgba(255, 255, 255, 0.3) 50%,
+         transparent 100%
+     );
+     animation: shimmer 2s infinite;
+     pointer-events: none;
+     opacity: 0;
+ }
+
+ .testimonial-photo img:not([data-loaded="true"]) ~ .testimonial-photo::before {
+     opacity: 1;
+ }
+
+ @keyframes shimmer {
+     0% {
+         transform: translateX(-100%);
+     }
+     100% {
+         transform: translateX(100%);
+     }
  }
 
  .testimonial-author {
@@ -369,6 +433,28 @@
      .testimonial-card {
          padding: 20px;
      }
+
+     /* Adjust testimonial photo grid on mobile */
+     .testimonial-photos {
+         grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+     }
+
+     /* All orientations take single column on mobile */
+     .testimonial-photo-portrait,
+     .testimonial-photo-square,
+     .testimonial-photo-landscape,
+     .testimonial-photo-panoramic {
+         grid-column: span 1;
+     }
+
+     /* Adjust aspect ratios for better mobile display */
+     .testimonial-photo-landscape {
+         aspect-ratio: 4 / 3;
+     }
+
+     .testimonial-photo-panoramic {
+         aspect-ratio: 16 / 9;
+     }
  }
 /* Industry-standard responsive breakpoints */
 
@@ -382,6 +468,19 @@
     .testimonials-grid {
         grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
         gap: 25px;
+    }
+
+    /* Adjust photo spans on tablets */
+    .testimonial-photos {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    }
+
+    .testimonial-photo-landscape {
+        grid-column: span 2;
+    }
+
+    .testimonial-photo-panoramic {
+        grid-column: span 2; /* Reduce span on tablets */
     }
 }
 
@@ -421,5 +520,11 @@
 
     .testimonial-photos {
         grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 8px;
+    }
+
+    /* Even more compact on very small screens */
+    .testimonial-photo-portrait {
+        aspect-ratio: 1 / 1;
     }
 }
