@@ -12,6 +12,7 @@ import TestimonialForm from './components/forms/TestimonialForm';
 import InvoiceViewer from './components/invoice/InvoiceViewer';
 import ReceiptViewer from './components/invoice/ReceiptViewer';
 import SmsCompliance from './components/SmsCompliance';
+import PrivacySettings from './components/PrivacySettings';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
@@ -38,9 +39,12 @@ function App() {
             <Route path="/testimonial/:token" element={<TestimonialForm />} />
             <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
             <Route path="/invoice/:token" element={<InvoiceViewer />} />
-            <Route path="/sms-consent-verification" element={<SmsCompliance />} />
+            <Route path="/sms-consent-verification" element={<SmsCompliance defaultTab="consent" />} />
             <Route path="/sms-terms" element={<SmsCompliance defaultTab="terms" />} />
-            <Route path="/privacy" element={<SmsCompliance defaultTab="privacy" />} />
+            <Route path="/sms-privacy" element={<SmsCompliance defaultTab="privacy" />} />
+            <Route path="/privacy" element={<SmsCompliance defaultTab="website" />} />
+            <Route path="/opt-out" element={<PrivacySettings />} />
+            <Route path="/privacy-settings" element={<PrivacySettings />} />
           </Routes>
         </Router>
       </PricingProvider>

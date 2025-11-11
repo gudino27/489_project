@@ -1566,11 +1566,11 @@ const testimonialDb = {
   async trackLinkOpen(token, trackingData) {
     const db = await getDb();
 
-    // Insert tracking record
+    // Insert tracking record (city-level only for privacy compliance)
     await db.run(
       `INSERT INTO testimonial_link_tracking
-       (token, ip_address, user_agent, referer, city, region, country, country_code, latitude, longitude)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (token, ip_address, user_agent, referer, city, region, country, country_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         token,
         trackingData.ip_address,
@@ -1579,9 +1579,7 @@ const testimonialDb = {
         trackingData.city,
         trackingData.region,
         trackingData.country,
-        trackingData.country_code,
-        trackingData.latitude,
-        trackingData.longitude
+        trackingData.country_code
       ]
     );
 

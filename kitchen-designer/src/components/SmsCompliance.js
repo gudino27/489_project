@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './css/sms-compliance.css';
+import WebsitePrivacy from './WebsitePrivacy';
 
 const SmsCompliance = ({ defaultTab = 'consent' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -220,6 +221,8 @@ const SmsCompliance = ({ defaultTab = 'consent' }) => {
 
   const renderContent = () => {
     switch(activeTab) {
+      case 'website':
+        return <WebsitePrivacy />;
       case 'consent':
         return <ConsentContent />;
       case 'terms':
@@ -227,7 +230,7 @@ const SmsCompliance = ({ defaultTab = 'consent' }) => {
       case 'privacy':
         return <PrivacyContent />;
       default:
-        return <ConsentContent />;
+        return <WebsitePrivacy />;
     }
   };
 
@@ -235,22 +238,28 @@ const SmsCompliance = ({ defaultTab = 'consent' }) => {
     <div className="sms-compliance-container">
       <div className="sms-tabs-container">
         <button
+          className={`sms-tab-button ${activeTab === 'website' ? 'active' : ''}`}
+          onClick={() => setActiveTab('website')}
+        >
+          Website Privacy
+        </button>
+        <button
           className={`sms-tab-button ${activeTab === 'consent' ? 'active' : ''}`}
           onClick={() => setActiveTab('consent')}
         >
-          SMS Consent Process
+          SMS Consent
         </button>
         <button
           className={`sms-tab-button ${activeTab === 'terms' ? 'active' : ''}`}
           onClick={() => setActiveTab('terms')}
         >
-          Terms & Conditions
+          SMS Terms
         </button>
         <button
           className={`sms-tab-button ${activeTab === 'privacy' ? 'active' : ''}`}
           onClick={() => setActiveTab('privacy')}
         >
-          Privacy Policy
+          SMS Privacy
         </button>
       </div>
       

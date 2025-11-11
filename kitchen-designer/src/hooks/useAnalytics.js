@@ -43,6 +43,30 @@ const getUserInfo = () => {
   }
 };
 
+// Check if user has opted out of analytics or enabled "Do Not Track"
+const isOptedOut = () => {
+  try {
+    // Check for explicit opt-out flag
+    const optOut = localStorage.getItem('analytics_opt_out');
+    if (optOut === 'true') {
+      console.log('Analytics: User has opted out');
+      return true;
+    }
+
+    // Check for "Do Not Track" browser setting
+    const dnt = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+    if (dnt === '1' || dnt === 'yes') {
+      console.log('Analytics: Do Not Track is enabled');
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    // If there's an error checking opt-out status, default to not tracking
+    return true;
+  }
+};
+
 export const useAnalytics = (pagePath) => {
   const [viewId, setViewId] = useState(null);
   const startTime = useRef(Date.now());
@@ -51,6 +75,12 @@ export const useAnalytics = (pagePath) => {
   // Track page view on mount
   useEffect(() => {
     if (!pagePath || isTracking.current) return;
+
+    // Privacy compliance: Respect opt-out and Do Not Track
+    if (isOptedOut()) {
+      console.log('Analytics: Tracking disabled for this user');
+      return;
+    }
 
     isTracking.current = true;
     startTime.current = Date.now();
@@ -161,6 +191,12 @@ export const useAnalytics = (pagePath) => {
 // Hook for tracking custom events
 export const useEventTracking = () => {
   const trackEvent = async (eventName, eventData = {}) => {
+    // Privacy compliance: Respect opt-out and Do Not Track
+    if (isOptedOut()) {
+      console.log('Event tracking: Disabled for this user');
+      return;
+    }
+
     try {
       const sessionId = getSessionId();
       const userId = getUserInfo();

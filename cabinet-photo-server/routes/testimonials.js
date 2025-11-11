@@ -60,7 +60,7 @@ router.post("/track-open", async (req, res) => {
     // Get geolocation data
     const location = await getLocationFromIP(ip);
 
-    // Track the link open
+    // Track the link open (city-level only for privacy compliance)
     await testimonialDb.trackLinkOpen(token, {
       ip_address: ip,
       user_agent: userAgent,
@@ -68,9 +68,7 @@ router.post("/track-open", async (req, res) => {
       city: location.city,
       region: location.region,
       country: location.country,
-      country_code: location.country_code,
-      latitude: location.latitude,
-      longitude: location.longitude
+      country_code: location.country_code
     });
 
     // Send push notification to admins
@@ -109,7 +107,7 @@ router.get("/t/:token", async (req, res) => {
     // Get geolocation data
     const location = await getLocationFromIP(ip);
 
-    // Track the link open
+    // Track the link open (city-level only for privacy compliance)
     await testimonialDb.trackLinkOpen(token, {
       ip_address: ip,
       user_agent: userAgent,
@@ -117,9 +115,7 @@ router.get("/t/:token", async (req, res) => {
       city: location.city,
       region: location.region,
       country: location.country,
-      country_code: location.country_code,
-      latitude: location.latitude,
-      longitude: location.longitude
+      country_code: location.country_code
     });
 
     // Redirect to testimonial form with token

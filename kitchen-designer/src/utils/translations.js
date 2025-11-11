@@ -335,6 +335,7 @@ const translations = {
       "Are you sure you want to deactivate this user?",
     "userManagement.passwordMismatch": "Passwords do not match",
     "userManagement.never": "Never",
+    "userManagement.employee": "Employee",
 
     // Testimonial Manager
     "testimonialManager.title": "Testimonial Management",
@@ -1622,6 +1623,7 @@ const translations = {
       "¿Está seguro de que desea desactivar este usuario?",
     "userManagement.passwordMismatch": "Las contraseñas no coinciden",
     "userManagement.never": "Nunca",
+    "userManagement.employee": "Empleado",
 
     // Testimonial Manager
     "testimonialManager.title": "Gestión de Testimonios",

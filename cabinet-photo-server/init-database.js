@@ -52,6 +52,12 @@ async function initializeDatabase() {
   } finally {
     await db.close();
   }
+
+  // Run data cleanup for privacy compliance (24-month retention)
+  // Runs after database initialization with its own connection
+  console.log(' Running data cleanup (privacy compliance)...');
+  const { cleanupOldAnalytics } = require('./utils/data-cleanup');
+  await cleanupOldAnalytics();
 }
 
 async function createBasicTables(db) {
@@ -881,6 +887,7 @@ async function addTestimonialTables(db) {
   `);
 
   // Testimonial link tracking table for tracking link opens
+  // Privacy-compliant: Only stores city-level geolocation (NO precise lat/long)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS testimonial_link_tracking (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -893,8 +900,6 @@ async function addTestimonialTables(db) {
       region TEXT,
       country TEXT,
       country_code TEXT,
-      latitude REAL,
-      longitude REAL,
       FOREIGN KEY (token) REFERENCES testimonial_tokens(token) ON DELETE CASCADE
     )
   `);
@@ -919,6 +924,63 @@ async function addTestimonialTables(db) {
     }
   } catch (migrationError) {
     console.warn(' Migration warning:', migrationError.message);
+  }
+
+  // Migration: Remove latitude and longitude columns for privacy compliance
+  try {
+    console.log(' 🔒 Privacy compliance migration: Removing precise geolocation data...');
+    const trackingTableInfo = await db.all('PRAGMA table_info(testimonial_link_tracking)');
+    const trackingColumnNames = trackingTableInfo.map(col => col.name);
+
+    if (trackingColumnNames.includes('latitude') || trackingColumnNames.includes('longitude')) {
+      console.log('   Found lat/long columns in testimonial_link_tracking, removing...');
+
+      // SQLite doesn't support DROP COLUMN in older versions, so we recreate the table
+      await db.exec('BEGIN TRANSACTION');
+
+      // Create new table without lat/long
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS testimonial_link_tracking_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT NOT NULL,
+          opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          ip_address TEXT,
+          user_agent TEXT,
+          referer TEXT,
+          city TEXT,
+          region TEXT,
+          country TEXT,
+          country_code TEXT,
+          FOREIGN KEY (token) REFERENCES testimonial_tokens(token) ON DELETE CASCADE
+        )
+      `);
+
+      // Copy data from old table (excluding lat/long)
+      await db.exec(`
+        INSERT INTO testimonial_link_tracking_new
+        (id, token, opened_at, ip_address, user_agent, referer, city, region, country, country_code)
+        SELECT id, token, opened_at, ip_address, user_agent, referer, city, region, country, country_code
+        FROM testimonial_link_tracking
+      `);
+
+      // Drop old table
+      await db.exec('DROP TABLE testimonial_link_tracking');
+
+      // Rename new table
+      await db.exec('ALTER TABLE testimonial_link_tracking_new RENAME TO testimonial_link_tracking');
+
+      await db.exec('COMMIT');
+      console.log('   ✅ Removed latitude and longitude columns (privacy compliance)');
+    } else {
+      console.log('   ✅ Lat/long columns already removed or never existed');
+    }
+  } catch (migrationError) {
+    console.error('   ❌ Migration error (rolling back):', migrationError.message);
+    try {
+      await db.exec('ROLLBACK');
+    } catch (rollbackError) {
+      // Ignore rollback errors
+    }
   }
 
   // Create indexes for testimonials

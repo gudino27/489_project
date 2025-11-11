@@ -1119,6 +1119,31 @@ router.post("/api/admin/security/unlock-account/:userId", authenticateUser, requ
   }
 });
 
+// Test geolocation with any IP address (admin only)
+router.post("/api/admin/test-geolocation", authenticateUser, requireRole("admin"), async (req, res) => {
+  try {
+    const { ip } = req.body;
+
+    if (!ip) {
+      return res.status(400).json({ error: "IP address is required" });
+    }
+
+    const { getLocationFromIP } = require("../utils/geolocation");
+    const location = await getLocationFromIP(ip);
+
+    res.json({
+      success: true,
+      ip: ip,
+      location: location,
+      privacy_compliant: !location.latitude && !location.longitude,
+      message: "Geolocation test successful"
+    });
+  } catch (error) {
+    console.error("Error testing geolocation:", error);
+    res.status(500).json({ error: "Failed to test geolocation" });
+  }
+});
+
 // EXPORTS
 module.exports = router;
 
