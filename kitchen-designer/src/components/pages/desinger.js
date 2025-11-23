@@ -17,6 +17,7 @@ import { generatePDF, sendQuote } from '../../services/pdfService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { usePricing } from '../../contexts/PricingContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import FloatingPropertiesPanel from '../design/FloatingPropertiesPanel';
 const KitchenDesigner = () => {
   // Analytics tracking
   useAnalytics('/designer');
@@ -2959,6 +2960,21 @@ const KitchenDesigner = () => {
             </div>
           </div>
         </div>
+        {/* Floating Properties Panel */}
+        {selectedElement && (
+          <FloatingPropertiesPanel
+            selectedElement={selectedElement}
+            currentRoomData={currentRoomData}
+            setCurrentRoomData={setCurrentRoomData}
+            elementTypes={elementTypes}
+            updateElement={updateElement}
+            deleteElement={deleteElement}
+            rotateElement={rotateElement}
+            rotateCornerCabinet={rotateCornerCabinet}
+            materialMultipliers={materialMultipliers}
+            onClose={() => setSelectedElement(null)}
+          />
+        )}
         {/* Quote Form Modal */}
         <QuoteForm
           isVisible={showQuoteForm}
