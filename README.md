@@ -367,8 +367,7 @@ Behind the scenes, you have complete control through a comprehensive admin panel
 
 - 3D visualization capabilities
 - Integration with supplier catalogs
-- Automated email follow-ups
-- Mobile app version
+
 
 ---
 ## Acknowledgments
