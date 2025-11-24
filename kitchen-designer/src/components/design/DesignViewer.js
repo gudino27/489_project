@@ -28,6 +28,34 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
     statusBreakdown: { pending: 0, new: 0, viewed: 0 },
     totalRevenue: 0, averageOrderValue: 0, recentDesigns: 0
   });
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Handle 3D element updates
+  const handleUpdateElement = (elementId, updates) => {
+    setSelectedDesign(prev => {
+      const newDesign = { ...prev };
+      
+      // Helper to update elements in a room
+      const updateRoomElements = (roomData) => {
+        if (!roomData || !roomData.elements) return roomData;
+        const elementIndex = roomData.elements.findIndex(el => el.id === elementId);
+        if (elementIndex === -1) return roomData;
+        
+        const newElements = [...roomData.elements];
+        newElements[elementIndex] = { ...newElements[elementIndex], ...updates };
+        return { ...roomData, elements: newElements };
+      };
+
+      if (newDesign.kitchen_data) {
+        newDesign.kitchen_data = updateRoomElements(newDesign.kitchen_data);
+      }
+      if (newDesign.bathroom_data) {
+        newDesign.bathroom_data = updateRoomElements(newDesign.bathroom_data);
+      }
+      
+      return newDesign;
+    });
+  };
 
   // New state for enhanced functionality
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
@@ -1002,12 +1030,23 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                 </div>
 
                 {/* Design Preview */}
+                {/* Design Preview */}
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-3">Design Visualization</h3>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">Design Visualization</h3>
+                    <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${isEditing ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                        {isEditing ? 'Done Editing' : 'Edit 3D Layout'}
+                    </button>
+                  </div>
                   <DesignPreview
                     designData={selectedDesign}
                     hasKitchen={selectedDesign.include_kitchen && selectedDesign.kitchen_data}
                     hasBathroom={selectedDesign.include_bathroom && selectedDesign.bathroom_data}
+                    interactive={isEditing}
+                    onUpdateElement={handleUpdateElement}
                   />
                 </div>
 

@@ -33,8 +33,6 @@ email-signature-studio/*
 # Backups
 backups/
 backups/*
-data/
-data/*
 cabinet-photo-server/database/cabinet_photos.db-wal
 cabinet-photo-server/database/cabinet_photos.db-shm
 cabinet-photo-server/uploads/*

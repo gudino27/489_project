@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Maximize2, X, Home, Bath } from 'lucide-react';
+import { Maximize2, X, Home, Bath, Box } from 'lucide-react';
+import DesignPreview3D from './DesignPreview3D';
 
-const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
+const DesignPreview = ({ designData, hasKitchen, hasBathroom, interactive, onUpdateElement }) => {
     const [viewMode, setViewMode] = useState('floor');
     const [selectedWall, setSelectedWall] = useState(1);
     const [showFullscreen, setShowFullscreen] = useState(false);
@@ -44,147 +45,76 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
     const currentImages = getCurrentRoomImages();
     const roomData = getCurrentRoomData();
 
-    // If we have saved images, use those with room switching
-    if (currentImages.floor_plan || currentImages.wall_views) {
-        return (
-            <div className="design-preview">
-                {/* Room Switcher - Only show if both rooms exist */}
-                {hasKitchen && hasBathroom && (
-                    <div className="flex items-center justify-center mb-4">
-                        <div className="bg-white rounded-lg p-1 shadow-sm border">
-                            <button
-                                onClick={() => setActiveRoom('kitchen')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'kitchen'
-                                    ? 'bg-blue-100 text-blue-700 font-medium'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Home className="w-4 h-4" />
-                                Kitchen
-                            </button>
-                            <button
-                                onClick={() => setActiveRoom('bathroom')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${activeRoom === 'bathroom'
-                                    ? 'bg-purple-100 text-purple-700 font-medium'
-                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Bath className="w-4 h-4" />
-                                Bathroom
-                            </button>
-                        </div>
-                    </div>
-                )}
+    // SVG Generation code - use same scaling logic as main designer
+    const calculateScale = () => {
+        if (!roomData || !roomData.dimensions) return 2;
 
-                {/* Single Room Label - Show if only one room exists */}
-                {(hasKitchen && !hasBathroom) && (
-                    <div className="text-center mb-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
-                            <Home className="w-4 h-4" />
-                            Kitchen Design
-                        </span>
-                    </div>
-                )}
+        const roomWidthFeet = parseFloat(roomData.dimensions.width) || 10;
+        const roomHeightFeet = parseFloat(roomData.dimensions.height) || 10;
 
-                {(hasBathroom && !hasKitchen) && (
-                    <div className="text-center mb-4">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">
-                            <Bath className="w-4 h-4" />
-                            Bathroom Design
-                        </span>
-                    </div>
-                )}
+        // Use the same scale calculation as the main designer
+        const roomWidthInches = roomWidthFeet * 12;
+        const roomHeightInches = roomHeightFeet * 12;
+        const maxCanvasSize = 600;
+        
+        const scaleX = maxCanvasSize / roomWidthInches;
+        const scaleY = maxCanvasSize / roomHeightInches;
+        
+        return Math.min(scaleX, scaleY);
+    };
 
-                {/* View Mode Controls */}
-                <div className="mb-4 flex gap-2">
-                    <button
-                        onClick={() => setViewMode('floor')}
-                        className={`px-4 py-2 rounded ${viewMode === 'floor' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                    >
-                        Floor Plan
-                    </button>
-                    <button
-                        onClick={() => setViewMode('walls')}
-                        className={`px-4 py-2 rounded ${viewMode === 'walls' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                    >
-                        Wall Views
-                    </button>
-                    <button
-                        onClick={() => setShowFullscreen(true)}
-                        className="ml-auto px-4 py-2 bg-gray-200 rounded flex items-center gap-2"
-                    >
-                        <Maximize2 className="w-4 h-4" />
-                        Fullscreen
-                    </button>
-                </div>
+    const scale = calculateScale();
+    const roomWidth = parseFloat(roomData?.dimensions?.width || 0) * 12 * scale;
+    const roomHeight = parseFloat(roomData?.dimensions?.height || 0) * 12 * scale;
+    const wallHeight = parseFloat(roomData?.dimensions?.wallHeight || 96);
 
-                {/* Floor Plan View */}
-                {viewMode === 'floor' && currentImages.floor_plan && (
-                    <div className="border rounded-lg p-4 bg-white">
-                        <div className="text-center mb-2">
-                            <span className="text-sm text-gray-600">
-                                {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Floor Plan
-                            </span>
-                        </div>
-                        <img
-                            src={currentImages.floor_plan}
-                            alt={`${activeRoom} Floor Plan`}
-                            className="w-full h-auto"
-                        />
-                    </div>
-                )}
+    // Element types for rendering - Enhanced for better bathroom display
+    const elementTypes = {
+        'base': { name: 'Base Cabinet', defaultHeight: 34.5, color: '#8B4513' },
+        'wall': { name: 'Wall Cabinet', defaultHeight: 30, color: '#A0522D' },
+        'tall': { name: 'Tall Cabinet', defaultHeight: 84, color: '#8B4513' },
+        'corner': { name: 'Corner Cabinet', defaultHeight: 34.5, color: '#8B4513' },
+        'sink-base': { name: 'Sink Base', defaultHeight: 34.5, color: '#8B4513' },
+        'vanity': { name: 'Vanity Cabinet', defaultHeight: 32, color: '#8B4513' },
+        'vanity-sink': { name: 'Vanity with Sink', defaultHeight: 32, color: '#654321' },
+        'medicine': { name: 'Medicine Cabinet', defaultHeight: 30, color: '#A0522D', mountHeight: 48 },
+        'medicine-mirror': { name: 'Medicine Cabinet w/ Mirror', defaultHeight: 36, color: '#A0522D', mountHeight: 48 },
+        'linen': { name: 'Linen Cabinet', defaultHeight: 84, color: '#8B4513' },
+        'linen-tower': { name: 'Linen Tower', defaultHeight: 84, color: '#8B4513' },
+        'double-vanity': { name: 'Double Vanity', defaultHeight: 32, color: '#8B4513' },
+        'floating-vanity': { name: 'Floating Vanity', defaultHeight: 32, color: '#8B4513' },
+        'corner-vanity': { name: 'Corner Vanity', defaultHeight: 32, color: '#8B4513' },
+        'vanity-tower': { name: 'Vanity Tower', defaultHeight: 84, color: '#8B4513' },
+        'refrigerator': { name: 'Refrigerator', defaultHeight: 70, color: '#C0C0C0' },
+        'stove': { name: 'Stove/Range', defaultHeight: 36, color: '#666' },
+        'dishwasher': { name: 'Dishwasher', defaultHeight: 34, color: '#C0C0C0' },
+        'microwave': { name: 'Microwave', defaultHeight: 18, color: '#666' },
+        'toilet': { name: 'Toilet', defaultHeight: 30, color: '#FFFFFF', stroke: '#999' },
+        'tub': { name: 'Bathtub', defaultHeight: 20, color: '#E8F4FD', stroke: '#4A90E2' },
+        'shower': { name: 'Shower', defaultHeight: 80, color: '#F0F8FF', stroke: '#4A90E2' }
+    };
 
-                {/* Wall Views */}
-                {viewMode === 'walls' && currentImages.wall_views && (
-                    <div className="space-y-4">
-                        <div className="flex gap-2">
-                            {[1, 2, 3, 4].map(wall => (
-                                <button
-                                    key={wall}
-                                    onClick={() => setSelectedWall(wall)}
-                                    className={`px-3 py-1 rounded ${selectedWall === wall ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                                >
-                                    Wall {wall}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="border rounded-lg p-4 bg-white">
-                            <div className="text-center mb-2">
-                                <span className="text-sm text-gray-600">
-                                    {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Wall {selectedWall}
-                                </span>
-                            </div>
-                            {currentImages.wall_views.find(w => w.wall === selectedWall) && (
-                                <img
-                                    src={currentImages.wall_views.find(w => w.wall === selectedWall).image}
-                                    alt={`${activeRoom} Wall ${selectedWall}`}
-                                    className="w-full h-auto"
-                                />
-                            )}
-                        </div>
-                    </div>
-                )}
+    const getElementsOnWall = (wallNumber) => {
+        if (!roomData) return [];
+        const threshold = 20;
+        return roomData.elements.filter(element => {
+            const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
+            const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
 
-                {/* Fullscreen Modal */}
-                {showFullscreen && (
-                    <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-                        <button
-                            onClick={() => setShowFullscreen(false)}
-                            className="absolute top-4 right-4 text-white"
-                        >
-                            <X className="w-8 h-8" />
-                        </button>
-                        <img
-                            src={viewMode === 'floor' ? currentImages.floor_plan :
-                                currentImages.wall_views?.find(w => w.wall === selectedWall)?.image}
-                            alt="Design Preview"
-                            className="max-w-full max-h-full"
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    }
+            switch (wallNumber) {
+                case 1:
+                    return element.y < threshold;
+                case 2:
+                    return element.x + elementWidth > roomWidth - threshold;
+                case 3:
+                    return element.y + elementDepth > roomHeight - threshold;
+                case 4:
+                    return element.x < threshold;
+                default:
+                    return false;
+            }
+        });
+    };
 
     // If no images, show message or fallback to SVG generation
     if (!roomData || !roomData.elements) {
@@ -234,77 +164,6 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
         );
     }
 
-    // SVG Generation code - use same scaling logic as main designer
-    const calculateScale = () => {
-        if (!roomData || !roomData.dimensions) return 2;
-
-        const roomWidthFeet = parseFloat(roomData.dimensions.width) || 10;
-        const roomHeightFeet = parseFloat(roomData.dimensions.height) || 10;
-
-        // Use the same scale calculation as the main designer
-        const roomWidthInches = roomWidthFeet * 12;
-        const roomHeightInches = roomHeightFeet * 12;
-        const maxCanvasSize = 600;
-        
-        const scaleX = maxCanvasSize / roomWidthInches;
-        const scaleY = maxCanvasSize / roomHeightInches;
-        
-        return Math.min(scaleX, scaleY);
-    };
-
-    const scale = calculateScale();
-    const roomWidth = parseFloat(roomData.dimensions.width) * 12 * scale;
-    const roomHeight = parseFloat(roomData.dimensions.height) * 12 * scale;
-    const wallHeight = parseFloat(roomData.dimensions.wallHeight);
-
-
-    // Element types for rendering - Enhanced for better bathroom display
-    const elementTypes = {
-        'base': { name: 'Base Cabinet', defaultHeight: 34.5, color: '#8B4513' },
-        'wall': { name: 'Wall Cabinet', defaultHeight: 30, color: '#A0522D' },
-        'tall': { name: 'Tall Cabinet', defaultHeight: 84, color: '#8B4513' },
-        'corner': { name: 'Corner Cabinet', defaultHeight: 34.5, color: '#8B4513' },
-        'sink-base': { name: 'Sink Base', defaultHeight: 34.5, color: '#8B4513' },
-        'vanity': { name: 'Vanity Cabinet', defaultHeight: 32, color: '#8B4513' },
-        'vanity-sink': { name: 'Vanity with Sink', defaultHeight: 32, color: '#654321' },
-        'medicine': { name: 'Medicine Cabinet', defaultHeight: 30, color: '#A0522D', mountHeight: 48 },
-        'medicine-mirror': { name: 'Medicine Cabinet w/ Mirror', defaultHeight: 36, color: '#A0522D', mountHeight: 48 },
-        'linen': { name: 'Linen Cabinet', defaultHeight: 84, color: '#8B4513' },
-        'linen-tower': { name: 'Linen Tower', defaultHeight: 84, color: '#8B4513' },
-        'double-vanity': { name: 'Double Vanity', defaultHeight: 32, color: '#8B4513' },
-        'floating-vanity': { name: 'Floating Vanity', defaultHeight: 32, color: '#8B4513' },
-        'corner-vanity': { name: 'Corner Vanity', defaultHeight: 32, color: '#8B4513' },
-        'vanity-tower': { name: 'Vanity Tower', defaultHeight: 84, color: '#8B4513' },
-        'refrigerator': { name: 'Refrigerator', defaultHeight: 70, color: '#C0C0C0' },
-        'stove': { name: 'Stove/Range', defaultHeight: 36, color: '#666' },
-        'dishwasher': { name: 'Dishwasher', defaultHeight: 34, color: '#C0C0C0' },
-        'microwave': { name: 'Microwave', defaultHeight: 18, color: '#666' },
-        'toilet': { name: 'Toilet', defaultHeight: 30, color: '#FFFFFF', stroke: '#999' },
-        'tub': { name: 'Bathtub', defaultHeight: 20, color: '#E8F4FD', stroke: '#4A90E2' },
-        'shower': { name: 'Shower', defaultHeight: 80, color: '#F0F8FF', stroke: '#4A90E2' }
-    };
-
-    const getElementsOnWall = (wallNumber) => {
-        const threshold = 20;
-        return roomData.elements.filter(element => {
-            const elementWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
-            const elementDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
-
-            switch (wallNumber) {
-                case 1:
-                    return element.y < threshold;
-                case 2:
-                    return element.x + elementWidth > roomWidth - threshold;
-                case 3:
-                    return element.y + elementDepth > roomHeight - threshold;
-                case 4:
-                    return element.x < threshold;
-                default:
-                    return false;
-            }
-        });
-    };
-
     return (
         <div className="design-preview">
             {/* Room Switcher */}
@@ -353,75 +212,103 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             <span className="text-gray-600">Height:</span>
                             <span className="ml-1 font-medium">{roomData.dimensions.height}'</span>
                         </div>
-                        <div>
-                            <span className="text-gray-600">Wall Height:</span>
-                            <span className="ml-1 font-medium">{roomData.dimensions.wallHeight}"</span>
-                        </div>
-                        <div>
-                            <span className="text-gray-600">Elements:</span>
-                            <span className="ml-1 font-medium">{roomData.elements.length}</span>
-                        </div>
                     </div>
                 </div>
             )}
 
             {/* View Mode Controls */}
-            <div className="mb-4 flex gap-2">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button
+                        onClick={() => setViewMode('floor')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'floor'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Floor Plan
+                    </button>
+                    <button
+                        onClick={() => setViewMode('walls')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'walls'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Wall Views
+                    </button>
+                    <button
+                        onClick={() => setViewMode('3d')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === '3d'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Box className="w-4 h-4" />
+                        3D View
+                    </button>
+                </div>
+                
                 <button
-                    onClick={() => setViewMode('floor')}
-                    className={`px-4 py-2 rounded ${viewMode === 'floor' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setShowFullscreen(true)}
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Fullscreen View"
                 >
-                    Floor Plan
-                </button>
-                <button
-                    onClick={() => setViewMode('wall')}
-                    className={`px-4 py-2 rounded ${viewMode === 'wall' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                >
-                    Wall Views
+                    <Maximize2 className="w-5 h-5" />
                 </button>
             </div>
 
-            {/* SVG Floor Plan */}
-            {viewMode === 'floor' ? (
-                <div className="border rounded-lg p-4 bg-white">
+            {/* 3D View */}
+            {viewMode === '3d' && (
+                <div className="border-2 rounded-lg overflow-hidden bg-gray-50 h-[1200px] relative">
+                    <DesignPreview3D 
+                        roomData={roomData} 
+                        elementTypes={elementTypes} 
+                        scale={scale}
+                        interactive={interactive}
+                        onUpdateElement={onUpdateElement}
+                    />
+                    <div className="absolute bottom-7 right-4 bg-white/80 p-2 rounded text-xs text-gray-600 pointer-events-none">
+                        <p>Left Click + Drag to Move</p>
+                        <p>Right Click + Drag to Rotate</p>
+                        <p>Scroll to Zoom</p>
+                    </div>
+                </div>
+            )}
+            {/* Floor Plan View */}
+            {viewMode === 'floor' && (
+                <div className="border-2 rounded-lg p-4 bg-white shadow-sm overflow-auto">
                     <svg
-                        width={600}
-                        height={600}
-                        className="border"
+                        width={roomWidth + 60}
+                        height={roomHeight + 60}
+                        className="mx-auto"
                         viewBox={`0 0 ${roomWidth + 60} ${roomHeight + 60}`}
                     >
+                        {/* Grid background */}
+                        <defs>
+                            <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+                                <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#f0f0f0" strokeWidth="1" />
+                            </pattern>
+                            <pattern id="tile" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <rect width="20" height="20" fill="#f8f9fa" stroke="#e9ecef" strokeWidth="1" />
+                            </pattern>
+                        </defs>
+                        <rect width={roomWidth + 60} height={roomHeight + 60} fill="white" />
+                        <rect x="30" y="30" width={roomWidth} height={roomHeight} fill="url(#grid)" stroke="#eee" strokeWidth="1" />
+                        
                         {/* Room outline */}
                         <rect
                             x="30"
                             y="30"
                             width={roomWidth}
                             height={roomHeight}
-                            fill="#f9f9f9"
+                            fill="none"
                             stroke="#333"
-                            strokeWidth="3"
+                            strokeWidth="4"
                         />
-
-                        {/* Grid */}
-                        <defs>
-                            <pattern id={`grid-${activeRoom}`} width={12 * scale} height={12 * scale} patternUnits="userSpaceOnUse">
-                                <path d={`M ${12 * scale} 0 L 0 0 0 ${12 * scale}`} fill="none" stroke="#e0e0e0" strokeWidth="0.5" />
-                            </pattern>
-
-                            {/* Patterns for bathroom fixtures */}
-                            <pattern id="tile" width="4" height="4" patternUnits="userSpaceOnUse">
-                                <rect width="4" height="4" fill="#f0f0f0" />
-                                <rect width="2" height="2" fill="#e0e0e0" />
-                                <rect x="2" y="2" width="2" height="2" fill="#e0e0e0" />
-                            </pattern>
-                        </defs>
-                        <rect x="30" y="30" width={roomWidth} height={roomHeight} fill={`url(#grid-${activeRoom})`} />
 
                         {/* Elements */}
                         {roomData.elements.map((element, index) => {
-                            const spec = elementTypes[element.type] || { color: '#999', stroke: '#666' };
-                            const width = element.width * scale;
-                            const depth = element.depth * scale;
-                            
                             // Use element coordinates directly (they should already be scaled)
                             // For wall-mounted elements, check if they need special positioning
                             const elementSpec = elementTypes[element.type] || {};
@@ -433,6 +320,9 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                 // This is a wall-mounted element - position should be correct as stored
                                 // The mountHeight is just metadata for rendering
                             }
+
+                            const width = (element.rotation % 180 === 0 ? element.width : element.depth) * scale;
+                            const depth = (element.rotation % 180 === 0 ? element.depth : element.width) * scale;
 
                             // Special rendering for bathroom fixtures
                             if (element.type === 'toilet') {
@@ -526,22 +416,25 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                         <circle
                                             cx={width / 2}
                                             cy={depth / 2}
-                                            r="4"
-                                            fill="#999"
-                                            stroke="#666"
+                                            r={width * 0.1}
+                                            fill="#ccc"
+                                        />
+                                        <line
+                                            x1="0"
+                                            y1="0"
+                                            x2={width}
+                                            y2={depth}
+                                            stroke="#4A90E2"
                                             strokeWidth="1"
                                         />
-                                        <text
-                                            x={width / 2}
-                                            y={depth / 2 - 15}
-                                            textAnchor="middle"
-                                            dominantBaseline="middle"
-                                            fontSize="9"
-                                            fill="#4A90E2"
-                                            fontWeight="bold"
-                                        >
-                                            SHOWER
-                                        </text>
+                                        <line
+                                            x1={width}
+                                            y1="0"
+                                            x2="0"
+                                            y2={depth}
+                                            stroke="#4A90E2"
+                                            strokeWidth="1"
+                                        />
                                     </g>
                                 );
                             }
@@ -637,12 +530,15 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                         )}
                                         <text
                                             x={width / 2}
-                                            y={depth * 0.9}
-                                            textAnchor="middle" dominantBaseline="middle"
-                                            fontSize={Math.min(width, depth) * 0.12}
-                                            fill="white" fontWeight="bold"
+                                            y={depth / 2 + 15}
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            fontSize={Math.min(width, depth) / 5}
+                                            fill="white"
+                                            fontWeight="bold"
+                                            style={{ textShadow: '0px 1px 2px rgba(0,0,0,0.5)' }}
                                         >
-                                            {element.type.toUpperCase().replace('-', ' ')}
+                                            {element.type.includes('vanity') ? 'VANITY' : ''}
                                         </text>
                                     </g>
                                 );
@@ -652,60 +548,23 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             if (element.category === 'cabinet') {
                                 return (
                                     <g key={element.id || index} transform={`translate(${30 + elementX}, ${30 + elementY})`}>
-                                        <defs>
-                                            <linearGradient id={`cabinetGrad${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <stop offset="0%" stopColor="#A0522D" />
-                                                <stop offset="50%" stopColor="#8B4513" />
-                                                <stop offset="100%" stopColor="#654321" />
-                                            </linearGradient>
-                                        </defs>
-                                        {/* Drop shadow */}
                                         <rect
-                                            x="2" y="2"
-                                            width={width} height={depth}
-                                            fill="#00000015" rx="2"
-                                        />
-                                        {/* Main cabinet body */}
-                                        <rect
-                                            width={width} height={depth}
-                                            fill={`url(#cabinetGrad${index})`}
-                                            stroke="#2F1B14"
+                                            width={width}
+                                            height={depth}
+                                            fill={elementSpec.color || '#8B4513'}
+                                            stroke="#333"
                                             strokeWidth="2"
+                                            opacity="0.9"
                                             rx="2"
                                         />
-                                        {/* Cabinet door frame */}
-                                        <rect
-                                            x={width * 0.1} y={depth * 0.1}
-                                            width={width * 0.8} height={depth * 0.8}
-                                            fill="none"
-                                            stroke="#2F1B14"
-                                            strokeWidth="1"
-                                            rx="1"
-                                        />
-                                        {/* Door handle */}
-                                        <circle
-                                            cx={width * 0.8}
-                                            cy={depth * 0.5}
-                                            r="2"
-                                            fill="#C0C0C0"
-                                            stroke="#999"
-                                            strokeWidth="1"
-                                        />
-                                        {/* Wall-mounted indicator */}
-                                        {elementSpec.mountHeight && (
-                                            <rect
-                                                x="0" y={depth - 2}
-                                                width={width} height="2"
-                                                fill="#2F1B14"
-                                                opacity="0.5"
-                                            />
-                                        )}
+                                        <line x1="0" y1="0" x2={width} y2={depth} stroke="#5c3a21" strokeWidth="1" />
+                                        <line x1={width} y1="0" x2="0" y2={depth} stroke="#5c3a21" strokeWidth="1" />
                                         <text
                                             x={width / 2}
                                             y={depth / 2}
                                             textAnchor="middle"
                                             dominantBaseline="middle"
-                                            fontSize={Math.min(width, depth) * 0.12}
+                                            fontSize={Math.min(width, depth) / 4}
                                             fill="white"
                                             fontWeight="bold"
                                         >
@@ -721,8 +580,8 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                     <rect
                                         width={width}
                                         height={depth}
-                                        fill={spec.color || '#999'}
-                                        stroke={spec.stroke || '#333'}
+                                        fill={elementSpec.color || '#999'}
+                                        stroke={elementSpec.stroke || '#333'}
                                         strokeWidth="2"
                                         opacity="0.9"
                                         rx="2"
@@ -751,7 +610,10 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                         </text>
                     </svg>
                 </div>
-            ) : (
+            )}
+
+            {/* SVG Wall Views */}
+            {viewMode === 'walls' && (
                 /* Wall View - Enhanced */
                 <div className="space-y-4">
                     <div className="flex gap-2">
@@ -823,7 +685,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                                     <stop offset="100%" stopColor="#654321" />
                                                 </linearGradient>
                                             </defs>
-                                            {/* Cabinet body */}
+                                            {/* Cabinet Body */}
                                             <rect
                                                 x={xPos} y={yPos}
                                                 width={elementWidth} height={height}
@@ -833,38 +695,22 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                                 rx="3"
                                             />
                                             {/* Cabinet doors - elevation view */}
-                                            {elementWidth > 40 ? (
-                                                // Double doors for wider cabinets
-                                                <>
-                                                    <rect
-                                                        x={xPos + 4} y={yPos + 4}
-                                                        width={elementWidth/2 - 6} height={height - 8}
-                                                        fill="none" stroke="#2F1B14"
-                                                        strokeWidth="1.5" rx="2"
-                                                    />
-                                                    <rect
-                                                        x={xPos + elementWidth/2 + 2} y={yPos + 4}
-                                                        width={elementWidth/2 - 6} height={height - 8}
-                                                        fill="none" stroke="#2F1B14"
-                                                        strokeWidth="1.5" rx="2"
-                                                    />
-                                                    {/* Door handles */}
-                                                    <circle cx={xPos + elementWidth/2 - 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
-                                                    <circle cx={xPos + elementWidth/2 + 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
-                                                </>
-                                            ) : (
-                                                // Single door for narrow cabinets
-                                                <>
-                                                    <rect
-                                                        x={xPos + 4} y={yPos + 4}
-                                                        width={elementWidth - 8} height={height - 8}
-                                                        fill="none" stroke="#2F1B14"
-                                                        strokeWidth="1.5" rx="2"
-                                                    />
-                                                    <circle cx={xPos + elementWidth - 12} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
-                                                </>
-                                            )}
-                                            {/* Cabinet label */}
+                                            <rect
+                                                x={xPos + 4} y={yPos + 4}
+                                                width={elementWidth/2 - 6} height={height - 8}
+                                                fill="none" stroke="#2F1B14"
+                                                strokeWidth="1.5" rx="2"
+                                            />
+                                            <rect
+                                                x={xPos + elementWidth/2 + 2} y={yPos + 4}
+                                                width={elementWidth/2 - 6} height={height - 8}
+                                                fill="none" stroke="#2F1B14"
+                                                strokeWidth="1.5" rx="2"
+                                            />
+                                            {/* Door handles */}
+                                            <circle cx={xPos + elementWidth/2 - 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
+                                            <circle cx={xPos + elementWidth/2 + 8} cy={yPos + height/2} r="2" fill="#C0C0C0" stroke="#999" />
+                                            
                                             <text
                                                 x={xPos + elementWidth / 2}
                                                 y={yPos + height + 15}
@@ -879,8 +725,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                         </g>
                                     );
                                 }
-                                
-                                // Default rendering for non-cabinet elements
+
                                 return (
                                     <g key={element.id || index}>
                                         <rect
@@ -892,7 +737,7 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                                             stroke="#333"
                                             strokeWidth="2"
                                             opacity="0.9"
-                                            rx="3"
+                                            rx="2"
                                         />
                                         <text
                                             x={xPos + elementWidth / 2}
@@ -952,6 +797,67 @@ const DesignPreview = ({ designData, hasKitchen, hasBathroom }) => {
                             {(roomData.dimensions.width * roomData.dimensions.height).toFixed(0)}
                         </div>
                         <div className="text-xs text-gray-600">Sq Ft</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Fullscreen Modal */}
+            {showFullscreen && (
+                <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+                        <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+                            <h3 className="text-xl font-bold text-gray-800">
+                                {activeRoom === 'kitchen' ? 'Kitchen' : 'Bathroom'} Design Preview
+                            </h3>
+                            <button
+                                onClick={() => setShowFullscreen(false)}
+                                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                            >
+                                <X className="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-auto p-8 bg-gray-100 flex items-center justify-center">
+                            {viewMode === '3d' ? (
+                                <div className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden relative">
+                                    <DesignPreview3D 
+                                        roomData={roomData} 
+                                        elementTypes={elementTypes} 
+                                        scale={scale}
+                                        interactive={interactive}
+                                        onUpdateElement={onUpdateElement}
+                                    />
+                                    <div className="absolute bottom-4 right-4 bg-white/80 p-2 rounded text-xs text-gray-600 pointer-events-none">
+                                        <p>Left Click + Drag to Move</p>
+                                        <p>Right Click + Drag to Rotate</p>
+                                        <p>Scroll to Zoom</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-white p-8 rounded-lg shadow-lg max-w-full max-h-full overflow-auto">
+                                    {viewMode === 'floor' ? (
+                                        <img
+                                            src={currentImages.floor_plan || `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#eee"/><text x="50" y="50" text-anchor="middle">Preview</text></svg>')}`}
+                                            alt="Full Floor Plan"
+                                            className="max-w-full max-h-[70vh] object-contain"
+                                        />
+                                    ) : (
+                                        <div className="space-y-8">
+                                            {currentImages.wall_views?.map((view, i) => (
+                                                <div key={i} className="space-y-2">
+                                                    <h4 className="font-medium text-gray-500">Wall {view.wall}</h4>
+                                                    <img
+                                                        src={view.image}
+                                                        alt={`Wall ${view.wall}`}
+                                                        className="max-w-full max-h-[60vh] object-contain border rounded"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

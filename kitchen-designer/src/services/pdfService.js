@@ -154,6 +154,42 @@ export const generatePDF = async ({
   // Return PDF blob for potential email attachment
   return pdf.output('blob');
 };
+const capture3DViews = async (setViewMode, currentRoomData) => {
+  const views3D = [];
+
+  // Only capture 3D if there are elements to show
+  if (!currentRoomData || !currentRoomData.elements || currentRoomData.elements.length === 0) {
+    return views3D;
+  }
+
+  try {
+    // Switch to 3D view
+    setViewMode('3d');
+    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 3D scene to render
+
+    // Find the 3D canvas element (React Three Fiber creates a canvas)
+    const canvas3D = document.querySelector('canvas');
+
+    if (canvas3D) {
+      // Capture the 3D view as-is (perspective view)
+      const imageData = canvas3D.toDataURL('image/png', 1.0);
+
+      views3D.push({
+        label: '3D Perspective View',
+        image: imageData
+      });
+
+      console.log('Captured 3D perspective view');
+    } else {
+      console.warn('3D canvas not found');
+    }
+
+  } catch (error) {
+    console.error('Error capturing 3D views:', error);
+  }
+
+  return views3D;
+};
 
 export const sendQuote = async ({
   clientInfo,
@@ -283,6 +319,33 @@ export const sendQuote = async ({
       }
     }
 
+    // Capture 3D views from human perspective (6ft eye height)
+    loadingMessage.innerHTML = 'Capturing 3D perspective views...';
+
+    const views3D = [];
+
+    // Capture 3D for kitchen if included
+    if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
+      const kitchenViews = await capture3DViews(setViewMode, kitchenData);
+      kitchenViews.forEach(view => {
+        views3D.push({
+          ...view,
+          room: 'Kitchen'
+        });
+      });
+    }
+
+    // Capture 3D for bathroom if included
+    if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
+      const bathroomViews = await capture3DViews(setViewMode, bathroomData);
+      bathroomViews.forEach(view => {
+        views3D.push({
+          ...view,
+          room: 'Bathroom'
+        });
+      });
+    }
+
     // Return to floor view
     setViewMode('floor');
 
@@ -363,6 +426,44 @@ export const sendQuote = async ({
       }
     }
 
+    // Add 3D perspective views on new page
+    if (views3D.length > 0) {
+      pdf.addPage();
+      currentY = 20;
+
+      pdf.setFontSize(16);
+      pdf.text('3D Perspective Views (Human Eye Level)', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 10;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text('Views captured from 6ft height for realistic human perspective', pageWidth / 2, currentY, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+      currentY += 15;
+
+      for (let i = 0; i < views3D.length; i++) {
+        // Add new page if we've used up current page
+        if (currentY > pageHeight - 120) {
+          pdf.addPage();
+          currentY = 20;
+        }
+
+        pdf.setFontSize(12);
+        pdf.text(`${views3D[i].room} - ${views3D[i].label}`, 20, currentY);
+        currentY += 5;
+
+        try {
+          // Add 3D view image (larger size for better detail)
+          pdf.addImage(views3D[i].image, 'PNG', 20, currentY, 170, 110);
+          currentY += 120;
+        } catch (e) {
+          console.error('Error adding 3D view to PDF:', e);
+          pdf.text('(3D view capture failed)', 20, currentY);
+          currentY += 10;
+        }
+      }
+    }
+
     // Add specifications
     pdf.addPage();
     currentY = 20;
@@ -431,7 +532,8 @@ export const sendQuote = async ({
       total_price: grandTotal,
       comments: clientInfo.comments || '',
       floor_plan_image: floorPlanImage,
-      wall_view_images: wallViewImages
+      wall_view_images: wallViewImages,
+      views_3d: views3D // Include 3D perspective views
     };
 
     // //console.log('Sending design:', {

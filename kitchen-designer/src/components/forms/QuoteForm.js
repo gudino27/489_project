@@ -14,7 +14,7 @@ const QuoteForm = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-[60] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
       <div className="bg-white rounded-lg max-w-md w-full mt-24 mb-4 min-h-0">
         {/* Modal content */}
         <div className="p-6 pt-2 ">

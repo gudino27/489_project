@@ -1,7 +1,14 @@
 body {
     background-color: rgb(110, 110, 110);
     margin: 0;
-    padding: 100px !important;
+    padding: 0 !important;
+}
+
+/* Desktop padding - only on larger screens */
+@media (min-width: 768px) {
+    body {
+        padding: 100px !important;
+    }
 }
 
 .loading-container {
@@ -88,4 +95,25 @@ body {
 .nav-link:focus {
     outline: 2px solid #3b82f6;
     outline-offset: 2px;
+}
+
+/* Mobile touch controls for designer canvas */
+#designer-canvas-svg,
+.designer-canvas-container {
+    /* Disable all browser touch handling - we'll handle it ourselves */
+    touch-action: none;
+    /* Prevent pull-to-refresh and overscroll */
+    overscroll-behavior: contain;
+    /* Prevent text selection during drag */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Prevent long-press context menu */
+    -webkit-touch-callout: none;
+}
+
+/* Allow scrolling on sidebar and panels */
+.designer-sidebar,
+.properties-panel {
+    touch-action: auto;
+    overscroll-behavior: auto;
 }

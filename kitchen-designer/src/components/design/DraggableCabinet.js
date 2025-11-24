@@ -139,17 +139,22 @@ const DraggableCabinet = React.memo(({
         stroke={strokeColor}
         strokeWidth={isSelected ? '2' : '1'}
         style={{
-          cursor: isDragging && element.id === selectedElement 
-            ? (dragPreviewPosition?.snapped ? 'copy' : 'grabbing') 
+          cursor: isDragging && element.id === selectedElement
+            ? (dragPreviewPosition?.snapped ? 'copy' : 'grabbing')
             : 'grab',
           opacity: isDragging && element.id === selectedElement ? 0.7 : 1,
           transition: isDragging ? 'none' : 'opacity 0.2s ease',
-          filter: isDragging && element.id === selectedElement 
-            ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' 
-            : 'none'
+          filter: isDragging && element.id === selectedElement
+            ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+            : 'none',
+          touchAction: 'none'
         }}
         onMouseDown={(e) => onMouseDown(e, element.id)}
-        onTouchStart={(e) => onMouseDown(e, element.id)}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onMouseDown(e, element.id);
+        }}
       />
 
       {/* Special rendering for medicine cabinets to show actual shallow depth */}

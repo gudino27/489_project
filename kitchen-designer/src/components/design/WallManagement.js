@@ -25,6 +25,7 @@ const WallManagement = ({
   markWallAsExistedPrior,
   getCurrentWallAngle,
   rotateCustomWall,
+  resizeCustomWall,
   wallDrawStart,
   setIsDrawingWall,
   setWallDrawStart,
@@ -33,7 +34,8 @@ const WallManagement = ({
   removeDoor,
   updateDoor,
   getDoorsOnWall,
-  getDoorTypes
+  getDoorTypes,
+  scale
 }) => {
   const { t } = useLanguage();
 
@@ -112,6 +114,16 @@ const WallManagement = ({
               const customWall = getCustomWallByNumber(wallNum);
               const isCustom = !!customWall;
               const existedPrior = customWall?.existedPrior || false;
+              
+              // Calculate wall length for custom walls
+              let wallLengthInches = 0;
+              if (isCustom && customWall && scale) {
+                const lengthPixels = Math.sqrt(
+                  Math.pow(customWall.x2 - customWall.x1, 2) + 
+                  Math.pow(customWall.y2 - customWall.y1, 2)
+                );
+                wallLengthInches = lengthPixels / scale;
+              }
 
               return (
                 <div key={wallNum} className="p-2 bg-gray-50 rounded border">
@@ -131,7 +143,7 @@ const WallManagement = ({
                         {wallAvailability.addWallEnabled && (
                           <button
                             onClick={() => addWall(wallNum)}
-                            className="flex-1 text-xs py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600"
+                            className="flex-1 text-xs py-2 px-3 min-h-10 bg-green-500 text-white rounded hover:bg-green-600 active:bg-green-700 transition-colors"
                             title={`Add ${getWallName(wallNum)} (+$${wallPricing.addWall})`}
                           >
                             Add
@@ -165,7 +177,7 @@ const WallManagement = ({
                                 });
                               }
                             }}
-                            className="text-xs py-1 px-2 rounded bg-red-600 text-white hover:bg-red-700"
+                            className="text-xs py-2 px-3 min-h-10 rounded bg-red-600 text-white hover:bg-red-700 active:bg-red-800 transition-colors"
                             title={`Permanently delete ${getWallName(wallNum)}`}
                           >
                             🗑️
@@ -198,7 +210,7 @@ const WallManagement = ({
                                 });
                               }
                             }}
-                            className="flex-1 text-xs py-1 px-2 rounded bg-red-600 text-white hover:bg-red-700"
+                            className="flex-1 text-xs py-2 px-3 min-h-10 rounded bg-red-600 text-white hover:bg-red-700 active:bg-red-800 transition-colors"
                             title={`Permanently delete ${getWallName(wallNum)}`}
                           >
                             Delete
@@ -207,9 +219,9 @@ const WallManagement = ({
                           <button
                             onClick={() => removeWall(wallNum)}
                             disabled={wallRemovalDisabled || !wallAvailability.removeWallEnabled}
-                            className={`flex-1 text-xs py-1 px-2 rounded ${wallRemovalDisabled || !wallAvailability.removeWallEnabled
+                            className={`flex-1 text-xs py-2 px-3 min-h-10 rounded transition-colors ${wallRemovalDisabled || !wallAvailability.removeWallEnabled
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-red-500 text-white hover:bg-red-600'
+                                : 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700'
                               }`}
                             title={wallRemovalDisabled ? "Wall removal temporarily disabled" :
                               !wallAvailability.removeWallEnabled ? "Wall removal service disabled" :
@@ -238,7 +250,7 @@ const WallManagement = ({
                                   removeDoor(door.id);
                                 }
                               }}
-                              className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                              className="text-xs px-3 py-2 min-h-9 min-w-9 bg-red-100 text-red-700 rounded hover:bg-red-200 active:bg-red-300 transition-colors flex items-center justify-center"
                               title="Remove door"
                             >
                               ✕
@@ -352,7 +364,7 @@ const WallManagement = ({
                                 alert('Door width must be between 18 and 48 inches');
                               }
                             }}
-                            className="w-full text-xs py-1 px-2 bg-green-500 text-white rounded hover:bg-green-600"
+                            className="w-full text-xs py-2 px-3 min-h-10 bg-green-500 text-white rounded hover:bg-green-600 active:bg-green-700 transition-colors"
                             title={`Add door to ${getWallName(wallNum)}`}
                           >
                             🚪 Add Door
@@ -392,6 +404,24 @@ const WallManagement = ({
                       >
                         {existedPrior ? '✓ Existed Prior (click to unmark)' : 'Mark as Existed Prior'}
                       </button>
+
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-600">Length: {wallLengthInches.toFixed(1)}"</div>
+                        <div className="flex gap-1">
+                          <input
+                            type="number"
+                            min="12"
+                            step="1"
+                            value={Math.round(wallLengthInches)}
+                            onChange={(e) => {
+                              const newLength = parseFloat(e.target.value) || 12;
+                              if (resizeCustomWall) resizeCustomWall(wallNum, newLength);
+                            }}
+                            className="flex-1 text-xs px-1 py-1 border rounded"
+                            placeholder="Length"
+                          />
+                        </div>
+                      </div>
 
                       <div className="space-y-1">
                         <div className="text-xs text-gray-600">Rotation: {getCurrentWallAngle(wallNum).toFixed(1)}°</div>

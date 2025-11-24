@@ -16,7 +16,12 @@ const WallView = ({
   handleWallViewMouseDown
 }) => {
   const wall = wallNum || selectedWall;
-  const wallElements = getElementsOnWall(wall).sort((a, b) => {
+  
+  // Calculate room dimensions for element filtering
+  const roomWidth = parseFloat(currentRoomData.dimensions.width) * 12 * scale;
+  const roomHeight = parseFloat(currentRoomData.dimensions.height) * 12 * scale;
+
+  const wallElements = getElementsOnWall(wall, currentRoomData.elements, roomWidth, roomHeight, scale).sort((a, b) => {
     // Sort elements left-to-right or top-to-bottom based on wall orientation
     if (wall === 1 || wall === 3) {
       return a.x - b.x; // Horizontal walls: sort by x position
