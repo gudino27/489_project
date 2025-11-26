@@ -2,9 +2,73 @@ import jsPDF from 'jspdf';
 import { elementTypes } from '../constants/elementTypes';
 
 //  constants 
-const COMPANY_NAME = process.env.REACT_APP_COMPANY_NAME || 'Gudino Custom';
+const COMPANY_NAME = process.env.REACT_APP_COMPANY_NAME || 'Gudino Custom WoodWorking LLC';
 const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 const originalWalls = [1, 2, 3, 4];
+
+// Professional PDF styling constants
+const PDF_STYLES = {
+  headerFont: 14,
+  titleFont: 16,
+  bodyFont: 10,
+  smallFont: 8,
+  primaryColor: [0, 0, 0],      // Black
+  grayColor: [100, 100, 100],   // Gray for secondary text
+  lineColor: [0, 0, 0],         // Black lines
+  pageMargin: 15,
+  lineHeight: 6
+};
+
+// Helper to draw a horizontal separator line
+const drawSeparator = (pdf, y, margin = PDF_STYLES.pageMargin) => {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  pdf.setDrawColor(...PDF_STYLES.lineColor);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, y, pageWidth - margin, y);
+  return y + 3;
+};
+
+// Professional header for each page
+const drawPageHeader = (pdf, clientName, roomName, wallInfo = '', date) => {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = PDF_STYLES.pageMargin;
+  let y = margin;
+
+  // Company name on left
+  pdf.setFontSize(PDF_STYLES.headerFont);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...PDF_STYLES.primaryColor);
+  pdf.text(COMPANY_NAME, margin, y);
+
+  // Client name on right
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(clientName, pageWidth - margin, y, { align: 'right' });
+  y += 8;
+
+  // Date centered
+  pdf.setFontSize(PDF_STYLES.bodyFont);
+  pdf.setTextColor(...PDF_STYLES.grayColor);
+  pdf.text(date, pageWidth / 2, y, { align: 'center' });
+  y += 6;
+
+  // Room/Wall info
+  if (roomName) {
+    pdf.setFontSize(PDF_STYLES.bodyFont);
+    pdf.setTextColor(...PDF_STYLES.primaryColor);
+    pdf.text(roomName + (wallInfo ? ` - ${wallInfo}` : ''), margin, y);
+    
+    // "Not To Scale" on right
+    pdf.setFontSize(PDF_STYLES.smallFont);
+    pdf.setTextColor(...PDF_STYLES.grayColor);
+    pdf.text('Not To Scale', pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+
+  // Separator line
+  y = drawSeparator(pdf, y);
+  
+  return y;
+};
 
 export const generatePDF = async ({
   clientInfo,
@@ -18,27 +82,34 @@ export const generatePDF = async ({
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  let currentY = 20;
-
-  // PDF Header
-  pdf.setFontSize(20);
-  pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
+  const margin = PDF_STYLES.pageMargin;
+  const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  
+  let currentY = drawPageHeader(pdf, clientInfo.name, '', '', date);
   currentY += 10;
 
-  pdf.setFontSize(12);
-  pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
+  // Title
+  pdf.setFontSize(PDF_STYLES.titleFont);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...PDF_STYLES.primaryColor);
+  pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
   currentY += 15;
 
   // Client Information Section
-  pdf.setFontSize(12);
-  pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
-  currentY += 8;
-  pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
-  currentY += 8;
-  pdf.text(`Contact Method: ${clientInfo.contactPreference}`, 20, currentY);
-  currentY += 8;
-  pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
-  currentY += 15;
+  pdf.setFontSize(PDF_STYLES.bodyFont);
+  pdf.setFont('helvetica', 'normal');
+  
+  // Two column layout for client info
+  pdf.text(`Client: ${clientInfo.name}`, margin, currentY);
+  pdf.text(`Date: ${date}`, pageWidth - margin, currentY, { align: 'right' });
+  currentY += PDF_STYLES.lineHeight;
+  
+  pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, margin, currentY);
+  pdf.text(`Method: ${clientInfo.contactPreference}`, pageWidth - margin, currentY, { align: 'right' });
+  currentY += 10;
+
+  currentY = drawSeparator(pdf, currentY);
+  currentY += 5;
 
   // Process each room included in quote
   const roomsToInclude = [];
@@ -47,29 +118,51 @@ export const generatePDF = async ({
 
   for (const room of roomsToInclude) {
     // Start new page if needed
-    if (currentY > pageHeight - 50) {
+    if (currentY > pageHeight - 60) {
       pdf.addPage();
-      currentY = 20;
+      currentY = drawPageHeader(pdf, clientInfo.name, room.name, '', date);
+      currentY += 5;
     }
 
     // Room header
-    pdf.setFontSize(16);
-    pdf.text(room.name + ' Design', 20, currentY);
-    currentY += 10;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(room.name + ' Design', margin, currentY);
+    currentY += 8;
 
-    // Room dimensions
-    pdf.setFontSize(10);
-    pdf.text(`Room Dimensions: ${room.data.dimensions.width}' × ${room.data.dimensions.height}' × ${room.data.dimensions.wallHeight}" height`, 20, currentY);
+    // Room dimensions in a clean format
+    pdf.setFontSize(PDF_STYLES.bodyFont);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...PDF_STYLES.grayColor);
+    pdf.text(`Dimensions: ${room.data.dimensions.width}' W × ${room.data.dimensions.height}' D × ${room.data.dimensions.wallHeight}" H`, margin, currentY);
     currentY += 10;
 
     // Cabinet specifications for this room
     const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
     if (cabinets.length > 0) {
-      pdf.setFontSize(12);
-      pdf.text('Cabinet Specifications:', 20, currentY);
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...PDF_STYLES.primaryColor);
+      pdf.text('Cabinet Specifications', margin, currentY);
       currentY += 8;
 
-      pdf.setFontSize(10);
+      // Table header
+      pdf.setFontSize(PDF_STYLES.smallFont);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...PDF_STYLES.grayColor);
+      pdf.text('#', margin, currentY);
+      pdf.text('Type', margin + 8, currentY);
+      pdf.text('Dimensions', margin + 70, currentY);
+      pdf.text('Material', margin + 110, currentY);
+      pdf.text('Price', pageWidth - margin, currentY, { align: 'right' });
+      currentY += 4;
+      currentY = drawSeparator(pdf, currentY);
+      currentY += 3;
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...PDF_STYLES.primaryColor);
+      pdf.setFontSize(PDF_STYLES.bodyFont);
+      
       cabinets.forEach((cabinet, index) => {
         const spec = elementTypes[cabinet.type];
         const material = room.data.materials[cabinet.id] || 'laminate';
@@ -78,14 +171,18 @@ export const generatePDF = async ({
         const sizeMultiplier = cabinet.width / 24;
         const price = basePrice * materialMultiplier * sizeMultiplier;
 
-        pdf.text(`${index + 1}. ${spec.name}: ${cabinet.width}" × ${cabinet.depth}" × ${cabinet.actualHeight || spec.fixedHeight}"`, 25, currentY);
-        pdf.text(`Material: ${material} - $${price.toFixed(2)}`, 140, currentY);
-        currentY += 6;
+        pdf.text(`${index + 1}`, margin, currentY);
+        pdf.text(spec.name || cabinet.type, margin + 8, currentY);
+        pdf.text(`${cabinet.width}" × ${cabinet.depth}" × ${cabinet.actualHeight || spec.fixedHeight}"`, margin + 70, currentY);
+        pdf.text(material.charAt(0).toUpperCase() + material.slice(1), margin + 110, currentY);
+        pdf.text(`$${price.toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' });
+        currentY += PDF_STYLES.lineHeight;
 
         // Check if new page needed
-        if (currentY > pageHeight - 20) {
+        if (currentY > pageHeight - 25) {
           pdf.addPage();
-          currentY = 20;
+          currentY = drawPageHeader(pdf, clientInfo.name, room.name, 'Continued', date);
+          currentY += 5;
         }
       });
 
@@ -96,56 +193,78 @@ export const generatePDF = async ({
 
       if (chargeableRemoved.length > 0 || customAdded.length > 0) {
         currentY += 5;
-        pdf.setFontSize(10);
-        pdf.text('Wall Modifications:', 20, currentY);
-        currentY += 5;
+        pdf.setFontSize(PDF_STYLES.bodyFont);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Wall Modifications:', margin, currentY);
+        currentY += PDF_STYLES.lineHeight;
 
+        pdf.setFont('helvetica', 'normal');
         if (chargeableRemoved.length > 0) {
-          pdf.text(`• ${chargeableRemoved.length} wall(s) removed: $${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}`, 25, currentY);
-          currentY += 5;
+          pdf.text(`• ${chargeableRemoved.length} wall(s) removed`, margin + 5, currentY);
+          pdf.text(`$${(chargeableRemoved.length * wallPricing.removeWall).toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' });
+          currentY += PDF_STYLES.lineHeight;
         }
 
         if (customAdded.length > 0) {
-          pdf.text(`• ${customAdded.length} custom wall(s) added: $${(customAdded.length * wallPricing.addWall).toFixed(2)}`, 25, currentY);
-          currentY += 5;
+          pdf.text(`• ${customAdded.length} custom wall(s) added`, margin + 5, currentY);
+          pdf.text(`$${(customAdded.length * wallPricing.addWall).toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' });
+          currentY += PDF_STYLES.lineHeight;
         }
       }
 
-      // Room subtotal
-      currentY += 5;
+      // Room subtotal with separator
+      currentY += 3;
+      currentY = drawSeparator(pdf, currentY);
+      currentY += 3;
+      
       const roomTotal = calculateTotalPrice(room.data);
       pdf.setFontSize(11);
-      pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
-      currentY += 10;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${room.name} Subtotal:`, margin, currentY);
+      pdf.text(`$${roomTotal.toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' });
+      currentY += 15;
     }
   }
 
   // Grand total calculation
-  if (currentY > pageHeight - 40) {
+  if (currentY > pageHeight - 50) {
     pdf.addPage();
-    currentY = 20;
+    currentY = drawPageHeader(pdf, clientInfo.name, 'Summary', '', date);
+    currentY += 10;
   }
 
-  currentY += 10;
-  pdf.setFontSize(14);
+  // Grand total box
+  pdf.setFillColor(245, 245, 245);
+  pdf.rect(margin, currentY - 3, pageWidth - margin * 2, 15, 'F');
+  
   let grandTotal = 0;
   if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
   if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
 
-  pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
-  currentY += 10;
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Total Estimate:', margin + 5, currentY + 7);
+  pdf.text(`$${grandTotal.toFixed(2)}`, pageWidth - margin - 5, currentY + 7, { align: 'right' });
+  currentY += 20;
 
   // Disclaimer
-  pdf.setFontSize(10);
-  pdf.text('* This is an estimate. Final pricing may vary based on specific requirements.', 20, currentY);
+  pdf.setFontSize(PDF_STYLES.smallFont);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(...PDF_STYLES.grayColor);
+  pdf.text('* This is an estimate. Final pricing may vary based on specific requirements and site conditions.', margin, currentY);
   currentY += 10;
 
   // Customer comments section
   if (clientInfo.comments) {
-    pdf.text('Customer Notes:', 20, currentY);
-    currentY += 6;
-    const lines = pdf.splitTextToSize(clientInfo.comments, 170);
-    pdf.text(lines, 20, currentY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...PDF_STYLES.primaryColor);
+    pdf.setFontSize(PDF_STYLES.bodyFont);
+    pdf.text('Customer Notes:', margin, currentY);
+    currentY += PDF_STYLES.lineHeight;
+    
+    pdf.setFont('helvetica', 'normal');
+    const lines = pdf.splitTextToSize(clientInfo.comments, pageWidth - margin * 2);
+    pdf.text(lines, margin, currentY);
   }
 
   // Save PDF with client name and date
@@ -154,7 +273,7 @@ export const generatePDF = async ({
   // Return PDF blob for potential email attachment
   return pdf.output('blob');
 };
-const capture3DViews = async (setViewMode, currentRoomData) => {
+const capture3DViews = async (setViewMode, currentRoomData, cameraRef) => {
   const views3D = [];
 
   // Only capture 3D if there are elements to show
@@ -165,23 +284,50 @@ const capture3DViews = async (setViewMode, currentRoomData) => {
   try {
     // Switch to 3D view
     setViewMode('3d');
-    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 3D scene to render
+    
+    // Wait for 3D scene to fully render
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Find the 3D canvas element (React Three Fiber creates a canvas)
-    const canvas3D = document.querySelector('canvas');
+    // Find the 3D canvas element
+    const canvas3D = document.querySelector('.w-full.h-full.bg-gray-100 canvas') || 
+                     document.querySelector('canvas[data-engine]') ||
+                     document.querySelector('canvas');
 
-    if (canvas3D) {
-      // Capture the 3D view as-is (perspective view)
-      const imageData = canvas3D.toDataURL('image/png', 1.0);
-
-      views3D.push({
-        label: '3D Perspective View',
-        image: imageData
-      });
-
-      console.log('Captured 3D perspective view');
-    } else {
+    if (!canvas3D) {
       console.warn('3D canvas not found');
+      return views3D;
+    }
+
+    // Wall names for labeling
+    const wallNames = ['Wall 1 (Top)', 'Wall 2 (Right)', 'Wall 3 (Bottom)', 'Wall 4 (Left)'];
+    
+    // Capture view for each wall - standing in center looking at each wall
+    for (let wall = 1; wall <= 4; wall++) {
+      try {
+        // Set camera to look at this wall from center of room
+        if (cameraRef?.current?.setWallView) {
+          cameraRef.current.setWallView(wall);
+        }
+        
+        // Wait for camera to update and scene to re-render
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Capture the view
+        const imageData = canvas3D.toDataURL('image/png', 1.0);
+        
+        if (imageData && imageData.length > 1000) {
+          views3D.push({
+            label: wallNames[wall - 1],
+            wall: wall,
+            image: imageData
+          });
+          console.log(`Captured 3D view for ${wallNames[wall - 1]}, size:`, imageData.length);
+        }
+      } catch (err) {
+        console.error(`Error capturing wall ${wall}:`, err);
+      }
     }
 
   } catch (error) {
@@ -201,7 +347,8 @@ export const sendQuote = async ({
   viewMode,
   setViewMode,
   selectedWall,
-  setSelectedWall
+  setSelectedWall,
+  cameraRef  // New: ref to 3D camera controller
 }) => {
   // Validate required client information
   if (!clientInfo.name || !clientInfo.email || !clientInfo.phone) {
@@ -319,74 +466,59 @@ export const sendQuote = async ({
       }
     }
 
-    // Capture 3D views from human perspective (6ft eye height)
-    loadingMessage.innerHTML = 'Capturing 3D perspective views...';
-
-    const views3D = [];
-
-    // Capture 3D for kitchen if included
-    if (clientInfo.includeKitchen && kitchenData.elements.length > 0) {
-      const kitchenViews = await capture3DViews(setViewMode, kitchenData);
-      kitchenViews.forEach(view => {
-        views3D.push({
-          ...view,
-          room: 'Kitchen'
-        });
-      });
-    }
-
-    // Capture 3D for bathroom if included
-    if (clientInfo.includeBathroom && bathroomData.elements.length > 0) {
-      const bathroomViews = await capture3DViews(setViewMode, bathroomData);
-      bathroomViews.forEach(view => {
-        views3D.push({
-          ...view,
-          room: 'Bathroom'
-        });
-      });
-    }
-
+    // Skip 3D capture to keep PDF file size manageable
     // Return to floor view
     setViewMode('floor');
 
     loadingMessage.innerHTML = 'Generating PDF...';
 
-    // Generate PDF
+    // Generate PDF with professional styling
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    let currentY = 20;
+    const margin = PDF_STYLES.pageMargin;
+    const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    
+    let currentY = drawPageHeader(pdf, clientInfo.name, '', '', date);
+    currentY += 5;
 
-    // PDF Header
-    pdf.setFontSize(20);
+    // Title
+    pdf.setFontSize(PDF_STYLES.titleFont);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...PDF_STYLES.primaryColor);
     pdf.text('Cabinet Design Quote', pageWidth / 2, currentY, { align: 'center' });
+    currentY += 12;
+
+    // Client Information in two columns
+    pdf.setFontSize(PDF_STYLES.bodyFont);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Client: ${clientInfo.name}`, margin, currentY);
+    pdf.text(`Date: ${date}`, pageWidth - margin, currentY, { align: 'right' });
+    currentY += PDF_STYLES.lineHeight;
+    pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, margin, currentY);
     currentY += 10;
-
-    pdf.setFontSize(12);
-    pdf.text(COMPANY_NAME, pageWidth / 2, currentY, { align: 'center' });
-    currentY += 15;
-
-    // Client Information
-    pdf.setFontSize(12);
-    pdf.text(`Client: ${clientInfo.name}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Contact: ${clientInfo.contactPreference === 'email' ? clientInfo.email : clientInfo.phone}`, 20, currentY);
-    currentY += 8;
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, currentY);
-    currentY += 15;
 
     // Add floor plan to PDF
     if (floorPlanImage) {
-      pdf.setFontSize(14);
-      pdf.text('Floor Plan Design', 20, currentY);
-      currentY += 10;
+      currentY = drawSeparator(pdf, currentY);
+      currentY += 3;
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Floor Plan Design', margin, currentY);
+      pdf.setFontSize(PDF_STYLES.smallFont);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...PDF_STYLES.grayColor);
+      pdf.text('Not To Scale', pageWidth - margin, currentY, { align: 'right' });
+      pdf.setTextColor(...PDF_STYLES.primaryColor);
+      currentY += 8;
 
       try {
-        pdf.addImage(floorPlanImage, 'PNG', 20, currentY, 170, 100);
-        currentY += 110;
+        pdf.addImage(floorPlanImage, 'PNG', margin, currentY, pageWidth - margin * 2, 90);
+        currentY += 100;
       } catch (e) {
         console.error('Error adding floor plan to PDF:', e);
-        pdf.text('(Wall view available in admin panel)', 20, currentY);
+        pdf.text('(Floor plan available in admin panel)', margin, currentY);
         currentY += 10;
       }
     }
@@ -396,81 +528,44 @@ export const sendQuote = async ({
     if (clientInfo.includeKitchen) grandTotal += calculateTotalPrice(kitchenData);
     if (clientInfo.includeBathroom) grandTotal += calculateTotalPrice(bathroomData);
 
-    // Add wall views on new page
+    // Add wall views on new page with professional layout
     if (wallViewImages.length > 0) {
       pdf.addPage();
-      currentY = 20;
-
-      pdf.setFontSize(16);
-      pdf.text('Wall Elevation Views', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 15;
+      currentY = drawPageHeader(pdf, clientInfo.name, 'Wall Elevation Views', '', date);
+      currentY += 5;
 
       for (let i = 0; i < wallViewImages.length; i++) {
-        if (i % 2 === 0 && i > 0) {
+        if (currentY > pageHeight - 100) {
           pdf.addPage();
-          currentY = 20;
+          currentY = drawPageHeader(pdf, clientInfo.name, 'Wall Elevation Views', 'Continued', date);
+          currentY += 5;
         }
 
-        pdf.setFontSize(12);
-        pdf.text(`Wall ${wallViewImages[i].wall}`, 20, currentY);
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Wall ${wallViewImages[i].wall}`, margin, currentY);
+        pdf.setFontSize(PDF_STYLES.smallFont);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...PDF_STYLES.grayColor);
+        pdf.text('Not To Scale', pageWidth - margin, currentY, { align: 'right' });
+        pdf.setTextColor(...PDF_STYLES.primaryColor);
         currentY += 5;
 
         try {
-          pdf.addImage(wallViewImages[i].image, 'PNG', 20, currentY, 170, 80);
-          currentY += 90;
+          pdf.addImage(wallViewImages[i].image, 'PNG', margin, currentY, pageWidth - margin * 2, 75);
+          currentY += 85;
         } catch (e) {
           console.error('Error adding wall view to PDF:', e);
-          pdf.text('(Wall view available in admin panel)', 20, currentY);
+          pdf.text('(Wall view available in admin panel)', margin, currentY);
           currentY += 10;
         }
       }
     }
 
-    // Add 3D perspective views on new page
-    if (views3D.length > 0) {
-      pdf.addPage();
-      currentY = 20;
-
-      pdf.setFontSize(16);
-      pdf.text('3D Perspective Views (Human Eye Level)', pageWidth / 2, currentY, { align: 'center' });
-      currentY += 10;
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('Views captured from 6ft height for realistic human perspective', pageWidth / 2, currentY, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-      currentY += 15;
-
-      for (let i = 0; i < views3D.length; i++) {
-        // Add new page if we've used up current page
-        if (currentY > pageHeight - 120) {
-          pdf.addPage();
-          currentY = 20;
-        }
-
-        pdf.setFontSize(12);
-        pdf.text(`${views3D[i].room} - ${views3D[i].label}`, 20, currentY);
-        currentY += 5;
-
-        try {
-          // Add 3D view image (larger size for better detail)
-          pdf.addImage(views3D[i].image, 'PNG', 20, currentY, 170, 110);
-          currentY += 120;
-        } catch (e) {
-          console.error('Error adding 3D view to PDF:', e);
-          pdf.text('(3D view capture failed)', 20, currentY);
-          currentY += 10;
-        }
-      }
-    }
-
-    // Add specifications
+    // Add specifications page
     pdf.addPage();
-    currentY = 20;
-
-    pdf.setFontSize(16);
-    pdf.text('Cabinet Specifications', 20, currentY);
-    currentY += 15;
+    currentY = drawPageHeader(pdf, clientInfo.name, 'Cabinet Specifications', '', date);
+    currentY += 5;
 
     // Process each room
     const roomsToInclude = [];
@@ -482,33 +577,75 @@ export const sendQuote = async ({
     }
 
     for (const room of roomsToInclude) {
-      pdf.setFontSize(14);
-      pdf.text(`${room.name} (${room.data.dimensions.width}' × ${room.data.dimensions.height}')`, 20, currentY);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${room.name}`, margin, currentY);
+      pdf.setFontSize(PDF_STYLES.bodyFont);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...PDF_STYLES.grayColor);
+      pdf.text(`${room.data.dimensions.width}' W × ${room.data.dimensions.height}' D`, margin + 50, currentY);
+      pdf.setTextColor(...PDF_STYLES.primaryColor);
       currentY += 8;
 
       const cabinets = room.data.elements.filter(el => el.category === 'cabinet');
 
-      pdf.setFontSize(10);
+      // Table header
+      pdf.setFontSize(PDF_STYLES.smallFont);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...PDF_STYLES.grayColor);
+      pdf.text('#', margin, currentY);
+      pdf.text('Cabinet Type', margin + 8, currentY);
+      pdf.text('Dimensions', margin + 80, currentY);
+      pdf.text('Material', margin + 130, currentY);
+      currentY += 3;
+      currentY = drawSeparator(pdf, currentY);
+      currentY += 3;
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...PDF_STYLES.primaryColor);
+      pdf.setFontSize(PDF_STYLES.bodyFont);
+
       cabinets.forEach((cabinet, index) => {
         const material = room.data.materials[cabinet.id] || 'laminate';
-        pdf.text(`${index + 1}. ${cabinet.type}: ${cabinet.width}" × ${cabinet.depth}" - ${material}`, 25, currentY);
-        currentY += 6;
+        pdf.text(`${index + 1}`, margin, currentY);
+        pdf.text(cabinet.type, margin + 8, currentY);
+        pdf.text(`${cabinet.width}" × ${cabinet.depth}"`, margin + 80, currentY);
+        pdf.text(material.charAt(0).toUpperCase() + material.slice(1), margin + 130, currentY);
+        currentY += PDF_STYLES.lineHeight;
 
         if (currentY > pageHeight - 30) {
           pdf.addPage();
-          currentY = 20;
+          currentY = drawPageHeader(pdf, clientInfo.name, 'Cabinet Specifications', 'Continued', date);
+          currentY += 5;
         }
       });
 
+      currentY += 3;
+      currentY = drawSeparator(pdf, currentY);
+      currentY += 3;
+
       const roomTotal = calculateTotalPrice(room.data);
       pdf.setFontSize(11);
-      pdf.text(`${room.name} Total: $${roomTotal.toFixed(2)}`, 20, currentY);
-      currentY += 10;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${room.name} Subtotal:`, margin, currentY);
+      pdf.text(`$${roomTotal.toFixed(2)}`, pageWidth - margin, currentY, { align: 'right' });
+      currentY += 12;
     }
 
-    // Grand total
+    // Grand total box
+    if (currentY > pageHeight - 40) {
+      pdf.addPage();
+      currentY = drawPageHeader(pdf, clientInfo.name, 'Summary', '', date);
+      currentY += 10;
+    }
+    
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(margin, currentY - 3, pageWidth - margin * 2, 15, 'F');
+    
     pdf.setFontSize(14);
-    pdf.text(`Total Estimate: $${grandTotal.toFixed(2)}`, 20, currentY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Total Estimate:', margin + 5, currentY + 7);
+    pdf.text(`$${grandTotal.toFixed(2)}`, pageWidth - margin - 5, currentY + 7, { align: 'right' });
 
     // Get PDF blob
     const pdfBlob = pdf.output('blob');
@@ -532,8 +669,7 @@ export const sendQuote = async ({
       total_price: grandTotal,
       comments: clientInfo.comments || '',
       floor_plan_image: floorPlanImage,
-      wall_view_images: wallViewImages,
-      views_3d: views3D // Include 3D perspective views
+      wall_view_images: wallViewImages
     };
 
     // //console.log('Sending design:', {

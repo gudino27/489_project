@@ -1,7 +1,14 @@
 import React from 'react';
 import { getDoorsOnWall, getCustomWallByNumber } from '../../utils/designer/wallViewUtils';
+import { getMaterialById } from '../../constants/materials';
+
 export const renderCornerCabinet = (element, scale, isDragging, handleMouseDown) => {
   const size = element.width * scale;
+  
+  // Get material color if set
+  const materialData = element.materialId ? getMaterialById(element.materialId) : null;
+  const fillColor = materialData ? materialData.hex : '#d3d3d3';
+  
   // Create L-shaped path based on hinge direction (using relative coordinates)
   const path =
     element.hingeDirection === "left"
@@ -21,13 +28,21 @@ export const renderCornerCabinet = (element, scale, isDragging, handleMouseDown)
        Z`;
   return (
     <g>
+      {/* Base cabinet shape */}
       <path
         d={path}
-        fill="#d3d3d3"
+        fill={fillColor}
         stroke="#333"
         strokeWidth="1"
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={(e) => handleMouseDown(e, element.id)}
+      />
+      {/* Wood grain texture overlay */}
+      <path
+        d={path}
+        fill="url(#woodGrain)"
+        stroke="none"
+        style={{ pointerEvents: 'none' }}
       />
       {/* Door outlines and graphics */}
       {element.hingeDirection === "left" ? (

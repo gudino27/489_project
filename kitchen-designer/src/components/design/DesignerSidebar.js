@@ -7,7 +7,8 @@ import {
   Home,
   Bath,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Camera
 } from 'lucide-react';
 import WallManagement from './WallManagement';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -47,6 +48,7 @@ const DesignerSidebar = ({
   updateElement,
   deleteElement,
   setShowQuoteForm,
+  setShowARViewer,
 
   // Wall/Elements
   allAvailableWalls,
@@ -137,6 +139,9 @@ const DesignerSidebar = ({
             <button onClick={() => setShowQuoteForm(true)} className="p-3 min-h-11 min-w-11 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 active:bg-blue-300 flex items-center justify-center" title="Send Quote">
               <Send size={20} />
             </button>
+            <button onClick={() => setShowARViewer(true)} className="p-3 min-h-11 min-w-11 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 active:bg-purple-300 flex items-center justify-center" title="View in AR">
+              <Camera size={20} />
+            </button>
             <button onClick={() => setViewMode(viewMode === 'floor' ? 'wall' : 'floor')} className="p-3 min-h-11 min-w-11 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center" title={`Switch to ${viewMode === 'floor' ? 'Wall' : 'Floor'} View`}>
               {viewMode === 'floor' ? '🏠' : '🧱'}
             </button>
@@ -163,6 +168,9 @@ const DesignerSidebar = ({
             </button>
             <button onClick={() => setShowQuoteForm(true)} className="w-full p-3 min-h-11 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2">
               <Send size={16} />{t('designer.sendQuote')}
+            </button>
+            <button onClick={() => setShowARViewer(true)} className="w-full p-3 min-h-11 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center justify-center gap-2">
+              <Camera size={16} />View in AR
             </button>
           </div>
           <div className="mb-6">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getMaterialById } from '../../constants/materials';
 
 const DraggableCabinet = React.memo(({
   element,
@@ -20,6 +21,10 @@ const DraggableCabinet = React.memo(({
     console.warn('Skipping rendering for invalid element type:', element.type);
     return null;
   }
+
+  // Get material color if set, otherwise use default
+  const materialData = element.materialId ? getMaterialById(element.materialId) : null;
+  const materialColor = materialData ? materialData.hex : null;
 
   // Special Rendering for Corner Cabinets
   if (element.type === 'corner' || element.type === 'corner-wall') {
@@ -85,8 +90,8 @@ const DraggableCabinet = React.memo(({
   const displayWidth = element.rotation % 180 === 0 ? element.width * scale : element.depth * scale;
   const displayDepth = element.rotation % 180 === 0 ? element.depth * scale : element.width * scale;
 
-  // Visual styling based on element category
-  const fillColor = element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3';
+  // Visual styling based on element category - use material color if available
+  const fillColor = materialColor || (element.category === 'appliance' ? '#e0e0e0' : '#d3d3d3');
   const strokeColor = '#333'; // Consistent stroke color regardless of selection
 
   return (
@@ -156,6 +161,47 @@ const DraggableCabinet = React.memo(({
           onMouseDown(e, element.id);
         }}
       />
+
+      {/* Wood Grain Texture Overlay for Cabinets */}
+      {element.category === 'cabinet' && (
+        <rect
+          x={(element.type === 'medicine' || element.type === 'medicine-mirror') 
+            ? (() => {
+                if (element.type === 'medicine-mirror') {
+                  switch (element.rotation) {
+                    case 0: return 0;
+                    case 90: return 0;
+                    case 180: return 0;
+                    case 270: return -40;
+                    case -90: return -40;
+                    default: return 0;
+                  }
+                }
+                return 0;
+              })()
+            : 0}
+          y={(element.type === 'medicine' || element.type === 'medicine-mirror') 
+            ? (() => {
+                if (element.type === 'medicine-mirror') {
+                  switch (element.rotation) {
+                    case 0: return 0;
+                    case 90: return 30;
+                    case 180: return 0;
+                    case 270: return 28;
+                    case -90: return 28;
+                    default: return 0;
+                  }
+                }
+                return 0;
+              })()
+            : 0}
+          width={element.width * scale}
+          height={element.depth * scale}
+          fill="url(#woodGrain)"
+          stroke="none"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
 
       {/* Special rendering for medicine cabinets to show actual shallow depth */}
       {(element.type === 'medicine' || element.type === 'medicine-mirror') && (

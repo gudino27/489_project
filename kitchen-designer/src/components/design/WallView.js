@@ -1,4 +1,6 @@
 import React from 'react';
+import { getDoorsOnWall } from '../../utils/designer/wallViewUtils';
+
 const WallView = ({
   wallNum,
   currentRoomData,
@@ -59,6 +61,114 @@ const WallView = ({
       <text x={50 + (wallWidth * calculatedViewScale) / 2} y="20" textAnchor="middle" fontSize="12" fontWeight="bold">
         Wall {wall} - {(wallWidth / 12).toFixed(1)}'
       </text>
+
+      {/* Room Doors on this wall */}
+      {(() => {
+        const doorsOnWall = getDoorsOnWall(wall, currentRoomData.doors || []);
+        const doorHeight = 80; // Standard door height in inches
+        
+        return doorsOnWall.map((door, idx) => {
+          // Calculate door position based on position percentage
+          const doorWidthInches = door.width || 32;
+          const doorX = (door.position / 100) * wallWidth - (doorWidthInches / 2);
+          const doorYPos = wallHeight - doorHeight; // Door from floor
+          
+          // Door colors based on type
+          const doorColor = door.type === 'pantry' ? '#8B4513' : 
+                           door.type === 'room' ? '#6B8E23' : 
+                           door.type === 'double' ? '#4682B4' :
+                           door.type === 'sliding' ? '#708090' : '#A0522D';
+          const doorLightColor = door.type === 'pantry' ? '#A0522D' :
+                                door.type === 'room' ? '#9ACD32' :
+                                door.type === 'double' ? '#5F9EA0' :
+                                door.type === 'sliding' ? '#778899' : '#CD853F';
+          
+          return (
+            <g key={`door-${door.id || idx}`}>
+              {/* Door frame/opening */}
+              <rect
+                x={50 + doorX * calculatedViewScale}
+                y={30 + doorYPos * calculatedViewScale}
+                width={doorWidthInches * calculatedViewScale}
+                height={doorHeight * calculatedViewScale}
+                fill="#2c2c2c"
+                stroke="#1a1a1a"
+                strokeWidth="2"
+              />
+              
+              {/* Door panel */}
+              <rect
+                x={50 + (doorX + 2) * calculatedViewScale}
+                y={30 + (doorYPos + 2) * calculatedViewScale}
+                width={(doorWidthInches - 4) * calculatedViewScale}
+                height={(doorHeight - 4) * calculatedViewScale}
+                fill={doorColor}
+                stroke={doorLightColor}
+                strokeWidth="1"
+              />
+              
+              {/* Door panel details - top panel */}
+              <rect
+                x={50 + (doorX + 4) * calculatedViewScale}
+                y={30 + (doorYPos + 4) * calculatedViewScale}
+                width={(doorWidthInches - 8) * calculatedViewScale}
+                height={(doorHeight * 0.35) * calculatedViewScale}
+                fill="none"
+                stroke={doorLightColor}
+                strokeWidth="1.5"
+              />
+              
+              {/* Door panel details - bottom panel */}
+              <rect
+                x={50 + (doorX + 4) * calculatedViewScale}
+                y={30 + (doorYPos + doorHeight * 0.45) * calculatedViewScale}
+                width={(doorWidthInches - 8) * calculatedViewScale}
+                height={(doorHeight * 0.5) * calculatedViewScale}
+                fill="none"
+                stroke={doorLightColor}
+                strokeWidth="1.5"
+              />
+              
+              {/* Door handle/knob */}
+              <circle
+                cx={50 + (doorX + doorWidthInches - 6) * calculatedViewScale}
+                cy={30 + (doorYPos + doorHeight * 0.55) * calculatedViewScale}
+                r={3 * calculatedViewScale}
+                fill="#C0C0C0"
+                stroke="#808080"
+                strokeWidth="1"
+              />
+              
+              {/* Door type label */}
+              <text
+                x={50 + (doorX + doorWidthInches / 2) * calculatedViewScale}
+                y={30 + (doorYPos + doorHeight / 2) * calculatedViewScale}
+                textAnchor="middle"
+                fontSize="9"
+                fill="#fff"
+                fontWeight="bold"
+              >
+                {door.type === 'standard' ? 'DOOR' :
+                 door.type === 'pantry' ? 'PANTRY' :
+                 door.type === 'room' ? 'ROOM' :
+                 door.type === 'double' ? 'DOUBLE' :
+                 door.type === 'sliding' ? 'SLIDING' : 'DOOR'}
+              </text>
+              
+              {/* Door width dimension */}
+              <text
+                x={50 + (doorX + doorWidthInches / 2) * calculatedViewScale}
+                y={30 + (doorYPos + doorHeight + 12) * calculatedViewScale}
+                textAnchor="middle"
+                fontSize="8"
+                fill="#666"
+              >
+                {doorWidthInches}"
+              </text>
+            </g>
+          );
+        });
+      })()}
 
       {/* Height reference line */}
       <line x1="40" y1="30" x2="40" y2={30 + wallHeight * calculatedViewScale} stroke="#333" strokeWidth="1" />

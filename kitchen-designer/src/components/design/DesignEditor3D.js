@@ -1,30 +1,159 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Stage, Environment, TransformControls } from '@react-three/drei';
+import React, { useMemo, useRef, useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, TransformControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { getMaterialById, MATERIAL_TYPES, FINISHES } from '../../constants/materials';
+
+// Camera controller component that exposes camera control to parent
+const CameraController = forwardRef(({ orbitControlsRef, widthInches, depthInches }, ref) => {
+  const { camera } = useThree();
+  
+  useImperativeHandle(ref, () => ({
+    // Set camera to look at a specific wall from center of room
+    // Wall 1 = top (looking towards z=0), Wall 2 = right (looking towards x=max)
+    // Wall 3 = bottom (looking towards z=max), Wall 4 = left (looking towards x=0)
+    setWallView: (wallNumber) => {
+      const centerX = widthInches / 2;
+      const centerZ = depthInches / 2;
+      const eyeHeight = 66; // 5.5 feet eye level
+      const viewDistance = 24; // Distance from center towards wall
+      
+      let cameraPos, targetPos;
+      
+      switch(wallNumber) {
+        case 1: // Top wall - camera looks from center towards z=0
+          cameraPos = [centerX, eyeHeight, centerZ + viewDistance];
+          targetPos = [centerX, eyeHeight * 0.7, 0];
+          break;
+        case 2: // Right wall - camera looks from center towards x=max
+          cameraPos = [centerX - viewDistance, eyeHeight, centerZ];
+          targetPos = [widthInches, eyeHeight * 0.7, centerZ];
+          break;
+        case 3: // Bottom wall - camera looks from center towards z=max
+          cameraPos = [centerX, eyeHeight, centerZ - viewDistance];
+          targetPos = [centerX, eyeHeight * 0.7, depthInches];
+          break;
+        case 4: // Left wall - camera looks from center towards x=0
+          cameraPos = [centerX + viewDistance, eyeHeight, centerZ];
+          targetPos = [0, eyeHeight * 0.7, centerZ];
+          break;
+        default:
+          return;
+      }
+      
+      camera.position.set(...cameraPos);
+      camera.lookAt(...targetPos);
+      
+      if (orbitControlsRef?.current) {
+        orbitControlsRef.current.target.set(...targetPos);
+        orbitControlsRef.current.update();
+      }
+    },
+    // Get current camera for direct manipulation
+    getCamera: () => camera,
+    getControls: () => orbitControlsRef?.current
+  }));
+  
+  return null;
+});
+
+// Professional cabinet colors matching Master Build style
+const CABINET_COLORS = {
+  white: '#f5f5f5',      // Clean white shaker
+  cream: '#f8f4e8',      // Warm cream
+  gray: '#d4d4d4',       // Light gray
+};
+
+// Countertop materials
+const COUNTERTOP_COLORS = {
+  marble: '#e8e4df',     // Light marble/granite
+  granite: '#4a4a4a',    // Dark granite
+};
+
+// Shaker Door Panel Component
+const ShakerDoorPanel = ({ width, height, depth, color, isSelected }) => {
+  const frameWidth = 2;
+  const panelInset = 0.3;
+  
+  return (
+    <group>
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial 
+          color={color} 
+          roughness={0.4}
+          metalness={0.05}
+          emissive={isSelected ? '#4a90e2' : '#000000'}
+          emissiveIntensity={isSelected ? 0.15 : 0}
+        />
+      </mesh>
+      <mesh position={[0, 0, -panelInset]} castShadow receiveShadow>
+        <boxGeometry args={[width - frameWidth * 2, height - frameWidth * 2, depth * 0.5]} />
+        <meshStandardMaterial color={color} roughness={0.5} metalness={0.02} />
+      </mesh>
+    </group>
+  );
+};
+
+// Crown Molding Component
+const CrownMolding = ({ width, depth, height = 3, color }) => {
+  return (
+    <group>
+      <mesh position={[0, 0, depth / 2]} castShadow>
+        <boxGeometry args={[width + 1, height, 1.5]} />
+        <meshStandardMaterial color={color} roughness={0.4} />
+      </mesh>
+      <mesh position={[width / 2 + 0.5, 0, 0]} castShadow>
+        <boxGeometry args={[1.5, height, depth + 1]} />
+        <meshStandardMaterial color={color} roughness={0.4} />
+      </mesh>
+      <mesh position={[-width / 2 - 0.5, 0, 0]} castShadow>
+        <boxGeometry args={[1.5, height, depth + 1]} />
+        <meshStandardMaterial color={color} roughness={0.4} />
+      </mesh>
+    </group>
+  );
+};
+
+// Cabinet Handle Component
+const CabinetHandle = ({ position, rotation = [0, 0, 0] }) => {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh castShadow>
+        <capsuleGeometry args={[0.25, 4, 8, 16]} />
+        <meshStandardMaterial color="#9ca3af" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, 1.5, -0.3]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.6, 8]} />
+        <meshStandardMaterial color="#6b7280" metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -1.5, -0.3]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.6, 8]} />
+        <meshStandardMaterial color="#6b7280" metalness={0.8} roughness={0.2} />
+      </mesh>
+    </group>
+  );
+};
 
 const Element3D = ({ element, scale, elementTypes, isSelected, onSelect, onUpdate, interactive, transformMode, orbitControlsRef, roomWidth, roomDepth, onTransformChange }) => {
   const [elementObj, setElementObj] = useState(null);
   const spec = elementTypes[element.type] || { color: '#999' };
   
-  // Material Resolution
+  // Material Resolution - Default to white shaker style
   const materialData = element.materialId ? getMaterialById(element.materialId) : null;
-  const baseColor = materialData ? materialData.hex : (spec.color || '#ccc');
+  const baseColor = materialData ? materialData.hex : CABINET_COLORS.white;
   
   // Determine material properties based on type
   const materialProps = useMemo(() => {
-    if (!materialData) return { roughness: 0.5, metalness: 0.1 };
+    if (!materialData) return { roughness: 0.4, metalness: 0.05 };
     
     if (materialData.type === MATERIAL_TYPES.PAINT) {
-        // Use the finish from the element if specified, otherwise default to Satin
         const finish = element.finish && FINISHES[element.finish] ? FINISHES[element.finish] : FINISHES.satin;
         return { roughness: finish.roughness, metalness: finish.metalness };
     } else if (materialData.type === MATERIAL_TYPES.APPLIANCE) {
         return { roughness: materialData.roughness, metalness: materialData.metalness };
     } else {
-        // Stain properties
-        return { roughness: 0.6, metalness: 0 };
+        return { roughness: 0.5, metalness: 0 };
     }
   }, [materialData, element.finish]);
 
@@ -102,16 +231,16 @@ const Element3D = ({ element, scale, elementTypes, isSelected, onSelect, onUpdat
                     emissiveIntensity={isSelected ? 0.3 : 0}
                 />
             </mesh>
-            {/* Countertop for corner */}
+            {/* Countertop for corner - Marble/Granite style */}
             {isBaseCabinet && (
                 <group position={[0, height + 0.75, 0]}>
                     <mesh position={[0, 0, 12 - depth / 2]} castShadow receiveShadow onClick={handleElementClick}>
                         <boxGeometry args={[width + 1, 1.5, 25]} />
-                        <meshStandardMaterial color="#f5f5dc" roughness={0.5} />
+                        <meshStandardMaterial color="#e8e4df" roughness={0.15} metalness={0.05} />
                     </mesh>
                     <mesh position={[12 - width / 2, 0, 24 + (depth - 24) / 2 - depth / 2]} castShadow receiveShadow onClick={handleElementClick}>
                         <boxGeometry args={[25, 1.5, depth - 24 + 1]} />
-                        <meshStandardMaterial color="#f5f5dc" roughness={0.5} />
+                        <meshStandardMaterial color="#e8e4df" roughness={0.15} metalness={0.05} />
                     </mesh>
                 </group>
             )}
@@ -134,7 +263,7 @@ const Element3D = ({ element, scale, elementTypes, isSelected, onSelect, onUpdat
         </mesh>
       )}
 
-        {/* Countertop for standard base cabinets */}
+        {/* Countertop for standard base cabinets - Marble/Granite style */}
         {isBaseCabinet && !isCorner && (
             <mesh 
                 position={[0, height + 0.75, 0]} 
@@ -143,7 +272,7 @@ const Element3D = ({ element, scale, elementTypes, isSelected, onSelect, onUpdat
                 onClick={handleElementClick}
             >
               <boxGeometry args={[width + 1, 1.5, depth + 1]} />
-              <meshStandardMaterial color="#f5f5dc" roughness={0.5} />
+              <meshStandardMaterial color="#e8e4df" roughness={0.15} metalness={0.05} />
             </mesh>
         )}
 
@@ -287,12 +416,52 @@ const Element3D = ({ element, scale, elementTypes, isSelected, onSelect, onUpdat
   );
 };
 
+// Professional wood floor with plank pattern
 const RoomFloor = ({ width, depth }) => {
+  // Light oak wood floor color
+  const woodFloorColor = '#c8a27a';
+  const groutColor = '#9a7b5c';
+  const plankWidth = 6; // 6 inch wide planks
+  const plankLength = 48; // 4 foot planks
+  
+  const planks = useMemo(() => {
+    const p = [];
+    for (let x = 0; x < width; x += plankWidth) {
+      for (let y = 0; y < depth; y += plankLength) {
+        // Offset every other row for staggered pattern
+        const xOffset = Math.floor(y / plankLength) % 2 === 0 ? 0 : plankWidth / 2;
+        const actualX = x + xOffset;
+        if (actualX < width) {
+          const pw = Math.min(plankWidth, width - actualX);
+          const pl = Math.min(plankLength, depth - y);
+          // Slight color variation for realism
+          const colorVariation = (Math.random() * 0.1 - 0.05);
+          p.push({ x: actualX + pw/2, y: y + pl/2, w: pw - 0.2, l: pl - 0.2, colorVar: colorVariation });
+        }
+      }
+    }
+    return p;
+  }, [width, depth]);
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0, depth / 2]} receiveShadow>
-      <planeGeometry args={[width, depth]} />
-      <meshStandardMaterial color="#f0f0f0" />
-    </mesh>
+    <group>
+      {/* Base floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -0.1, depth / 2]} receiveShadow>
+        <planeGeometry args={[width, depth]} />
+        <meshStandardMaterial color={groutColor} />
+      </mesh>
+      {/* Wood planks */}
+      {planks.map((plank, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[plank.x, 0, plank.y]} receiveShadow>
+          <planeGeometry args={[plank.w, plank.l]} />
+          <meshStandardMaterial 
+            color={woodFloorColor} 
+            roughness={0.6 + plank.colorVar} 
+            metalness={0.02}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 };
 
@@ -300,89 +469,113 @@ const Door3D = ({ door, width, depth, height, scale, activeWalls, customWalls })
   const doorWidthInches = door.width || 32;
   const doorHeightInches = 80; // Standard door height
   const wallThickness = 4;
-  const doorThickness = 1.75; // Standard door thickness
+  const doorThickness = 2; // Slightly thicker for visibility
 
   // Check if this door's wall is active
   if (!activeWalls.includes(door.wallNumber)) return null;
 
-  // Door color based on type
-  const doorColor = door.type === 'pantry' ? '#6B4423' : door.type === 'room' ? '#8B7355' : '#7D6E5F';
+  // More visible door colors based on type
+  const doorColors = {
+    standard: { main: '#8B6914', light: '#A67C00', dark: '#5C4A0F' },
+    pantry: { main: '#5D4037', light: '#8D6E63', dark: '#3E2723' },
+    room: { main: '#2E7D32', light: '#4CAF50', dark: '#1B5E20' },
+    double: { main: '#1565C0', light: '#42A5F5', dark: '#0D47A1' },
+    sliding: { main: '#455A64', light: '#78909C', dark: '#263238' }
+  };
+  
+  const colors = doorColors[door.type] || doorColors.standard;
 
   // Render detailed door with panels, frame, and hardware
   const renderDoorDetails = () => (
     <>
-      {/* Main door panel */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[doorWidthInches, doorHeightInches, doorThickness]} />
-        <meshStandardMaterial color={doorColor} roughness={0.6} metalness={0.1} />
-      </mesh>
-
-      {/* Door frame/trim */}
-      <group position={[0, 0, doorThickness / 2 + 0.1]}>
-        {/* Top rail */}
-        <mesh position={[0, doorHeightInches / 2 - 3, 0]}>
-          <boxGeometry args={[doorWidthInches - 4, 1, 0.3]} />
-          <meshStandardMaterial color={doorColor} roughness={0.5} />
+      {/* Door frame/casing around the opening */}
+      <group position={[0, 0, -doorThickness / 2 - 0.5]}>
+        {/* Top casing */}
+        <mesh position={[0, doorHeightInches / 2 + 2, 0]} castShadow>
+          <boxGeometry args={[doorWidthInches + 6, 4, 1]} />
+          <meshStandardMaterial color="#f5f5f0" roughness={0.5} />
         </mesh>
-        {/* Bottom rail */}
-        <mesh position={[0, -doorHeightInches / 2 + 3, 0]}>
-          <boxGeometry args={[doorWidthInches - 4, 1, 0.3]} />
-          <meshStandardMaterial color={doorColor} roughness={0.5} />
+        {/* Left casing */}
+        <mesh position={[-doorWidthInches / 2 - 2, 0, 0]} castShadow>
+          <boxGeometry args={[4, doorHeightInches + 4, 1]} />
+          <meshStandardMaterial color="#f5f5f0" roughness={0.5} />
         </mesh>
-        {/* Left stile */}
-        <mesh position={[-doorWidthInches / 2 + 3, 0, 0]}>
-          <boxGeometry args={[1, doorHeightInches - 8, 0.3]} />
-          <meshStandardMaterial color={doorColor} roughness={0.5} />
-        </mesh>
-        {/* Right stile */}
-        <mesh position={[doorWidthInches / 2 - 3, 0, 0]}>
-          <boxGeometry args={[1, doorHeightInches - 8, 0.3]} />
-          <meshStandardMaterial color={doorColor} roughness={0.5} />
-        </mesh>
-
-        {/* Decorative panels */}
-        {/* Upper panel */}
-        <mesh position={[0, doorHeightInches / 4, 0.15]}>
-          <boxGeometry args={[doorWidthInches - 10, doorHeightInches / 2 - 10, 0.2]} />
-          <meshStandardMaterial color={doorColor} roughness={0.7} />
-        </mesh>
-        {/* Lower panel */}
-        <mesh position={[0, -doorHeightInches / 4, 0.15]}>
-          <boxGeometry args={[doorWidthInches - 10, doorHeightInches / 2 - 10, 0.2]} />
-          <meshStandardMaterial color={doorColor} roughness={0.7} />
+        {/* Right casing */}
+        <mesh position={[doorWidthInches / 2 + 2, 0, 0]} castShadow>
+          <boxGeometry args={[4, doorHeightInches + 4, 1]} />
+          <meshStandardMaterial color="#f5f5f0" roughness={0.5} />
         </mesh>
       </group>
 
-      {/* Door handle assembly */}
-      <group position={[doorWidthInches * 0.35, 0, doorThickness / 2]}>
-        {/* Handle base plate */}
-        <mesh position={[0, 0, 0.5]}>
-          <cylinderGeometry args={[2, 2, 0.3, 16]} />
-          <meshStandardMaterial color="#D4AF37" roughness={0.2} metalness={0.9} />
-        </mesh>
+      {/* Main door panel */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[doorWidthInches, doorHeightInches, doorThickness]} />
+        <meshStandardMaterial color={colors.main} roughness={0.5} metalness={0.05} />
+      </mesh>
 
-        {/* Handle lever */}
-        <mesh position={[0, 0, 1.5]} rotation={[Math.PI / 2, 0, 0]}>
-          <capsuleGeometry args={[0.4, 4, 8, 16]} />
+      {/* Door panel details (raised panels) */}
+      <group position={[0, 0, doorThickness / 2 + 0.1]}>
+        {/* Upper panel - recessed */}
+        <mesh position={[0, doorHeightInches / 4 + 2, 0]}>
+          <boxGeometry args={[doorWidthInches - 8, doorHeightInches / 2 - 12, 0.5]} />
+          <meshStandardMaterial color={colors.dark} roughness={0.6} />
+        </mesh>
+        {/* Upper panel - raised center */}
+        <mesh position={[0, doorHeightInches / 4 + 2, 0.3]}>
+          <boxGeometry args={[doorWidthInches - 12, doorHeightInches / 2 - 16, 0.3]} />
+          <meshStandardMaterial color={colors.light} roughness={0.4} />
+        </mesh>
+        
+        {/* Lower panel - recessed */}
+        <mesh position={[0, -doorHeightInches / 4 - 2, 0]}>
+          <boxGeometry args={[doorWidthInches - 8, doorHeightInches / 2 - 12, 0.5]} />
+          <meshStandardMaterial color={colors.dark} roughness={0.6} />
+        </mesh>
+        {/* Lower panel - raised center */}
+        <mesh position={[0, -doorHeightInches / 4 - 2, 0.3]}>
+          <boxGeometry args={[doorWidthInches - 12, doorHeightInches / 2 - 16, 0.3]} />
+          <meshStandardMaterial color={colors.light} roughness={0.4} />
+        </mesh>
+      </group>
+
+      {/* Door handle assembly - larger and more visible */}
+      <group position={[doorWidthInches * 0.35, 0, doorThickness / 2]}>
+        {/* Handle backplate */}
+        <mesh position={[0, 0, 0.3]}>
+          <boxGeometry args={[2.5, 8, 0.3]} />
           <meshStandardMaterial color="#C0C0C0" roughness={0.2} metalness={0.9} />
         </mesh>
 
-        {/* Lock cylinder */}
+        {/* Handle lever */}
+        <mesh position={[0, 2, 1.5]} rotation={[0, 0, Math.PI / 2]}>
+          <capsuleGeometry args={[0.5, 5, 8, 16]} />
+          <meshStandardMaterial color="#B8860B" roughness={0.2} metalness={0.9} />
+        </mesh>
+
+        {/* Lock/deadbolt */}
         <mesh position={[0, -3, 0.8]}>
-          <cylinderGeometry args={[0.5, 0.5, 0.5, 16]} />
+          <cylinderGeometry args={[0.8, 0.8, 0.6, 16]} />
           <meshStandardMaterial color="#4A4A4A" roughness={0.3} metalness={0.7} />
         </mesh>
       </group>
 
-      {/* Hinges (3 hinges on opposite side) */}
-      {[0.7, 0, -0.7].map((yOffset, i) => (
-        <group key={i} position={[-doorWidthInches / 2 + 1, doorHeightInches * yOffset / 2, doorThickness / 2]}>
+      {/* Hinges (3 hinges on opposite side) - larger */}
+      {[0.8, 0, -0.8].map((yOffset, i) => (
+        <group key={i} position={[-doorWidthInches / 2 + 0.5, doorHeightInches * yOffset / 2, doorThickness / 2]}>
           <mesh>
-            <boxGeometry args={[1.5, 3, 0.5]} />
+            <boxGeometry args={[2, 4, 0.8]} />
             <meshStandardMaterial color="#4A4A4A" roughness={0.4} metalness={0.8} />
           </mesh>
         </group>
       ))}
+      
+      {/* Door type label - floating text above door */}
+      {door.type && door.type !== 'standard' && (
+        <mesh position={[0, doorHeightInches / 2 + 8, 2]}>
+          <planeGeometry args={[20, 6]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+        </mesh>
+      )}
     </>
   );
 
@@ -392,21 +585,21 @@ const Door3D = ({ door, width, depth, height, scale, activeWalls, customWalls })
     let doorPosition, doorRotation;
 
     switch (door.wallNumber) {
-      case 1: // Top wall
-        doorPosition = [width * position, doorHeightInches / 2, 0];
+      case 1: // Top wall - at z = -wallThickness/2
+        doorPosition = [width * position, doorHeightInches / 2, -wallThickness / 2];
         doorRotation = [0, 0, 0];
         break;
-      case 2: // Right wall
-        doorPosition = [width, doorHeightInches / 2, depth * position];
+      case 2: // Right wall - at x = width + wallThickness/2
+        doorPosition = [width + wallThickness / 2, doorHeightInches / 2, depth * position];
         doorRotation = [0, Math.PI / 2, 0];
         break;
-      case 3: // Bottom wall
-        doorPosition = [width * position, doorHeightInches / 2, depth];
-        doorRotation = [0, 0, 0];
+      case 3: // Bottom wall - at z = depth + wallThickness/2
+        doorPosition = [width * position, doorHeightInches / 2, depth + wallThickness / 2];
+        doorRotation = [0, Math.PI, 0];
         break;
-      case 4: // Left wall
-        doorPosition = [0, doorHeightInches / 2, depth * position];
-        doorRotation = [0, Math.PI / 2, 0];
+      case 4: // Left wall - at x = -wallThickness/2
+        doorPosition = [-wallThickness / 2, doorHeightInches / 2, depth * position];
+        doorRotation = [0, -Math.PI / 2, 0];
         break;
       default:
         return null;
@@ -513,8 +706,8 @@ const WallWithDoorOpening = ({
       <mesh
         position={
           wallRotation[1] === 0
-            ? [wallPosition[0] - wallLength / 2 + doorCenter, wallPosition[1] + doorHeightInches / 2 + (wallHeight - doorHeightInches) / 4, wallPosition[2]]
-            : [wallPosition[0], wallPosition[1] + doorHeightInches / 2 + (wallHeight - doorHeightInches) / 4, wallPosition[2] - wallLength / 2 + doorCenter]
+            ? [wallPosition[0] - wallLength / 2 + doorCenter, doorHeightInches + (wallHeight - doorHeightInches) / 2, wallPosition[2]]
+            : [wallPosition[0], doorHeightInches + (wallHeight - doorHeightInches) / 2, wallPosition[2] - wallLength / 2 + doorCenter]
         }
         receiveShadow
         castShadow
@@ -553,8 +746,8 @@ const WallWithDoorOpening = ({
         <mesh
           position={
             wallRotation[1] === 0
-              ? [wallPosition[0] - wallLength / 2 + doorCenter - doorHalfWidth - frameWidth / 2, wallPosition[1] - wallHeight / 2 + doorHeightInches / 2, wallPosition[2]]
-              : [wallPosition[0], wallPosition[1] - wallHeight / 2 + doorHeightInches / 2, wallPosition[2] - wallLength / 2 + doorCenter - doorHalfWidth - frameWidth / 2]
+              ? [wallPosition[0] - wallLength / 2 + doorCenter - doorHalfWidth - frameWidth / 2, doorHeightInches / 2, wallPosition[2]]
+              : [wallPosition[0], doorHeightInches / 2, wallPosition[2] - wallLength / 2 + doorCenter - doorHalfWidth - frameWidth / 2]
           }
           receiveShadow
           castShadow
@@ -571,8 +764,8 @@ const WallWithDoorOpening = ({
         <mesh
           position={
             wallRotation[1] === 0
-              ? [wallPosition[0] - wallLength / 2 + doorCenter + doorHalfWidth + frameWidth / 2, wallPosition[1] - wallHeight / 2 + doorHeightInches / 2, wallPosition[2]]
-              : [wallPosition[0], wallPosition[1] - wallHeight / 2 + doorHeightInches / 2, wallPosition[2] - wallLength / 2 + doorCenter + doorHalfWidth + frameWidth / 2]
+              ? [wallPosition[0] - wallLength / 2 + doorCenter + doorHalfWidth + frameWidth / 2, doorHeightInches / 2, wallPosition[2]]
+              : [wallPosition[0], doorHeightInches / 2, wallPosition[2] - wallLength / 2 + doorCenter + doorHalfWidth + frameWidth / 2]
           }
           receiveShadow
           castShadow
@@ -589,8 +782,8 @@ const WallWithDoorOpening = ({
         <mesh
           position={
             wallRotation[1] === 0
-              ? [wallPosition[0] - wallLength / 2 + doorCenter, wallPosition[1] - wallHeight / 2 + doorHeightInches + frameWidth / 2, wallPosition[2]]
-              : [wallPosition[0], wallPosition[1] - wallHeight / 2 + doorHeightInches + frameWidth / 2, wallPosition[2] - wallLength / 2 + doorCenter]
+              ? [wallPosition[0] - wallLength / 2 + doorCenter, doorHeightInches + frameWidth / 2, wallPosition[2]]
+              : [wallPosition[0], doorHeightInches + frameWidth / 2, wallPosition[2] - wallLength / 2 + doorCenter]
           }
           receiveShadow
           castShadow
@@ -609,7 +802,8 @@ const WallWithDoorOpening = ({
 
 const RoomWalls = ({ width, depth, height, roomData, scale = 1 }) => {
   const wallThickness = 4; // 4 inches thick walls
-  const wallColor = "#e0e0e0";
+  // Soft sage/green-gray wall color - contrasts nicely with white cabinets
+  const wallColor = "#b8c4b8";
   const wallHeight = height || 96; // Default 8ft walls
 
   const activeWalls = roomData?.walls || [1, 2, 3, 4];
@@ -680,7 +874,6 @@ const RoomWalls = ({ width, depth, height, roomData, scale = 1 }) => {
         if (!activeWalls.includes(wall.wallNumber)) return null;
         
         // Convert pixel coordinates to inches
-        // Custom wall coordinates are in pixels, need to divide by scale
         const x1Inches = wall.x1 / scale;
         const y1Inches = wall.y1 / scale;
         const x2Inches = wall.x2 / scale;
@@ -696,17 +889,96 @@ const RoomWalls = ({ width, depth, height, roomData, scale = 1 }) => {
         const centerX = (x1Inches + x2Inches) / 2;
         const centerY = (y1Inches + y2Inches) / 2;
         
+        // Check if this custom wall has any doors
+        const doorsOnWall = doors.filter(d => d.wallNumber === wall.wallNumber);
+        
+        if (doorsOnWall.length === 0) {
+          // No doors - render solid wall
+          return (
+            <mesh 
+              key={wall.id || wall.wallNumber}
+              position={[centerX, wallHeight / 2, centerY]}
+              rotation={[0, -wallAngle, 0]}
+              receiveShadow 
+              castShadow
+            >
+              <boxGeometry args={[wallLength, wallHeight, wall.thickness || wallThickness]} />
+              <meshStandardMaterial color={wallColor} />
+            </mesh>
+          );
+        }
+        
+        // Wall has door(s) - render with opening
+        const door = doorsOnWall[0]; // Handle first door
+        const doorWidthInches = door.width || 32;
+        const doorHeightInches = 80;
+        const doorPosition = door.position / 100; // 0-1
+        const frameWidth = 4;
+        
+        // Calculate door center position along wall
+        const doorCenter = doorPosition * wallLength;
+        const doorHalfWidth = doorWidthInches / 2;
+        
+        // Left segment
+        const leftSegmentLength = doorCenter - doorHalfWidth - frameWidth;
+        // Right segment  
+        const rightSegmentLength = wallLength - doorCenter - doorHalfWidth - frameWidth;
+        
+        // Calculate positions for each segment along the wall direction
+        const leftSegmentCenter = leftSegmentLength / 2;
+        const rightSegmentCenter = wallLength - rightSegmentLength / 2;
+        
         return (
-          <mesh 
-            key={wall.id || wall.wallNumber}
-            position={[centerX, wallHeight / 2, centerY]}
-            rotation={[0, -wallAngle, 0]}
-            receiveShadow 
-            castShadow
-          >
-            <boxGeometry args={[wallLength, wallHeight, wall.thickness || wallThickness]} />
-            <meshStandardMaterial color={wallColor} />
-          </mesh>
+          <group key={wall.id || wall.wallNumber}>
+            {/* Left wall segment */}
+            {leftSegmentLength > 0 && (
+              <mesh
+                position={[
+                  x1Inches + Math.cos(wallAngle) * leftSegmentCenter,
+                  wallHeight / 2,
+                  y1Inches + Math.sin(wallAngle) * leftSegmentCenter
+                ]}
+                rotation={[0, -wallAngle, 0]}
+                receiveShadow
+                castShadow
+              >
+                <boxGeometry args={[leftSegmentLength, wallHeight, wall.thickness || wallThickness]} />
+                <meshStandardMaterial color={wallColor} />
+              </mesh>
+            )}
+            
+            {/* Header above door */}
+            <mesh
+              position={[
+                x1Inches + Math.cos(wallAngle) * doorCenter,
+                doorHeightInches + (wallHeight - doorHeightInches) / 2,
+                y1Inches + Math.sin(wallAngle) * doorCenter
+              ]}
+              rotation={[0, -wallAngle, 0]}
+              receiveShadow
+              castShadow
+            >
+              <boxGeometry args={[doorWidthInches + frameWidth * 2, wallHeight - doorHeightInches, wall.thickness || wallThickness]} />
+              <meshStandardMaterial color={wallColor} />
+            </mesh>
+            
+            {/* Right wall segment */}
+            {rightSegmentLength > 0 && (
+              <mesh
+                position={[
+                  x1Inches + Math.cos(wallAngle) * rightSegmentCenter,
+                  wallHeight / 2,
+                  y1Inches + Math.sin(wallAngle) * rightSegmentCenter
+                ]}
+                rotation={[0, -wallAngle, 0]}
+                receiveShadow
+                castShadow
+              >
+                <boxGeometry args={[rightSegmentLength, wallHeight, wall.thickness || wallThickness]} />
+                <meshStandardMaterial color={wallColor} />
+              </mesh>
+            )}
+          </group>
         );
       })}
     </group>
@@ -721,7 +993,8 @@ const DesignEditor3D = ({
   selectedElement: parentSelectedElement,
   setSelectedElement: parentSetSelectedElement,
   onUpdateElement,
-  onTransformChange
+  onTransformChange,
+  cameraRef  // New prop for external camera control
 }) => {
   const [transformMode, setTransformMode] = React.useState('translate'); // 'translate' | 'rotate'
 
@@ -731,6 +1004,7 @@ const DesignEditor3D = ({
   const setSelectedId = parentSetSelectedElement || setInternalSelectedId;
   
   const orbitControlsRef = useRef();
+  const internalCameraRef = useRef();
 
   if (!roomData) return null;
 
@@ -743,8 +1017,11 @@ const DesignEditor3D = ({
         shadows
         camera={{ position: [widthInches * 1.5, widthInches, depthInches * 1.5], fov: 45 }}
         onPointerMissed={() => interactive && setSelectedId(null)}
+        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1, preserveDrawingBuffer: true }}
       >
-        <color attach="background" args={['#f5f5f5']} />
+        {/* Light blue-gray sky background - contrasts with sage walls and white cabinets */}
+        <color attach="background" args={['#e0e8ef']} />
+        <fog attach="fog" args={['#e0e8ef', widthInches * 2, widthInches * 4]} />
         
         <OrbitControls 
           ref={orbitControlsRef}
@@ -754,11 +1031,57 @@ const DesignEditor3D = ({
           makeDefault
         />
         
-        <ambientLight intensity={0.7} />
+        {/* Camera controller for programmatic camera positioning */}
+        <CameraController 
+          ref={cameraRef || internalCameraRef} 
+          orbitControlsRef={orbitControlsRef}
+          widthInches={widthInches}
+          depthInches={depthInches}
+        />
+        
+        {/* Professional lighting setup */}
+        <ambientLight intensity={0.5} color="#fff5eb" />
+        
+        {/* Main key light - warm sunlight from window */}
         <directionalLight 
-          position={[widthInches / 2, 100, depthInches / 2]} 
-          intensity={1} 
-          castShadow 
+          position={[widthInches * 0.8, 150, depthInches * 0.3]} 
+          intensity={1.2} 
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-far={300}
+          shadow-camera-left={-widthInches}
+          shadow-camera-right={widthInches}
+          shadow-camera-top={depthInches}
+          shadow-camera-bottom={-depthInches}
+          color="#fffaf0"
+        />
+        
+        {/* Fill light from opposite side */}
+        <directionalLight 
+          position={[-widthInches * 0.5, 80, depthInches * 0.8]} 
+          intensity={0.4}
+          color="#e8f0ff"
+        />
+        
+        {/* Soft overhead light */}
+        <pointLight 
+          position={[widthInches / 2, 90, depthInches / 2]} 
+          intensity={0.3}
+          color="#fffaf0"
+        />
+        
+        {/* Under-cabinet accent lights */}
+        <pointLight 
+          position={[widthInches * 0.3, 36, 12]} 
+          intensity={0.15}
+          color="#fff8dc"
+          distance={40}
+        />
+        <pointLight 
+          position={[widthInches * 0.7, 36, 12]} 
+          intensity={0.15}
+          color="#fff8dc"
+          distance={40}
         />
         
         <group>
@@ -782,10 +1105,10 @@ const DesignEditor3D = ({
               />
             ))}
             
-            {/* Grid Helper */}
+            {/* Subtle grid - less visible */}
             <gridHelper 
-                args={[Math.max(widthInches, depthInches) * 2, 20, 0xcccccc, 0xe5e5e5]} 
-                position={[widthInches / 2, 0.1, depthInches / 2]} 
+                args={[Math.max(widthInches, depthInches) * 2, 40, 0xdddddd, 0xeeeeee]} 
+                position={[widthInches / 2, 0.05, depthInches / 2]} 
             />
 
             {/* Elements */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, ArrowLeft, RotateCw, Move, Palette, X } from 'lucide-react';
 import DesignEditor3D from './DesignEditor3D';
 import { PAINTS, STAINS, FINISHES, APPLIANCE_MATERIALS, GRAIN_TYPES } from '../../constants/materials';
@@ -12,12 +12,17 @@ const Designer3D = ({
     selectedElement: parentSelectedElement,
     setSelectedElement: parentSetSelectedElement,
     updateElement: parentUpdateElement,
-    onClose 
+    onClose,
+    cameraRef  // New: ref for external camera control
 }) => {
     const [localScale, setLocalScale] = useState(1);
     const [interactive, setInteractive] = useState(true);
     const [internalSelectedElement, setInternalSelectedElement] = useState(null);
     const [tempElementState, setTempElementState] = useState(null);
+    
+    // Use provided cameraRef or create internal one
+    const internalCameraRef = useRef();
+    const actualCameraRef = cameraRef || internalCameraRef;
 
     // Use parent's selection if provided, otherwise use internal state
     const selectedElement = parentSelectedElement !== undefined ? parentSelectedElement : internalSelectedElement;
@@ -125,6 +130,7 @@ const Designer3D = ({
                                 setTempElementState(prev => ({ ...prev, ...updates }));
                             }
                         }}
+                        cameraRef={actualCameraRef}
                     />
                     
                     {/* Overlay Instructions */}

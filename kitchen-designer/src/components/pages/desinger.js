@@ -4,7 +4,9 @@ import {
   X, // Close icon
   Plus, // Zoom in icon
   Minus, // Zoom out icon
+  Camera, // AR view icon
 } from "lucide-react";
+import ARViewer from "../design/ARViewer";
 import MainNavBar from "../ui/Navigation";
 import WallView from "../design/WallView";
 import DraggableCabinet from "../design/DraggableCabinet";
@@ -62,7 +64,7 @@ import { useWallManagement as useWallMgmt } from "../../hooks/designer/useWallMa
 import { useZoomControls } from "../../hooks/designer/useZoomControls";
 
 const KitchenDesigner = () => {
-  const { dragCacheRef, canvasRef, floorPlanRef, wallViewRef } =
+  const { dragCacheRef, canvasRef, floorPlanRef, wallViewRef, cameraRef } =
     useDesignerRefs();
 
   // Analytics tracking
@@ -124,10 +126,6 @@ const KitchenDesigner = () => {
     doors: [], // Array to store doors: {id, wallNumber, position, width, type}
   });
   // -----------------------------
-  // Current Room Helper Variables
-  // These provide easy access to the currently active room's data
-  // -----------------------------
-  // -----------------------------
   // UI and Interaction State
   // Controls user interface elements and interactions
   // MUST BE DECLARED BEFORE CUSTOM HOOKS THAT USE THEM
@@ -152,6 +150,7 @@ const KitchenDesigner = () => {
   const [selectedWall, setSelectedWall] = useState(1); // Wall number for wall view (1-4)
   const [showPricing, setShowPricing] = useState(false); // Show/hide pricing panel
   const [showQuoteForm, setShowQuoteForm] = useState(false); // Show/hide quote form modal
+  const [showARViewer, setShowARViewer] = useState(false); // Show/hide AR viewer modal
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Sidebar collapse state
   const [showFloorPlanPresets, setShowFloorPlanPresets] = useState(false); // Show/hide floor plan preset options
   const [isDrawingWall, setIsDrawingWall] = useState(false); // Wall drawing mode
@@ -959,6 +958,7 @@ const KitchenDesigner = () => {
       setViewMode,
       selectedWall,
       setSelectedWall,
+      cameraRef,  // Pass camera ref for 3D wall views
     });
     if (result?.success && result?.resetClientInfo) {
       setClientInfo(result.resetClientInfo);
@@ -1044,6 +1044,7 @@ const KitchenDesigner = () => {
             updateElement={updateElement}
             deleteElement={deleteElement}
             setShowQuoteForm={setShowQuoteForm}
+            setShowARViewer={setShowARViewer}
             // Wall/Elements
             allAvailableWalls={allAvailableWalls}
             selectedWall={selectedWall}
@@ -1128,6 +1129,7 @@ const KitchenDesigner = () => {
                   setSelectedElement={setSelectedElement}
                   updateElement={updateElement}
                   onClose={() => setViewMode("floor")}
+                  cameraRef={cameraRef}
                 />
               ) : viewMode === "floor" ? (
                 <>
@@ -1355,6 +1357,119 @@ const KitchenDesigner = () => {
                             fill="none"
                             stroke="#f0f0f0"
                             strokeWidth="0.5"
+                          />
+                        </pattern>
+                        {/* Wood Grain Pattern - Premium 2D Visual */}
+                        <pattern
+                          id="woodGrain"
+                          x="0"
+                          y="0"
+                          width="40"
+                          height="40"
+                          patternUnits="userSpaceOnUse"
+                        >
+                          {/* Base wood texture lines */}
+                          <path
+                            d="M0,8 Q10,6 20,8 T40,8"
+                            fill="none"
+                            stroke="#c4a882"
+                            strokeWidth="0.5"
+                            opacity="0.4"
+                          />
+                          <path
+                            d="M0,16 Q8,14 18,17 T40,15"
+                            fill="none"
+                            stroke="#c4a882"
+                            strokeWidth="0.5"
+                            opacity="0.35"
+                          />
+                          <path
+                            d="M0,24 Q12,22 22,25 T40,23"
+                            fill="none"
+                            stroke="#c4a882"
+                            strokeWidth="0.5"
+                            opacity="0.4"
+                          />
+                          <path
+                            d="M0,32 Q6,30 16,33 T40,31"
+                            fill="none"
+                            stroke="#c4a882"
+                            strokeWidth="0.5"
+                            opacity="0.35"
+                          />
+                          {/* Additional grain detail */}
+                          <path
+                            d="M5,4 Q15,2 25,5"
+                            fill="none"
+                            stroke="#b89b6a"
+                            strokeWidth="0.3"
+                            opacity="0.3"
+                          />
+                          <path
+                            d="M10,20 Q20,18 30,21"
+                            fill="none"
+                            stroke="#b89b6a"
+                            strokeWidth="0.3"
+                            opacity="0.3"
+                          />
+                          <path
+                            d="M2,36 Q12,34 22,37"
+                            fill="none"
+                            stroke="#b89b6a"
+                            strokeWidth="0.3"
+                            opacity="0.3"
+                          />
+                        </pattern>
+                        {/* Wood Grain Pattern - Dark variant for contrast */}
+                        <pattern
+                          id="woodGrainDark"
+                          x="0"
+                          y="0"
+                          width="40"
+                          height="40"
+                          patternUnits="userSpaceOnUse"
+                        >
+                          <path
+                            d="M0,8 Q10,6 20,8 T40,8"
+                            fill="none"
+                            stroke="#8b7355"
+                            strokeWidth="0.6"
+                            opacity="0.5"
+                          />
+                          <path
+                            d="M0,16 Q8,14 18,17 T40,15"
+                            fill="none"
+                            stroke="#8b7355"
+                            strokeWidth="0.6"
+                            opacity="0.45"
+                          />
+                          <path
+                            d="M0,24 Q12,22 22,25 T40,23"
+                            fill="none"
+                            stroke="#8b7355"
+                            strokeWidth="0.6"
+                            opacity="0.5"
+                          />
+                          <path
+                            d="M0,32 Q6,30 16,33 T40,31"
+                            fill="none"
+                            stroke="#8b7355"
+                            strokeWidth="0.6"
+                            opacity="0.45"
+                          />
+                          <path
+                            d="M5,4 Q15,2 25,5"
+                            fill="none"
+                            stroke="#6b5344"
+                            strokeWidth="0.4"
+                            opacity="0.4"
+                          />
+                          <path
+                            d="M10,20 Q20,18 30,21"
+                            fill="none"
+                            stroke="#6b5344"
+                            strokeWidth="0.4"
+                            opacity="0.4"
                           />
                         </pattern>
                       </defs>
@@ -2308,6 +2423,15 @@ const KitchenDesigner = () => {
         bathroomData={bathroomData}
         calculateTotalPrice={calculateTotalPrice}
         onSendQuote={handleSendQuote}
+      />
+      {/* AR Viewer Modal */}
+      <ARViewer
+        isOpen={showARViewer}
+        onClose={() => setShowARViewer(false)}
+        roomData={currentRoomData}
+        elementTypes={elementTypes}
+        scale={scale}
+        activeRoom={activeRoom}
       />
     </>
   );

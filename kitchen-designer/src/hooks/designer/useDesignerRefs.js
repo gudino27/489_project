@@ -15,11 +15,13 @@ export const useDesignerRefs = () => {
   const canvasRef = useRef(null); // Main floor plan canvas (SVG element)
   const floorPlanRef = useRef(null); // Floor plan container for PDF export
   const wallViewRef = useRef(null); // Wall elevation view canvas
+  const cameraRef = useRef(null); // 3D camera controller ref for PDF capture
 
   return {
     dragCacheRef,
     canvasRef,
     floorPlanRef,
     wallViewRef,
+    cameraRef,
   };
 };
