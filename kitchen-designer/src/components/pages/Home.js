@@ -16,6 +16,7 @@ const Home = () => {
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
+  const [visibleQuotes, setVisibleQuotes] = useState([]);
 
   const workTypes = [
     { title: t('home.workTypes.kitchen'), description: t('home.workTypes.kitchenDesc') },
@@ -40,9 +41,22 @@ const Home = () => {
       if (!isMobile) {
         setScrollY(window.scrollY);
       }
+
+      // Check which quotes are in view
+      const quotes = document.querySelectorAll('.quote, .feature-content, .final-content');
+      quotes.forEach((quote, index) => {
+        const rect = quote.getBoundingClientRect();
+        const isInView = rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
+
+        if (isInView && !visibleQuotes.includes(index)) {
+          setVisibleQuotes(prev => [...prev, index]);
+          quote.classList.add('animate-in');
+        }
+      });
     };
 
     checkIfMobile();
+    handleScroll(); // Check on mount
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', checkIfMobile);
 
@@ -50,7 +64,7 @@ const Home = () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', checkIfMobile);
     };
-  }, [isMobile]);
+  }, [isMobile, visibleQuotes]);
 
   return (
     <>

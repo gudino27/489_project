@@ -178,6 +178,24 @@ body {
     margin: 0 auto;
     line-height: 1.6;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.quote.animate-in {
+    animation: slideInUp 0.8s ease-out forwards;
+}
+
+.quote:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 /* Image Sections with Parallax */
@@ -274,6 +292,24 @@ body {
     text-align: center;
     position: relative;
     z-index: 2;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 60px 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.feature-content.animate-in {
+    animation: slideInUp 0.8s ease-out forwards;
+}
+
+.feature-content:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
 }
 
 .feature-header h2 {
@@ -302,15 +338,16 @@ body {
 
 .cta-button {
     display: inline-block;
-    padding: 15px 40px;
-    background: linear-gradient(135deg, #333333 0%, #000000 100%);
+    padding: 16px 45px;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(51, 51, 51, 0.9));
+    border: 2px solid rgba(255, 255, 255, 0.3);
     color: white;
     text-decoration: none;
     border-radius: 50px;
     font-size: clamp(1rem, 2vw, 1.2rem);
     font-weight: 600;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
 }
@@ -322,8 +359,10 @@ body {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
     transition: left 0.5s ease;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .cta-button:hover::before {
@@ -331,10 +370,11 @@ body {
 }
 
 .cta-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
     text-decoration: none;
     color: white;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Final Section */
@@ -348,6 +388,24 @@ body {
     max-width: 1000px;
     margin: 0 auto;
     text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 60px 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.final-content.animate-in {
+    animation: slideInUp 0.8s ease-out forwards;
+}
+
+.final-content:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
 }
 
 /* Animations */
@@ -357,6 +415,17 @@ body {
         transform: translateY(50px);
     }
 
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
     to {
         opacity: 1;
         transform: translateY(0);
@@ -595,8 +664,10 @@ body {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     transition: left 0.5s ease;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .dropdown-toggle:hover::before {

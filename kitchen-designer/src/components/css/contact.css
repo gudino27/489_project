@@ -71,10 +71,11 @@
 }
 
 .contact-card {
-  background: rgb(0, 0, 0);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
@@ -99,12 +100,14 @@
 
 .contact-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 48px rgba(31, 38, 135, 0.5);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .contact-card.hovered {
   transform: translateY(-10px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 48px rgba(31, 38, 135, 0.5);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .card-icon {
@@ -113,11 +116,13 @@
   margin-bottom: 20px;
   color: #ffffff;
   transition: all 0.3s ease;
+  animation: iconPulse 2s ease-in-out infinite;
 }
 
 .contact-card:hover .card-icon {
   color: #020202;
   transform: scale(1.1);
+  animation: none;
 }
 
 .card-icon svg {
@@ -137,6 +142,46 @@
   color: #ffffff;
   margin-bottom: 10px;
   font-weight: 500;
+}
+
+.contact-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.contact-detail-row .contact-detail {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.copy-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.copy-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+}
+
+.copy-button:active {
+  transform: scale(0.95);
+}
+
+.copy-button svg {
+  display: block;
 }
 
 .card-action {
@@ -160,10 +205,11 @@
 
 /* Map Section */
 .map-section {
-  background: rgb(0, 0, 0);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 20px;
   padding: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
 }
 
 .map-header {
@@ -216,6 +262,65 @@
 
 .interactive-map:hover {
   transform: scale(1.02);
+}
+
+.directions-button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(51, 51, 51, 0.9));
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.directions-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.directions-button:hover::before {
+  left: 100%;
+}
+
+.directions-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 1), rgba(51, 51, 51, 1));
+}
+
+.directions-button:active {
+  transform: translateY(0);
+}
+
+.directions-button svg {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.directions-button span {
+  position: relative;
+  z-index: 2;
 }
 
 
@@ -312,6 +417,17 @@
   }
 }
 
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .contact-grid {
@@ -374,15 +490,18 @@
 /* Special hover effects for different card types - phone card excluded */
 
 .email-card:hover {
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
 .location-card:hover {
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
 .hours-card:hover {
-  background: linear-gradient(135deg, #000000 0%, #000000 100%);
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
 /* Phone Options Styling */
@@ -428,7 +547,7 @@
 
 .phone-option .card-action {
   font-size: 0.85rem;
-  color: #3b82f6;
+  color: #ffffff;
   opacity: 1;
   font-weight: 600;
   text-decoration: underline;
@@ -437,15 +556,15 @@
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .phone-option:hover .card-action {
   opacity: 1;
   color: #ffffff;
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.4);
   transform: scale(1.05);
   text-decoration: none;
 }
@@ -457,13 +576,14 @@
 
 .phone-card:hover {
   transform: none !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
-  background: rgb(0, 0, 0) !important;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .phone-card.hovered {
   transform: none !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .phone-card:hover .card-icon {
@@ -491,5 +611,92 @@
 
   .phone-option .contact-detail {
     font-size: 1rem;
+  }
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  animation: slideInRight 0.4s ease-out, fadeOut 0.4s ease-in 2.6s forwards;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.toast-content svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+/* Mobile toast positioning */
+@media (max-width: 768px) {
+  .toast-notification {
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
+    padding: 14px 20px;
+  }
+
+  .toast-content {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-notification {
+    bottom: 15px;
+    right: 15px;
+    left: 15px;
+    padding: 12px 16px;
+  }
+
+  .toast-content {
+    font-size: 0.85rem;
+    gap: 10px;
+  }
+
+  .toast-content svg {
+    width: 20px;
+    height: 20px;
   }
 }

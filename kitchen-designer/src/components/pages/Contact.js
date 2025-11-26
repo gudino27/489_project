@@ -14,6 +14,8 @@ const Contact = () => {
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [isContentLoaded, setIsContentLoaded] = useState(false);
 
   useEffect(() => {
     // Simulate map loading
@@ -35,16 +37,57 @@ const Contact = () => {
     }
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, 3000);
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`${label} copied to clipboard!`);
+    }).catch((err) => {
+      console.error('Failed to copy:', err);
+      showToast('Failed to copy', 'error');
+    });
+  };
+
+  const handleGetDirections = () => {
+    const address = encodeURIComponent(contactInfo.address);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+
+    let mapsUrl;
+
+    if (isIOS) {
+      // Use Apple Maps on iOS devices
+      mapsUrl = `maps://maps.apple.com/?address=${address}`;
+    } else if (isAndroid) {
+      // Use Google Maps on Android devices
+      mapsUrl = `google.navigation:q=${address}`;
+    } else {
+      // Use Google Maps in browser for desktop
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${address}`;
+    }
+
+    window.open(mapsUrl, '_blank');
+    showToast('Opening maps...');
+  };
+
   const handleEnglishPhoneClick = () => {
     window.location.href = `tel:${contactInfo.phone.english}`;
+    showToast('Opening dialer...');
   };
 
   const handleSpanishPhoneClick = () => {
     window.location.href = `tel:${contactInfo.phone.spanish}`;
+    showToast('Opening dialer...');
   };
 
   const handleEmailClick = () => {
     window.location.href = `mailto:${contactInfo.email}`;
+    showToast('Opening email client...');
   };
 
   return (
@@ -81,15 +124,43 @@ const Contact = () => {
                 <div className="card-content">
                   <h3>{t('contact.callUs')}</h3>
                   <div className="phone-options">
-                    <div className="phone-option" onClick={handleEnglishPhoneClick}>
+                    <div className="phone-option">
                       <span className="language-label">English</span>
-                      <p className="contact-detail">{contactInfo.phone.english}</p>
-                      <span className="card-action">{t('contact.clickToCall')}</span>
+                      <div className="contact-detail-row">
+                        <p className="contact-detail">{contactInfo.phone.english}</p>
+                        <button
+                          className="copy-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(contactInfo.phone.english, 'Phone number');
+                          }}
+                          aria-label="Copy phone number"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <span className="card-action" onClick={handleEnglishPhoneClick}>{t('contact.clickToCall')}</span>
                     </div>
-                    <div className="phone-option" onClick={handleSpanishPhoneClick}>
+                    <div className="phone-option">
                       <span className="language-label">Español</span>
-                      <p className="contact-detail">{contactInfo.phone.spanish}</p>
-                      <span className="card-action">{t('contact.clickToCall')}</span>
+                      <div className="contact-detail-row">
+                        <p className="contact-detail">{contactInfo.phone.spanish}</p>
+                        <button
+                          className="copy-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(contactInfo.phone.spanish, 'Phone number');
+                          }}
+                          aria-label="Copy phone number"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <span className="card-action" onClick={handleSpanishPhoneClick}>{t('contact.clickToCall')}</span>
                     </div>
                   </div>
                 </div>
@@ -100,7 +171,6 @@ const Contact = () => {
                 className={`contact-card email-card ${hoveredCard === 'email' ? 'hovered' : ''}`}
                 onMouseEnter={() => setHoveredCard('email')}
                 onMouseLeave={() => setHoveredCard(null)}
-                onClick={handleEmailClick}
               >
                 <div className="card-icon">
                   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -109,8 +179,22 @@ const Contact = () => {
                 </div>
                 <div className="card-content">
                   <h3>{t('contact.emailUs')}</h3>
-                  <p className="contact-detail">{contactInfo.email}</p>
-                  <span className="card-action">{t('contact.clickToEmail')}</span>
+                  <div className="contact-detail-row">
+                    <p className="contact-detail">{contactInfo.email}</p>
+                    <button
+                      className="copy-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(contactInfo.email, 'Email address');
+                      }}
+                      aria-label="Copy email address"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <span className="card-action" onClick={handleEmailClick}>{t('contact.clickToEmail')}</span>
                 </div>
               </div>
 
@@ -170,18 +254,26 @@ const Contact = () => {
                     <p>{t('contact.loadingMap')}</p>
                   </div>
                 ) : (
-                  <div className="interactive-map">
-                    <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2756.6001221157585!2d-119.9602535231462!3d46.297917871099834!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x549822f175b48609%3A0x30cb35096d65324b!2s70%20Ray%20Rd%2C%20Sunnyside%2C%20WA%2098944!5e0!3m2!1sen!2sus!4v1753657799291!5m2!1sen!2sus"
-                      width="100%"
-                      height="400"
-                      style={{ border: 0, borderRadius: '15px' }}
-                      allowFullScreen=""
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title="Gudino Custom Woodworking Location"
-                    ></iframe>
-                  </div>
+                  <>
+                    <div className="interactive-map">
+                      <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2756.6001221157585!2d-119.9602535231462!3d46.297917871099834!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x549822f175b48609%3A0x30cb35096d65324b!2s70%20Ray%20Rd%2C%20Sunnyside%2C%20WA%2098944!5e0!3m2!1sen!2sus!4v1753657799291!5m2!1sen!2sus"
+                        width="100%"
+                        height="400"
+                        style={{ border: 0, borderRadius: '15px' }}
+                        allowFullScreen=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Gudino Custom Woodworking Location"
+                      ></iframe>
+                    </div>
+                    <button className="directions-button" onClick={handleGetDirections}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
+                      </svg>
+                      <span>Get Directions</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -191,6 +283,18 @@ const Contact = () => {
 
 
         </div>
+
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className={`toast-notification ${toast.type}`}>
+            <div className="toast-content">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </>
