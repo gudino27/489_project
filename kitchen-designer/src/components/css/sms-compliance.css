@@ -160,6 +160,44 @@
   color: #e5e7eb;
 }
 
+/* Collapsible section styles */
+.collapsible {
+  margin-bottom: 12px;
+}
+.collapsible-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  padding: 8px 0;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 16px;
+}
+.collapsible-title {
+  font-weight: 600;
+}
+.collapsible-caret {
+  display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 0.18s ease;
+  color: #9ca3af;
+  margin-left: 12px;
+}
+.collapsible-caret.open {
+  transform: rotate(90deg);
+}
+.collapsible-content {
+  padding: 6px 0 14px 0;
+  color: #d1d5db;
+  line-height: 1.6;
+}
+.collapsible-content ul {
+  margin-top: 8px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .sms-tabs-container {

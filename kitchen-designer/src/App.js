@@ -45,6 +45,7 @@ function App() {
             <Route path="/privacy" element={<SmsCompliance defaultTab="website" />} />
             <Route path="/opt-out" element={<PrivacySettings />} />
             <Route path="/privacy-settings" element={<PrivacySettings />} />
+            <Route path="/cabinet-Care" element={<SmsCompliance defaultTab="cabinetCare" />} />
           </Routes>
         </Router>
       </PricingProvider>

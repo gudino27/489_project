@@ -28,7 +28,12 @@ const Footer = () => {
           <Link to="/privacy" className="footer-link">
             Privacy
           </Link>
+          <span className="footer-separator">|</span>
+          <Link to="/cabinet-Care" className="footer-link">
+            Cabinet Care
+          </Link>
         </div>
+        
         
         <div className="footer-copyright">
           © {new Date().getFullYear()} Gudino Custom Cabinets. All rights reserved.
