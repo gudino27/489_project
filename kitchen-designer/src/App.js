@@ -13,6 +13,8 @@ import InvoiceViewer from './components/invoice/InvoiceViewer';
 import ReceiptViewer from './components/invoice/ReceiptViewer';
 import SmsCompliance from './components/SmsCompliance';
 import PrivacySettings from './components/PrivacySettings';
+import CabinetCare from './components/pages/CabinetCare';
+import WhyChooseUs from './components/pages/WhyChooseUs';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
@@ -45,7 +47,8 @@ function App() {
             <Route path="/privacy" element={<SmsCompliance defaultTab="website" />} />
             <Route path="/opt-out" element={<PrivacySettings />} />
             <Route path="/privacy-settings" element={<PrivacySettings />} />
-            <Route path="/cabinet-Care" element={<SmsCompliance defaultTab="cabinetCare" />} />
+            <Route path="/cabinet-care" element={<CabinetCare />} />
+            <Route path="/why-choose-us" element={<WhyChooseUs />} />
           </Routes>
         </Router>
       </PricingProvider>

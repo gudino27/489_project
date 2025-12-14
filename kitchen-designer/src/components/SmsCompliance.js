@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import "./css/sms-compliance.css";
 import WebsitePrivacy from "./WebsitePrivacy";
 import Navigation from "./ui/Navigation";
-import CabinetCareContent from "./CabinetCare";
 import Collapsible from "./ui/Collapsible";
 const SmsCompliance = ({ defaultTab = "consent" }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -319,8 +318,6 @@ const SmsCompliance = ({ defaultTab = "consent" }) => {
         return <TermsContent />;
       case "privacy":
         return <PrivacyContent />;
-      case "cabinetCare":
-        return <CabinetCareContent />;
       default:
         return <WebsitePrivacy />;
     }
@@ -363,14 +360,6 @@ const SmsCompliance = ({ defaultTab = "consent" }) => {
             onClick={() => setActiveTab("privacy")}
           >
             SMS Privacy
-          </button>
-          <button
-            className={`sms-tab-button ${
-              activeTab === "cabinetCare" ? "active" : ""
-            }`}
-            onClick={() => setActiveTab("cabinetCare")}
-          >
-            Cabinet Care
           </button>
         </div>
 

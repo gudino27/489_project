@@ -6,6 +6,7 @@ import '../css/navigation.css';
 const Navigation = () => {
     const location = useLocation();
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // Add this useEffect to dynamically set body padding
     useEffect(() => {
@@ -23,6 +24,18 @@ const Navigation = () => {
         return () => window.removeEventListener('resize', updatePadding);
     }, []);
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (isDropdownOpen && !event.target.closest('.dropdown')) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [isDropdownOpen]);
+
     // Helper function to determine if a link is active
     const isActive = (path) => {
         if (path === '/' && location.pathname === '/') return true;
@@ -31,6 +44,16 @@ const Navigation = () => {
     };
 
     const handleNavCollapse = () => setIsNavCollapsed(!isNavCollapsed);
+
+    const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
+
+    const closeDropdown = () => {
+        setIsDropdownOpen(false);
+        // On mobile, also collapse the main nav
+        if (window.innerWidth < 992) {
+            handleNavCollapse();
+        }
+    };
 
     return (
         <nav className="navbar navbar-expand-lg" id="main-nav">
@@ -63,8 +86,29 @@ const Navigation = () => {
                     <Link className={`nav-link text-white ${isActive('/contact') ? 'active' : ''}`} to="/contact" onClick={handleNavCollapse}>
                         <p>Contact</p>
                     </Link>
-                    
-                    
+
+                    <div className={`nav-item dropdown ${isActive('/cabinet-care') || isActive('/why-choose-us') ? 'active' : ''} ${isDropdownOpen ? 'show' : ''}`}>
+                        <button
+                            className="nav-link dropdown-toggle text-white"
+                            onClick={toggleDropdown}
+                            aria-expanded={isDropdownOpen}
+                        >
+                            <p>Learn More</p>
+                        </button>
+                        <ul className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
+                            <li>
+                                <Link className="dropdown-item text-left" to="/cabinet-care" onClick={closeDropdown}style={{border:"1px solid #ffffff8a"}}>
+                                    Cabinet Care
+                                </Link>
+                            </li>
+                            <li>
+                                <Link className="dropdown-item text-center" to="/why-choose-us" onClick={closeDropdown}style={{border:"1px solid #ffffff8a"}}>
+                                    Why Choose Us
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
                     <Link className={`nav-link text-white ${isActive('/admin') ? 'active' : ''}`} to="/admin" onClick={handleNavCollapse}>
                         <p>Login</p>
                     </Link>
