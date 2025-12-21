@@ -1,142 +1,123 @@
 import React from 'react';
 import './css/sms-compliance.css';
 import Collapsible from './ui/Collapsible';
+import { useLanguage } from '../contexts/LanguageContext';
 
-const WebsitePrivacy = () => (
-  <>
-    <h1 className="sms-header">Privacy Policy - Website & Tracking</h1>
-    <p><em>Effective for Washington State and all US users</em></p>
+const WebsitePrivacy = () => {
+  const { t } = useLanguage();
 
-    <Collapsible title="Our Commitment to Your Privacy" >
-      <p>
-        Gudino Custom Woodworking LLC respects your privacy. This policy explains how we collect, use, and protect
-        your information when you use our website and services. We are committed to transparency and
-        compliance with all applicable privacy laws.
-      </p>
-    </Collapsible>
+  return (
+    <>
+      <h1 className="sms-header">{t("websitePrivacy.header")}</h1>
+      <p><em>{t("websitePrivacy.effective")}</em></p>
 
-    <Collapsible title="Information We Collect">
-      <div><strong>Invoice & Testimonial Link Tracking:</strong></div>
-      <p>When you open an invoice or testimonial link we send you, we collect:</p>
-      <ul className="sms-list">
-        <li><strong>City-level location:</strong> Approximate city, region, and country (for fraud prevention)</li>
-        <li><strong>IP address:</strong> To verify delivery and detect suspicious access</li>
-        <li><strong>Device information:</strong> Browser and device type</li>
-        <li><strong>Timestamp:</strong> When you opened the link</li>
-      </ul>
-      <div className="sms-highlight-box">
-        <strong>Privacy Note:</strong> We do NOT collect precise location.
-        We only collect city-level location data for legitimate business purposes such as
-        fraud prevention and delivery confirmation.
-      </div>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.commitment.title")}>
+        <p>{t("websitePrivacy.commitment.content")}</p>
+      </Collapsible>
 
-    <Collapsible title="How We Collect This Information">
-      <ul className="sms-list">
-        <li><strong>Self-hosted location:</strong> We use a local database - your IP address is NOT sent to third parties</li>
-        <li><strong>Browser storage:</strong> We use your browser's storage to remember your session and preferences</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.collect.title")}>
+        <div><strong>{t("websitePrivacy.collect.tracking")}</strong></div>
+        <p>{t("websitePrivacy.collect.intro")}</p>
+        <ul className="sms-list">
+          <li><strong>{t("websitePrivacy.collect.location")}</strong></li>
+          <li><strong>{t("websitePrivacy.collect.ip")}</strong></li>
+          <li><strong>{t("websitePrivacy.collect.device")}</strong></li>
+          <li><strong>{t("websitePrivacy.collect.timestamp")}</strong></li>
+        </ul>
+        <div className="sms-highlight-box">
+          <strong>{t("websitePrivacy.collect.note")}</strong>
+        </div>
+      </Collapsible>
 
-    <Collapsible title="Why We Collect This Information">
-      <p>We collect and use this information for the following legitimate business purposes:</p>
-      <ul className="sms-list">
-        <li><strong>Fraud prevention:</strong> Detecting suspicious access patterns and preventing unauthorized invoice/testimonial access</li>
-        <li><strong>Delivery confirmation:</strong> Verifying that invoices and testimonials were successfully delivered to the intended recipient</li>
-        <li><strong>Security:</strong> Protecting our business and customers from malicious activity</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.how.title")}>
+        <ul className="sms-list">
+          <li><strong>{t("websitePrivacy.how.selfhosted")}</strong></li>
+          <li><strong>{t("websitePrivacy.how.browser")}</strong></li>
+        </ul>
+      </Collapsible>
 
-    <Collapsible title="Third-Party Data Sharing">
-      <div className="sms-highlight-box">
-        <strong>We do NOT sell, rent, or share your personal information with third parties.</strong>
-      </div>
-      <p>All tracking is done on our own servers. Your data stays with us. We do not use third-party analytics tools. We use industry-standard protection measures to safeguard your information.</p>
-      <p><strong>Exception:</strong> We may disclose information if required by law, court order, or to protect our legal rights.</p>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.why.title")}>
+        <p>{t("websitePrivacy.why.intro")}</p>
+        <ul className="sms-list">
+          <li><strong>{t("websitePrivacy.why.fraud")}</strong></li>
+          <li><strong>{t("websitePrivacy.why.delivery")}</strong></li>
+          <li><strong>{t("websitePrivacy.why.security")}</strong></li>
+        </ul>
+      </Collapsible>
 
-    <Collapsible title="Data Retention">
-      <p>We retain different types of data for different periods:</p>
-      <ul className="sms-list">
-        <li><strong>Testimonial tracking:</strong> Retained while the testimonial is active, then deleted after 24 months</li>
-        <li><strong>Invoice tracking:</strong> Retained for the duration of the business relationship plus 3 years for accounting/tax purposes</li>
-        <li><strong>Session data:</strong> Deleted when you close your browser</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.sharing.title")}>
+        <div className="sms-highlight-box">
+          <strong>{t("websitePrivacy.sharing.never")}</strong>
+        </div>
+        <p>{t("websitePrivacy.sharing.servers")}</p>
+        <p><strong>{t("websitePrivacy.sharing.exception")}</strong></p>
+      </Collapsible>
 
-    <Collapsible title="How to Exercise Your Rights">
-      <p>To opt-out, access, or delete your data:</p>
-      <ul className="sms-list">
-        <li>Email us at: <strong>Admin@gudinocustom.com</strong></li>
-        <li>Call us at: <strong>(509) 515-4090</strong></li>
-        <li>We will respond to your request within 30 days</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.retention.title")}>
+        <p>{t("websitePrivacy.retention.intro")}</p>
+        <ul className="sms-list">
+          <li><strong>{t("websitePrivacy.retention.testimonial")}</strong></li>
+          <li><strong>{t("websitePrivacy.retention.invoice")}</strong></li>
+          <li><strong>{t("websitePrivacy.retention.session")}</strong></li>
+        </ul>
+      </Collapsible>
 
-    <Collapsible title='Browser "Do Not Track"'>
-      <p>
-        We respect the "Do Not Track" browser setting. If your browser is set to "Do Not Track",
-        we will not collect analytics data from your visit.
-      </p>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.exercise.title")}>
+        <p>{t("websitePrivacy.exercise.intro")}</p>
+        <ul className="sms-list">
+          <li>{t("websitePrivacy.exercise.email")} <strong>Admin@gudinocustom.com</strong></li>
+          <li>{t("websitePrivacy.exercise.phone")} <strong>(509) 515-4090</strong></li>
+          <li>{t("websitePrivacy.exercise.respond")}</li>
+        </ul>
+      </Collapsible>
 
-    <Collapsible title="Data Security">
-      <p>We protect your information through:</p>
-      <ul className="sms-list">
-        <li>HTTPS encryption for all data transmission</li>
-        <li>Secure servers with regular security updates</li>
-        <li>Limited access to data - only authorized staff</li>
-        <li>Regular security monitoring and backups</li>
-        <li>Industry-standard database security practices</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.dnt.title")}>
+        <p>{t("websitePrivacy.dnt.content")}</p>
+      </Collapsible>
 
-    <Collapsible title="Children's Privacy">
-      <p>
-        Our services are not directed to children under 13. We do not knowingly collect information
-        from children. If we discover we have collected information from a child under 13, we will
-        delete it immediately.
-      </p>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.security.title")}>
+        <p>{t("websitePrivacy.security.intro")}</p>
+        <ul className="sms-list">
+          <li>{t("websitePrivacy.security.https")}</li>
+          <li>{t("websitePrivacy.security.servers")}</li>
+          <li>{t("websitePrivacy.security.access")}</li>
+          <li>{t("websitePrivacy.security.monitoring")}</li>
+          <li>{t("websitePrivacy.security.practices")}</li>
+        </ul>
+      </Collapsible>
 
-    <Collapsible title="Changes to This Privacy Policy">
-      <p>
-        We may update this privacy policy from time to time. We will notify you of any material changes
-        by posting the new policy on this page with a new "Last updated" date. We encourage you to review
-        this policy periodically.
-      </p>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.children.title")}>
+        <p>{t("websitePrivacy.children.content")}</p>
+      </Collapsible>
 
-    <Collapsible title="Contact Us">
-      <p>
-        For questions about this privacy policy or to exercise your privacy rights:<br/><br/>
-        <strong>Gudino Custom Cabinets</strong><br/>
-        Privacy Contact: Admin@gudinocustom.com<br/>
-        Phone: (509) 515-4090<br/>
-        Address: 70 Ray Rd, Sunnyside WA 98944<br/>
-      </p>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.policychanges.title")}>
+        <p>{t("websitePrivacy.policychanges.content")}</p>
+      </Collapsible>
 
-    <Collapsible title="State-Specific Rights">
-      <p><strong>Washington State Residents:</strong></p>
-      <p>
-        While Washington does not currently have a comprehensive consumer privacy law ,
-        we extend privacy protections to all our Washington customers. You have the rights listed
-        above to access and delete your data.
-      </p>
-      <p><strong>California Residents:</strong></p>
-      <p>
-        If you are a California resident, you have additional rights under the California Consumer
-        Privacy Act (CCPA):
-      </p>
-      <ul className="sms-list">
-        <li>Right to know what personal information we collect and how we use it</li>
-        <li>Right to delete personal information</li>
-        <li>Right to opt-out of "sale" of personal information (we do not sell your information)</li>
-        <li>Right to non-discrimination for exercising your privacy rights</li>
-      </ul>
-    </Collapsible>
+      <Collapsible title={t("websitePrivacy.contact.title")}>
+        <p>
+          {t("websitePrivacy.contact.intro")}<br/><br/>
+          <strong>{t("websitePrivacy.contact.company")}</strong><br/>
+          {t("websitePrivacy.contact.privacy")}<br/>
+          {t("websitePrivacy.contact.phone")}<br/>
+          {t("websitePrivacy.contact.address")}<br/>
+        </p>
+      </Collapsible>
 
-  </>
-);
+      <Collapsible title={t("websitePrivacy.state.title")}>
+        <p><strong>{t("websitePrivacy.state.washington")}</strong></p>
+        <p>{t("websitePrivacy.state.washington.content")}</p>
+        <p><strong>{t("websitePrivacy.state.california")}</strong></p>
+        <p>{t("websitePrivacy.state.california.intro")}</p>
+        <ul className="sms-list">
+          <li>{t("websitePrivacy.state.california.know")}</li>
+          <li>{t("websitePrivacy.state.california.delete")}</li>
+          <li>{t("websitePrivacy.state.california.optout")}</li>
+          <li>{t("websitePrivacy.state.california.nondiscrimination")}</li>
+        </ul>
+      </Collapsible>
+    </>
+  );
+};
+
 export default WebsitePrivacy;

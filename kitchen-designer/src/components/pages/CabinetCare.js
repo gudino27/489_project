@@ -1,20 +1,21 @@
 import "../css/sms-compliance.css";
 import Collapsible from "../ui/Collapsible";
 import Navigation from "../ui/Navigation";
-
+import { useLanguage } from "../../contexts/LanguageContext";
 const CabinetCare = () => {
+  const { t } = useLanguage();
   return (
     <div>
       <Navigation />
       <div style={{ height: "3vh" }}></div>
       <div className="sms-compliance-container">
         <div className="sms-content">
-          <h1 className="sms-header">Cabinet Care, Cleaning & Warranty Guide</h1>
+          <h1 className="sms-header">{t("cabinetCare.title")}</h1>
           <p>
-            <em>Care instructions and warranty Guide for Gudino Custom Cabinets</em>
+            <em>{t("cabinetCare.intro")}</em>
           </p>
 
-          <Collapsible title="Cabinet Care & Maintenance">
+          <Collapsible title={t("cabinetCare.maintenance.title")}>
             <p
               style={{
                 borderBottom: "2px solid rgba(255, 255, 255, 0.3)",
@@ -22,66 +23,51 @@ const CabinetCare = () => {
                 marginBottom: "12px",
               }}
             >
-              Our cabinets are built with quality materials and craftsmanship. Proper
-              care and a stable home environment are essential to maintaining their
-              appearance and performance over time. Please review the following
-              guidelines to help protect your cabinetry.{" "}
+              {t("cabinetCare.maintenance.intro")}
             </p>
           </Collapsible>
 
-          <Collapsible title="Areas Requiring Special Attention">
+          <Collapsible title={t("cabinetCare.attention.title")}>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                {" "}
-                <strong>Sink Areas</strong>
+                <strong>{t("cabinetCare.attention.sink.title")}</strong>
               </li>
               <p>
-                Cabinets near sinks are frequently exposed to water. Farm and apron
-                sink cabinets are especially susceptible. Wipe up water immediately
-                and keep surfaces dry to prevent damage.{" "}
+                {t("cabinetCare.attention.sink.content")}
               </p>
               <li style={{ marginTop: "12px" }}>
-                <strong>Self-Cleaning Ovens</strong>
+                <strong>{t("cabinetCare.attention.oven.title")}</strong>
               </li>
               <p>
-                The extreme heat produced during self-cleaning cycles may damage
-                surrounding cabinetry. To reduce risk, remove cabinet doors and
-                drawers adjacent to the oven before using this feature
+                {t("cabinetCare.attention.oven.content")}
               </p>
               <li style={{ marginTop: "12px" }}>
-                <strong> Countertop Appliances</strong>
+                <strong>{t("cabinetCare.attention.appliances.title")}</strong>
               </li>
               <p>
-                Appliances such as coffee makers, instant pots, and crockpots release
-                heat and steam. Avoid placing them where steam vents directly toward
-                cabinet surfaces, as this may cause permanent damage.
+                {t("cabinetCare.attention.appliances.content")}
               </p>
               <li style={{ marginTop: "12px" }}>
-                <strong> Trash Pull-Outs</strong>
+                <strong>{t("cabinetCare.attention.trash.title")}</strong>
               </li>
               <p>
-                Trash cabinets experience frequent use. Clean these areas regularly
-                and inspect for chips or scratches to the cabinet finish.
+                {t("cabinetCare.attention.trash.content")}
               </p>
               <li style={{ marginTop: "12px" }}>
-                <strong> Dishwashers</strong>
+                <strong>{t("cabinetCare.attention.dishwasher.title")}</strong>
                 <p>
-                  Dishwashers generate heat and steam during operation. After use, dry
-                  nearby cabinet surfaces to help prevent moisture-related damage.
+                  {t("cabinetCare.attention.dishwasher.content")}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong> Cooktops</strong>
+                <strong>{t("cabinetCare.attention.cooktop.title")}</strong>
                 <p>
-                  Cabinetry around cooktops may be exposed to heat, humidity, and
-                  cooking splatter. Clean and dry surrounding areas promptly to
-                  prevent staining or deterioration.
+                  {t("cabinetCare.attention.cooktop.content")}
                 </p>
               </li>
             </ul>
             <div className="sms-highlight-box">
-              <strong>IMPORTANT:</strong> These areas require regular attention to remain clean and dry
-              and to avoid damage.
+              <strong>{t("cabinetCare.attention.important")}</strong>
             </div>
             <div
               style={{
@@ -92,37 +78,34 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Cabinet Care & Maintenance Guidelines">
+          <Collapsible title={t("cabinetCare.guidelines.title")}>
             <ul className=" sms-list">
               <li style={{ marginTop: "12px" }}>
-                {" "}
-                <strong> Routine Care </strong>
+                <strong>{t("cabinetCare.guidelines.routine.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Clean spills and splatters promptly and dry thoroughly.
+                  {t("cabinetCare.guidelines.routine.item1")}
                 </p>
-                <p>Do not place damp cloths or towels on cabinet surfaces. </p>
+                <p>{t("cabinetCare.guidelines.routine.item2")}</p>
                 <p>
-                  Remove excess moisture from cabinet areas exposed to higher
-                  humidity.{" "}
+                  {t("cabinetCare.guidelines.routine.item3")}
                 </p>
-                <p>Avoid impacts that may chip or scratch cabinet finishes. </p>
-                <p>Regularly monitor the areas listed above.</p>
+                <p>{t("cabinetCare.guidelines.routine.item4")}</p>
+                <p>{t("cabinetCare.guidelines.routine.item5")}</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Periodic Cleaning</strong>
+                <strong>{t("cabinetCare.guidelines.periodic.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Maintain a consistent indoor temperature and humidity level.
+                  {t("cabinetCare.guidelines.periodic.item1")}
                 </p>
-                <p>Clean cabinet exteriors several times per year.</p>
-                <p>Clean small sections at a time for best results.</p>
+                <p>{t("cabinetCare.guidelines.periodic.item2")}</p>
+                <p>{t("cabinetCare.guidelines.periodic.item3")}</p>
                 <p>
-                  Remove oils and residue that may build up around knobs and pulls.
+                  {t("cabinetCare.guidelines.periodic.item4")}
                 </p>
               </li>
             </ul>
             <div className="sms-highlight-box">
-              <strong>IMPORTANT:</strong> Improper cleaning, care, or maintenance may result in
-              permanent damage to cabinetry.
+              <strong>{t("cabinetCare.guidelines.important")}</strong>
             </div>
             <div
               style={{
@@ -133,43 +116,39 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Maintaining a Proper Home Environment">
+          <Collapsible title={t("cabinetCare.environment.title")}>
             <ul className=" sms-list">
               <li style={{ marginTop: "12px" }}>
-                {" "}
-                <strong> Humidity & Moisture</strong>
+                <strong>{t("cabinetCare.environment.humidity.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Excess moisture can cause cabinetry to swell, crack, or warp.
+                  {t("cabinetCare.environment.humidity.item1")}
                 </p>
-                <p>Ensure kitchens and bathrooms are properly ventilated.</p>
-                <p>Maintain indoor relative humidity between 35% and 50%.</p>
+                <p>{t("cabinetCare.environment.humidity.item2")}</p>
+                <p>{t("cabinetCare.environment.humidity.item3")}</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>sunlight</strong>
+                <strong>{t("cabinetCare.environment.sunlight.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Natural sunlight and UV exposure can affect cabinet color over time.
+                  {t("cabinetCare.environment.sunlight.item1")}
                 </p>
-                <p>Wood and painted finishes may fade, darken, or discolor.</p>
+                <p>{t("cabinetCare.environment.sunlight.item2")}</p>
                 <p>
-                  Mellowing refers to the natural color change that occurs in wood
-                  when exposed to light.
+                  {t("cabinetCare.environment.sunlight.item3")}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Temperature</strong>
+                <strong>{t("cabinetCare.environment.temperature.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Maintain indoor temperatures between 60º and 80º Fahrenheit.
+                  {t("cabinetCare.environment.temperature.item1")}
                 </p>
                 <p>
-                  Significant temperature fluctuations may cause cabinet materials to
-                  expand or contract.
+                  {t("cabinetCare.environment.temperature.item2")}
                 </p>
-                <p>Heat from self-cleaning ovens may also affect nearby cabinetry.</p>
+                <p>{t("cabinetCare.environment.temperature.item3")}</p>
               </li>
             </ul>
             <div className="sms-highlight-box">
-              <strong>IMPORTANT:</strong> Exposure to extreme humidity, moisture, temperature, or
-              sunlight may cause permanent damage.
+              <strong>{t("cabinetCare.environment.important")}</strong>
             </div>
             <div
               style={{
@@ -180,38 +159,24 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Cleaning Your Cabinets">
+          <Collapsible title={t("cabinetCare.cleaning.title")}>
             <p>
-              Proper cleaning helps maintain the appearance and finish of your
-              cabinetry. Follow the guidelines below to ensure safe and effective
-              cleaning.{" "}
+              {t("cabinetCare.cleaning.intro")}
             </p>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Routine Cleaning</strong>
+                <strong>{t("cabinetCare.cleaning.routine.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Wipe spills immediately using a clean, soft cloth dampened with warm
-                  water. After cleaning, dry the surface right away using a second
-                  clean, soft cloth.
+                  {t("cabinetCare.cleaning.routine.item1")}
                 </p>
                 <p style={{ marginTop: "12px" }}>
-                  For regular cleaning, simply wipe cabinet surfaces with a microfiber
-                  cloth dampened with warm water. Always follow by drying with a
-                  clean, soft cloth.
+                  {t("cabinetCare.cleaning.routine.item2")}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong> Removing Grease and Tougher Spills</strong>
+                <strong>{t("cabinetCare.cleaning.grease.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  To remove oil, grease, food residue, or more stubborn spills, use a
-                  clean, soft cloth dampened with a mild dishwashing liquid and warm
-                  water solution. We recommend mixing{" "}
-                  <strong>
-                    {" "}
-                    four to five drops of Dawn® dish soap per one gallon of water.
-                  </strong>{" "}
-                  After cleaning, immediately dry the surface with a second clean,
-                  soft cloth.
+                  {t("cabinetCare.cleaning.grease.content")} <strong>{t("cabinetCare.cleaning.grease.recommendation")}</strong> {t("cabinetCare.cleaning.grease.aftercare")}
                 </p>
               </li>
             </ul>
@@ -223,70 +188,50 @@ const CabinetCare = () => {
                 marginBottom: "12px",
               }}
             >
-              Always wipe in the direction of the wood grain
+              {t("cabinetCare.cleaning.woodGrain")}
             </p>
           </Collapsible>
 
-          <Collapsible title="Products to Avoid">
+          <Collapsible title={t("cabinetCare.avoid.title")}>
             <p>
-              Using the wrong cleaning products can permanently damage your cabinet
-              finish.{" "}
+              {t("cabinetCare.avoid.intro")}
             </p>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Harsh Cleaners</strong>
+                <strong>{t("cabinetCare.avoid.harsh.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Avoid cleaners that contain bleach, ammonia, citrus ingredients,
-                  mineral oil, harsh detergents, strong soaps, or abrasive agents.
+                  {t("cabinetCare.avoid.harsh.item1")}
                 </p>
                 <p>
-                  Examples of cleaners to avoid include:
-                  <strong>
-                    {" "}
-                    409®, Simple Green®, glass cleaners, and Clorox®.
-                  </strong>{" "}
+                  {t("cabinetCare.avoid.harsh.item2")} <strong>{t("cabinetCare.avoid.harsh.examples")}</strong>
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Waxes & Polishers</strong>
+                <strong>{t("cabinetCare.avoid.waxes.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Cleaners containing waxes can cause buildup over time, leading to a
-                  yellowed appearance.
+                  {t("cabinetCare.avoid.waxes.item1")}
                 </p>
                 <p>
-                  Many self-polishing products, especially those containing silicone,
-                  can damage cabinet finishes.
+                  {t("cabinetCare.avoid.waxes.item2")}
                 </p>
-                <p>Polishes may also attract and hold dust.</p>
+                <p>{t("cabinetCare.avoid.waxes.item3")}</p>
                 <p>
-                  Examples to avoid include:
-                  <strong>
-                    Johnson Paste Wax®, Liquid Gold®, Pledge®, and Old English®.
-                  </strong>
+                  {t("cabinetCare.avoid.waxes.item4")} <strong>{t("cabinetCare.avoid.waxes.examples")}</strong>
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Abrasives</strong>
+                <strong>{t("cabinetCare.avoid.abrasives.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Abrasive cleaners, scouring pads, and abrasive liquids or powders
-                  can scratch and dull cabinet finishes.
+                  {t("cabinetCare.avoid.abrasives.item1")}
                 </p>
                 <p>
-                  Avoid products such as:{" "}
-                  <strong>
-                    Ajax®, Soft Scrub®, Comet®, baking soda, Scotch-Brite® pads, steel
-                    wool, and Magic Erasers®.
-                  </strong>
+                  {t("cabinetCare.avoid.abrasives.item2")} <strong>{t("cabinetCare.avoid.abrasives.examples")}</strong>
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Sponges & Dishcloths</strong>
+                <strong>{t("cabinetCare.avoid.sponges.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Do not use everyday kitchen sponges or dishcloths. These may contain
-                  food particles, oils, or
-                </p>
-                <p>
-                  residues from other cleaners and may scratch the cabinet surface.
+                  {t("cabinetCare.avoid.sponges.item1")} {t("cabinetCare.avoid.sponges.item2")}
                 </p>
               </li>
             </ul>
@@ -300,54 +245,42 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Specialty Cleaning Areas">
+          <Collapsible title={t("cabinetCare.specialty.title")}>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                {" "}
-                <strong> Glass Doors</strong>
+                <strong>{t("cabinetCare.specialty.glass.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Spray an ammonia-free glass cleaner onto a lint-free cloth, then
-                  wipe the glass.
+                  {t("cabinetCare.specialty.glass.item1")}
                 </p>
                 <p>
-                  Do not spray cleaner directly onto the glass or cabinet surface, as
-                  overspray or drips may
+                  {t("cabinetCare.specialty.glass.item2")} {t("cabinetCare.specialty.glass.item3")}
                 </p>
-                <p>damage surrounding finishes.</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong> Maple Chopping Block</strong>
+                <strong>{t("cabinetCare.specialty.maple.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Occasionally reseal with a food-grade mineral or vegetable oil to
-                  help preserve the surface.
+                  {t("cabinetCare.specialty.maple.item1")}
                 </p>
-                <p>Apply oil only to frequently used areas.</p>
+                <p>{t("cabinetCare.specialty.maple.item2")}</p>
                 <p>
-                  With years of heavy use, refinishing may be required. Lightly sand
-                  the surface and reseal using
+                  {t("cabinetCare.specialty.maple.item3")} {t("cabinetCare.specialty.maple.item4")} <strong>{t("cabinetCare.specialty.maple.product")}</strong>
                 </p>
-                <p>
-                  mineral oil, vegetable oil, or a clear urethane gel protective
-                  finish such as <strong>Good Stuff®.</strong>
-                </p>
-                <p>Always follow safe food-handling guidelines.</p>
+                <p>{t("cabinetCare.specialty.maple.item5")}</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong> Bread Board</strong>
+                <strong>{t("cabinetCare.specialty.bread.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Clean thoroughly after each use with a clean, soft cloth dampened
-                  with mild dishwashing liquid
+                  {t("cabinetCare.specialty.bread.item1")} {t("cabinetCare.specialty.bread.item2")}
                 </p>
-                <p>and warm water.</p>
                 <p>
-                  Do not soak the breadboard in water or place it in the dishwasher.
+                  {t("cabinetCare.specialty.bread.item3")}
                 </p>
-                <p>Always follow safe food-handling guidelines.</p>
+                <p>{t("cabinetCare.specialty.bread.item4")}</p>
               </li>
             </ul>
           </Collapsible>
 
-          <Collapsible title="Warranty Information">
+          <Collapsible title={t("cabinetCare.warranty.title")}>
             <ul className="sms-list">
               <li
                 style={{
@@ -357,21 +290,9 @@ const CabinetCare = () => {
                   marginBottom: "12px",
                 }}
               >
-                <strong>Who Does This Warranty Apply To?</strong>
+                <strong>{t("cabinetCare.warranty.who.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  This warranty applies to the original purchaser of the products who
-                  owns them at the original
-                </p>
-                <p>
-                  site of installation.
-                  <strong>
-                    {" "}
-                    Failure by the consumer to provide proof of purchase voids any
-                    claim
-                  </strong>
-                </p>
-                <p style={{ marginBottom: "12px" }}>
-                  <strong> made under this warranty.</strong>
+                  {t("cabinetCare.warranty.who.item1")} {t("cabinetCare.warranty.who.item2")} <strong>{t("cabinetCare.warranty.who.item3")} {t("cabinetCare.warranty.who.item4")}</strong>
                 </p>
               </li>
               <li
@@ -382,24 +303,16 @@ const CabinetCare = () => {
                   marginBottom: "12px",
                 }}
               >
-                <strong> What Does This Limited Warranty Cover? </strong>
+                <strong>{t("cabinetCare.warranty.what.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  This limited warranty covers defects in materials and workmanship in
-                  your <strong> Gudino Custom</strong>
-                </p>
-                <p>
-                  {" "}
-                  <strong>Woodworking</strong> custom cabinetry under normal
-                  residential use and service.
+                  {t("cabinetCare.warranty.what.item1")} <strong>{t("cabinetCare.warranty.what.company")} {t("cabinetCare.warranty.what.item2")}</strong> {t("cabinetCare.warranty.what.item3")}
                 </p>
               </li>
               <li>
-                <strong> What Will Gudino Custom Woodworking Do?</strong>
+                <strong>{t("cabinetCare.warranty.willDo.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  <strong>Gudino Custom Woodworking</strong> will repair or replace
-                  any part or parts that are determined to
+                  <strong>{t("cabinetCare.warranty.willDo.item1")}</strong> {t("cabinetCare.warranty.willDo.item2")} {t("cabinetCare.warranty.willDo.item3")}
                 </p>
-                <p>be defective under normal home use and service.</p>
               </li>
             </ul>
             <div
@@ -412,32 +325,14 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Lifetime Limited Warranty">
+          <Collapsible title={t("cabinetCare.lifetime.title")}>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Effect on Implied Warranties</strong>{" "}
-              </li>{" "}
+                <strong>{t("cabinetCare.lifetime.effect.title")}</strong>
+              </li>
               <p style={{ marginTop: "12px" }}>
-                <strong> Gudino Custom Woodworking</strong> makes no other warranties
-                of any kind, either express or
+                <strong>{t("cabinetCare.lifetime.effect.item1")}</strong> {t("cabinetCare.lifetime.effect.item2")} {t("cabinetCare.lifetime.effect.item3")} {t("cabinetCare.lifetime.effect.item4")} {t("cabinetCare.lifetime.effect.item5")} {t("cabinetCare.lifetime.effect.item6")} {t("cabinetCare.lifetime.effect.item7")}
               </p>
-              <p>
-                implied. All implied warranties, including warranties of
-                merchantability and fitness for a particular
-              </p>
-              <p>
-                purpose, are excluded from this transaction and do not apply to the
-                goods sold unless the
-              </p>
-              <p>
-                goods qualify as "consumer products" as defined by the federal
-                Magnuson-Moss Warranty Act.
-              </p>
-              <p>
-                Some states do not allow limitations on implied warranties, so these
-                limitations may not apply to
-              </p>
-              <p>you.</p>
             </ul>
             <div
               style={{
@@ -449,44 +344,28 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="What Is Not Covered Under This Warranty">
+          <Collapsible title={t("cabinetCare.notCovered.title")}>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Hairline Cracking</strong>
+                <strong>{t("cabinetCare.notCovered.hairline.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Visible cracking at joints in painted face frames, doors, and other
-                  painted products is considered
+                  {t("cabinetCare.notCovered.hairline.item1")} {t("cabinetCare.notCovered.hairline.item2")} {t("cabinetCare.notCovered.hairline.item3")}
                 </p>
-                <p>
-                  a natural characteristic of wood. Wood expands and contracts with
-                  changes in temperature and
-                </p>
-                <p>humidity and is not covered under this or any implied warranty.</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Mellowing or Fading</strong>
+                <strong>{t("cabinetCare.notCovered.mellowing.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Natural mellowing, fading, or aging of wood products caused by
-                  photo-degradation, including
+                  {t("cabinetCare.notCovered.mellowing.item1")} {t("cabinetCare.notCovered.mellowing.item2")}
                 </p>
-                <p>exposure to natural or artificial light, is not covered.</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Installation</strong>
+                <strong>{t("cabinetCare.notCovered.installation.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  This warranty does not cover damage caused by improper handling or
-                  installation. Door and
+                  {t("cabinetCare.notCovered.installation.item1")} {t("cabinetCare.notCovered.installation.item2")} {t("cabinetCare.notCovered.installation.item3")}
                 </p>
                 <p>
-                  drawer alignment issues resulting from cabinets installed out of
-                  level, square, or plumb are not
+                  {t("cabinetCare.notCovered.installation.item4")} {t("cabinetCare.notCovered.installation.item5")}
                 </p>
-                <p>covered.</p>
-                <p>
-                  This warranty does not include labor or costs associated with
-                  removal or reinstallation of any
-                </p>
-                <p>product.</p>
               </li>
             </ul>
             <div
@@ -499,59 +378,40 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="What Will Void the Warranty">
+          <Collapsible title={t("cabinetCare.void.title")}>
             <p style={{ marginTop: "12px" }}>
-              Products determined to have been neglected, abused, misused, or
-              improperly maintained are{" "}
+              {t("cabinetCare.void.intro1")} {t("cabinetCare.void.intro2")} {t("cabinetCare.void.intro3")}
             </p>
-            <p>
-              not covered. Failure by the consumer to provide proof of purchase voids
-              any claim made{" "}
-            </p>
-            <p>under this warranty. </p>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Water Damage</strong>
+                <strong>{t("cabinetCare.void.water.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Damage caused by water exposure or the use of damp cloths on
-                  cabinetry is considered
-                </p>
-                <p>improper care and will void the warranty.</p>
-              </li>
-              <li style={{ marginTop: "12px" }}>
-                <strong>Neglected Chips & Scratches</strong>
-                <p style={{ marginTop: "12px" }}>
-                  Failure to properly touch up chips or scratches is considered
-                  improper maintenance. Untreated
-                </p>
-                <p>
-                  damage may lead to future product failure and will void the
-                  warranty.
+                  {t("cabinetCare.void.water.item1")} {t("cabinetCare.void.water.item2")}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Product Modifications</strong>
+                <strong>{t("cabinetCare.void.chips.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  This warranty does not cover damage resulting from job-site
-                  modifications, disassembly,
+                  {t("cabinetCare.void.chips.item1")} {t("cabinetCare.void.chips.item2")}
                 </p>
-                <p>refinishing, or other alterations to the product.</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Improper Storage</strong>
+                <strong>{t("cabinetCare.void.modifications.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Products stored in uncontrolled environments before or during
-                  installation are considered
+                  {t("cabinetCare.void.modifications.item1")} {t("cabinetCare.void.modifications.item2")}
                 </p>
-                <p>improperly maintained and will void the warranty.</p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Appliance-Related Damage</strong>
+                <strong>{t("cabinetCare.void.storage.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Damage caused by heat, steam, water, or other conditions related to
-                  appliance use is
+                  {t("cabinetCare.void.storage.item1")} {t("cabinetCare.void.storage.item2")}
                 </p>
-                <p>considered improper care and will void the warranty.</p>
+              </li>
+              <li style={{ marginTop: "12px" }}>
+                <strong>{t("cabinetCare.void.appliance.title")}</strong>
+                <p style={{ marginTop: "12px" }}>
+                  {t("cabinetCare.void.appliance.item1")} {t("cabinetCare.void.appliance.item2")}
+                </p>
               </li>
             </ul>
             <div
@@ -564,33 +424,25 @@ const CabinetCare = () => {
             ></div>
           </Collapsible>
 
-          <Collapsible title="Product Warranty Exceptions">
+          <Collapsible title={t("cabinetCare.exceptions.title")}>
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Electronic Components</strong>
+                <strong>{t("cabinetCare.exceptions.electronic.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Electronic components, including lighting systems and electronic
-                  assist-opening devices, are
-                </p>
-                <p>
-                  covered by the implied limited warranty of the original supplier.
+                  {t("cabinetCare.exceptions.electronic.item1")} {t("cabinetCare.exceptions.electronic.item2")}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Specialty Finishes</strong>
+                <strong>{t("cabinetCare.exceptions.specialty.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Certain specialty finishes may have limited coverage or exclusions.
-                  If applicable, your designer
+                  {t("cabinetCare.exceptions.specialty.item1")} {t("cabinetCare.exceptions.specialty.item2")}
                 </p>
-                <p>will be provided with a disclaimer. </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Specialty Products</strong>
+                <strong>{t("cabinetCare.exceptions.products.title")}</strong>
                 <p style={{ marginTop: "12px" }}>
-                  Some outsourced specialty products and oversized items may not be
-                  covered under any implied
+                  {t("cabinetCare.exceptions.products.item1")} {t("cabinetCare.exceptions.products.item2")}
                 </p>
-                <p>warranty.</p>
               </li>
             </ul>
           </Collapsible>

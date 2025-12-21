@@ -48,9 +48,30 @@
   "devDependencies": {
     "@tailwindcss/postcss7-compat": "^2.2.17",
     "autoprefixer": "^9.8.8",
-    "postcss": "^8.5.4",
+    "postcss": "^8.4.49",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-preset-env": "^10.2.1",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17"
+  },
+  "overrides": {
+    "nth-check": "^2.1.1",
+    "@tailwindcss/postcss7-compat": {
+      "postcss": "^8.4.49"
+    },
+    "autoprefixer": {
+      "postcss": "^8.4.49"
+    },
+    "postcss-functions": {
+      "postcss": "^8.4.49"
+    },
+    "postcss-js": {
+      "postcss": "^8.4.49"
+    },
+    "postcss-nested": {
+      "postcss": "^8.4.49"
+    },
+    "resolve-url-loader": {
+      "postcss": "^8.4.49"
+    }
   }
 }
