@@ -1,12 +1,20 @@
 import "../css/sms-compliance.css";
 import Collapsible from "../ui/Collapsible";
 import Navigation from "../ui/Navigation";
+import SEO from "../ui/SEO";
 import { useLanguage } from "../../contexts/LanguageContext";
 const CabinetCare = () => {
   const { t } = useLanguage();
   return (
-    <div>
-      <Navigation />
+    <>
+      <SEO
+        title="Cabinet Care & Maintenance Guide"
+        description="Expert tips for cleaning and maintaining your custom kitchen cabinets and bathroom vanities. Learn how to protect your investment and keep your cabinets looking new."
+        keywords="cabinet care, cabinet maintenance, cleaning wood cabinets, cabinet cleaning tips, protect cabinets, cabinet care guide"
+        canonical="https://gudinocustom.com/cabinet-care"
+      />
+      <div>
+        <Navigation />
       <div style={{ height: "3vh" }}></div>
       <div className="sms-compliance-container">
         <div className="sms-content">
@@ -449,7 +457,8 @@ const CabinetCare = () => {
         </div>
       </div>
       <div style={{ height: "2vh" }}></div>
-    </div>
+      </div>
+    </>
   );
 };
 

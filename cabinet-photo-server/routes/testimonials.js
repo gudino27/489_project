@@ -5,20 +5,31 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs").promises;
 const sharp = require("sharp");
+const rateLimit = require("express-rate-limit");
 const { testimonialDb } = require("../db-helpers");
 const { authenticateUser } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
 const { uploadMemory } = require("../middleware/upload");
 const { getLocationFromIP } = require("../utils/geolocation");
 const { notifyTestimonialLinkOpened, notifyTestimonialSubmitted } = require("../utils/push-notifications");
+const { handleError } = require("../utils/error-handler");
+
+// Rate limiter for testimonial submissions (3 per hour per IP)
+const testimonialSubmitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: { error: 'Too many testimonial submissions. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false } // Trust proxy configured at app level
+});
 // Public endpoint - Get all visible testimonials
 router.get("/", async (req, res) => {
   try {
     const testimonials = await testimonialDb.getAllTestimonials(true);
     res.json(testimonials);
   } catch (error) {
-    console.error("Error getting testimonials:", error);
-    res.status(500).json({ error: "Failed to get testimonials" });
+    handleError(error, "Failed to get testimonials", res, 500);
   }
 });
 // Public endpoint - Validate testimonial token and return token data
@@ -36,8 +47,7 @@ router.get("/validate-token/:token", async (req, res) => {
       res.json({ valid: false });
     }
   } catch (error) {
-    console.error("Error validating token:", error);
-    res.status(500).json({ error: "Failed to validate token" });
+    handleError(error, "Failed to validate token", res, 500);
   }
 });
 
@@ -83,8 +93,7 @@ router.post("/track-open", async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error("Error tracking link open:", error);
-    res.status(500).json({ error: "Failed to track link open" });
+    handleError(error, "Failed to track link open", res, 500);
   }
 });
 
@@ -127,7 +136,7 @@ router.get("/t/:token", async (req, res) => {
 });
 
 // Public endpoint - Submit testimonial with photos
-router.post("/submit",uploadMemory.array("photos", 5),async (req, res) => {
+router.post("/submit", testimonialSubmitLimiter, uploadMemory.array("photos", 5), async (req, res) => {
     try {
       const { client_name, message, rating, project_type, token } = req.body;
       // Validate token
@@ -214,8 +223,7 @@ router.post("/submit",uploadMemory.array("photos", 5),async (req, res) => {
 
       res.json({ success: true, testimonial_id: testimonial.id });
     } catch (error) {
-      console.error("Error submitting testimonial:", error);
-      res.status(500).json({ error: "Failed to submit testimonial" });
+      handleError(error, "Failed to submit testimonial", res, 500);
     }
   }
 );

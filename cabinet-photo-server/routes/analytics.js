@@ -1,11 +1,23 @@
 // This file contains all analytics-related API endpoints
-// REQUIRED IMPORTS 
+// REQUIRED IMPORTS
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 const { analyticsDb } = require("../db-helpers");
 const { authenticateUser, requireRole } = require("../middleware/auth");
+const { handleError } = require("../utils/error-handler");
+
+// Rate limiter for analytics tracking (100 per 15 minutes per IP)
+const analyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { error: 'Too many analytics requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false } // Trust proxy configured at app level
+});
 // Analytics endpoints
-router.post("/pageview", async (req, res) => {
+router.post("/pageview", analyticsLimiter, async (req, res) => {
   try {
     const { page_path, user_agent, referrer, session_id, user_id } = req.body;
     // Get IP address from request
@@ -25,11 +37,10 @@ router.post("/pageview", async (req, res) => {
     });
     res.json({ success: true, viewId });
   } catch (error) {
-    console.error("Analytics pageview error:", error);
-    res.status(500).json({ error: "Failed to record page view" });
+    handleError(error, "Failed to record page view", res, 500);
   }
 });
-router.post("/time", async (req, res) => {
+router.post("/time", analyticsLimiter, async (req, res) => {
   try {
     // Validate request body
     if (!req.body || typeof req.body !== "object") {
@@ -51,12 +62,11 @@ router.post("/time", async (req, res) => {
     await analyticsDb.updateTimeSpent(viewId, timeSpent);
     res.json({ success: true });
   } catch (error) {
-    console.error("Analytics time tracking error:", error);
-    res.status(500).json({ error: "Failed to update time spent" });
+    handleError(error, "Failed to update time spent", res, 500);
   }
 });
 // Analytics event tracking endpoint
-router.post("/event", async (req, res) => {
+router.post("/event", analyticsLimiter, async (req, res) => {
   try {
     const { event_name, event_data, session_id, user_id, page_path } = req.body;
     if (!event_name) {
@@ -79,8 +89,7 @@ router.post("/event", async (req, res) => {
     console.log("Analytics Event:", eventRecord);
     res.json({ success: true, eventId: Date.now() });
   } catch (error) {
-    console.error("Analytics event error:", error);
-    res.status(500).json({ error: "Failed to track event" });
+    handleError(error, "Failed to track event", res, 500);
   }
 });
 // Analytics dashboard endpoints (super admin only)
@@ -90,8 +99,7 @@ router.get("/stats",authenticateUser,requireRole("super_admin"),async (req, res)
       const stats = await analyticsDb.getPageViewStats(dateRange);
       res.json(stats);
     } catch (error) {
-      console.error("Analytics stats error:", error);
-      res.status(500).json({ error: "Failed to fetch analytics stats" });
+      handleError(error, "Failed to fetch analytics stats", res, 500);
     }
   }
 );
@@ -100,8 +108,7 @@ router.get("/realtime",authenticateUser,requireRole("super_admin"),async (req, r
       const stats = await analyticsDb.getRealtimeStats();
       res.json(stats);
     } catch (error) {
-      console.error("Analytics realtime error:", error);
-      res.status(500).json({ error: "Failed to fetch realtime stats" });
+      handleError(error, "Failed to fetch realtime stats", res, 500);
     }
   }
 );

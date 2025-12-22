@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import ARViewer from "../design/ARViewer";
 import MainNavBar from "../ui/Navigation";
+import SEO from "../ui/SEO";
 import WallView from "../design/WallView";
 import DraggableCabinet from "../design/DraggableCabinet";
 import DesignerSidebar from "../design/DesignerSidebar";
@@ -988,6 +989,12 @@ const KitchenDesigner = () => {
   // Full-featured design environment with sidebar controls and main canvas
   return (
     <>
+      <SEO
+        title="Kitchen Designer Tool - Plan Your Dream Kitchen Free"
+        description="Free online kitchen and bathroom design tool. Drag and drop cabinets, customize your layout, get instant pricing, and visualize your dream space in 3D."
+        keywords="kitchen design tool, free kitchen planner, cabinet designer, bathroom planner, online kitchen designer, 3D kitchen visualizer, cabinet layout tool"
+        canonical="https://gudinocustom.com/design"
+      />
       <MainNavBar />
       <div className="min-h-screen bg-gray-100">
         {/* ========== MOBILE HAMBURGER MENU ========== */}

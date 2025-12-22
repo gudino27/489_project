@@ -70,77 +70,29 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Services Pages -->
+  <!-- Additional Pages -->
   <url>
-    <loc>https://gudinocustom.com/services/kitchen-cabinets</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://gudinocustom.com/services/bathroom-vanities</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://gudinocustom.com/services/custom-woodworking</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://gudinocustom.com/services/cabinet-design</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://gudinocustom.com/services/cabinet-installation</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Testimonials Page -->
-  <url>
-    <loc>https://gudinocustom.com/testimonials</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- FAQ and Info Pages -->
-  <url>
-    <loc>https://gudinocustom.com/faq</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://gudinocustom.com/process</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
+    <loc>https://gudinocustom.com/cabinet-care</loc>
+    <lastmod>2025-12-21T00:00:00.000Z</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://gudinocustom.com/gallery</loc>
-    <lastmod>2025-07-29T01:07:41.000Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- Location/Service Area Pages -->
-  <url>
-    <loc>https://gudinocustom.com/areas/spokane-cabinet-maker</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
+    <loc>https://gudinocustom.com/why-choose-us</loc>
+    <lastmod>2025-12-21T00:00:00.000Z</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://gudinocustom.com/areas/coeur-dalene-cabinets</loc>
-    <lastmod>2025-07-30T17:00:00.000Z</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://gudinocustom.com/privacy</loc>
+    <lastmod>2025-12-21T00:00:00.000Z</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://gudinocustom.com/sms-terms</loc>
+    <lastmod>2025-12-21T00:00:00.000Z</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

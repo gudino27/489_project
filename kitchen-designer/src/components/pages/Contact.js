@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
+import SEO from '../ui/SEO';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/contact.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -92,6 +93,12 @@ const Contact = () => {
 
   return (
     <>
+      <SEO
+        title="Contact Us - Get a Free Quote for Your Project"
+        description="Contact Gudino Custom for a free consultation and quote on your kitchen remodeling, bathroom renovation, or custom cabinet project in Washington. Call or email us today."
+        keywords="contact carpenter, free quote, consultation, kitchen remodel estimate, cabinet installation quote, Washington contractor"
+        canonical="https://gudinocustom.com/contact"
+      />
       <Navigation />
 
       <div className="contact-container">

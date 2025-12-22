@@ -1,22 +1,26 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
-import Home from './components/pages/Home';
-import Portfolio from './components/pages/portfolio';
-import KitchenDesigner from './components/pages/desinger';
-import About from './components/pages/About';
-import Contact from './components/pages/Contact';
-import AdminPanel from './components/admin/AdminPanel';
-import PasswordReset from './components/admin/PasswordReset';
-import Registration from './components/auth/Registration';
-import TestimonialForm from './components/forms/TestimonialForm';
-import InvoiceViewer from './components/invoice/InvoiceViewer';
-import ReceiptViewer from './components/invoice/ReceiptViewer';
-import SmsCompliance from './components/SmsCompliance';
-import PrivacySettings from './components/PrivacySettings';
-import CabinetCare from './components/pages/CabinetCare';
-import WhyChooseUs from './components/pages/WhyChooseUs';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { PricingProvider } from './contexts/PricingContext';
+
+// Lazy load all route components for better performance
+const Home = lazy(() => import('./components/pages/Home'));
+const Portfolio = lazy(() => import('./components/pages/portfolio'));
+const KitchenDesigner = lazy(() => import('./components/pages/desinger'));
+const About = lazy(() => import('./components/pages/About'));
+const Contact = lazy(() => import('./components/pages/Contact'));
+const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
+const PasswordReset = lazy(() => import('./components/admin/PasswordReset'));
+const Registration = lazy(() => import('./components/auth/Registration'));
+const TestimonialForm = lazy(() => import('./components/forms/TestimonialForm'));
+const InvoiceViewer = lazy(() => import('./components/invoice/InvoiceViewer'));
+const ReceiptViewer = lazy(() => import('./components/invoice/ReceiptViewer'));
+const SmsCompliance = lazy(() => import('./components/SmsCompliance'));
+const PrivacySettings = lazy(() => import('./components/PrivacySettings'));
+const CabinetCare = lazy(() => import('./components/pages/CabinetCare'));
+const WhyChooseUs = lazy(() => import('./components/pages/WhyChooseUs'));
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -24,35 +28,51 @@ import { PricingProvider } from './contexts/PricingContext';
 // -----------------------------
 function App() {
   return (
-    <LanguageProvider>
-      <PricingProvider>
-        <Router>
-          <Routes>
+    <HelmetProvider>
+      <LanguageProvider>
+        <PricingProvider>
+          <Router>
+            <Suspense fallback={
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100vh',
+              backgroundColor: '#1f2937',
+              color: 'white',
+              fontSize: '24px'
+            }}>
+              Loading...
+            </div>
+          }>
+            <Routes>
 
-            {/* React components */}
-            <Route path="/" element={<Home />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/design" element={<KitchenDesigner />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/reset-password" element={<PasswordReset />} />
-            <Route path="/register/:token" element={<Registration />} />
-            <Route path="/testimonial/:token" element={<TestimonialForm />} />
-            <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
-            <Route path="/invoice/:token" element={<InvoiceViewer />} />
-            <Route path="/sms-consent-verification" element={<SmsCompliance defaultTab="consent" />} />
-            <Route path="/sms-terms" element={<SmsCompliance defaultTab="terms" />} />
-            <Route path="/sms-privacy" element={<SmsCompliance defaultTab="privacy" />} />
-            <Route path="/privacy" element={<SmsCompliance defaultTab="website" />} />
-            <Route path="/opt-out" element={<PrivacySettings />} />
-            <Route path="/privacy-settings" element={<PrivacySettings />} />
-            <Route path="/cabinet-care" element={<CabinetCare />} />
-            <Route path="/why-choose-us" element={<WhyChooseUs />} />
-          </Routes>
+              {/* React components */}
+              <Route path="/" element={<Home />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/design" element={<KitchenDesigner />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/reset-password" element={<PasswordReset />} />
+              <Route path="/register/:token" element={<Registration />} />
+              <Route path="/testimonial/:token" element={<TestimonialForm />} />
+              <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
+              <Route path="/invoice/:token" element={<InvoiceViewer />} />
+              <Route path="/sms-consent-verification" element={<SmsCompliance defaultTab="consent" />} />
+              <Route path="/sms-terms" element={<SmsCompliance defaultTab="terms" />} />
+              <Route path="/sms-privacy" element={<SmsCompliance defaultTab="privacy" />} />
+              <Route path="/privacy" element={<SmsCompliance defaultTab="website" />} />
+              <Route path="/opt-out" element={<PrivacySettings />} />
+              <Route path="/privacy-settings" element={<PrivacySettings />} />
+              <Route path="/cabinet-care" element={<CabinetCare />} />
+              <Route path="/why-choose-us" element={<WhyChooseUs />} />
+            </Routes>
+          </Suspense>
         </Router>
       </PricingProvider>
     </LanguageProvider>
+    </HelmetProvider>
   );
 }
 

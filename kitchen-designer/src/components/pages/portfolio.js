@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "../css/portfolio.css";
 import Navigation from "../ui/Navigation";
+import SEO from "../ui/SEO";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAnalytics } from "../../hooks/useAnalytics";
 const API_BASE =process.env.REACT_APP_API_URL ||"https://api.gudinocustom.com";
@@ -556,6 +557,12 @@ useEffect(() => {
 }, [photos, currentIndex]);
   return (
     <>
+      <SEO
+        title="Portfolio - Kitchen & Bathroom Remodeling Projects"
+        description="Browse our extensive portfolio of custom kitchen cabinets, bathroom vanities, and woodworking projects in Washington. Quality craftsmanship showcased."
+        keywords="kitchen portfolio, bathroom remodeling gallery, custom cabinet photos, woodworking projects, before and after, Washington remodeling"
+        canonical="https://gudinocustom.com/portfolio"
+      />
       <Navigation />
 
       <div className="category-container">
@@ -712,7 +719,7 @@ useEffect(() => {
   const isVideo = photo.mime_type && photo.mime_type.startsWith('video/');
   const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`; // Thumbnail for display
   const fullSrc = `${API_BASE}${photo.url}`; // Full image/video for modal
-  const caption = photo.title || photo.label || `Cabinet ${i + 1}`;
+  const caption = "";
 
   return (
     <div
@@ -738,6 +745,9 @@ useEffect(() => {
           <img
             src={imgSrc}
             alt={caption}
+            loading="lazy"
+            width="400"
+            height="300"
             onLoad={(e) => handleImageLoad(e, i)}
             style={{
               width: "100%",
@@ -771,6 +781,9 @@ useEffect(() => {
         <img
           src={imgSrc}
           alt={caption}
+          loading={i === 0 ? "eager" : "lazy"}
+          width="400"
+          height="300"
           onLoad={(e) => handleImageLoad(e, i)}
           style={{
             width: "100%",
@@ -941,7 +954,7 @@ useEffect(() => {
                       className={`video-thumb ${idx === currentVideoIndex ? 'active' : ''}`}
                       onClick={() => setCurrentVideoIndex(idx)}
                     >
-                      <img src={thumbnail} alt={video.title || `Video ${idx + 1}`} />
+                      <img src={thumbnail} alt={video.title || `Video ${idx + 1}`} loading="lazy" width="120" height="90" />
                       {idx === currentVideoIndex && (
                         <div className="video-thumb-active-indicator" />
                       )}

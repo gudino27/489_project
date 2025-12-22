@@ -5,9 +5,11 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
-const { userDb } = require("../db-helpers");
+const { userDb, getDb } = require("../db-helpers");
 const { authenticateUser, JWT_SECRET } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
+const { validatePasswordComplexity } = require("../utils/password-validation");
+const { handleError } = require("../utils/error-handler");
 
 // Rate limiter for login endpoint - 5 attempts per 15 minutes
 const loginLimiter = rateLimit({
@@ -16,6 +18,7 @@ const loginLimiter = rateLimit({
   message: { error: "Too many login attempts, please try again after 15 minutes" },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false } // Trust proxy configured at app level
 });
 
 router.get("/me", authenticateUser, (req, res) => {
@@ -43,6 +46,16 @@ router.post("/login", loginLimiter, async (req, res) => {
       });
     }
 
+    // Check if password change is required
+    if (result.user.must_change_password === 1) {
+      return res.status(403).json({
+        error: "Password change required",
+        mustChangePassword: true,
+        message: "You must change your password before accessing the system",
+        username: result.user.username
+      });
+    }
+
     // Generate refresh token for mobile apps (if deviceId provided)
     let refreshToken = null;
     if (deviceId && deviceType) {
@@ -62,8 +75,7 @@ router.post("/login", loginLimiter, async (req, res) => {
       message: `Welcome, ${result.user.full_name || result.user.username}!`
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    handleError(error, "Login failed", res, 500);
   }
 });
 
@@ -84,8 +96,7 @@ router.post("/logout", authenticateUser, async (req, res) => {
 
     res.json({ message: "Logged out successfully" });
   } catch (error) {
-    console.error("Logout error:", error);
-    res.status(500).json({ error: "Logout failed" });
+    handleError(error, "Logout failed", res, 500);
   }
 });
 
@@ -133,8 +144,7 @@ router.post("/refresh", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Token refresh error:", error);
-    res.status(500).json({ error: "Failed to refresh token" });
+    handleError(error, "Failed to refresh token", res, 500);
   }
 });
 // Password reset endpoints
@@ -175,8 +185,7 @@ router.post("/forgot-password", async (req, res) => {
         "If an account with that email exists, a password reset link has been sent.",
     });
   } catch (error) {
-    console.error("Password reset request error:", error);
-    res.status(500).json({ error: "Failed to process password reset request" });
+    handleError(error, "Failed to process password reset request", res, 500);
   }
 });
 router.post("/reset-password", async (req, res) => {
@@ -185,19 +194,20 @@ router.post("/reset-password", async (req, res) => {
     if (!token || !password) {
       return res.status(400).json({ error: "Token and password are required" });
     }
-    if (password.length < 8) {
-      return res
-        .status(400)
-        .json({ error: "Password must be at least 8 characters long" });
+
+    // Validate password complexity
+    const validation = validatePasswordComplexity(password);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.message });
     }
+
     const success = await userDb.resetPassword(token, password);
     if (!success) {
       return res.status(400).json({ error: "Invalid or expired reset token" });
     }
     res.json({ message: "Password reset successfully" });
   } catch (error) {
-    console.error("Password reset error:", error);
-    res.status(500).json({ error: "Failed to reset password" });
+    handleError(error, "Failed to reset password", res, 500);
   }
 });
 router.get("/validate-reset-token/:token", async (req, res) => {
@@ -213,10 +223,131 @@ router.get("/validate-reset-token/:token", async (req, res) => {
       expires_at: resetRecord.expires_at,
     });
   } catch (error) {
-    console.error("Token validation error:", error);
-    res.status(500).json({ error: "Failed to validate token" });
+    handleError(error, "Failed to validate token", res, 500);
   }
 });
+
+// Force password change endpoint (no authentication required - special case for must_change_password)
+router.post("/change-password-required", async (req, res) => {
+  const { username, currentPassword, newPassword } = req.body;
+  const ipAddress = req.ip || req.connection.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+
+  try {
+    // Validate required fields
+    if (!username || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Username, current password, and new password are required" });
+    }
+
+    // First, authenticate with current credentials
+    const result = await userDb.authenticateUser(username, currentPassword, ipAddress, userAgent);
+
+    if (!result || !result.user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Check if password change is actually required
+    if (result.user.must_change_password !== 1) {
+      return res.status(400).json({ error: "Password change not required for this account" });
+    }
+
+    // Validate new password complexity
+    const validation = validatePasswordComplexity(newPassword);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.message });
+    }
+
+    // Ensure new password is different from old password
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: "New password must be different from current password" });
+    }
+
+    // Hash new password and update
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const db = await getDb();
+
+    await db.run(
+      'UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [hashedPassword, result.user.id]
+    );
+
+    // Generate new session token
+    const token = jwt.sign(
+      { userId: result.user.id, username: result.user.username, role: result.user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Create session
+    await userDb.createSession(result.user.id, token, ipAddress, userAgent);
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+      token,
+      user: {
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        role: result.user.role,
+        full_name: result.user.full_name
+      }
+    });
+  } catch (error) {
+    handleError(error, "Failed to change password", res, 500);
+  }
+});
+
+// Regular password change endpoint (for authenticated users)
+router.post("/change-password", authenticateUser, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    // Validate required fields
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+
+    // Validate new password complexity
+    const validation = validatePasswordComplexity(newPassword);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.message });
+    }
+
+    // Verify current password
+    const db = await getDb();
+    const user = await db.get('SELECT * FROM users WHERE id = ?', req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    // Ensure new password is different
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: "New password must be different from current password" });
+    }
+
+    // Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await db.run(
+      'UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [hashedPassword, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (error) {
+    handleError(error, "Failed to change password", res, 500);
+  }
+});
+
 // EXPORTS
 module.exports = router;
 

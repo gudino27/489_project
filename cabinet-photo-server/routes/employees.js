@@ -9,8 +9,10 @@ const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs").promises;
 const { employeeDb } = require("../db-helpers");
-const { authenticateUser } = require("../middleware/auth");
+const { authenticateUser, requireRole } = require("../middleware/auth");
 const { upload } = require("../middleware/upload");
+const { handleError } = require("../utils/error-handler");
+const { validateFileUpload, generateSafeFilename } = require("../utils/file-validation");
 // Get all employees
 router.get("", async (req, res) => {
   try {
@@ -26,12 +28,11 @@ router.get("", async (req, res) => {
     }));
     res.json(employeesWithPhotos);
   } catch (error) {
-    console.error("Error fetching employees:", error);
-    res.status(500).json({ error: "Failed to fetch employees" });
+    handleError(error, "Failed to fetch employees", res, 500);
   }
 });
 // Get single employee
-router.get("/:id", async (req, res) => {
+router.get("/:id", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const employeeId = parseInt(req.params.id);
     const employee = await employeeDb.getEmployee(employeeId);
@@ -45,24 +46,27 @@ router.get("/:id", async (req, res) => {
       res.status(404).json({ error: "Employee not found" });
     }
   } catch (error) {
-    console.error("Error fetching employee:", error);
-    res.status(500).json({ error: "Failed to fetch employee" });
+    handleError(error, "Failed to fetch employee", res, 500);
   }
 });
 // Create new employee with photo upload
-router.post("", upload.single("photo"), async (req, res) => {
+router.post("", authenticateUser, requireRole(['admin', 'super_admin']), upload.single("photo"), async (req, res) => {
   try {
     let photoPath = null;
     let photoFilename = null;
     // Handle photo upload if provided
     if (req.file) {
+      // Validate file upload
+      const validation = validateFileUpload(req.file);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
       // Create employees directory
       const employeesDir = path.join(__dirname, "uploads", "employees");
       await fs.mkdir(employeesDir, { recursive: true });
-      // Generate unique filename
-      const uniqueName = `emp_${Date.now()}_${Math.round(
-        Math.random() * 1e9
-      )}${path.extname(req.file.originalname)}`;
+      // Generate secure filename
+      const uniqueName = generateSafeFilename(req.file, 'emp');
       const filePath = path.join(employeesDir, uniqueName);
       // Move/save the file
       if (req.file.buffer) {
@@ -119,13 +123,10 @@ router.post("", upload.single("photo"), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error creating employee:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to create employee: " + error.message });
+    handleError(error, "Failed to create employee", res, 500);
   }
 });
-router.put("/reorder", async (req, res) => {
+router.put("/reorder", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const { employeeIds } = req.body;
     if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
@@ -134,12 +135,11 @@ router.put("/reorder", async (req, res) => {
     await employeeDb.updateEmployeeOrder(employeeIds);
     res.json({ success: true, message: "Employee order updated successfully" });
   } catch (error) {
-    console.error("[REORDER] Error:", error);
-    res.status(500).json({ error: "Failed to update employee order" });
+    handleError(error, "Failed to update employee order", res, 500);
   }
 });
 // Update employee
-router.put("/:id", upload.single("photo"), async (req, res) => {
+router.put("/:id", authenticateUser, requireRole(['admin', 'super_admin']), upload.single("photo"), async (req, res) => {
   try {
     const employeeId = parseInt(req.params.id);
     const updates = {};
@@ -166,6 +166,12 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
     });
     // Handle photo upload if provided
     if (req.file) {
+      // Validate file upload
+      const validation = validateFileUpload(req.file);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
       // Get current employee to delete old photo
       const currentEmployee = await employeeDb.getEmployee(employeeId);
       // Delete old photo if exists
@@ -194,9 +200,7 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
       const employeesDir = path.join(__dirname, "uploads", "employees");
       await fs.mkdir(employeesDir, { recursive: true });
 
-      const uniqueName = `emp_${Date.now()}_${Math.round(
-        Math.random() * 1e9
-      )}${path.extname(req.file.originalname)}`;
+      const uniqueName = generateSafeFilename(req.file, 'emp');
       const filePath = path.join(employeesDir, uniqueName);
 
       if (req.file.buffer) {
@@ -245,12 +249,11 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
       res.status(404).json({ error: "Employee not found" });
     }
   } catch (error) {
-    console.error("Update employee error:", error);
-    res.status(500).json({ error: "Failed to update employee" });
+    handleError(error, "Failed to update employee", res, 500);
   }
 });
 // Delete employee
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const employeeId = parseInt(req.params.id);
     const hardDelete = req.query.hard === "true";
@@ -282,8 +285,7 @@ router.delete("/:id", async (req, res) => {
       res.status(404).json({ error: "Employee not found" });
     }
   } catch (error) {
-    console.error("Delete employee error:", error);
-    res.status(500).json({ error: "Failed to delete employee" });
+    handleError(error, "Failed to delete employee", res, 500);
   }
 });
 // EXPORTS

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
+import SEO from '../ui/SEO';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/about.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -198,6 +199,12 @@ const About = () => {
 
     return (
         <>
+            <SEO
+                title="About Us - Master Carpenters & Woodworking Experts"
+                description="Meet the craftsmen behind Gudino Custom. Family-owned carpentry business serving Washington since 2010. Expert kitchen and bathroom remodeling with dedication to quality."
+                keywords="about us, carpentry team, master carpenters, family owned business, Washington contractors, craftsmen, woodworking experts"
+                canonical="https://gudinocustom.com/about"
+            />
             <Navigation />
             <div className="container">
                 {/* Hero Section */}

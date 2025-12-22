@@ -8,21 +8,7 @@ const Navigation = () => {
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // Add this useEffect to dynamically set body padding
-    useEffect(() => {
-        const updatePadding = () => {
-            const navbar = document.getElementById('main-nav');
-            if (navbar) {
-                const navHeight = navbar.offsetHeight;
-                document.body.style.paddingTop = `${navHeight + 1}px`;
-            }
-        };
-
-        updatePadding();
-        window.addEventListener('resize', updatePadding);
-
-        return () => window.removeEventListener('resize', updatePadding);
-    }, []);
+    // Removed dynamic padding calculation to prevent CLS - now using fixed heights in CSS
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -58,7 +44,7 @@ const Navigation = () => {
     return (
         <nav className="navbar navbar-expand-lg" id="main-nav">
             <Link className={`navbar-brand ${isActive('/') ? 'active' : ''}`} to="/">
-                <img src="/O.png" alt="Home" width="250" />
+                <img src="/O.png" alt="Gudino Custom Woodworking Logo" width="250" height="60" />
             </Link>
 
             <button
@@ -93,7 +79,7 @@ const Navigation = () => {
                             onClick={toggleDropdown}
                             aria-expanded={isDropdownOpen}
                         >
-                            <p>Learn More</p>
+                            <p style={{fontSize:'17px', fontWeight:'200'}}>Learn More</p>
                         </button>
                         <ul className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
                             <li>

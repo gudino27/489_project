@@ -384,6 +384,7 @@ async function addUserTables(db) {
       role TEXT NOT NULL DEFAULT 'admin',
       full_name TEXT,
       is_active BOOLEAN DEFAULT 1,
+      must_change_password INTEGER DEFAULT 0,
       last_login DATETIME,
       failed_login_attempts INTEGER DEFAULT 0,
       account_locked_until DATETIME,
@@ -728,6 +729,27 @@ async function addUserTables(db) {
     }
   }
 
+  // Migration: Add must_change_password column to users table if it doesn't exist
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0`);
+    console.log('✓ Added must_change_password column to users table');
+  } catch (error) {
+    if (!error.message.includes('duplicate column name')) {
+      console.error('Error adding must_change_password column:', error);
+    }
+  }
+
+  // Migration: Update existing superadmin user to require password change
+  try {
+    const result = await db.run(`UPDATE users SET must_change_password = 1 WHERE username = 'superadmin' AND must_change_password IS NOT 1`);
+    if (result.changes > 0) {
+      console.log('✓ Updated superadmin user to require password change');
+      console.log('⚠️  WARNING: Superadmin must change password on next login!');
+    }
+  } catch (error) {
+    console.error('Error updating superadmin password flag:', error);
+  }
+
   // Migration: Add session tracking columns to user_sessions table if they don't exist
   try {
     // SQLite doesn't allow non-constant defaults in ALTER TABLE, so we use NULL and update after
@@ -787,11 +809,12 @@ async function addUserTables(db) {
     const defaultPassword = await bcrypt.hash('changeme123', 12);
 
     await db.run(
-      'INSERT INTO users (username, email, password_hash, role, full_name) VALUES (?, ?, ?, ?, ?)',
-      ['superadmin', 'admin@gudinocustom.com', defaultPassword, 'super_admin', 'Super Administrator']
+      'INSERT INTO users (username, email, password_hash, role, full_name, must_change_password) VALUES (?, ?, ?, ?, ?, ?)',
+      ['superadmin', 'admin@gudinocustom.com', defaultPassword, 'super_admin', 'Super Administrator', 1]
     );
 
     console.log(' Created default super admin user (username: superadmin, password: changeme123)');
+    console.log('⚠️  WARNING: You MUST change this password on first login!');
   } else {
     console.log(' Super admin user already exists');
   }

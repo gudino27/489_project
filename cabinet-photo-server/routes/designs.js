@@ -1,27 +1,38 @@
 // This file contains all design-related API endpoints
-// REQUIRED IMPORTS 
+// REQUIRED IMPORTS
 const express = require("express");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs").promises;
+const rateLimit = require("express-rate-limit");
 const {getDb,designDb} = require("../db-helpers");
-const {authenticateUser } = require("../middleware/auth");
+const {authenticateUser, requireRole } = require("../middleware/auth");
 const {uploadMemory } = require("../middleware/upload");
 const { emailTransporter } = require("../utils/email");
 const { sendSmsWithRouting } = require("../utils/sms");
+const { handleError } = require("../utils/error-handler");
+
+// Rate limiter for design submissions (5 per 15 minutes per IP)
+const designSubmitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'Too many design submissions. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false } // Trust proxy configured at app level
+});
 // Get all designs (for admin panel)
-router.get("/", async (req, res) => {
+router.get("/", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const status = req.query.status || null;
     const designs = await designDb.getAllDesigns(status);
     res.json(designs);
   } catch (error) {
-    console.error("Error fetching designs:", error);
-    res.status(500).json({ error: "Failed to fetch designs" });
+    handleError(error, "Failed to fetch designs", res, 500);
   }
 });
 // Send email notification
-router.post("/", uploadMemory.single("pdf"), async (req, res) => {
+router.post("/", designSubmitLimiter, uploadMemory.single("pdf"), async (req, res) => {
   try {
     console.log("\n=== NEW DESIGN SUBMISSION ===");
     // Parse design data from form data
@@ -187,24 +198,19 @@ router.post("/", uploadMemory.single("pdf"), async (req, res) => {
       message: "Design saved successfully",
     });
   } catch (error) {
-    console.error("❌ Error saving design:", error);
-    res.status(500).json({
-      error: "Failed to save design",
-      details: error.message,
-    });
+    handleError(error, "Failed to save design", res, 500);
   }
 });
-router.get("/stats", async (req, res) => {
+router.get("/stats", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const stats = await designDb.getDesignStats();
     res.json(stats);
   } catch (error) {
-    console.error("Error fetching design stats:", error);
-    res.status(500).json({ error: "Failed to fetch design statistics" });
+    handleError(error, "Failed to fetch design statistics", res, 500);
   }
 });
 // Also fix the single design route
-router.get("/:id", async (req, res) => {
+router.get("/:id", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const design = await designDb.getDesign(designId);
@@ -214,11 +220,10 @@ router.get("/:id", async (req, res) => {
       res.status(404).json({ error: "Design not found" });
     }
   } catch (error) {
-    console.error("Error fetching design:", error);
-    res.status(500).json({ error: "Failed to fetch design" });
+    handleError(error, "Failed to fetch design", res, 500);
   }
 });
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const db = await getDb();
@@ -230,12 +235,11 @@ router.delete("/:id", async (req, res) => {
       res.status(404).json({ error: "Design not found" });
     }
   } catch (error) {
-    console.error("Error deleting design:", error);
-    res.status(500).json({ error: "Failed to delete design" });
+    handleError(error, "Failed to delete design", res, 500);
   }
 });
 // Get design PDF
-router.get("/:id/pdf", async (req, res) => {
+router.get("/:id/pdf", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const pdfData = await designDb.getDesignPdf(designId);
@@ -249,12 +253,11 @@ router.get("/:id/pdf", async (req, res) => {
       res.status(404).json({ error: "PDF not found" });
     }
   } catch (error) {
-    console.error("Error fetching PDF:", error);
-    res.status(500).json({ error: "Failed to fetch PDF" });
+    handleError(error, "Failed to fetch PDF", res, 500);
   }
 });
 // Update design status
-router.put("/:id/status", authenticateUser, async (req, res) => {
+router.put("/:id/status", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const { status, viewedBy } = req.body;
@@ -269,12 +272,11 @@ router.put("/:id/status", authenticateUser, async (req, res) => {
       res.status(404).json({ error: "Design not found" });
     }
   } catch (error) {
-    console.error("Error updating design status:", error);
-    res.status(500).json({ error: "Failed to update design status" });
+    handleError(error, "Failed to update design status", res, 500);
   }
 });
 // Update design note
-router.put("/:id/note", authenticateUser, async (req, res) => {
+router.put("/:id/note", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const { note } = req.body;
@@ -285,11 +287,10 @@ router.put("/:id/note", authenticateUser, async (req, res) => {
       res.status(404).json({ error: "Design not found" });
     }
   } catch (error) {
-    console.error("Error updating design note:", error);
-    res.status(500).json({ error: "Failed to update design note" });
+    handleError(error, "Failed to update design note", res, 500);
   }
 });
-router.get("/:id/debug", async (req, res) => {
+router.get("/:id/debug", authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const designId = parseInt(req.params.id);
     const db = await getDb();
@@ -321,8 +322,7 @@ router.get("/:id/debug", async (req, res) => {
       res.status(404).json({ error: "Design not found" });
     }
   } catch (error) {
-    console.error("Debug error:", error);
-    res.status(500).json({ error: error.message });
+    handleError(error, "Failed to fetch debug information", res, 500);
   }
 });
 // EXPORTS 

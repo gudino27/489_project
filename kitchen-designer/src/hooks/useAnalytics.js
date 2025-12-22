@@ -8,6 +8,11 @@ import { useEffect, useRef, useState } from 'react';
 
 // Generate a unique session ID
 const generateSessionId = () => {
+  // Use crypto.randomUUID if available (modern browsers)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
   return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
 };
 

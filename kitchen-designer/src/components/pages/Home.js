@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
+import SEO from '../ui/SEO';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/home.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -68,6 +69,12 @@ const Home = () => {
 
   return (
     <>
+      <SEO
+        title="Expert Carpenters & Cabinet Makers in Washington"
+        description="Professional kitchen remodeling, bathroom renovations, and custom cabinet installation throughout Washington. Expert carpentry services with 15+ years of experience."
+        keywords="carpenter, carpentry, kitchen remodeling, bathroom renovation, custom cabinets, cabinet maker, woodworking, Washington, Spokane"
+        canonical="https://gudinocustom.com/"
+      />
       <Navigation />
 
       {/* Hero Section with Video Background */}
@@ -76,9 +83,17 @@ const Home = () => {
         paddingTop: isMobile ? '80px' : '250px'
       }}>
         <div className="video-background">
-          <video autoPlay muted loop playsInline onError={(e) => console.warn('Video failed to load:', e)}>
-            <source src="/videos/woodworking-hero.mp4" type="video/mp4" />
+          <video
+            autoPlay={!isMobile}
+            muted
+            loop
+            playsInline
+            preload={isMobile ? "none" : "metadata"}
+            poster="/home-page-images/kitchen-island.jpeg"
+            onError={(e) => console.warn('Video failed to load:', e)}
+          >
             <source src="/videos/woodworking-hero.webm" type="video/webm" />
+            <source src="/videos/woodworking-hero.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
         </div>
@@ -136,7 +151,7 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.03}px)` }}>
-            <img src="/home-page-images/kitchen-island.jpeg" alt="Kitchen Island" />
+            <img src="/home-page-images/kitchen-island.jpeg" alt="Kitchen Island" loading="lazy" width="1920" height="1280" />
           </div>
         </section>
 
@@ -164,7 +179,7 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)` }}>
-            <img src="/home-page-images/kitchen.jpg" alt="Kitchen" />
+            <img src="/home-page-images/kitchen.jpg" alt="Kitchen" loading="lazy" width="1920" height="1280" />
           </div>
         </section>
 
@@ -215,7 +230,7 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)` }}>
-            <img src="/home-page-images/blueprint.jpg" alt="Blueprint" />
+            <img src="/home-page-images/blueprint.jpg" alt="Blueprint" loading="lazy" width="1920" height="1280" />
           </div>
         </section>
 

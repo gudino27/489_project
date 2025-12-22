@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 cabinet-photo-server/cabinet-photo-server/*
 data/*
+!data/geolite2/
+data/geolite2/*.mmdb
 node_modules
 dist
 dist-ssr
@@ -84,3 +86,5 @@ GCWadmin/credentials/ios/dist-cert.p12
 GCWadmin/credentials/ios/profile.mobileprovision
 GCWadmin/credentials.json
 GCWadmin/scan_hardcoded_text.js
+data/geolite2/README.md
+data/geolite2/GeoLite2-City_20251219/GeoLite2-City_20251219/GeoLite2-City.mmdb

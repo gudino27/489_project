@@ -13,13 +13,14 @@
 
 const path = require('path');
 const fs = require('fs');
+const config = require('../config');
 
 // Lazy-load MaxMind reader (only loaded if database exists)
 let Reader;
 let cityReader;
 
-// Database path configuration
-const DB_PATH = path.join(__dirname, '..', 'data', 'geolite2', 'GeoLite2-City.mmdb');
+// Database path from config (supports environment variable override)
+const DB_PATH = config.geoLite2.path;
 
 /**
  * Initialize MaxMind reader if database exists
@@ -57,6 +58,16 @@ async function initializeReader() {
  */
 async function getLocationFromIP(ip) {
   console.log('getLocationFromIP called with IP:', ip);
+
+  // Check if geolocation is disabled
+  if (!config.geoLite2.enabled) {
+    return {
+      country: 'Unknown',
+      country_code: null,
+      region: 'Unknown',
+      city: 'Unknown'
+    };
+  }
 
   // Handle localhost/private IPs
   if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {

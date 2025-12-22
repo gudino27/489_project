@@ -33,7 +33,7 @@ COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app .
 
 # Create necessary directories with proper ownership
-RUN mkdir -p uploads database && chown -R node:node uploads database
+RUN mkdir -p uploads database data/geolite2 && chown -R node:node uploads database data
 
 # Copy entrypoint and make executable (only file that needs +x)
 COPY --chown=node:node docker-entrypoint.sh /app/

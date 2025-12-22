@@ -40,6 +40,7 @@ import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
 import SecurityMonitor from './SecurityMonitor';
 import TimeClockManager from './TimeClockManager';
+import PasswordChangeRequired from './PasswordChangeRequired';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
 import InvoiceIcon from './invoices/components/InvoiceIcon';
@@ -70,6 +71,8 @@ const AdminPanel = () => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordChangeRequired, setShowPasswordChangeRequired] = useState(false);
+  const [usernameForPasswordChange, setUsernameForPasswordChange] = useState('');
 
   // Base API URL, can be set via environment variable
   // This allows flexibility for different environments (development, production, etc.)
@@ -150,7 +153,7 @@ const AdminPanel = () => {
         setUser(data.user);
         setToken(data.token);
         setIsAuthenticated(true);
-        
+
         // Set default tab based on role
         if (data.user.role === 'employee') {
           setActiveTab('timeclock');
@@ -158,6 +161,11 @@ const AdminPanel = () => {
 
         // Clear form
         setLoginCredentials({ username: '', password: '' });
+      } else if (response.status === 403 && data.mustChangePassword) {
+        // Password change required
+        setUsernameForPasswordChange(loginCredentials.username);
+        setShowPasswordChangeRequired(true);
+        setLoginError('');
       } else {
         setLoginError(data.error || 'Invalid credentials');
       }
@@ -194,6 +202,29 @@ const AdminPanel = () => {
     setIsAuthenticated(false);
     setUser(null);
     setToken(null);
+  };
+
+  // Password change handlers
+  const handlePasswordChanged = (newToken, userData) => {
+    // Password changed successfully - log user in
+    sessionManager.saveSession(userData, newToken);
+    setUser(userData);
+    setToken(newToken);
+    setIsAuthenticated(true);
+    setShowPasswordChangeRequired(false);
+    setUsernameForPasswordChange('');
+    setLoginCredentials({ username: '', password: '' });
+
+    // Set default tab based on role
+    if (userData.role === 'employee') {
+      setActiveTab('timeclock');
+    }
+  };
+
+  const handlePasswordChangeCancel = () => {
+    setShowPasswordChangeRequired(false);
+    setUsernameForPasswordChange('');
+    setLoginCredentials({ username: '', password: '' });
   };
 
   const handleForgotPassword = async (e) => {
@@ -383,6 +414,15 @@ const AdminPanel = () => {
               }
             </p>
           </div>
+
+          {/* Password Change Required Modal */}
+          {showPasswordChangeRequired && (
+            <PasswordChangeRequired
+              username={usernameForPasswordChange}
+              onPasswordChanged={handlePasswordChanged}
+              onCancel={handlePasswordChangeCancel}
+            />
+          )}
         </div></>
     );
   }

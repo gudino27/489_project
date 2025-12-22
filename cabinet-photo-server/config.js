@@ -18,7 +18,18 @@ const config = {
 
   // Security
   jwt: {
-    secret: process.env.JWT_SECRET || 'dev-secret-change-this',
+    secret: (() => {
+      if (!process.env.JWT_SECRET) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('❌ CRITICAL: JWT_SECRET environment variable must be set in production');
+        } else {
+          console.warn('⚠️  WARNING: Using default JWT secret in development. NEVER use this in production!');
+          console.warn('⚠️  Set JWT_SECRET environment variable before deploying to production.');
+          return 'dev-secret-change-this-INSECURE';
+        }
+      }
+      return process.env.JWT_SECRET;
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   },
   bcrypt: {
@@ -29,6 +40,12 @@ const config = {
   database: {
     path: process.env.DB_PATH || path.join(__dirname, 'database', 'cabinet_photos.db'),
     poolSize: parseInt(process.env.DB_POOL_SIZE) || 5
+  },
+
+  // GeoLite2 Database Configuration
+  geoLite2: {
+    path: process.env.GEOLITE2_DB_PATH || path.join(__dirname, 'data', 'geolite2', 'GeoLite2-City.mmdb'),
+    enabled: process.env.GEOLITE2_ENABLED !== 'false' // Default enabled
   },
 
   // Email Configuration
@@ -64,11 +81,20 @@ const config = {
 
   // CORS Configuration
   cors: {
-    origins: process.env.CORS_ORIGINS?.split(',') || [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:5500'
-    ],
+    origins: (() => {
+      if (process.env.NODE_ENV === 'production') {
+        if (!process.env.CORS_ORIGINS) {
+          throw new Error('❌ CRITICAL: CORS_ORIGINS environment variable must be set in production');
+        }
+        return process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
+      }
+      // Development fallback
+      return process.env.CORS_ORIGINS?.split(',').map(origin => origin.trim()) || [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:5500'
+      ];
+    })(),
     credentials: process.env.CORS_CREDENTIALS !== 'false'
   },
 
@@ -103,7 +129,8 @@ const requiredDirs = [
   path.join(config.uploads.path, 'bathroom'),
   path.join(config.uploads.path, 'custom'),
   config.logging.dir,
-  path.dirname(config.database.path)
+  path.dirname(config.database.path),
+  path.dirname(config.geoLite2.path) // GeoLite2 database directory
 ];
 
 const fs = require('fs');

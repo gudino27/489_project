@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
+const helmet = require("helmet");
 
 // Import database helpers
 const {
@@ -36,6 +37,29 @@ const app = express();
 
 // Trust proxy - this allows Express to read X-Forwarded-For headers from nginx
 app.set('trust proxy', true);
+
+// Security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  referrerPolicy: { policy: 'same-origin' },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
 // CORS configuration
 app.use(

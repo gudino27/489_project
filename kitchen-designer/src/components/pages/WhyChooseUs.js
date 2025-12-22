@@ -1,11 +1,19 @@
 import "../css/sms-compliance.css";
 import Collapsible from "../ui/Collapsible";
 import Navigation from "../ui/Navigation";
+import SEO from "../ui/SEO";
 
 const WhyChooseUs = () => {
   return (
-    <div>
-      <Navigation />
+    <>
+      <SEO
+        title="Why Choose Gudino Custom Woodworking"
+        description="Discover why homeowners choose Gudino Custom for their kitchen and bathroom projects. Expert craftsmanship, quality materials, professional installation, and exceptional customer service."
+        keywords="why choose us, custom woodworking benefits, quality cabinets, professional installation, expert craftsmanship, Washington cabinet maker"
+        canonical="https://gudinocustom.com/why-choose-us"
+      />
+      <div>
+        <Navigation />
       <div style={{ height: "1vh" }}></div>
       <div className="sms-compliance-container">
         <div className="sms-content">
@@ -186,7 +194,8 @@ const WhyChooseUs = () => {
         </div>
       </div>
       <div style={{ height: "3vh" }}></div>
-    </div>
+      </div>
+    </>
   );
 };
 

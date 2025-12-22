@@ -826,7 +826,8 @@ const userDb = {
           username: user.username,
           email: user.email,
           role: user.role,
-          full_name: user.full_name
+          full_name: user.full_name,
+          must_change_password: user.must_change_password
         }
       };
     } catch (error) {

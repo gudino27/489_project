@@ -1,9 +1,11 @@
 // This file contains all pricing-related API endpoints
-// REQUIRED IMPORTS 
+// REQUIRED IMPORTS
 const express = require("express");
 const router = express.Router();
-const { authenticateUser } = require("../middleware/auth");
+const { authenticateUser, requireRole } = require("../middleware/auth");
+const { validatePricing, validateMaterials } = require("../middleware/validation");
 const { getDb, queueDbOperation } = require("../db-helpers");
+const { handleError } = require("../utils/error-handler");
 // Get all the pricing data
 router.get("/", async (req, res) => {
   try {
@@ -57,12 +59,11 @@ router.get("/", async (req, res) => {
       wallPricing,
     });
   } catch (error) {
-    console.error("Error loading prices:", error);
-    res.status(500).json({ error: "Failed to load prices" });
+    handleError(error, "Failed to load prices", res, 500);
   }
 });
 // Update the cabinet prices
-router.put("/cabinets", async (req, res) => {
+router.put("/cabinets", authenticateUser, requireRole('super_admin'), validatePricing, async (req, res) => {
   try {
     const prices = req.body;
     console.log("Updating cabinet prices:", prices);
@@ -89,8 +90,7 @@ router.put("/cabinets", async (req, res) => {
     });
     res.json({ success: true, message: "Cabinet prices updated successfully" });
   } catch (error) {
-    console.error("Error updating cabinet prices:", error);
-    res.status(500).json({ error: "Failed to update cabinet prices" });
+    handleError(error, "Failed to update cabinet prices", res, 500);
   }
 });
 router.get("/cabinets", async (req, res) => {
@@ -106,8 +106,7 @@ router.get("/cabinets", async (req, res) => {
     console.log("Loaded cabinet prices:", cabinets);
     res.json(cabinets);
   } catch (error) {
-    console.error("Error fetching cabinet prices:", error);
-    res.status(500).json({ error: "Failed to fetch cabinet prices" });
+    handleError(error, "Failed to fetch cabinet prices", res, 500);
   }
 });
 router.get("/materials", async (req, res) => {
@@ -129,12 +128,11 @@ router.get("/materials", async (req, res) => {
     console.log("Loaded materials:", materialArray);
     res.json(materialArray);
   } catch (error) {
-    console.error("Error fetching materials:", error);
-    res.status(500).json({ error: "Failed to fetch materials" });
+    handleError(error, "Failed to fetch materials", res, 500);
   }
 });
 // Update the material multipliers
-router.put("/materials", async (req, res) => {
+router.put("/materials", authenticateUser, requireRole('super_admin'), validateMaterials, async (req, res) => {
   try {
     const materials = req.body;
     console.log("Saving materials:", materials);
@@ -165,14 +163,11 @@ router.put("/materials", async (req, res) => {
     });
     res.json({ success: true, message: "Materials saved successfully" });
   } catch (error) {
-    console.error("Error saving materials:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to save materials: " + error.message });
+    handleError(error, "Failed to save materials", res, 500);
   }
 });
 // Update the color pricing
-router.put("/colors", async (req, res) => {
+router.put("/colors", authenticateUser, requireRole('super_admin'), validatePricing, async (req, res) => {
   try {
     const colors = req.body;
     console.log("Updating color pricing:", colors);
@@ -199,8 +194,7 @@ router.put("/colors", async (req, res) => {
     });
     res.json({ success: true, message: "Color pricing updated successfully" });
   } catch (error) {
-    console.error("Error updating color pricing:", error);
-    res.status(500).json({ error: "Failed to update color pricing" });
+    handleError(error, "Failed to update color pricing", res, 500);
   }
 });
 router.get("/colors", async (req, res) => {
@@ -219,8 +213,7 @@ router.get("/colors", async (req, res) => {
     console.log("Loaded color pricing:", colors);
     res.json(colors);
   } catch (error) {
-    console.error("Error fetching color pricing:", error);
-    res.status(500).json({ error: "Failed to fetch color pricing" });
+    handleError(error, "Failed to fetch color pricing", res, 500);
   }
 });
 router.get("/history", async (req, res) => {
@@ -240,8 +233,7 @@ router.get("/history", async (req, res) => {
     `);
     res.json(history);
   } catch (error) {
-    console.error("Error fetching price history:", error);
-    res.status(500).json({ error: "Failed to fetch price history" });
+    handleError(error, "Failed to fetch price history", res, 500);
   }
 });
 // Wall pricing endpoints
@@ -275,12 +267,10 @@ router.get("/walls", async (req, res) => {
     console.log("Loaded wall pricing:", walls);
     res.json(walls);
   } catch (error) {
-    console.error("Error fetching wall pricing:", error);
-    // Return defaults on error
-    res.json({ addWall: 1500, removeWall: 2000 });
+    handleError(error, "Failed to fetch wall pricing", res, 500);
   }
 });
-router.put("/walls", async (req, res) => {
+router.put("/walls", authenticateUser, requireRole('super_admin'), validatePricing, async (req, res) => {
   try {
     const wallPricing = req.body;
     console.log("Updating wall pricing:", wallPricing);
@@ -319,8 +309,7 @@ router.put("/walls", async (req, res) => {
     console.log("Wall pricing updated successfully");
     res.json({ success: true });
   } catch (error) {
-    console.error("Error updating wall pricing:", error);
-    res.status(500).json({ error: "Failed to update wall pricing" });
+    handleError(error, "Failed to update wall pricing", res, 500);
   }
 });
 // Wall availability endpoints
@@ -345,15 +334,10 @@ router.get("/wall-availability", async (req, res) => {
     //await db.close();
     res.json(availability);
   } catch (error) {
-    console.error("Error fetching wall availability:", error);
-    // Return defaults on error
-    res.json({
-      addWallEnabled: true,
-      removeWallEnabled: true,
-    });
+    handleError(error, "Failed to fetch wall availability", res, 500);
   }
 });
-router.put("/wall-availability", async (req, res) => {
+router.put("/wall-availability", authenticateUser, requireRole('super_admin'), async (req, res) => {
   try {
     const db = await getDb();
     const wallAvailability = req.body;
@@ -383,8 +367,7 @@ router.put("/wall-availability", async (req, res) => {
     console.log("Wall availability updated successfully");
     res.json({ success: true });
   } catch (error) {
-    console.error("Error updating wall availability:", error);
-    res.status(500).json({ error: "Failed to update wall availability" });
+    handleError(error, "Failed to update wall availability", res, 500);
   }
 });
 // EXPORTS
