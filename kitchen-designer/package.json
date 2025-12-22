@@ -56,8 +56,6 @@
   },
   "overrides": {
     "nth-check": "^2.1.1",
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0",
     "@tailwindcss/postcss7-compat": {
       "postcss": "^8.4.49"
     },
