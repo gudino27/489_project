@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
 const PasswordChangeRequired = ({ username, onPasswordChanged, onCancel }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -70,7 +71,7 @@ const PasswordChangeRequired = ({ username, onPasswordChanged, onCancel }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/change-password-required', {
+      const response = await fetch(`${API_BASE}/api/auth/change-password-required`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
