@@ -44,6 +44,9 @@ async function initializeDatabase() {
     console.log(' Checking and fixing payroll schema...');
     await fixPayrollSchema(db);
 
+    console.log(' Adding quick quote tables...');
+    await addQuickQuoteTables(db);
+
     console.log('\n✅ Database initialization completed successfully!');
 
   } catch (error) {
@@ -1379,6 +1382,47 @@ async function addSmsRoutingTables(db) {
   }
 
   console.log(' Created SMS routing tables');
+}
+
+async function addQuickQuoteTables(db) {
+  // Quick quote submissions table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS quick_quote_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      client_email TEXT NOT NULL,
+      client_phone TEXT,
+      client_language TEXT DEFAULT 'en',
+      project_type TEXT NOT NULL,
+      room_dimensions TEXT,
+      budget_range TEXT,
+      preferred_materials TEXT,
+      preferred_colors TEXT,
+      message TEXT,
+      photos TEXT,
+      status TEXT DEFAULT 'new' CHECK(status IN ('new', 'contacted', 'quote_sent', 'converted', 'closed')),
+      assigned_employee_id INTEGER,
+      priority BOOLEAN DEFAULT 0,
+      internal_notes TEXT,
+      ip_address TEXT,
+      geolocation TEXT,
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      contacted_at DATETIME,
+      converted_at DATETIME,
+      FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL
+    )
+  `);
+
+  // Create indexes for quick quotes
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_quick_quotes_status ON quick_quote_submissions(status);
+    CREATE INDEX IF NOT EXISTS idx_quick_quotes_submitted ON quick_quote_submissions(submitted_at);
+    CREATE INDEX IF NOT EXISTS idx_quick_quotes_email ON quick_quote_submissions(client_email);
+    CREATE INDEX IF NOT EXISTS idx_quick_quotes_assigned ON quick_quote_submissions(assigned_employee_id);
+    CREATE INDEX IF NOT EXISTS idx_quick_quotes_priority ON quick_quote_submissions(priority);
+  `);
+
+  console.log(' Created quick quote tables and indexes');
 }
 
 async function fixPayrollSchema(db) {

@@ -424,6 +424,7 @@ const KitchenDesigner = () => {
     rotateCustomWall,
     resizeCustomWall,
     getCurrentWallAngle,
+    markWallAsNonExistentPrior,
   } = useWallMgmt({
     currentRoomData,
     setCurrentRoomData,
@@ -1060,6 +1061,8 @@ const KitchenDesigner = () => {
             getCustomWallByNumber={(wallNum) =>
               getCustomWallByNumber(wallNum, customWalls)
             }
+            // Floor plan presets
+            applyFloorPlanPreset={applyFloorPlanPreset}
             // Wall Management
             isDrawingWall={isDrawingWall}
             setIsDrawingWall={setIsDrawingWall}
@@ -1076,6 +1079,7 @@ const KitchenDesigner = () => {
             addWall={addWall}
             removeWall={removeWall}
             markWallAsExistedPrior={markWallAsExistedPrior}
+            markWallAsNonExistentPrior={markWallAsNonExistentPrior}
             getCurrentWallAngle={getCurrentWallAngle}
             rotateCustomWall={rotateCustomWall}
             resizeCustomWall={resizeCustomWall}

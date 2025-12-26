@@ -15,6 +15,7 @@ const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
 const PasswordReset = lazy(() => import('./components/admin/PasswordReset'));
 const Registration = lazy(() => import('./components/auth/Registration'));
 const TestimonialForm = lazy(() => import('./components/forms/TestimonialForm'));
+const QuickContactForm = lazy(() => import('./components/forms/QuickContactForm'));
 const InvoiceViewer = lazy(() => import('./components/invoice/InvoiceViewer'));
 const ReceiptViewer = lazy(() => import('./components/invoice/ReceiptViewer'));
 const SmsCompliance = lazy(() => import('./components/SmsCompliance'));
@@ -57,6 +58,7 @@ function App() {
               <Route path="/reset-password" element={<PasswordReset />} />
               <Route path="/register/:token" element={<Registration />} />
               <Route path="/testimonial/:token" element={<TestimonialForm />} />
+              <Route path="/quick-quote" element={<QuickContactForm />} />
               <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
               <Route path="/invoice/:token" element={<InvoiceViewer />} />
               <Route path="/sms-consent-verification" element={<SmsCompliance defaultTab="consent" />} />

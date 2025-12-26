@@ -4,9 +4,215 @@ const express = require("express");
 const router = express.Router();
 const fs = require("fs").promises;
 const path = require("path");
+const multer = require("multer");
 const { getDb, photoDb, testimonialDb } = require("../db-helpers");
 const { authenticateUser, requireRole } = require("../middleware/auth");
+const {
+  emailTransporter,
+  generateQuickQuoteConfirmationEmail,
+  generateQuickQuoteAdminNotification,
+} = require("../utils/email");
+const { sendSmsWithRouting } = require("../utils/sms");
 const PORT = process.env.PORT || 3001;
+
+// Configure multer for quick quote photo uploads (max 5 photos, 10MB each)
+const quickQuoteStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "..", "uploads", "quick-quote-photos");
+    await fs.mkdir(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const quickQuoteUpload = multer({
+  storage: quickQuoteStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images are allowed"));
+    }
+  },
+});
+
+// Quick quote submission endpoint (alternative to full designer)
+router.post("/api/contact/quick-quote", quickQuoteUpload.array("photos", 5), async (req, res) => {
+  try {
+    const {
+      client_name,
+      client_email,
+      client_phone,
+      client_language,
+      project_type,
+      room_dimensions,
+      budget_range,
+      preferred_materials,
+      preferred_colors,
+      message,
+    } = req.body;
+
+    // Validate required fields
+    if (!client_name || !client_email || !project_type) {
+      return res.status(400).json({
+        error: "Missing required fields: client_name, client_email, and project_type are required",
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(client_email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    // Validate project type
+    const validProjectTypes = ["kitchen", "bathroom", "custom"];
+    if (!validProjectTypes.includes(project_type)) {
+      return res.status(400).json({
+        error: "Invalid project_type. Must be one of: kitchen, bathroom, custom",
+      });
+    }
+
+    // Get IP address and geolocation
+    const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+    let geolocation = null;
+
+    // Optional: Get geolocation from IP (using ipapi.co - free tier)
+    try {
+      const https = require("https");
+      const geoData = await new Promise((resolve, reject) => {
+        https.get(`https://ipapi.co/${ipAddress}/json/`, (geoRes) => {
+          let data = "";
+          geoRes.on("data", (chunk) => (data += chunk));
+          geoRes.on("end", () => {
+            try {
+              const json = JSON.parse(data);
+              if (json.city && json.region && json.country_name) {
+                resolve(`${json.city}, ${json.region}, ${json.country_name}`);
+              } else {
+                resolve(null);
+              }
+            } catch (e) {
+              resolve(null);
+            }
+          });
+        }).on("error", () => resolve(null));
+      });
+      geolocation = geoData;
+    } catch (error) {
+      console.log("Geolocation lookup failed:", error.message);
+    }
+
+    // Process uploaded photos
+    const photoFilenames = req.files ? req.files.map((file) => file.filename) : [];
+    const photosJson = JSON.stringify(photoFilenames);
+
+    // Save to database
+    const db = await getDb();
+    const result = await db.run(
+      `INSERT INTO quick_quote_submissions
+       (client_name, client_email, client_phone, client_language, project_type,
+        room_dimensions, budget_range, preferred_materials, preferred_colors,
+        message, photos, ip_address, geolocation, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        client_name,
+        client_email,
+        client_phone || null,
+        client_language || "en",
+        project_type,
+        room_dimensions || null,
+        budget_range || null,
+        preferred_materials || null,
+        preferred_colors || null,
+        message || null,
+        photosJson,
+        ipAddress,
+        geolocation,
+        "new",
+      ]
+    );
+
+    const submissionId = result.lastID;
+
+    // Send confirmation email to client
+    try {
+      const confirmationEmailOptions = generateQuickQuoteConfirmationEmail({
+        clientName: client_name,
+        clientEmail: client_email,
+        projectType: project_type,
+        language: client_language || "en",
+        submissionId,
+      });
+      await emailTransporter.sendMail(confirmationEmailOptions);
+      console.log(`✉️  Confirmation email sent to ${client_email}`);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the request if email fails
+    }
+
+    // Send notification email to admin
+    try {
+      const adminNotificationOptions = generateQuickQuoteAdminNotification({
+        clientName: client_name,
+        clientEmail: client_email,
+        clientPhone: client_phone,
+        projectType: project_type,
+        roomDimensions: room_dimensions,
+        budgetRange: budget_range,
+        preferredMaterials: preferred_materials,
+        preferredColors: preferred_colors,
+        message,
+        photoCount: photoFilenames.length,
+        language: client_language || "en",
+        submissionId,
+        ipAddress,
+        geolocation,
+      });
+      await emailTransporter.sendMail(adminNotificationOptions);
+      console.log(`✉️  Admin notification email sent`);
+    } catch (emailError) {
+      console.error("Failed to send admin notification email:", emailError);
+    }
+
+    // Send SMS notification to admin
+    try {
+      const projectTypeLabels = {
+        kitchen: "Kitchen Cabinets",
+        bathroom: "Bathroom Vanities",
+        custom: "Custom Woodworking",
+      };
+      const smsMessage = `New Quote Request!\n\nClient: ${client_name}\nProject: ${projectTypeLabels[project_type]}\nEmail: ${client_email}${client_phone ? `\nPhone: ${client_phone}` : ""}\n\nView details in admin panel: https://gudinocustom.com/admin`;
+
+      await sendSmsWithRouting("quote_request", smsMessage);
+      console.log(`📱 SMS notification sent to admin`);
+    } catch (smsError) {
+      console.error("Failed to send SMS notification:", smsError);
+    }
+
+    // Return success response
+    res.status(201).json({
+      success: true,
+      message: "Quote request submitted successfully",
+      submissionId,
+      confirmation: {
+        email: client_email,
+        language: client_language || "en",
+      },
+    });
+  } catch (error) {
+    console.error("Quick quote submission error:", error);
+    res.status(500).json({
+      error: "Failed to submit quote request",
+      details: error.message,
+    });
+  }
+});
+
 // Gets the storage info
 router.get("/api/storage-info", async (req, res) => {
   try {

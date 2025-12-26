@@ -23,6 +23,7 @@ const translations = {
     "designer.roomWidth": "Room Width (feet)",
     "designer.roomDepth": "Room Depth (feet)",
     "designer.wallHeight": "Wall Height (inches)",
+    "designer.badge":"Most Popular",
 
     // Cabinets
     "cabinets.title": "Cabinets",
@@ -149,6 +150,27 @@ const translations = {
     "home.knowMoreDescription":
       "We're more than just the spaces we build. Click below to learn about our roots, hear from real customers, and get to know the team behind Gudino Custom Woodworking.",
     "home.aboutUs": "About Us",
+
+    // Designer or Contact Choice
+    "choice.title": "How would you like to get started?",
+    "choice.subtitle": "Choose the option that works best for you",
+    "choice.designer.title": "Use Our Designer",
+    "choice.designer.description": "Design your dream kitchen or bathroom with our interactive 3D designer tool.",
+    "choice.designer.feature1": "Interactive 3D visualization",
+    "choice.designer.feature2": "Real-time pricing",
+    "choice.designer.feature3": "Customize colors and materials",
+    "choice.designer.feature4": "Save and share your design",
+    "choice.designer.button": "Start Designing",
+    "choice.designer.badge": "Most Popular",
+    "choice.quickQuote.title": "Quick Quote Form",
+    "choice.quickQuote.description": "Tell us about your project and get a personalized quote from our team.",
+    "choice.quickQuote.feature1": "Fast and simple",
+    "choice.quickQuote.feature2": "Upload inspiration photos",
+    "choice.quickQuote.feature3": "Get a response in 24-48 hours",
+    "choice.quickQuote.feature4": "No design experience needed",
+    "choice.quickQuote.button": "Request Quote",
+    "choice.quickQuote.badge": "Quick & Easy",
+    "choice.unsure": "Not sure which to choose? Contact us and we'll help you decide.",
 
     //portfolio page
     "portfolio.selectCategory": "Select Category",
@@ -1978,6 +2000,7 @@ const translations = {
     "designer.roomWidth": "Ancho del Cuarto (pies)",
     "designer.roomDepth": "Profundidad del Cuarto (pies)",
     "designer.wallHeight": "Altura de Pared (pulgadas)",
+    "designer.badge":"Mas Popular",
 
     // Cabinets
     "cabinets.title": "Gabinetes",
@@ -2101,6 +2124,27 @@ const translations = {
     "home.knowMoreDescription":
       "Somos más que solo los espacios que construimos. Haz clic abajo para aprender sobre nuestras raíces, escuchar de clientes reales y conocer al equipo detrás de Gudino Custom Woodworking.",
     "home.aboutUs": "Acerca de Nosotros",
+
+    // Designer or Contact Choice
+    "choice.title": "¿Cómo le gustaría comenzar?",
+    "choice.subtitle": "Elija la opción que mejor le funcione",
+    "choice.designer.title": "Use Nuestro Diseñador",
+    "choice.designer.description": "Diseñe su cocina o baño de ensueño con nuestra herramienta de diseño 3D interactiva.",
+    "choice.designer.feature1": "Visualización 3D interactiva",
+    "choice.designer.feature2": "Precios en tiempo real",
+    "choice.designer.feature3": "Personalizar colores y materiales",
+    "choice.designer.feature4": "Guardar y compartir su diseño",
+    "choice.designer.button": "Comenzar a Diseñar",
+    "choice.designer.badge": "Más Popular",
+    "choice.quickQuote.title": "Formulario de Cotización Rápida",
+    "choice.quickQuote.description": "Cuéntenos sobre su proyecto y obtenga una cotización personalizada de nuestro equipo.",
+    "choice.quickQuote.feature1": "Rápido y sencillo",
+    "choice.quickQuote.feature2": "Cargar fotos de inspiración",
+    "choice.quickQuote.feature3": "Obtenga una respuesta en 24-48 horas",
+    "choice.quickQuote.feature4": "No se necesita experiencia en diseño",
+    "choice.quickQuote.button": "Solicitar Cotización",
+    "choice.quickQuote.badge": "Rápido y Fácil",
+    "choice.unsure": "¿No está seguro cuál elegir? Contáctenos y le ayudaremos a decidir.",
 
     //portfolio page
     "portfolio.selectCategory": "Seleccionar Categoría",

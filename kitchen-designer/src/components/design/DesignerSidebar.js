@@ -83,6 +83,7 @@ const DesignerSidebar = ({
   wallRemovalDisabled,
   getCustomWallByNumber,
   markWallAsExistedPrior,
+  markWallAsNonExistentPrior,
   getCurrentWallAngle,
   rotateCustomWall,
   resizeCustomWall,
@@ -91,6 +92,8 @@ const DesignerSidebar = ({
   updateDoor,
   getDoorsOnWall,
   getDoorTypes
+  ,
+  applyFloorPlanPreset
 }) => {
   const { t } = useLanguage();
 
@@ -200,6 +203,15 @@ const DesignerSidebar = ({
               <label className="block text-sm font-semibold">Floor Plan Layouts</label>
               <button onClick={() => toggleSection('floorPlanPresets')} className="text-xs px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center gap-1" title="Choose a floor plan preset">🏠 Presets</button>
             </div>
+            {!collapsedSections.floorPlanPresets && (
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                <button onClick={() => applyFloorPlanPreset('traditional')} className="w-full p-2 bg-white border rounded hover:bg-gray-50 text-sm">Traditional (All walls)</button>
+                <button onClick={() => applyFloorPlanPreset('open-concept')} className="w-full p-2 bg-white border rounded hover:bg-gray-50 text-sm">Open Concept (Remove South Wall)</button>
+                <button onClick={() => applyFloorPlanPreset('galley-open')} className="w-full p-2 bg-white border rounded hover:bg-gray-50 text-sm">Galley (North & South)</button>
+                <button onClick={() => applyFloorPlanPreset('island-focused')} className="w-full p-2 bg-white border rounded hover:bg-gray-50 text-sm">Island Focused (North only)</button>
+                <button onClick={() => applyFloorPlanPreset('peninsula')} className="w-full p-2 bg-white border rounded hover:bg-gray-50 text-sm">Peninsula (Remove West Wall)</button>
+              </div>
+            )}
           </div>
           <WallManagement
             wallAvailability={wallAvailability}
@@ -224,6 +236,7 @@ const DesignerSidebar = ({
             wallRemovalDisabled={wallRemovalDisabled}
             getCustomWallByNumber={getCustomWallByNumber}
             markWallAsExistedPrior={markWallAsExistedPrior}
+            markWallAsNonExistentPrior={markWallAsNonExistentPrior}
             getCurrentWallAngle={getCurrentWallAngle}
             rotateCustomWall={rotateCustomWall}
             resizeCustomWall={resizeCustomWall}

@@ -201,6 +201,22 @@ export const useWallManagement = ({
       originalWalls: updatedOriginalWalls,
     });
   };
+
+  const markWallAsNonExistentPrior = (wallNumber) => {
+    // For custom walls, clear existedPrior flag
+    const updatedCustomWalls = customWalls.map((wall) =>
+      wall.wallNumber === wallNumber ? { ...wall, existedPrior: false } : wall
+    );
+
+    // Remove from originalWalls so removing it later will not be charged
+    const updatedOriginalWalls = originalWalls.filter((w) => w !== wallNumber);
+
+    setCurrentRoomData({
+      ...currentRoomData,
+      customWalls: updatedCustomWalls,
+      originalWalls: updatedOriginalWalls,
+    });
+  };
   const addDoor = (wallNumber, position, width = 32, type = "standard") => {
     const doorId = `door-${Date.now()}`;
     const newDoor = {
@@ -370,5 +386,6 @@ export const useWallManagement = ({
     rotateCustomWall,
     resizeCustomWall,
     getCurrentWallAngle,
+    markWallAsNonExistentPrior,
   };
 };

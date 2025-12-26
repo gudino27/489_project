@@ -294,7 +294,7 @@ const TestimonialForm = () => {
                                 />
                                 <label htmlFor="photos" className="file-upload-label">
                                     <Upload className="upload-icon" />
-                                    <span>Click to upload photos or drag and drop</span>
+                                    <span>Click to upload photos or drag and drop </span>
                                     <span className="file-upload-subtitle">
                                         PNG, JPG, WebP up to 10MB each
                                     </span>

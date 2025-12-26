@@ -23,6 +23,7 @@ const WallManagement = ({
   wallRemovalDisabled,
   getCustomWallByNumber,
   markWallAsExistedPrior,
+  markWallAsNonExistentPrior,
   getCurrentWallAngle,
   rotateCustomWall,
   resizeCustomWall,
@@ -138,6 +139,31 @@ const WallManagement = ({
                   </div>
 
                   <div className="flex gap-1">
+                        {/* Existed / Non-existent prior toggle for pricing */}
+                        <div className="flex-2">
+                          {originalWalls.includes(wallNum) ? (
+                            <button
+                              onClick={() => {
+                                  markWallAsNonExistentPrior(wallNum);
+                                
+                              }}
+                              className="text-xs py-1 px-2 rounded w-full bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                              title="Mark this wall as not existing before modifications"
+                            >
+                              Mark Non-Existent Prior
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                markWallAsExistedPrior(wallNum);
+                              }}
+                              className="text-xs py-1 px-3 rounded w-full bg-yellow-500 text-white hover:bg-yellow-600"
+                              title="Mark this wall as existing before modifications"
+                            >
+                              Mark Existed Prior
+                            </button>
+                          )}
+                        </div>
                     {!isPresent && (
                       <div className="flex gap-1 w-full">
                         {wallAvailability.addWallEnabled && (

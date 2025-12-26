@@ -230,8 +230,193 @@ function generateReceiptEmailOptions({
   };
 }
 
+// Quick quote confirmation email for clients (bilingual)
+function generateQuickQuoteConfirmationEmail({
+  clientName,
+  clientEmail,
+  projectType,
+  language = "en",
+  submissionId,
+}) {
+  const translations = {
+    en: {
+      subject: "Quote Request Received - Gudino Custom Woodworking",
+      title: "We Received Your Quote Request!",
+      greeting: "Dear",
+      message:
+        "Thank you for your interest in Gudino Custom Woodworking. We have received your quote request and will get back to you within 2-4 buisness days.",
+      projectType: "Project Type",
+      nextSteps: "What Happens Next?",
+      step1: "Our team will review your project details",
+      step2: "We'll contact you to schedule a consultation",
+      step3: "We'll provide you with a detailed quote",
+      questions: "If you have any immediate questions, feel free to contact us:",
+      companyName: "Gudino Custom Woodworking",
+      phone: "Phone",
+      email: "Email",
+    },
+    es: {
+      subject: "Solicitud de Cotización Recibida - Gudino Custom Woodworking",
+      title: "¡Recibimos Su Solicitud de Cotización!",
+      greeting: "Estimado",
+      message:
+        "Gracias por su interés en Gudino Custom Woodworking. Hemos recibido su solicitud de cotización y nos comunicaremos con usted dentro de 2-4 días hábiles.",
+      projectType: "Tipo de Proyecto",
+      nextSteps: "¿Qué Sigue?",
+      step1: "Nuestro equipo revisará los detalles de su proyecto",
+      step2: "Nos pondremos en contacto para programar una consulta",
+      step3: "Le proporcionaremos una cotización detallada",
+      questions:
+        "Si tiene alguna pregunta inmediata, no dude en contactarnos:",
+      companyName: "Gudino Custom Woodworking",
+      phone: "Teléfono",
+      email: "Correo Electrónico",
+    },
+  };
+
+  const t = translations[language] || translations.en;
+
+  return {
+    from: process.env.EMAIL_FROM,
+    to: clientEmail,
+    subject: t.subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: rgba(109, 109, 109, 1); color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${t.companyName}</h1>
+        </div>
+
+        <div style="padding: 30px; background: #f8fafc;">
+          <h2 style="color: #1e3a8a; margin-top: 0;">${t.title}</h2>
+
+          <p style="color: black;">${t.greeting} ${clientName},</p>
+
+          <p style="color: black;">${t.message}</p>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: black;"><strong>${t.projectType}:</strong> ${projectType}</p>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
+              ${language === "es" ? "Número de referencia" : "Reference number"}: #${submissionId}
+            </p>
+          </div>
+
+          <div style="background: #eff6ff; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #1e3a8a; margin-top: 0;">${t.nextSteps}</h3>
+            <ol style="color: black; margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 10px;">${t.step1}</li>
+              <li style="margin-bottom: 10px;">${t.step2}</li>
+              <li>${t.step3}</li>
+            </ol>
+          </div>
+
+          <p style="color: black; margin-top: 30px;">${t.questions}</p>
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px; text-align: center;">
+            <p style="margin: 5px 0;"><strong>${t.companyName}</strong></p>
+            <p style="margin: 5px 0;">${t.phone}: (509) 515-4090</p>
+            <p style="margin: 5px 0;">${t.email}: ${process.env.ADMIN_EMAIL}</p>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+}
+
+// Quick quote admin notification email
+function generateQuickQuoteAdminNotification({
+  clientName,
+  clientEmail,
+  clientPhone,
+  projectType,
+  roomDimensions,
+  budgetRange,
+  preferredMaterials,
+  preferredColors,
+  message,
+  photoCount,
+  language,
+  submissionId,
+  ipAddress,
+  geolocation,
+}) {
+  const projectTypeLabels = {
+    kitchen: "Kitchen Cabinets",
+    bathroom: "Bathroom Vanities",
+    custom: "Custom Woodworking",
+  };
+
+  return {
+    from: process.env.EMAIL_FROM,
+    to: process.env.ADMIN_EMAIL,
+    subject: `New Quote Request: ${projectTypeLabels[projectType] || projectType} - ${clientName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1e3a8a; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">New Quote Request</h1>
+        </div>
+
+        <div style="padding: 30px; background: #f8fafc;">
+          <div style="background: #dcfce7; padding: 15px; border-radius: 5px; border-left: 4px solid #16a34a; margin-bottom: 20px;">
+            <p style="margin: 0; color: #166534; font-weight: bold;">
+              New quote request from ${clientName}
+            </p>
+            <p style="margin: 5px 0 0 0; color: #166534; font-size: 14px;">
+              Reference: #${submissionId} | Language: ${language === "es" ? "Spanish" : "English"}
+            </p>
+          </div>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0;">
+            <h3 style="margin-top: 0; color: black;">Client Information</h3>
+            <p style="color: black;"><strong>Name:</strong> ${clientName}</p>
+            <p style="color: black;"><strong>Email:</strong> <a href="mailto:${clientEmail}">${clientEmail}</a></p>
+            ${clientPhone ? `<p style="color: black;"><strong>Phone:</strong> <a href="tel:${clientPhone}">${clientPhone}</a></p>` : ""}
+            <p style="color: black;"><strong>Preferred Language:</strong> ${language === "es" ? "Spanish (Español)" : "English"}</p>
+          </div>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: black;">Project Details</h3>
+            <p style="color: black;"><strong>Project Type:</strong> ${projectTypeLabels[projectType] || projectType}</p>
+            ${roomDimensions ? `<p style="color: black;"><strong>Room Dimensions:</strong> ${roomDimensions}</p>` : ""}
+            ${budgetRange ? `<p style="color: black;"><strong>Budget Range:</strong> ${budgetRange}</p>` : ""}
+            ${preferredMaterials ? `<p style="color: black;"><strong>Preferred Materials:</strong> ${preferredMaterials}</p>` : ""}
+            ${preferredColors ? `<p style="color: black;"><strong>Preferred Colors:</strong> ${preferredColors}</p>` : ""}
+            ${photoCount > 0 ? `<p style="color: black;"><strong>Inspiration Photos:</strong> ${photoCount} photo(s) attached</p>` : ""}
+          </div>
+
+          ${
+            message
+              ? `
+          <div style="background: #fef3c7; padding: 20px; border-radius: 5px; border-left: 4px solid #f59e0b; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: black;">Client Message</h3>
+            <p style="color: black; white-space: pre-wrap;">${message}</p>
+          </div>
+          `
+              : ""
+          }
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin-top: 20px;">
+            <h3 style="margin-top: 0; color: black;">Technical Information</h3>
+            <p style="color: #6b7280; font-size: 14px;">IP Address: ${ipAddress || "N/A"}</p>
+            ${geolocation ? `<p style="color: #6b7280; font-size: 14px;">Location: ${geolocation}</p>` : ""}
+            <p style="color: #6b7280; font-size: 14px;">Submitted: ${new Date().toLocaleString()}</p>
+          </div>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://gudinocustom.com/admin"
+               style="display: inline-block; background: #1e3a8a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              View in Admin Panel
+            </a>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+}
+
 module.exports = {
   emailTransporter,
   generateInvoiceEmailOptions,
   generateReceiptEmailOptions,
+  generateQuickQuoteConfirmationEmail,
+  generateQuickQuoteAdminNotification,
 };

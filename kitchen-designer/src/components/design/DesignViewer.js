@@ -20,13 +20,20 @@ import { useLanguage } from '../../contexts/LanguageContext';
 const DesignViewer = ({ token, API_BASE, userRole }) => {
   const { t } = useLanguage();
   const [designs, setDesigns] = useState([]);
+  const [quickQuotes, setQuickQuotes] = useState([]);
   const [selectedDesign, setSelectedDesign] = useState(null);
+  const [selectedQuote, setSelectedQuote] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, new, viewed
+  const [viewType, setViewType] = useState('all'); // 'all', 'designs', 'quotes'
+  const [filter, setFilter] = useState('all'); // all, new, viewed (for designs) or status values for quotes
   const [stats, setStats] = useState({
     totalDesigns: 0,
     statusBreakdown: { pending: 0, new: 0, viewed: 0 },
     totalRevenue: 0, averageOrderValue: 0, recentDesigns: 0
+  });
+  const [quoteStats, setQuoteStats] = useState({
+    totalQuotes: 0,
+    statusBreakdown: { new: 0, contacted: 0, quote_sent: 0, converted: 0, closed: 0 }
   });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -86,10 +93,16 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
   };
 
   useEffect(() => {
-    loadDesigns();
-    loadStats();
+    if (viewType === 'all' || viewType === 'designs') {
+      loadDesigns();
+      loadStats();
+    }
+    if (viewType === 'all' || viewType === 'quotes') {
+      loadQuickQuotes();
+      loadQuoteStats();
+    }
     fetchNotificationSettings();
-  }, [filter]);
+  }, [filter, viewType]);
 
   // Fetch notification settings (super admin only)
   const fetchNotificationSettings = async () => {
@@ -181,6 +194,49 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
       }
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  };
+
+  // Load quick quotes with auth headers
+  const loadQuickQuotes = async () => {
+    setLoading(true);
+    try {
+      const url = filter === 'all'
+        ? `${API_BASE}/api/admin/quick-quotes`
+        : `${API_BASE}/api/admin/quick-quotes?status=${filter}`;
+
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setQuickQuotes(data);
+      } else if (response.status === 401) {
+        console.error('Unauthorized access - please log in again');
+      }
+    } catch (error) {
+      console.error('Error loading quick quotes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load quick quote stats
+  const loadQuoteStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/quick-quotes/stats`, {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setQuoteStats(data);
+      } else if (response.status === 401) {
+        console.error('Unauthorized access to quote stats');
+      }
+    } catch (error) {
+      console.error('Error loading quote stats:', error);
     }
   };
 
@@ -478,6 +534,108 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
     }
   };
 
+  // Quick quote functions
+  const viewQuickQuote = async (quoteId) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/quick-quotes/${quoteId}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedQuote(data);
+      } else if (response.status === 401) {
+        console.error('Unauthorized access to quote details');
+      }
+    } catch (error) {
+      console.error('Error loading quote:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeQuoteStatus = async (quoteId, newStatus) => {
+    setStatusChanging(quoteId);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/quick-quotes/${quoteId}/status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setQuickQuotes(quickQuotes.map(q =>
+          q.id === quoteId ? { ...q, status: newStatus } : q
+        ));
+        loadQuoteStats(); // Refresh stats
+      } else {
+        const errorText = await response.text();
+        console.error('Status update failed:', errorText);
+        alert(`Failed to change status: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error changing status:', error);
+      alert('Failed to change status');
+    } finally {
+      setStatusChanging(null);
+    }
+  };
+
+  const saveQuoteNote = async (quoteId, note) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/quick-quotes/${quoteId}/note`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ note })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setQuickQuotes(quickQuotes.map(q =>
+          q.id === quoteId ? { ...q, internal_notes: note } : q
+        ));
+        setEditingNote(null);
+        setNoteValues({ ...noteValues, [quoteId]: note });
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Failed to save note');
+    }
+  };
+
+  const deleteQuickQuote = async (quoteId) => {
+    if (!window.confirm('Are you sure you want to delete this quote request?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/quick-quotes/${quoteId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setQuickQuotes(quickQuotes.filter(q => q.id !== quoteId));
+        // Reload stats
+        loadQuoteStats();
+        // Close detail view if it's the deleted quote
+        if (selectedQuote && selectedQuote.id === quoteId) {
+          setSelectedQuote(null);
+        }
+      } else if (response.status === 401) {
+        alert('Unauthorized - please log in again');
+      } else {
+        alert('Failed to delete quote');
+      }
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      alert('Error deleting quote');
+    }
+  };
+
   // Keyboard shortcuts - moved after function declarations
   useEffect(() => {
     const handleKeyPress = (event) => {
@@ -549,40 +707,117 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
         )}
       </div>
 
-      {/* Filter Tabs */}
+      {/* View Type Selection */}
       <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+        <div className="border-b border-gray-300 pb-4">
+          <nav className="flex space-x-4">
             <button
-              onClick={() => setFilter('all')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'all'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              onClick={() => { setViewType('all'); setFilter('all'); }}
+              className={`px-4 py-2 rounded-lg font-medium text-sm ${viewType === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
-              {t('designViewer.allDesigns')}
+              All Submissions ({(stats.totalDesigns || 0) + (quoteStats.totalQuotes || 0)})
             </button>
             <button
-              onClick={() => setFilter('new')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'new'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              onClick={() => { setViewType('designs'); setFilter('all'); }}
+              className={`px-4 py-2 rounded-lg font-medium text-sm ${viewType === 'designs'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
-              {t('designViewer.new')} {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ?
-                `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})` : ''}
+              3D Designs ({stats.totalDesigns || 0})
             </button>
             <button
-              onClick={() => setFilter('viewed')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'viewed'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              onClick={() => { setViewType('quotes'); setFilter('all'); }}
+              className={`px-4 py-2 rounded-lg font-medium text-sm ${viewType === 'quotes'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
-              {t('designViewer.viewed')} {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ?
-                `(${stats.statusBreakdown.viewed})` : ''}
+              Quick Quotes ({quoteStats.totalQuotes || 0})
             </button>
           </nav>
+        </div>
+      </div>
+
+      {/* Filter Tabs - Show different filters based on view type */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          {(viewType === 'all' || viewType === 'designs') && (
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setFilter('all')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'all'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                {viewType === 'designs' ? 'All Designs' : t('designViewer.allDesigns')}
+              </button>
+              <button
+                onClick={() => setFilter('new')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'new'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                {t('designViewer.new')} {stats.statusBreakdown && ((stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)) > 0 ?
+                  `(${(stats.statusBreakdown.pending || 0) + (stats.statusBreakdown.new || 0)})` : ''}
+              </button>
+              <button
+                onClick={() => setFilter('viewed')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'viewed'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                {t('designViewer.viewed')} {stats.statusBreakdown && (stats.statusBreakdown.viewed || 0) > 0 ?
+                  `(${stats.statusBreakdown.viewed})` : ''}
+              </button>
+            </nav>
+          )}
+          {viewType === 'quotes' && (
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setFilter('all')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'all'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                All Quotes
+              </button>
+              <button
+                onClick={() => setFilter('new')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'new'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                New {quoteStats.statusBreakdown?.new > 0 ? `(${quoteStats.statusBreakdown.new})` : ''}
+              </button>
+              <button
+                onClick={() => setFilter('contacted')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'contacted'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                Contacted {quoteStats.statusBreakdown?.contacted > 0 ? `(${quoteStats.statusBreakdown.contacted})` : ''}
+              </button>
+              <button
+                onClick={() => setFilter('converted')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${filter === 'converted'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                Converted {quoteStats.statusBreakdown?.converted > 0 ? `(${quoteStats.statusBreakdown.converted})` : ''}
+              </button>
+            </nav>
+          )}
         </div>
       </div>
 
@@ -643,7 +878,7 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
       )}
 
       {/* Designs List */}
-      {loading && !selectedDesign ? (
+      {(viewType === 'all' || viewType === 'designs') && (loading && !selectedDesign ? (
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -954,7 +1189,161 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
             </div>
           )}
         </div>
-      )}
+      ))}
+
+      {/* Quick Quotes List */}
+      {(viewType === 'all' || viewType === 'quotes') && (loading && !selectedQuote ? (
+        <div className="bg-white rounded-lg shadow-md p-8 mt-6">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+            <p className="text-gray-500">Loading quick quotes...</p>
+          </div>
+        </div>
+      ) : quickQuotes.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mt-6">
+          <div className="bg-green-50 px-6 py-3 border-b border-green-200">
+            <h3 className="text-lg font-semibold text-green-900">Quick Quote Requests</h3>
+          </div>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {quickQuotes.map((quote) => (
+                <tr
+                  key={`quote-${quote.id}`}
+                  className={`${quote.status === 'new' ? 'bg-green-50' : ''} hover:bg-gray-100 cursor-pointer transition-colors`}
+                  onClick={() => viewQuickQuote(quote.id)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={quote.status}
+                      onChange={(e) => changeQuoteStatus(quote.id, e.target.value)}
+                      disabled={statusChanging === quote.id}
+                      className={`text-xs rounded px-2 py-1 border-0 font-semibold ${
+                        quote.status === 'new' ? 'bg-green-100 text-green-800' :
+                        quote.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                        quote.status === 'converted' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      } ${statusChanging === quote.id ? 'opacity-50' : 'cursor-pointer hover:bg-opacity-80'}`}
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="quote_sent">Quote Sent</option>
+                      <option value="converted">Converted</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{quote.client_name}</div>
+                    <div className="text-xs text-gray-500">{quote.client_language === 'es' ? '🇪🇸 Español' : '🇺🇸 English'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                      {quote.project_type === 'kitchen' ? 'Kitchen' : quote.project_type === 'bathroom' ? 'Bathroom' : 'Custom'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">
+                      {quote.client_phone && (
+                        <div className="flex items-center">
+                          <Phone className="w-3 h-3 mr-1" />
+                          <a href={`tel:${quote.client_phone}`} className="text-xs text-blue-600 hover:underline">
+                            {formatPhoneNumber(quote.client_phone)}
+                          </a>
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        <Mail className="w-3 h-3 mr-1" />
+                        <a href={`mailto:${quote.client_email}`} className="text-xs text-blue-600 hover:underline">
+                          {quote.client_email}
+                        </a>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {editingNote === `quote-${quote.id}` ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={noteValues[`quote-${quote.id}`] !== undefined ? noteValues[`quote-${quote.id}`] : (quote.internal_notes || '')}
+                          onChange={(e) => setNoteValues({ ...noteValues, [`quote-${quote.id}`]: e.target.value })}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              saveQuoteNote(quote.id, noteValues[`quote-${quote.id}`] || '');
+                            }
+                          }}
+                          className="text-xs border border-gray-300 rounded px-2 py-1 w-32"
+                          placeholder="Add note..."
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveQuoteNote(quote.id, noteValues[`quote-${quote.id}`] || '')}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingNote(null)}
+                          className="text-gray-600 hover:text-gray-800"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => {
+                          setEditingNote(`quote-${quote.id}`);
+                          setNoteValues({ ...noteValues, [`quote-${quote.id}`]: quote.internal_notes || '' });
+                        }}
+                        className="text-xs text-gray-500 cursor-pointer hover:text-blue-600 min-h-[20px]"
+                        title="Click to add note"
+                      >
+                        {quote.internal_notes || 'Add note...'}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(quote.submitted_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => viewQuickQuote(quote.id)}
+                      className="text-green-600 hover:text-green-900 mr-4"
+                      title="View details"
+                    >
+                      <Eye className="w-5 h-5 inline" />
+                    </button>
+                    <button
+                      onClick={() => deleteQuickQuote(quote.id)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-5 h-5 inline" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : viewType === 'quotes' ? (
+        <div className="bg-white rounded-lg shadow-md p-8 mt-6">
+          <div className="text-center">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No quick quotes found</h3>
+            <p className="text-gray-500">Quick quote requests will appear here when customers submit them.</p>
+          </div>
+        </div>
+      ) : null)}
 
       {/* Design Detail Modal */}
       {selectedDesign && (
@@ -1134,6 +1523,211 @@ const DesignViewer = ({ token, API_BASE, userRole }) => {
                     <a
                       href={`mailto:${selectedDesign.client_email}`}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Email Client
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Quote Detail Modal */}
+      {selectedQuote && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 z-70 overflow-y-auto">
+          <div className="flex min-h-full items-start justify-center p-6 pt-32">
+            <div className="bg-white rounded-lg max-w-4xl w-full my-12">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-2xl font-bold text-green-900">Quick Quote Request Details</h2>
+                  <button
+                    onClick={() => setSelectedQuote(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Client Information */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Client Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-medium">{selectedQuote.client_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Language Preference</p>
+                      <p className="font-medium">{selectedQuote.client_language === 'es' ? '🇪🇸 Español' : '🇺🇸 English'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <a href={`mailto:${selectedQuote.client_email}`} className="font-medium text-blue-600 hover:underline">
+                        {selectedQuote.client_email}
+                      </a>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Phone</p>
+                      {selectedQuote.client_phone ? (
+                        <a href={`tel:${selectedQuote.client_phone}`} className="font-medium text-blue-600 hover:underline">
+                          {formatPhoneNumber(selectedQuote.client_phone)}
+                        </a>
+                      ) : (
+                        <p className="font-medium text-gray-400">Not provided</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Details */}
+                <div className="mb-6 p-4 bg-green-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Project Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Project Type</p>
+                      <p className="font-medium capitalize">{selectedQuote.project_type}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Room Dimensions</p>
+                      <p className="font-medium">{selectedQuote.room_dimensions || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Budget Range</p>
+                      <p className="font-medium">{selectedQuote.budget_range || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Status</p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedQuote.status === 'new' ? 'bg-green-100 text-green-800' :
+                        selectedQuote.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedQuote.status === 'converted' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedQuote.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedQuote.preferred_materials && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600">Preferred Materials</p>
+                      <p className="font-medium">{selectedQuote.preferred_materials}</p>
+                    </div>
+                  )}
+
+                  {selectedQuote.preferred_colors && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600">Preferred Colors</p>
+                      <p className="font-medium">{selectedQuote.preferred_colors}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Customer Message */}
+                {selectedQuote.message && (
+                  <div className="mb-6 p-4 bg-yellow-50 rounded-lg">
+                    <h3 className="font-semibold mb-2">Customer Message</h3>
+                    <p className="text-gray-700 whitespace-pre-wrap">{selectedQuote.message}</p>
+                  </div>
+                )}
+
+                {/* Inspiration Photos */}
+                {selectedQuote.photos && JSON.parse(selectedQuote.photos).length > 0 && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold mb-3">Inspiration Photos ({JSON.parse(selectedQuote.photos).length})</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {JSON.parse(selectedQuote.photos).map((photo, idx) => (
+                        <a
+                          key={idx}
+                          href={`${API_BASE}/uploads/quick-quote-photos/${photo}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative group"
+                        >
+                          <img
+                            src={`${API_BASE}/uploads/quick-quote-photos/${photo}`}
+                            alt={`Inspiration ${idx + 1}`}
+                            className="w-full h-32 object-cover rounded-lg hover:opacity-75 transition-opacity"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
+                            <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Technical Info */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Technical Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">Submitted</p>
+                      <p className="font-medium">{formatDate(selectedQuote.submitted_at)}</p>
+                    </div>
+                    {selectedQuote.contacted_at && (
+                      <div>
+                        <p className="text-gray-600">Contacted</p>
+                        <p className="font-medium">{formatDate(selectedQuote.contacted_at)}</p>
+                      </div>
+                    )}
+                    {selectedQuote.ip_address && (
+                      <div>
+                        <p className="text-gray-600">IP Address</p>
+                        <p className="font-medium font-mono text-xs">{selectedQuote.ip_address}</p>
+                      </div>
+                    )}
+                    {selectedQuote.geolocation && (
+                      <div>
+                        <p className="text-gray-600">Location</p>
+                        <p className="font-medium">{selectedQuote.geolocation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Internal Notes */}
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-semibold mb-3">Internal Notes</h3>
+                  <textarea
+                    value={selectedQuote.internal_notes || ''}
+                    onChange={(e) => setSelectedQuote({...selectedQuote, internal_notes: e.target.value})}
+                    onBlur={() => saveQuoteNote(selectedQuote.id, selectedQuote.internal_notes || '')}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-sm"
+                    placeholder="Add internal notes about this quote..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      deleteQuickQuote(selectedQuote.id);
+                      setSelectedQuote(null);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Quote
+                  </button>
+                  <div className="flex gap-4">
+                    <a
+                      href={`tel:${selectedQuote.client_phone}`}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Call Client
+                    </a>
+                    <a
+                      href={`mailto:${selectedQuote.client_email}`}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
                     >
                       <Mail className="w-4 h-4" />
                       Email Client

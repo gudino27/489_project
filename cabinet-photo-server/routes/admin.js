@@ -1015,6 +1015,169 @@ router.post("/api/admin/test-geolocation", authenticateUser, requireRole("admin"
   }
 });
 
+// QUICK QUOTE MANAGEMENT ENDPOINTS
+// Get all quick quote submissions (admin and super_admin)
+router.get("/api/admin/quick-quotes", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+    const status = req.query.status; // 'all', 'new', 'contacted', 'quote_sent', 'converted', 'closed'
+
+    let query = `
+      SELECT
+        id, client_name, client_email, client_phone, client_language,
+        project_type, room_dimensions, budget_range, preferred_materials,
+        preferred_colors, message, photos, status, assigned_employee_id,
+        priority, internal_notes, ip_address, geolocation, submitted_at,
+        contacted_at, converted_at
+      FROM quick_quote_submissions
+    `;
+
+    const params = [];
+    if (status && status !== 'all') {
+      query += ' WHERE status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY priority DESC, submitted_at DESC';
+
+    const quotes = await db.all(query, params);
+    res.json(quotes);
+  } catch (error) {
+    console.error('Error fetching quick quotes:', error);
+    res.status(500).json({ error: 'Failed to fetch quick quotes' });
+  }
+});
+
+// Get quick quote stats (admin and super_admin)
+router.get("/api/admin/quick-quotes/stats", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const stats = await db.get(`
+      SELECT
+        COUNT(*) as totalQuotes,
+        SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as newQuotes,
+        SUM(CASE WHEN status = 'contacted' THEN 1 ELSE 0 END) as contactedQuotes,
+        SUM(CASE WHEN status = 'quote_sent' THEN 1 ELSE 0 END) as quoteSentQuotes,
+        SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as convertedQuotes,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closedQuotes
+      FROM quick_quote_submissions
+    `);
+
+    const statusBreakdown = {
+      new: stats.newQuotes || 0,
+      contacted: stats.contactedQuotes || 0,
+      quote_sent: stats.quoteSentQuotes || 0,
+      converted: stats.convertedQuotes || 0,
+      closed: stats.closedQuotes || 0
+    };
+
+    res.json({
+      totalQuotes: stats.totalQuotes || 0,
+      statusBreakdown
+    });
+  } catch (error) {
+    console.error('Error fetching quick quote stats:', error);
+    res.status(500).json({ error: 'Failed to fetch quick quote stats' });
+  }
+});
+
+// Get specific quick quote by ID (admin and super_admin)
+router.get("/api/admin/quick-quotes/:id", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+    const quoteId = parseInt(req.params.id);
+
+    const quote = await db.get(
+      'SELECT * FROM quick_quote_submissions WHERE id = ?',
+      [quoteId]
+    );
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Quick quote not found' });
+    }
+
+    res.json(quote);
+  } catch (error) {
+    console.error('Error fetching quick quote:', error);
+    res.status(500).json({ error: 'Failed to fetch quick quote' });
+  }
+});
+
+// Update quick quote status (admin and super_admin)
+router.put("/api/admin/quick-quotes/:id/status", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+    const quoteId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    const validStatuses = ['new', 'contacted', 'quote_sent', 'converted', 'closed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
+
+    // Update status and set timestamp if applicable
+    let updateQuery = 'UPDATE quick_quote_submissions SET status = ?';
+    const params = [status];
+
+    if (status === 'contacted' || status === 'quote_sent') {
+      updateQuery += ', contacted_at = CURRENT_TIMESTAMP';
+    } else if (status === 'converted') {
+      updateQuery += ', converted_at = CURRENT_TIMESTAMP';
+    }
+
+    updateQuery += ' WHERE id = ?';
+    params.push(quoteId);
+
+    await db.run(updateQuery, params);
+    res.json({ success: true, message: 'Status updated successfully' });
+  } catch (error) {
+    console.error('Error updating quick quote status:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Update quick quote internal note (admin and super_admin)
+router.put("/api/admin/quick-quotes/:id/note", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+    const quoteId = parseInt(req.params.id);
+    const { note } = req.body;
+
+    await db.run(
+      'UPDATE quick_quote_submissions SET internal_notes = ? WHERE id = ?',
+      [note, quoteId]
+    );
+
+    res.json({ success: true, message: 'Note updated successfully' });
+  } catch (error) {
+    console.error('Error updating quick quote note:', error);
+    res.status(500).json({ error: 'Failed to update note' });
+  }
+});
+
+// Delete quick quote (admin and super_admin)
+router.delete("/api/admin/quick-quotes/:id", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const db = await getDb();
+    const quoteId = parseInt(req.params.id);
+
+    const result = await db.run(
+      'DELETE FROM quick_quote_submissions WHERE id = ?',
+      [quoteId]
+    );
+
+    if (result.changes > 0) {
+      res.json({ success: true, message: 'Quick quote deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Quick quote not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting quick quote:', error);
+    res.status(500).json({ error: 'Failed to delete quick quote' });
+  }
+});
+
 // EXPORTS
 module.exports = router;
 
