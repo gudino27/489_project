@@ -112,5 +112,61 @@ router.get("/realtime",authenticateUser,requireRole("super_admin"),async (req, r
     }
   }
 );
-// EXPORTS 
+
+// Analytics Dashboard - Comprehensive endpoint for dashboard data
+router.get("/dashboard", authenticateUser, requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const { range = '30d' } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    switch (range) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 30);
+    }
+
+    // Fetch all dashboard data (only real data, no placeholders)
+    const [
+      overview,
+      conversionFunnel,
+      leadSources,
+      deviceBreakdown,
+      pageViews,
+      realTime
+    ] = await Promise.all([
+      analyticsDb.getOverviewStats(startDate),
+      analyticsDb.getConversionFunnel(startDate),
+      analyticsDb.getLeadSources(startDate),
+      analyticsDb.getDeviceBreakdown(startDate),
+      analyticsDb.getPageViewTrend(startDate),
+      analyticsDb.getRealtimeStats()
+    ]);
+
+    res.json({
+      overview,
+      conversionFunnel,
+      leadSources,
+      deviceBreakdown,
+      pageViews,
+      realTime
+    });
+  } catch (error) {
+    handleError(error, "Failed to fetch dashboard data", res, 500);
+  }
+});
+
+// EXPORTS
 module.exports = router;

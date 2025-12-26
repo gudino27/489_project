@@ -50,6 +50,15 @@ async function initializeDatabase() {
     console.log(' Adding before/after photo columns...');
     await addBeforeAfterPhotoColumns(db);
 
+    console.log(' Adding Instagram tables...');
+    await addInstagramTables(db);
+
+    console.log(' Updating timeline tables for standalone support...');
+    await updateTimelineTablesForStandalone(db);
+
+    console.log(' Adding appointment booking tables...');
+    await addAppointmentTables(db);
+
     console.log('\n✅ Database initialization completed successfully!');
 
   } catch (error) {
@@ -746,15 +755,7 @@ async function addUserTables(db) {
   }
 
   // Migration: Update existing superadmin user to require password change
-  try {
-    const result = await db.run(`UPDATE users SET must_change_password = 1 WHERE username = 'superadmin' AND must_change_password IS NOT 1`);
-    if (result.changes > 0) {
-      console.log('✓ Updated superadmin user to require password change');
-      console.log('⚠️  WARNING: Superadmin must change password on next login!');
-    }
-  } catch (error) {
-    console.error('Error updating superadmin password flag:', error);
-  }
+ 
 
   // Migration: Add session tracking columns to user_sessions table if they don't exist
   try {
@@ -1313,6 +1314,44 @@ async function addInvoiceTables(db) {
     console.log('Location columns already exist in invoice_views table');
   }
 
+  // Project Timeline tables for client project tracking
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS project_timelines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      client_language TEXT DEFAULT 'en', -- 'en' or 'es' for bilingual support
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+    )
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS timeline_phases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timeline_id INTEGER NOT NULL,
+      phase_name_key TEXT NOT NULL, -- Translation key: 'design', 'materials', 'fabrication', 'installation', 'completion'
+      status TEXT DEFAULT 'pending', -- 'pending', 'in_progress', 'completed'
+      start_date DATE,
+      estimated_completion DATE,
+      actual_completion DATE,
+      notes TEXT,
+      photos TEXT, -- JSON array of photo URLs
+      phase_order INTEGER DEFAULT 0, -- For custom ordering
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (timeline_id) REFERENCES project_timelines(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for timeline tables
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_timelines_invoice ON project_timelines(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_timeline_phases_timeline ON timeline_phases(timeline_id);
+    CREATE INDEX IF NOT EXISTS idx_timeline_phases_status ON timeline_phases(status);
+    CREATE INDEX IF NOT EXISTS idx_timeline_phases_order ON timeline_phases(phase_order);
+  `);
+
   console.log(' Created invoice system tables and default data');
 }
 
@@ -1470,6 +1509,197 @@ async function addBeforeAfterPhotoColumns(db) {
   }
 
   console.log(' Before/after photo columns ready');
+}
+
+async function addInstagramTables(db) {
+  try {
+    // Create instagram_posts table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS instagram_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id TEXT NOT NULL UNIQUE,
+        media_type TEXT NOT NULL,
+        media_url TEXT NOT NULL,
+        permalink TEXT NOT NULL,
+        caption TEXT,
+        timestamp DATETIME NOT NULL,
+        approved BOOLEAN DEFAULT 0,
+        display_order INTEGER DEFAULT 0,
+        fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for Instagram posts
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_instagram_approved ON instagram_posts(approved);
+      CREATE INDEX IF NOT EXISTS idx_instagram_display_order ON instagram_posts(display_order);
+      CREATE INDEX IF NOT EXISTS idx_instagram_timestamp ON instagram_posts(timestamp);
+    `);
+
+    // Create instagram_settings table for storing API credentials and refresh token
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS instagram_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        access_token TEXT,
+        token_expires_at DATETIME,
+        last_fetch_at DATETIME,
+        auto_refresh_enabled BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Insert default settings row if it doesn't exist
+    await db.exec(`
+      INSERT OR IGNORE INTO instagram_settings (id, auto_refresh_enabled)
+      VALUES (1, 0)
+    `);
+
+    console.log('   ✓ Created Instagram tables and indexes');
+  } catch (error) {
+    console.error('   ⚠️  Error creating Instagram tables:', error.message);
+    // Don't throw - allow initialization to continue
+  }
+
+  console.log(' Instagram tables ready');
+}
+
+async function updateTimelineTablesForStandalone(db) {
+  try {
+    // Check if project_timelines table needs migration
+    const tableInfo = await db.all(`PRAGMA table_info(project_timelines)`);
+    const columnNames = tableInfo.map(col => col.name);
+
+    // If client_name column doesn't exist, we need to migrate
+    if (!columnNames.includes('client_name')) {
+      console.log('   Migrating project_timelines table for standalone timeline support...');
+
+      // Create new table with updated schema
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS project_timelines_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER, -- Now nullable for standalone timelines
+          client_name TEXT, -- For standalone timelines
+          client_email TEXT, -- For standalone timelines
+          client_phone TEXT, -- For standalone timelines
+          client_language TEXT DEFAULT 'en', -- 'en' or 'es' for bilingual support
+          access_token TEXT UNIQUE, -- For standalone timeline access
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Copy existing data
+      await db.exec(`
+        INSERT INTO project_timelines_new (id, invoice_id, client_language, created_at, updated_at)
+        SELECT id, invoice_id, client_language, created_at, updated_at
+        FROM project_timelines
+      `);
+
+      // Drop old table
+      await db.exec(`DROP TABLE project_timelines`);
+
+      // Rename new table
+      await db.exec(`ALTER TABLE project_timelines_new RENAME TO project_timelines`);
+
+      // Recreate indexes
+      await db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_timelines_invoice ON project_timelines(invoice_id);
+        CREATE INDEX IF NOT EXISTS idx_timelines_access_token ON project_timelines(access_token);
+      `);
+
+      console.log('   ✓ Migrated project_timelines table for standalone support');
+    } else {
+      console.log('   ✓ project_timelines table already supports standalone timelines');
+    }
+  } catch (error) {
+    console.error('   ⚠️  Error updating timeline tables:', error.message);
+    // Don't throw - allow initialization to continue
+  }
+
+  console.log(' Timeline tables updated');
+}
+
+async function addAppointmentTables(db) {
+  try {
+    // Appointments table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT NOT NULL,
+        client_email TEXT NOT NULL,
+        client_phone TEXT NOT NULL,
+        client_language TEXT DEFAULT 'en', -- 'en' or 'es'
+        appointment_type TEXT NOT NULL, -- 'consultation', 'measurement', 'estimate', 'followup'
+        appointment_date DATETIME NOT NULL,
+        duration INTEGER NOT NULL DEFAULT 60, -- Duration in minutes
+        status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'cancelled', 'completed', 'no_show'
+        location_address TEXT,
+        notes TEXT,
+        assigned_employee_id INTEGER,
+        reminder_sent BOOLEAN DEFAULT 0,
+        cancellation_token TEXT UNIQUE, -- Token for cancel/reschedule link
+        cancelled_at DATETIME,
+        cancellation_reason TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Employee availability table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS employee_availability (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        employee_id INTEGER NOT NULL,
+        day_of_week INTEGER NOT NULL CHECK(day_of_week >= 0 AND day_of_week <= 6), -- 0=Sunday, 6=Saturday
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        is_available BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Blocked times table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS blocked_times (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        employee_id INTEGER NOT NULL,
+        start_datetime DATETIME NOT NULL,
+        end_datetime DATETIME NOT NULL,
+        reason TEXT NOT NULL, -- 'vacation', 'meeting', 'personal', 'other'
+        notes TEXT,
+        created_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Create indexes for appointment tables
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);
+      CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+      CREATE INDEX IF NOT EXISTS idx_appointments_employee ON appointments(assigned_employee_id);
+      CREATE INDEX IF NOT EXISTS idx_appointments_client_email ON appointments(client_email);
+      CREATE INDEX IF NOT EXISTS idx_appointments_cancellation_token ON appointments(cancellation_token);
+      CREATE INDEX IF NOT EXISTS idx_employee_availability_employee ON employee_availability(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_employee_availability_day ON employee_availability(day_of_week);
+      CREATE INDEX IF NOT EXISTS idx_blocked_times_employee ON blocked_times(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_blocked_times_dates ON blocked_times(start_datetime, end_datetime);
+    `);
+
+    console.log('   ✓ Created appointment booking tables and indexes');
+  } catch (error) {
+    console.error('   ⚠️  Error creating appointment tables:', error.message);
+    // Don't throw - allow initialization to continue
+  }
+
+  console.log(' Appointment booking tables ready');
 }
 
 async function fixPayrollSchema(db) {

@@ -35,6 +35,9 @@ const pushTokensRoutes = require("./routes/push-tokens");
 const timeclockRoutes = require("./routes/timeclock");
 const adminRoutes = require("./routes/admin");
 const miscRoutes = require("./routes/misc");
+const instagramRoutes = require("./routes/instagram");
+const timelinesRoutes = require("./routes/timelines");
+const appointmentsRoutes = require("./routes/appointments");
 
 const app = express();
 
@@ -123,6 +126,9 @@ app.use("/api/testimonials", testimonialsRoutes);
 app.use("/api/admin/push-tokens", pushTokensRoutes);
 app.use("/api/timeclock", timeclockRoutes);
 app.use("/api/admin", adminTestimonialsRoutes);
+app.use("/api/instagram", instagramRoutes);
+app.use("/api", timelinesRoutes);
+app.use("/", appointmentsRoutes);
 app.use("/", adminRoutes);
 app.use("/", miscRoutes);
 

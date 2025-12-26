@@ -6,6 +6,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useAnalytics } from "../../hooks/useAnalytics";
 import BeforeAfterSlider from "../ui/BeforeAfterSlider";
 import BeforeAfterCarousel from "../ui/BeforeAfterCarousel";
+import InstagramFeed from "../ui/InstagramFeed";
 const API_BASE =process.env.REACT_APP_API_URL ||"https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
@@ -1155,6 +1156,9 @@ useEffect(() => {
           )}
         </div>
       )}
+
+      {/* Instagram Feed Section */}
+      <InstagramFeed limit={6} showTitle={true} />
     </>
   );
 };

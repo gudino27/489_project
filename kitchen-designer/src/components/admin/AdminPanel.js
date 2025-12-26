@@ -19,7 +19,14 @@ import {
   Receipt,
   DollarSign,
   Languages,
-  Clock
+  Clock,
+  Instagram,
+  Calendar,
+  ChevronDown,
+  Briefcase,
+  Settings,
+  Menu,
+  X
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
@@ -34,12 +41,14 @@ import CategoryPhotoManager from './catergoryPhotoManager';
 import EmployeeManager from './EmployeeManager';
 import DesignViewer from '../design/DesignViewer';
 import UserManagement from './UserManagement';
-import Analytics from '../ui/Analytics';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import TestimonialManager from './TestimonialManager';
 import InvoiceManager from './InvoiceManager';
 import SmsRoutingManager from './SmsRoutingManager';
 import SecurityMonitor from './SecurityMonitor';
 import TimeClockManager from './TimeClockManager';
+import InstagramManager from './InstagramManager';
+import ProjectTimelineManager from './ProjectTimelineManager';
 import PasswordChangeRequired from './PasswordChangeRequired';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
@@ -73,6 +82,8 @@ const AdminPanel = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordChangeRequired, setShowPasswordChangeRequired] = useState(false);
   const [usernameForPasswordChange, setUsernameForPasswordChange] = useState('');
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Base API URL, can be set via environment variable
   // This allows flexibility for different environments (development, production, etc.)
@@ -261,23 +272,82 @@ const AdminPanel = () => {
     }
   };
 
-  // Tab access control
-  const getAvailableTabs = () => {
+  // Navigation structure with grouped tabs
+  const getNavigationGroups = () => {
     // Employees only get access to time clock
     if (user?.role === 'employee') {
-      return ['timeclock'];
+      return [
+        { type: 'single', id: 'timeclock', icon: Clock, label: t('admin.tabs.timeclock') }
+      ];
     }
-    
-    // Admin users get access to base tabs
-    const baseTabs = ['prices', 'photos', 'employees', 'timeclock', 'designs', 'invoices', 'testimonials'];
-    
-    // Super admins get access to all tabs
+
+    // Base navigation for admins
+    const baseNav = [
+      { type: 'single', id: 'prices', icon: DollarSign, label: t('admin.tabs.prices') },
+      { type: 'single', id: 'photos', icon: Image, label: t('admin.tabs.photos') },
+      { type: 'single', id: 'employees', icon: IdCardLanyard, label: t('admin.tabs.employees') },
+      { type: 'single', id: 'timeclock', icon: Clock, label: t('admin.tabs.timeclock') },
+      { type: 'single', id: 'designs', icon: FileText, label: t('admin.tabs.designs') },
+      { type: 'single', id: 'invoices', icon: Receipt, label: t('admin.tabs.invoices') },
+      {
+        type: 'group',
+        id: 'client-tools',
+        icon: Briefcase,
+        label: t('admin.groups.clientTools'),
+        items: [
+          { id: 'testimonials', icon: MessageSquare, label: t('admin.tabs.testimonials') },
+          { id: 'instagram', icon: Instagram, label: t('admin.tabs.instagram') },
+          { id: 'timelines', icon: Calendar, label: t('admin.tabs.timelines') }
+        ]
+      }
+    ];
+
+    // Super admins get additional system tools group
     if (user?.role === 'super_admin') {
-      return [...baseTabs, 'users', 'analytics', 'sms-routing', 'security'];
+      return [
+        ...baseNav,
+        {
+          type: 'group',
+          id: 'system-admin',
+          icon: Settings,
+          label: t('admin.groups.systemAdmin'),
+          items: [
+            { id: 'users', icon: Users, label: t('admin.tabs.users') },
+            { id: 'analytics', icon: BarChart3, label: t('admin.tabs.analytics') },
+            { id: 'sms-routing', icon: MessageCircle, label: t('admin.tabs.sms-routing') },
+            { id: 'security', icon: Shield, label: t('admin.tabs.security') }
+          ]
+        }
+      ];
     }
-    
-    return baseTabs;
+
+    return baseNav;
   };
+
+  // Toggle dropdown menu
+  const toggleDropdown = (groupId) => {
+    setOpenDropdown(openDropdown === groupId ? null : groupId);
+  };
+
+  // Handle tab selection and close dropdown
+  const handleTabSelect = (tabId) => {
+    setActiveTab(tabId);
+    setOpenDropdown(null);
+  };
+
+  // Close dropdown when clicking outside (desktop only)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Only close if clicking outside both desktop nav and mobile sidebar
+      if (openDropdown && !event.target.closest('.admin-tab-glass') && !event.target.closest('.mobile-sidebar-nav')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdown]);
+
   // Login screen
   if (!isAuthenticated) {
     return (
@@ -470,35 +540,205 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      {/* Secondary Navigation Tabs with Glass Effect */}
-      <div className="admin-nav-glass">
-        <div className="px-4 md:px-6 py-2">
-          <nav className="flex flex-wrap gap-1 md:gap-2 justify-center md:justify-start">
-            {getAvailableTabs().map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`admin-tab-glass font-medium text-xs md:text-sm transition ${activeTab === tab
-                  ? 'active text-blue-700'
-                  : 'text-gray-600 hover:text-gray-800'
+      {/* Mobile Hamburger Menu */}
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <h2 className="font-semibold text-gray-800">{t(`admin.tabs.${activeTab}`)}</h2>
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+          aria-label="Open navigation menu"
+        >
+          <Menu size={24} className="text-gray-700" />
+        </button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <div
+        className={`fixed top-0 left-0 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 md:hidden ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-800">{t('admin.title')}</h2>
+          <button
+            onClick={() => setMobileSidebarOpen(false)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            aria-label="Close navigation menu"
+          >
+            <X size={24} className="text-gray-700" />
+          </button>
+        </div>
+
+        {/* Sidebar Navigation */}
+        <nav className="mobile-sidebar-nav overflow-y-auto h-[calc(100%-5rem)] p-4">
+          {getNavigationGroups().map((item) => {
+            // Single tab
+            if (item.type === 'single') {
+              const Icon = item.icon;
+              const isInvoice = item.id === 'invoices';
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    handleTabSelect(item.id);
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${
+                    activeTab === item.id
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
                   }`}
-              >
-                <div className="flex items-center gap-1 md:gap-2 tab-content">
-                  {tab === 'prices' && <DollarSign size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'photos' && <Image size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'employees' && <IdCardLanyard size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'timeclock' && <Clock size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'designs' && <FileText size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'invoices' && <InvoiceIcon size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'testimonials' && <MessageSquare size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'users' && <Users size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'analytics' && <BarChart3 size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'sms-routing' && <MessageCircle size={16} className="md:w-[18px] md:h-[18px]" />}
-                  {tab === 'security' && <Shield size={16} className="md:w-[18px] md:h-[18px]" />}
-                  <span className="hidden sm:inline">{t(`admin.tabs.${tab}`)}</span>
+                >
+                  {isInvoice ? (
+                    <InvoiceIcon size={20} />
+                  ) : (
+                    <Icon size={20} />
+                  )}
+                  <span>{item.label}</span>
+                </button>
+              );
+            }
+
+            // Grouped tabs
+            const Icon = item.icon;
+            const isOpen = openDropdown === item.id;
+            const hasActiveChild = item.items.some(child => child.id === activeTab);
+
+            return (
+              <div key={item.id} className="mb-2">
+                <button
+                  onClick={() => toggleDropdown(item.id)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition ${
+                    hasActiveChild
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span>{item.label}</span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {/* Dropdown Items */}
+                {isOpen && (
+                  <div className="mt-1 ml-4 space-y-1">
+                    {item.items.map((child) => {
+                      const ChildIcon = child.icon;
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => {
+                            handleTabSelect(child.id);
+                            setMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                            activeTab === child.id
+                              ? 'bg-blue-50 text-blue-700 font-medium'
+                              : 'text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          <ChildIcon size={18} />
+                          <span className="text-sm">{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Desktop Navigation Tabs with Glass Effect */}
+      <div className="admin-nav-glass hidden md:block">
+        <div className="px-4 md:px-6 py-2">
+          <nav className="flex flex-wrap gap-1 md:gap-2 justify-start">
+            {getNavigationGroups().map((item) => {
+              // Single tab (not grouped)
+              if (item.type === 'single') {
+                const Icon = item.icon;
+                const isInvoice = item.id === 'invoices';
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabSelect(item.id)}
+                    className={`admin-tab-glass font-medium text-xs md:text-sm transition ${activeTab === item.id
+                      ? 'active text-blue-700'
+                      : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 tab-content">
+                      {isInvoice ? (
+                        <InvoiceIcon size={16} className="md:w-[18px] md:h-[18px]" />
+                      ) : (
+                        <Icon size={16} className="md:w-[18px] md:h-[18px]" />
+                      )}
+                      <span className="hidden sm:inline">{item.label}</span>
+                    </div>
+                  </button>
+                );
+              }
+
+              // Grouped tabs with dropdown
+              const Icon = item.icon;
+              const isOpen = openDropdown === item.id;
+              const hasActiveChild = item.items.some(child => child.id === activeTab);
+
+              return (
+                <div key={item.id} className="relative">
+                  <button
+                    onClick={() => toggleDropdown(item.id)}
+                    className={`admin-tab-glass font-medium text-xs md:text-sm transition ${hasActiveChild
+                      ? 'active text-blue-700'
+                      : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                  >
+                    <div className="flex items-center gap-1 md:gap-2 tab-content">
+                      <Icon size={16} className="md:w-[18px] md:h-[18px]" />
+                      <span className="hidden sm:inline">{item.label}</span>
+                      <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isOpen && (
+                    <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[200px]" style={{ zIndex: 9999 }}>
+                      {item.items.map((child) => {
+                        const ChildIcon = child.icon;
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => handleTabSelect(child.id)}
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition ${activeTab === child.id
+                              ? 'bg-blue-50 text-blue-700 font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                              }`}
+                          >
+                            <ChildIcon size={16} />
+                            <span>{child.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </nav>
         </div>
       </div>
@@ -545,6 +785,14 @@ const AdminPanel = () => {
         */}
         {activeTab === 'testimonials' && (<TestimonialManager token={token} API_BASE={API_BASE} userRole={user?.role} />)}
         {/*
+         Instagram Feed Management Tab
+        */}
+        {activeTab === 'instagram' && (<InstagramManager token={token} API_BASE={API_BASE} />)}
+        {/*
+         Project Timeline Management Tab
+        */}
+        {activeTab === 'timelines' && (<ProjectTimelineManager />)}
+        {/*
          User Management Tab
         */}
         {activeTab === 'users' && user?.role === 'super_admin' && (
@@ -554,7 +802,7 @@ const AdminPanel = () => {
          Analytics Tab
         */}
         {activeTab === 'analytics' && user?.role === 'super_admin' && (
-          <Analytics token={token} API_BASE={API_BASE} />
+          <AnalyticsDashboard />
         )}
         {/*
          SMS Routing Tab

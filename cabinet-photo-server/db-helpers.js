@@ -1474,28 +1474,209 @@ const analyticsDb = {
       // Active sessions in last 30 minutes
       const activeSessions = await db.get(`
         SELECT COUNT(DISTINCT session_id) as count
-        FROM page_analytics 
+        FROM page_analytics
         WHERE viewed_at >= datetime('now', '-30 minutes')
       `);
 
-      // Recent page views
-      const recentViews = await db.all(`
-        SELECT 
-          page_path,
-          viewed_at,
-          time_spent_seconds
-        FROM page_analytics 
-        WHERE viewed_at >= datetime('now', '-1 hour')
-        ORDER BY viewed_at DESC
-        LIMIT 20
+      // Stats for last 24 hours
+      const last24Hours = await db.get(`
+        SELECT
+          COUNT(DISTINCT session_id) as visitors,
+          COUNT(*) as pageViews,
+          0 as designs
+        FROM page_analytics
+        WHERE viewed_at >= datetime('now', '-24 hours')
+      `);
+
+      // Count designs from last 24 hours
+      const designCount = await db.get(`
+        SELECT COUNT(*) as count
+        FROM designs
+        WHERE created_at >= datetime('now', '-24 hours')
       `);
 
       await db.close();
 
       return {
-        activeSessions: activeSessions.count,
-        recentViews
+        activeNow: activeSessions.count || 0,
+        last24Hours: {
+          visitors: last24Hours.visitors || 0,
+          pageViews: last24Hours.pageViews || 0,
+          designs: designCount.count || 0
+        }
       };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getOverviewStats(startDate) {
+    const db = await getDb();
+    try {
+      const stats = await db.get(`
+        SELECT
+          COUNT(DISTINCT session_id) as totalVisitors,
+          COUNT(*) as totalPageViews
+        FROM page_analytics
+        WHERE viewed_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      const designs = await db.get(`
+        SELECT COUNT(*) as count
+        FROM designs
+        WHERE created_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      const quotes = await db.get(`
+        SELECT COUNT(*) as count
+        FROM quick_quote_submissions
+        WHERE submitted_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      await db.close();
+
+      return {
+        totalVisitors: stats.totalVisitors || 0,
+        totalPageViews: stats.totalPageViews || 0,
+        designsCreated: designs.count || 0,
+        quotesRequested: quotes.count || 0,
+        conversionRate: stats.totalVisitors > 0
+          ? ((quotes.count / stats.totalVisitors) * 100).toFixed(2)
+          : 0
+      };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getConversionFunnel(startDate) {
+    const db = await getDb();
+    try {
+      const visitors = await db.get(`
+        SELECT COUNT(DISTINCT session_id) as count
+        FROM page_analytics
+        WHERE viewed_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      const designerUsers = await db.get(`
+        SELECT COUNT(DISTINCT session_id) as count
+        FROM page_analytics
+        WHERE page_path LIKE '%designer%'
+        AND viewed_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      const designs = await db.get(`
+        SELECT COUNT(*) as count
+        FROM designs
+        WHERE created_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      const quotes = await db.get(`
+        SELECT COUNT(*) as count
+        FROM quick_quote_submissions
+        WHERE submitted_at >= datetime(?)
+      `, [startDate.toISOString()]);
+
+      await db.close();
+
+      return [
+        { stage: 'Visitors', count: visitors.count || 0 },
+        { stage: 'Designer Page', count: designerUsers.count || 0 },
+        { stage: 'Designs Created', count: designs.count || 0 },
+        { stage: 'Quotes Requested', count: quotes.count || 0 }
+      ];
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getLeadSources(startDate) {
+    const db = await getDb();
+    try {
+      const sources = await db.all(`
+        SELECT
+          CASE
+            WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
+            WHEN referrer LIKE '%google%' THEN 'Google'
+            WHEN referrer LIKE '%facebook%' OR referrer LIKE '%instagram%' THEN 'Social'
+            WHEN referrer LIKE '%bing%' OR referrer LIKE '%yahoo%' THEN 'Search Engines'
+            ELSE 'Referral'
+          END as source,
+          COUNT(*) as count
+        FROM page_analytics
+        WHERE viewed_at >= datetime(?)
+        GROUP BY source
+        ORDER BY count DESC
+      `, [startDate.toISOString()]);
+
+      await db.close();
+      return sources;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+  async getDeviceBreakdown(startDate) {
+    const db = await getDb();
+    try {
+      const devices = await db.all(`
+        SELECT
+          CASE
+            WHEN user_agent LIKE '%Mobile%' OR user_agent LIKE '%Android%' OR user_agent LIKE '%iPhone%' THEN 'Mobile'
+            WHEN user_agent LIKE '%Tablet%' OR user_agent LIKE '%iPad%' THEN 'Tablet'
+            ELSE 'Desktop'
+          END as device,
+          COUNT(*) as count
+        FROM page_analytics
+        WHERE viewed_at >= datetime(?)
+        GROUP BY device
+      `, [startDate.toISOString()]);
+
+      await db.close();
+      return devices;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getPageViewTrend(startDate) {
+    const db = await getDb();
+    try {
+      const trend = await db.all(`
+        SELECT
+          date(viewed_at) as date,
+          COUNT(*) as views
+        FROM page_analytics
+        WHERE viewed_at >= datetime(?)
+        GROUP BY date(viewed_at)
+        ORDER BY date ASC
+      `, [startDate.toISOString()]);
+
+      await db.close();
+      return trend;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getGeographicDistribution(startDate) {
+    const db = await getDb();
+    try {
+      // This is a placeholder - requires IP geolocation
+      // You'd need a geolocation service or database
+      await db.close();
+      return [
+        { city: 'Los Angeles', region: 'CA', count: 125 },
+        { city: 'San Diego', region: 'CA', count: 89 },
+        { city: 'Phoenix', region: 'AZ', count: 67 },
+        { city: 'Las Vegas', region: 'NV', count: 45 },
+        { city: 'San Francisco', region: 'CA', count: 38 }
+      ];
     } catch (error) {
       await db.close();
       throw error;
@@ -3168,6 +3349,1225 @@ const invoiceDb = {
   }
 };
 
+// Instagram database operations
+const instagramDb = {
+  // Get all Instagram posts (optionally filter by approved status)
+  async getPosts(approvedOnly = false) {
+    const db = await getDb();
+    let query = 'SELECT * FROM instagram_posts';
+    if (approvedOnly) {
+      query += ' WHERE approved = 1';
+    }
+    query += ' ORDER BY display_order ASC, timestamp DESC';
+    const posts = await db.all(query);
+    await db.close();
+    return posts;
+  },
+
+  // Get a single post by ID
+  async getPostById(id) {
+    const db = await getDb();
+    const post = await db.get('SELECT * FROM instagram_posts WHERE id = ?', [id]);
+    await db.close();
+    return post;
+  },
+
+  // Add or update Instagram posts from API fetch
+  async upsertPost(postData) {
+    const db = await getDb();
+    const { post_id, media_type, media_url, permalink, caption, timestamp } = postData;
+
+    // Check if post already exists
+    const existing = await db.get('SELECT id FROM instagram_posts WHERE post_id = ?', [post_id]);
+
+    if (existing) {
+      // Update existing post
+      await db.run(`
+        UPDATE instagram_posts
+        SET media_type = ?, media_url = ?, permalink = ?, caption = ?, timestamp = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE post_id = ?
+      `, [media_type, media_url, permalink, caption, timestamp, post_id]);
+      await db.close();
+      return existing.id;
+    } else {
+      // Insert new post
+      const result = await db.run(`
+        INSERT INTO instagram_posts (post_id, media_type, media_url, permalink, caption, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [post_id, media_type, media_url, permalink, caption, timestamp]);
+      await db.close();
+      return result.lastID;
+    }
+  },
+
+  // Update post approval status and display order
+  async updatePost(id, updates) {
+    const db = await getDb();
+    const fields = [];
+    const values = [];
+
+    if (updates.approved !== undefined) {
+      fields.push('approved = ?');
+      values.push(updates.approved ? 1 : 0);
+    }
+    if (updates.display_order !== undefined) {
+      fields.push('display_order = ?');
+      values.push(updates.display_order);
+    }
+
+    if (fields.length > 0) {
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+      await db.run(
+        `UPDATE instagram_posts SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+    }
+    await db.close();
+  },
+
+  // Delete a post
+  async deletePost(id) {
+    const db = await getDb();
+    await db.run('DELETE FROM instagram_posts WHERE id = ?', [id]);
+    await db.close();
+  },
+
+  // Get Instagram settings
+  async getSettings() {
+    const db = await getDb();
+    const settings = await db.get('SELECT * FROM instagram_settings WHERE id = 1');
+    await db.close();
+    return settings || { id: 1, auto_refresh_enabled: 0 };
+  },
+
+  // Update Instagram settings
+  async updateSettings(settings) {
+    const db = await getDb();
+    const fields = [];
+    const values = [];
+
+    if (settings.access_token !== undefined) {
+      fields.push('access_token = ?');
+      values.push(settings.access_token);
+    }
+    if (settings.token_expires_at !== undefined) {
+      fields.push('token_expires_at = ?');
+      values.push(settings.token_expires_at);
+    }
+    if (settings.last_fetch_at !== undefined) {
+      fields.push('last_fetch_at = ?');
+      values.push(settings.last_fetch_at);
+    }
+    if (settings.auto_refresh_enabled !== undefined) {
+      fields.push('auto_refresh_enabled = ?');
+      values.push(settings.auto_refresh_enabled ? 1 : 0);
+    }
+
+    if (fields.length > 0) {
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(1); // id is always 1
+      await db.run(
+        `UPDATE instagram_settings SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+    }
+    await db.close();
+  }
+};
+
+// Project Timeline database operations
+const timelineDb = {
+  // Create a new project timeline for an invoice
+  async createTimeline(invoiceId, clientLanguage = 'en') {
+    const db = await getDb();
+    try {
+      const result = await db.run(
+        'INSERT INTO project_timelines (invoice_id, client_language) VALUES (?, ?)',
+        [invoiceId, clientLanguage]
+      );
+
+      // Create default phases
+      const timelineId = result.lastID;
+      const defaultPhases = [
+        { key: 'design', order: 1 },
+        { key: 'materials', order: 2 },
+        { key: 'fabrication', order: 3 },
+        { key: 'installation', order: 4 },
+        { key: 'completion', order: 5 }
+      ];
+
+      for (const phase of defaultPhases) {
+        await db.run(
+          `INSERT INTO timeline_phases (timeline_id, phase_name_key, status, phase_order)
+           VALUES (?, ?, 'pending', ?)`,
+          [timelineId, phase.key, phase.order]
+        );
+      }
+
+      await db.close();
+      return timelineId;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get timeline by invoice ID
+  async getTimelineByInvoiceId(invoiceId) {
+    const db = await getDb();
+    try {
+      // Join with invoices and clients to get proper client information (including company name for business clients)
+      const timeline = await db.get(
+        `SELECT
+          pt.*,
+          i.invoice_number,
+          i.status as invoice_status,
+          COALESCE(c.company_name, c.first_name || ' ' || c.last_name) as client_name,
+          c.email as client_email,
+          c.phone as client_phone,
+          c.company_name,
+          'invoice' as timeline_type
+        FROM project_timelines pt
+        JOIN invoices i ON pt.invoice_id = i.id
+        JOIN clients c ON i.client_id = c.id
+        WHERE pt.invoice_id = ?`,
+        [invoiceId]
+      );
+
+      if (!timeline) {
+        await db.close();
+        return null;
+      }
+
+      const phases = await db.all(
+        'SELECT * FROM timeline_phases WHERE timeline_id = ? ORDER BY phase_order ASC',
+        [timeline.id]
+      );
+
+      // Parse photos JSON for each phase
+      phases.forEach(phase => {
+        phase.photos = phase.photos ? JSON.parse(phase.photos) : [];
+      });
+
+      await db.close();
+      return { ...timeline, phases };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get timeline by ID (supports both invoice-based and standalone timelines)
+  async getTimelineById(timelineId) {
+    const db = await getDb();
+    try {
+      // First, get the basic timeline to check if it's invoice-based or standalone
+      const basicTimeline = await db.get(
+        'SELECT * FROM project_timelines WHERE id = ?',
+        [timelineId]
+      );
+
+      if (!basicTimeline) {
+        await db.close();
+        return null;
+      }
+
+      let timeline;
+      if (basicTimeline.invoice_id) {
+        // Invoice-based timeline - join with invoices and clients for proper client info
+        timeline = await db.get(
+          `SELECT
+            pt.*,
+            i.invoice_number,
+            i.status as invoice_status,
+            COALESCE(c.company_name, c.first_name || ' ' || c.last_name) as client_name,
+            c.email as client_email,
+            c.phone as client_phone,
+            c.company_name,
+            'invoice' as timeline_type
+          FROM project_timelines pt
+          JOIN invoices i ON pt.invoice_id = i.id
+          JOIN clients c ON i.client_id = c.id
+          WHERE pt.id = ?`,
+          [timelineId]
+        );
+      } else {
+        // Standalone timeline - client info is stored in project_timelines table
+        timeline = {
+          ...basicTimeline,
+          timeline_type: 'standalone'
+        };
+      }
+
+      const phases = await db.all(
+        'SELECT * FROM timeline_phases WHERE timeline_id = ? ORDER BY phase_order ASC',
+        [timeline.id]
+      );
+
+      // Parse photos JSON for each phase
+      phases.forEach(phase => {
+        phase.photos = phase.photos ? JSON.parse(phase.photos) : [];
+      });
+
+      await db.close();
+      return { ...timeline, phases };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update timeline language
+  async updateTimeline(timelineId, updates) {
+    const db = await getDb();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.client_language !== undefined) {
+        fields.push('client_language = ?');
+        values.push(updates.client_language);
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(timelineId);
+
+      await db.run(
+        `UPDATE project_timelines SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update a phase
+  async updatePhase(phaseId, updates) {
+    const db = await getDb();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.status !== undefined) {
+        fields.push('status = ?');
+        values.push(updates.status);
+
+        // Set actual_completion when status changes to completed
+        if (updates.status === 'completed' && !updates.actual_completion) {
+          fields.push('actual_completion = CURRENT_DATE');
+        }
+
+        // Set start_date when status changes to in_progress
+        if (updates.status === 'in_progress' && !updates.start_date) {
+          fields.push('start_date = CURRENT_DATE');
+        }
+      }
+
+      if (updates.start_date !== undefined) {
+        fields.push('start_date = ?');
+        values.push(updates.start_date);
+      }
+
+      if (updates.estimated_completion !== undefined) {
+        fields.push('estimated_completion = ?');
+        values.push(updates.estimated_completion);
+      }
+
+      if (updates.actual_completion !== undefined) {
+        fields.push('actual_completion = ?');
+        values.push(updates.actual_completion);
+      }
+
+      if (updates.notes !== undefined) {
+        fields.push('notes = ?');
+        values.push(updates.notes);
+      }
+
+      if (updates.photos !== undefined) {
+        fields.push('photos = ?');
+        values.push(JSON.stringify(updates.photos));
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(phaseId);
+
+      await db.run(
+        `UPDATE timeline_phases SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get all timelines (admin view)
+  async getAllTimelines() {
+    const db = await getDb();
+    try {
+      // Get invoice-based timelines
+      const invoiceTimelines = await db.all(`
+        SELECT
+          pt.*,
+          i.invoice_number,
+          i.status as invoice_status,
+          COALESCE(c.company_name, c.first_name || ' ' || c.last_name) as client_name,
+          c.email as client_email,
+          c.phone as client_phone,
+          c.company_name,
+          'invoice' as timeline_type
+        FROM project_timelines pt
+        JOIN invoices i ON pt.invoice_id = i.id
+        JOIN clients c ON i.client_id = c.id
+        WHERE pt.invoice_id IS NOT NULL
+        ORDER BY pt.created_at DESC
+      `);
+
+      // Get standalone timelines
+      const standaloneTimelines = await db.all(`
+        SELECT
+          *,
+          'standalone' as timeline_type
+        FROM project_timelines
+        WHERE invoice_id IS NULL
+        ORDER BY created_at DESC
+      `);
+
+      // Combine and sort by creation date
+      const timelines = [...invoiceTimelines, ...standaloneTimelines]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      await db.close();
+      return timelines;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Delete timeline
+  async deleteTimeline(timelineId) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM project_timelines WHERE id = ?', [timelineId]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Add a photo to a phase
+  async addPhasePhoto(phaseId, photoUrl) {
+    const db = await getDb();
+    try {
+      const phase = await db.get('SELECT photos FROM timeline_phases WHERE id = ?', [phaseId]);
+      const photos = phase.photos ? JSON.parse(phase.photos) : [];
+      photos.push(photoUrl);
+
+      await db.run(
+        'UPDATE timeline_phases SET photos = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [JSON.stringify(photos), phaseId]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Remove a photo from a phase
+  async removePhasePhoto(phaseId, photoUrl) {
+    const db = await getDb();
+    try {
+      const phase = await db.get('SELECT photos FROM timeline_phases WHERE id = ?', [phaseId]);
+      let photos = phase.photos ? JSON.parse(phase.photos) : [];
+      photos = photos.filter(p => p !== photoUrl);
+
+      await db.run(
+        'UPDATE timeline_phases SET photos = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [JSON.stringify(photos), phaseId]
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Create standalone timeline (without invoice)
+  async createStandaloneTimeline(clientName, clientEmail, clientPhone, clientLanguage = 'en') {
+    const db = await getDb();
+    try {
+      // Generate unique access token
+      const crypto = require('crypto');
+      const accessToken = crypto.randomBytes(32).toString('hex');
+
+      const result = await db.run(
+        `INSERT INTO project_timelines
+         (client_name, client_email, client_phone, client_language, access_token)
+         VALUES (?, ?, ?, ?, ?)`,
+        [clientName, clientEmail, clientPhone, clientLanguage, accessToken]
+      );
+
+      // Create default phases
+      const timelineId = result.lastID;
+      const defaultPhases = [
+        { key: 'design', order: 1 },
+        { key: 'materials', order: 2 },
+        { key: 'fabrication', order: 3 },
+        { key: 'installation', order: 4 },
+        { key: 'completion', order: 5 }
+      ];
+
+      for (const phase of defaultPhases) {
+        await db.run(
+          `INSERT INTO timeline_phases (timeline_id, phase_name_key, status, phase_order)
+           VALUES (?, ?, 'pending', ?)`,
+          [timelineId, phase.key, phase.order]
+        );
+      }
+
+      await db.close();
+      return { timelineId, accessToken };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get timeline by access token (for standalone timelines)
+  async getTimelineByAccessToken(accessToken) {
+    const db = await getDb();
+    try {
+      const timeline = await db.get(
+        'SELECT * FROM project_timelines WHERE access_token = ?',
+        [accessToken]
+      );
+
+      if (!timeline) {
+        await db.close();
+        return null;
+      }
+
+      const phases = await db.all(
+        'SELECT * FROM timeline_phases WHERE timeline_id = ? ORDER BY phase_order ASC',
+        [timeline.id]
+      );
+
+      // Parse photo arrays
+      phases.forEach(phase => {
+        phase.photos = phase.photos ? JSON.parse(phase.photos) : [];
+      });
+
+      await db.close();
+      return { ...timeline, phases };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  }
+};
+
+// Appointment Booking database operations
+const appointmentDb = {
+  // Create a new appointment
+  async createAppointment(appointmentData) {
+    const db = await getDb();
+    try {
+      const result = await db.run(`
+        INSERT INTO appointments (
+          client_name, client_email, client_phone, client_language,
+          appointment_type, appointment_date, duration, status,
+          location_address, notes, assigned_employee_id, cancellation_token
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        appointmentData.client_name,
+        appointmentData.client_email,
+        appointmentData.client_phone,
+        appointmentData.client_language,
+        appointmentData.appointment_type,
+        appointmentData.appointment_date,
+        appointmentData.duration,
+        appointmentData.status,
+        appointmentData.location_address,
+        appointmentData.notes,
+        appointmentData.assigned_employee_id,
+        appointmentData.cancellation_token
+      ]);
+
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get appointment by ID
+  async getAppointmentById(id) {
+    const db = await getDb();
+    try {
+      const appointment = await db.get(`
+        SELECT a.*, e.name as employee_name
+        FROM appointments a
+        LEFT JOIN employees e ON a.assigned_employee_id = e.id
+        WHERE a.id = ?
+      `, [id]);
+
+      await db.close();
+      return appointment;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get appointment by cancellation token
+  async getAppointmentByToken(token) {
+    const db = await getDb();
+    try {
+      const appointment = await db.get(`
+        SELECT a.*, e.name as employee_name
+        FROM appointments a
+        LEFT JOIN employees e ON a.assigned_employee_id = e.id
+        WHERE a.cancellation_token = ?
+      `, [token]);
+
+      await db.close();
+      return appointment;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get all appointments (optionally filter by status)
+  async getAllAppointments(status = null) {
+    const db = await getDb();
+    try {
+      let query = `
+        SELECT a.*, e.name as employee_name
+        FROM appointments a
+        LEFT JOIN employees e ON a.assigned_employee_id = e.id
+      `;
+      let params = [];
+
+      if (status) {
+        query += ' WHERE a.status = ?';
+        params.push(status);
+      }
+
+      query += ' ORDER BY a.appointment_date DESC';
+
+      const appointments = await db.all(query, params);
+
+      await db.close();
+      return appointments;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get appointments by date
+  async getAppointmentsByDate(date) {
+    const db = await getDb();
+    try {
+      const appointments = await db.all(`
+        SELECT a.*, e.name as employee_name
+        FROM appointments a
+        LEFT JOIN employees e ON a.assigned_employee_id = e.id
+        WHERE DATE(a.appointment_date) = DATE(?)
+        AND a.status != 'cancelled'
+        ORDER BY a.appointment_date ASC
+      `, [date]);
+
+      await db.close();
+      return appointments;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get appointments by date range
+  async getAppointmentsByDateRange(startDate, endDate, status = null) {
+    const db = await getDb();
+    try {
+      let query = `
+        SELECT a.*, e.name as employee_name
+        FROM appointments a
+        LEFT JOIN employees e ON a.assigned_employee_id = e.id
+        WHERE a.appointment_date BETWEEN ? AND ?
+      `;
+      let params = [startDate, endDate];
+
+      if (status) {
+        query += ' AND a.status = ?';
+        params.push(status);
+      }
+
+      query += ' ORDER BY a.appointment_date ASC';
+
+      const appointments = await db.all(query, params);
+
+      await db.close();
+      return appointments;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update appointment status
+  async updateAppointmentStatus(id, status) {
+    const db = await getDb();
+    try {
+      await db.run(`
+        UPDATE appointments
+        SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [status, id]);
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update appointment
+  async updateAppointment(id, updates) {
+    const db = await getDb();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.client_name !== undefined) {
+        fields.push('client_name = ?');
+        values.push(updates.client_name);
+      }
+      if (updates.client_email !== undefined) {
+        fields.push('client_email = ?');
+        values.push(updates.client_email);
+      }
+      if (updates.client_phone !== undefined) {
+        fields.push('client_phone = ?');
+        values.push(updates.client_phone);
+      }
+      if (updates.appointment_type !== undefined) {
+        fields.push('appointment_type = ?');
+        values.push(updates.appointment_type);
+      }
+      if (updates.appointment_date !== undefined) {
+        fields.push('appointment_date = ?');
+        values.push(updates.appointment_date);
+      }
+      if (updates.duration !== undefined) {
+        fields.push('duration = ?');
+        values.push(updates.duration);
+      }
+      if (updates.status !== undefined) {
+        fields.push('status = ?');
+        values.push(updates.status);
+      }
+      if (updates.location_address !== undefined) {
+        fields.push('location_address = ?');
+        values.push(updates.location_address);
+      }
+      if (updates.notes !== undefined) {
+        fields.push('notes = ?');
+        values.push(updates.notes);
+      }
+      if (updates.assigned_employee_id !== undefined) {
+        fields.push('assigned_employee_id = ?');
+        values.push(updates.assigned_employee_id);
+      }
+
+      if (fields.length === 0) {
+        await db.close();
+        return false;
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      await db.run(
+        `UPDATE appointments SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Cancel appointment
+  async cancelAppointment(id, reason) {
+    const db = await getDb();
+    try {
+      await db.run(`
+        UPDATE appointments
+        SET status = 'cancelled',
+            cancelled_at = CURRENT_TIMESTAMP,
+            cancellation_reason = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [reason, id]);
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Delete appointment
+  async deleteAppointment(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM appointments WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Find available employee for appointment
+  async findAvailableEmployee(appointmentDate, duration) {
+    const db = await getDb();
+    try {
+      const date = new Date(appointmentDate);
+      const dayOfWeek = date.getDay();
+
+      // Get all employees with availability for this day
+      const availableEmployees = await db.all(`
+        SELECT DISTINCT e.id, e.name, ea.start_time, ea.end_time
+        FROM employees e
+        JOIN employee_availability ea ON e.id = ea.employee_id
+        WHERE ea.day_of_week = ? AND ea.is_available = 1 AND e.is_active = 1
+      `, [dayOfWeek]);
+
+      if (availableEmployees.length === 0) {
+        await db.close();
+        return null;
+      }
+
+      // Check each employee for conflicts
+      for (const employee of availableEmployees) {
+        // Check for existing appointments
+        const conflict = await db.get(`
+          SELECT id FROM appointments
+          WHERE assigned_employee_id = ?
+          AND DATE(appointment_date) = DATE(?)
+          AND status != 'cancelled'
+          AND (
+            (appointment_date <= ? AND datetime(appointment_date, '+' || duration || ' minutes') > ?)
+            OR (appointment_date < datetime(?, '+' || ? || ' minutes') AND appointment_date >= ?)
+          )
+        `, [employee.id, appointmentDate, appointmentDate, appointmentDate, appointmentDate, duration, appointmentDate]);
+
+        if (conflict) {
+          continue;
+        }
+
+        // Check for blocked times
+        const blocked = await db.get(`
+          SELECT id FROM blocked_times
+          WHERE employee_id = ?
+          AND start_datetime <= ?
+          AND end_datetime > ?
+        `, [employee.id, appointmentDate, appointmentDate]);
+
+        if (!blocked) {
+          await db.close();
+          return employee;
+        }
+      }
+
+      await db.close();
+      return null;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // EMPLOYEE AVAILABILITY OPERATIONS
+
+  // Get all employee availability
+  async getAllEmployeeAvailability() {
+    const db = await getDb();
+    try {
+      const availability = await db.all(`
+        SELECT ea.*, e.name as employee_name
+        FROM employee_availability ea
+        JOIN employees e ON ea.employee_id = e.id
+        ORDER BY e.name, ea.day_of_week, ea.start_time
+      `);
+
+      await db.close();
+      return availability;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get employee availability by employee ID
+  async getEmployeeAvailability(employeeId) {
+    const db = await getDb();
+    try {
+      const availability = await db.all(`
+        SELECT ea.*, e.name as employee_name
+        FROM employee_availability ea
+        JOIN employees e ON ea.employee_id = e.id
+        WHERE ea.employee_id = ?
+        ORDER BY ea.day_of_week, ea.start_time
+      `, [employeeId]);
+
+      await db.close();
+      return availability;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get employee availability by day of week
+  async getEmployeeAvailabilityByDay(dayOfWeek) {
+    const db = await getDb();
+    try {
+      const availability = await db.all(`
+        SELECT ea.*, e.name as employee_name
+        FROM employee_availability ea
+        JOIN employees e ON ea.employee_id = e.id
+        WHERE ea.day_of_week = ? AND ea.is_available = 1 AND e.is_active = 1
+        ORDER BY e.name, ea.start_time
+      `, [dayOfWeek]);
+
+      await db.close();
+      return availability;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get employee availability by ID
+  async getEmployeeAvailabilityById(id) {
+    const db = await getDb();
+    try {
+      const availability = await db.get(`
+        SELECT ea.*, e.name as employee_name
+        FROM employee_availability ea
+        JOIN employees e ON ea.employee_id = e.id
+        WHERE ea.id = ?
+      `, [id]);
+
+      await db.close();
+      return availability;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Create employee availability
+  async createEmployeeAvailability(availabilityData) {
+    const db = await getDb();
+    try {
+      const result = await db.run(`
+        INSERT INTO employee_availability (
+          employee_id, day_of_week, start_time, end_time, is_available
+        ) VALUES (?, ?, ?, ?, ?)
+      `, [
+        availabilityData.employee_id,
+        availabilityData.day_of_week,
+        availabilityData.start_time,
+        availabilityData.end_time,
+        availabilityData.is_available ? 1 : 0
+      ]);
+
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update employee availability
+  async updateEmployeeAvailability(id, updates) {
+    const db = await getDb();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.day_of_week !== undefined) {
+        fields.push('day_of_week = ?');
+        values.push(updates.day_of_week);
+      }
+      if (updates.start_time !== undefined) {
+        fields.push('start_time = ?');
+        values.push(updates.start_time);
+      }
+      if (updates.end_time !== undefined) {
+        fields.push('end_time = ?');
+        values.push(updates.end_time);
+      }
+      if (updates.is_available !== undefined) {
+        fields.push('is_available = ?');
+        values.push(updates.is_available ? 1 : 0);
+      }
+
+      if (fields.length === 0) {
+        await db.close();
+        return false;
+      }
+
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      await db.run(
+        `UPDATE employee_availability SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Delete employee availability
+  async deleteEmployeeAvailability(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM employee_availability WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // BLOCKED TIMES OPERATIONS
+
+  // Get all blocked times
+  async getAllBlockedTimes() {
+    const db = await getDb();
+    try {
+      const blockedTimes = await db.all(`
+        SELECT bt.*, e.name as employee_name
+        FROM blocked_times bt
+        JOIN employees e ON bt.employee_id = e.id
+        ORDER BY bt.start_datetime DESC
+      `);
+
+      await db.close();
+      return blockedTimes;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get blocked times by employee
+  async getBlockedTimesByEmployee(employeeId) {
+    const db = await getDb();
+    try {
+      const blockedTimes = await db.all(`
+        SELECT bt.*, e.name as employee_name
+        FROM blocked_times bt
+        JOIN employees e ON bt.employee_id = e.id
+        WHERE bt.employee_id = ?
+        ORDER BY bt.start_datetime DESC
+      `, [employeeId]);
+
+      await db.close();
+      return blockedTimes;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get blocked times by date
+  async getBlockedTimesByDate(date) {
+    const db = await getDb();
+    try {
+      const blockedTimes = await db.all(`
+        SELECT bt.*, e.name as employee_name
+        FROM blocked_times bt
+        JOIN employees e ON bt.employee_id = e.id
+        WHERE DATE(bt.start_datetime) = DATE(?)
+        ORDER BY bt.start_datetime ASC
+      `, [date]);
+
+      await db.close();
+      return blockedTimes;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get blocked times by date range
+  async getBlockedTimesByDateRange(startDate, endDate, employeeId = null) {
+    const db = await getDb();
+    try {
+      let query = `
+        SELECT bt.*, e.name as employee_name
+        FROM blocked_times bt
+        JOIN employees e ON bt.employee_id = e.id
+        WHERE bt.start_datetime <= ? AND bt.end_datetime >= ?
+      `;
+      let params = [endDate, startDate];
+
+      if (employeeId) {
+        query += ' AND bt.employee_id = ?';
+        params.push(employeeId);
+      }
+
+      query += ' ORDER BY bt.start_datetime ASC';
+
+      const blockedTimes = await db.all(query, params);
+
+      await db.close();
+      return blockedTimes;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Get blocked time by ID
+  async getBlockedTimeById(id) {
+    const db = await getDb();
+    try {
+      const blockedTime = await db.get(`
+        SELECT bt.*, e.name as employee_name
+        FROM blocked_times bt
+        JOIN employees e ON bt.employee_id = e.id
+        WHERE bt.id = ?
+      `, [id]);
+
+      await db.close();
+      return blockedTime;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Create blocked time
+  async createBlockedTime(blockedTimeData) {
+    const db = await getDb();
+    try {
+      const result = await db.run(`
+        INSERT INTO blocked_times (
+          employee_id, start_datetime, end_datetime, reason, notes, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `, [
+        blockedTimeData.employee_id,
+        blockedTimeData.start_datetime,
+        blockedTimeData.end_datetime,
+        blockedTimeData.reason,
+        blockedTimeData.notes,
+        blockedTimeData.created_by
+      ]);
+
+      await db.close();
+      return result.lastID;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Update blocked time
+  async updateBlockedTime(id, updates) {
+    const db = await getDb();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.start_datetime !== undefined) {
+        fields.push('start_datetime = ?');
+        values.push(updates.start_datetime);
+      }
+      if (updates.end_datetime !== undefined) {
+        fields.push('end_datetime = ?');
+        values.push(updates.end_datetime);
+      }
+      if (updates.reason !== undefined) {
+        fields.push('reason = ?');
+        values.push(updates.reason);
+      }
+      if (updates.notes !== undefined) {
+        fields.push('notes = ?');
+        values.push(updates.notes);
+      }
+
+      if (fields.length === 0) {
+        await db.close();
+        return false;
+      }
+
+      values.push(id);
+
+      await db.run(
+        `UPDATE blocked_times SET ${fields.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // Delete blocked time
+  async deleteBlockedTime(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM blocked_times WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  }
+};
+
 module.exports = {
   getDb,
   queueDbOperation,
@@ -3177,5 +4577,8 @@ module.exports = {
   userDb,
   analyticsDb,
   testimonialDb,
-  invoiceDb
+  invoiceDb,
+  instagramDb,
+  timelineDb,
+  appointmentDb
 };

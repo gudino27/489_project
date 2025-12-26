@@ -18,6 +18,7 @@ const TestimonialForm = lazy(() => import('./components/forms/TestimonialForm'))
 const QuickContactForm = lazy(() => import('./components/forms/QuickContactForm'));
 const InvoiceViewer = lazy(() => import('./components/invoice/InvoiceViewer'));
 const ReceiptViewer = lazy(() => import('./components/invoice/ReceiptViewer'));
+const ProjectTimeline = lazy(() => import('./components/project/ProjectTimeline'));
 const SmsCompliance = lazy(() => import('./components/SmsCompliance'));
 const PrivacySettings = lazy(() => import('./components/PrivacySettings'));
 const CabinetCare = lazy(() => import('./components/pages/CabinetCare'));
@@ -61,6 +62,7 @@ function App() {
               <Route path="/quick-quote" element={<QuickContactForm />} />
               <Route path="/invoice/:token/payment/:paymentId" element={<ReceiptViewer />} />
               <Route path="/invoice/:token" element={<InvoiceViewer />} />
+              <Route path="/project/:token" element={<ProjectTimeline />} />
               <Route path="/sms-consent-verification" element={<SmsCompliance defaultTab="consent" />} />
               <Route path="/sms-terms" element={<SmsCompliance defaultTab="terms" />} />
               <Route path="/sms-privacy" element={<SmsCompliance defaultTab="privacy" />} />

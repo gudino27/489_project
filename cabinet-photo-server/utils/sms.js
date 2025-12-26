@@ -161,10 +161,62 @@ async function sendSmsWithRouting(messageType, messageBody, options = {}) {
   }
 }
 
+// Direct SMS sender for sending messages to a specific phone number (clients)
+async function sendSMS(toNumber, messageBody, options = {}) {
+  if (!twilioClient) {
+    console.warn('  Twilio client not available for direct SMS');
+    throw new Error('SMS service not configured');
+  }
+
+  try {
+    const smsOptions = {
+      body: messageBody,
+      to: toNumber,
+    };
+
+     if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+          smsOptions.messagingServiceSid =
+            process.env.TWILIO_MESSAGING_SERVICE_SID;
+        } else if (process.env.TWILIO_PHONE_NUMBER) {
+          smsOptions.from = process.env.TWILIO_PHONE_NUMBER;
+        }
+
+    const result = await twilioClient.messages.create(smsOptions);
+
+    // Try to log to a simple sms_history table if available
+    try {
+      const db = await getDb();
+      await db.run(
+        `INSERT INTO sms_history (recipient_phone, message_content, twilio_sid, delivery_status)
+         VALUES (?, ?, ?, ?)`,
+        [toNumber, messageBody, result.sid, 'sent']
+      );
+    } catch (logErr) {
+      // Non-fatal: logging may not be set up
+      console.debug('sms_history log skipped:', logErr.message || logErr);
+    }
+
+    return result;
+  } catch (err) {
+    try {
+      const db = await getDb();
+      await db.run(
+        `INSERT INTO sms_history (recipient_phone, message_content, delivery_status, error_message)
+         VALUES (?, ?, ?, ?)`,
+        [toNumber, messageBody, 'failed', err.message]
+      );
+    } catch (logErr) {
+      // ignore logging errors
+    }
+    throw err;
+  }
+}
+
 // EXPORTS 
 module.exports = {
   twilioClient,
   sendSmsWithRouting,
+  sendSMS,
   getSmsRoutingRecipients,
   getSmsRoutingSettings
 };

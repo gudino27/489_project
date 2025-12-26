@@ -413,10 +413,283 @@ function generateQuickQuoteAdminNotification({
   };
 }
 
+// Generate appointment confirmation email
+function generateAppointmentConfirmationEmail({
+  clientName,
+  clientEmail,
+  appointmentType,
+  appointmentDate,
+  duration,
+  language = "en",
+  cancellationToken,
+}) {
+  const appointmentTypeLabels = {
+    consultation: language === "es" ? "Consulta" : "Consultation",
+    measurement: language === "es" ? "Medición" : "Measurement",
+    estimate: language === "es" ? "Estimación" : "Estimate",
+    followup: language === "es" ? "Seguimiento" : "Follow-up",
+  };
+
+  const formattedDate = new Date(appointmentDate).toLocaleString(
+    language === "es" ? "es-US" : "en-US",
+    {
+      dateStyle: "full",
+      timeStyle: "short",
+    }
+  );
+
+  return {
+    from: process.env.EMAIL_FROM,
+    to: clientEmail,
+    subject:
+      language === "es"
+        ? "Confirmación de Cita - Gudino Custom"
+        : "Appointment Confirmation - Gudino Custom",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: rgba(109, 109, 109, 1); color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">Gudino Custom</h1>
+        </div>
+
+        <div style="padding: 30px; background: #f8fafc;">
+          <h2 style="color: black; margin-top: 0;">
+            ${language === "es" ? "¡Cita Confirmada!" : "Appointment Confirmed!"}
+          </h2>
+
+          <p style="color: black;">
+            ${language === "es" ? "Hola" : "Hello"} ${clientName},
+          </p>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Su cita ha sido confirmada. Esperamos verle pronto."
+                : "Your appointment has been confirmed. We look forward to seeing you."
+            }
+          </p>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: black;">
+              ${language === "es" ? "Detalles de la Cita" : "Appointment Details"}
+            </h3>
+            <p style="color: black;"><strong>${language === "es" ? "Tipo:" : "Type:"}</strong> ${appointmentTypeLabels[appointmentType]}</p>
+            <p style="color: black;"><strong>${language === "es" ? "Fecha y Hora:" : "Date & Time:"}</strong> ${formattedDate}</p>
+            <p style="color: black;"><strong>${language === "es" ? "Duración:" : "Duration:"}</strong> ${duration} ${language === "es" ? "minutos" : "minutes"}</p>
+          </div>
+
+          <div style="background: #eff6ff; padding: 20px; border-radius: 5px; border-left: 4px solid #1e3a8a; margin: 20px 0;">
+            <p style="margin: 0; color: black;">
+              ${
+                language === "es"
+                  ? "Si necesita cancelar o reprogramar su cita, por favor use el enlace de abajo:"
+                  : "If you need to cancel or reschedule your appointment, please use the link below:"
+              }
+            </p>
+            <div style="text-align: center; margin-top: 15px;">
+              <a href="https://gudinocustom.com/appointment/cancel/${cancellationToken}"
+                 style="display: inline-block; background: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                ${language === "es" ? "Cancelar Cita" : "Cancel Appointment"}
+              </a>
+            </div>
+          </div>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Si tiene alguna pregunta, no dude en contactarnos."
+                : "If you have any questions, please don't hesitate to contact us."
+            }
+          </p>
+
+          <p style="color: black;">
+            ${language === "es" ? "Gracias," : "Thank you,"}
+          </p>
+          <p style="color: black;"><strong>Gudino Custom Team</strong></p>
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
+            <p>Gudino Custom</p>
+            <p>${language === "es" ? "Gabinetes Personalizados de Calidad" : "Quality Custom Cabinets"}</p>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+}
+
+// Generate appointment reminder email
+function generateAppointmentReminderEmail({
+  clientName,
+  clientEmail,
+  appointmentType,
+  appointmentDate,
+  language = "en",
+  cancellationToken,
+}) {
+  const appointmentTypeLabels = {
+    consultation: language === "es" ? "Consulta" : "Consultation",
+    measurement: language === "es" ? "Medición" : "Measurement",
+    estimate: language === "es" ? "Estimación" : "Estimate",
+    followup: language === "es" ? "Seguimiento" : "Follow-up",
+  };
+
+  const formattedDate = new Date(appointmentDate).toLocaleString(
+    language === "es" ? "es-US" : "en-US",
+    {
+      dateStyle: "full",
+      timeStyle: "short",
+    }
+  );
+
+  return {
+    from: process.env.EMAIL_FROM,
+    to: clientEmail,
+    subject:
+      language === "es"
+        ? "Recordatorio de Cita - Mañana"
+        : "Appointment Reminder - Tomorrow",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: rgba(109, 109, 109, 1); color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">Gudino Custom</h1>
+        </div>
+
+        <div style="padding: 30px; background: #f8fafc;">
+          <h2 style="color: black; margin-top: 0;">
+            ${language === "es" ? "Recordatorio de Cita" : "Appointment Reminder"}
+          </h2>
+
+          <p style="color: black;">
+            ${language === "es" ? "Hola" : "Hello"} ${clientName},
+          </p>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Este es un recordatorio amistoso de su próxima cita mañana:"
+                : "This is a friendly reminder of your upcoming appointment tomorrow:"
+            }
+          </p>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: black;"><strong>${language === "es" ? "Tipo:" : "Type:"}</strong> ${appointmentTypeLabels[appointmentType]}</p>
+            <p style="color: black;"><strong>${language === "es" ? "Fecha y Hora:" : "Date & Time:"}</strong> ${formattedDate}</p>
+          </div>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Esperamos verle. Si necesita cancelar, por favor use el enlace de abajo:"
+                : "We look forward to seeing you. If you need to cancel, please use the link below:"
+            }
+          </p>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="https://gudinocustom.com/appointment/cancel/${cancellationToken}"
+               style="display: inline-block; background: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+              ${language === "es" ? "Cancelar Cita" : "Cancel Appointment"}
+            </a>
+          </div>
+
+          <p style="color: black;">
+            ${language === "es" ? "Gracias," : "Thank you,"}
+          </p>
+          <p style="color: black;"><strong>Gudino Custom Team</strong></p>
+        </div>
+      </div>
+    `,
+  };
+}
+
+// Generate appointment cancellation email
+function generateAppointmentCancellationEmail({
+  clientName,
+  clientEmail,
+  appointmentType,
+  appointmentDate,
+  language = "en",
+}) {
+  const appointmentTypeLabels = {
+    consultation: language === "es" ? "Consulta" : "Consultation",
+    measurement: language === "es" ? "Medición" : "Measurement",
+    estimate: language === "es" ? "Estimación" : "Estimate",
+    followup: language === "es" ? "Seguimiento" : "Follow-up",
+  };
+
+  const formattedDate = new Date(appointmentDate).toLocaleString(
+    language === "es" ? "es-US" : "en-US",
+    {
+      dateStyle: "full",
+      timeStyle: "short",
+    }
+  );
+
+  return {
+    from: process.env.EMAIL_FROM,
+    to: clientEmail,
+    subject:
+      language === "es"
+        ? "Cita Cancelada - Gudino Custom"
+        : "Appointment Cancelled - Gudino Custom",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: rgba(109, 109, 109, 1); color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">Gudino Custom</h1>
+        </div>
+
+        <div style="padding: 30px; background: #f8fafc;">
+          <h2 style="color: black; margin-top: 0;">
+            ${language === "es" ? "Cita Cancelada" : "Appointment Cancelled"}
+          </h2>
+
+          <p style="color: black;">
+            ${language === "es" ? "Hola" : "Hello"} ${clientName},
+          </p>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Su cita ha sido cancelada exitosamente:"
+                : "Your appointment has been successfully cancelled:"
+            }
+          </p>
+
+          <div style="background: white; padding: 20px; border-radius: 5px; border: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: black;"><strong>${language === "es" ? "Tipo:" : "Type:"}</strong> ${appointmentTypeLabels[appointmentType]}</p>
+            <p style="color: black;"><strong>${language === "es" ? "Fecha y Hora:" : "Date & Time:"}</strong> ${formattedDate}</p>
+          </div>
+
+          <p style="color: black;">
+            ${
+              language === "es"
+                ? "Si desea programar una nueva cita, por favor visite nuestro sitio web o contáctenos directamente."
+                : "If you'd like to schedule a new appointment, please visit our website or contact us directly."
+            }
+          </p>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="https://gudinocustom.com/book"
+               style="display: inline-block; background: #1e3a8a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
+              ${language === "es" ? "Programar Nueva Cita" : "Schedule New Appointment"}
+            </a>
+          </div>
+
+          <p style="color: black;">
+            ${language === "es" ? "Gracias," : "Thank you,"}
+          </p>
+          <p style="color: black;"><strong>Gudino Custom Team</strong></p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 module.exports = {
   emailTransporter,
   generateInvoiceEmailOptions,
   generateReceiptEmailOptions,
   generateQuickQuoteConfirmationEmail,
   generateQuickQuoteAdminNotification,
+  generateAppointmentConfirmationEmail,
+  generateAppointmentReminderEmail,
+  generateAppointmentCancellationEmail,
 };

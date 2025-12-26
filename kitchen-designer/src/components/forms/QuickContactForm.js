@@ -4,6 +4,7 @@ import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import Navigation from '../ui/Navigation';
 import '../css/testimonial-form.css';
+import { color } from 'three/src/nodes/TSL.js';
 
 const QuickContactForm = ({ onBack }) => {
   const navigate = useNavigate();
@@ -251,7 +252,7 @@ const QuickContactForm = ({ onBack }) => {
             {/* Contact Information */}
             <div className="form-section mb-10">
               <h3 className="section-title text-2xl my-6">
-                <strong>
+                <strong style={{color:'black' ,important: true}}>
                   {currentLanguage === 'es'
                     ? 'Información de Contacto'
                     : 'Contact Information'}
@@ -309,7 +310,7 @@ const QuickContactForm = ({ onBack }) => {
             {/* Project Details */}
             <div className="form-section mb-10">
               <h3 className="section-title text-2xl my-6">
-                <strong>
+                <strong style={{color:'black' ,important: true}}>
                   {currentLanguage === 'es'
                   ? 'Detalles del Proyecto'
                   : 'Project Details'}
@@ -445,9 +446,11 @@ const QuickContactForm = ({ onBack }) => {
             {/* Inspiration Photos */}
             <div className="form-group mb-10">
               <h3 className="section-title text-2xl my-6">
-                {currentLanguage === 'es'
-                  ? 'Fotos de Inspiración (Opcional)'
-                  : 'Inspiration Photos (Optional)'}
+                <strong style={{color:'black' ,important: true}}>
+                  {currentLanguage === 'es'
+                    ? 'Fotos de Inspiración (Opcional)'
+                    : 'Inspiration Photos (Optional)'}
+                </strong>
               </h3>
               <p className="text-base text-gray-600 mb-6">
                 {currentLanguage === 'es'

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
 import SEO from '../ui/SEO';
+import InstagramFeed from '../ui/InstagramFeed';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/home.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -261,6 +262,9 @@ const Home = () => {
             </div>
           </div>
         </section>
+
+        {/* Instagram Feed Section */}
+        <InstagramFeed limit={6} showTitle={true} />
       </div>
       <Footer />
     </>
