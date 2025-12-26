@@ -4,7 +4,7 @@ const express = require("express");
 const router = express.Router();
 const fs = require("fs").promises;
 const path = require("path");
-const { getDb } = require("../db-helpers");
+const { getDb, photoDb, testimonialDb } = require("../db-helpers");
 const { authenticateUser, requireRole } = require("../middleware/auth");
 const PORT = process.env.PORT || 3001;
 // Gets the storage info
