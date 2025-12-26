@@ -4,6 +4,8 @@ import Navigation from "../ui/Navigation";
 import SEO from "../ui/SEO";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAnalytics } from "../../hooks/useAnalytics";
+import BeforeAfterSlider from "../ui/BeforeAfterSlider";
+import BeforeAfterCarousel from "../ui/BeforeAfterCarousel";
 const API_BASE =process.env.REACT_APP_API_URL ||"https://api.gudinocustom.com";
 const Portfolio = () => {
   // Analytics tracking
@@ -31,6 +33,8 @@ const Portfolio = () => {
   const [savedPositions, setSavedPositions] = useState({});
   const [videoInView, setVideoInView] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [viewMode, setViewMode] = useState('3d'); // '3d', 'beforeAfter', 'grid'
+  const [beforeAfterPairs, setBeforeAfterPairs] = useState([]);
   const categories = useMemo(
     () => [
       "kitchen",
@@ -130,6 +134,34 @@ const Portfolio = () => {
       // Separate videos from photos
       const videos = filtered.filter(item => item.mime_type && item.mime_type.startsWith('video/'));
       const photosOnly = filtered.filter(item => !item.mime_type || !item.mime_type.startsWith('video/'));
+
+      // Group before/after photos by comparison_pair_id
+      const pairs = [];
+      const pairedIds = new Set();
+      const regularPhotos = [];
+
+      photosOnly.forEach(photo => {
+        if (photo.comparison_pair_id && !pairedIds.has(photo.comparison_pair_id)) {
+          // Find the matching pair
+          const beforePhoto = photosOnly.find(p =>
+            p.comparison_pair_id === photo.comparison_pair_id && p.photo_type === 'before'
+          );
+          const afterPhoto = photosOnly.find(p =>
+            p.comparison_pair_id === photo.comparison_pair_id && p.photo_type === 'after'
+          );
+
+          if (beforePhoto && afterPhoto) {
+            pairs.push({ before: beforePhoto, after: afterPhoto });
+            pairedIds.add(photo.comparison_pair_id);
+          }
+        } else if (!photo.comparison_pair_id || photo.photo_type === 'regular') {
+          if (!pairedIds.has(photo.id)) {
+            regularPhotos.push(photo);
+          }
+        }
+      });
+
+      setBeforeAfterPairs(pairs);
 
       // Store all photos for this category (photos only, videos shown separately)
       setAllCategoryPhotos(photosOnly);
@@ -580,11 +612,46 @@ useEffect(() => {
             </button>
           ))}
         </div>
+
+        {/* View Mode Toggle */}
+        {currentCategory && (
+          <div className="view-mode-toggle" style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: 'center',
+            marginTop: '2rem',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              className={`category-button ${viewMode === '3d' ? 'active' : ''}`}
+              onClick={() => setViewMode('3d')}
+              style={{ minWidth: '120px' }}
+            >
+              Carousel
+            </button>
+            {beforeAfterPairs.length > 0 && (
+              <button
+                className={`category-button ${viewMode === 'beforeAfter' ? 'active' : ''}`}
+                onClick={() => setViewMode('beforeAfter')}
+                style={{ minWidth: '120px' }}
+              >
+                Before/After
+              </button>
+            )}
+            <button
+              className={`category-button ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              style={{ minWidth: '120px' }}
+            >
+              Grid View
+            </button>
+          </div>
+        )}
       </div>
 
-     
 
-      {totalPages > 1 && currentCategory && (
+
+      {totalPages > 1 && currentCategory && viewMode === '3d' && (
         <div className="page-navigation enhanced">
           <div className="page-header">
             <div className="page-info">
@@ -697,12 +764,13 @@ useEffect(() => {
           </div>
         </div>
       )}
-      <div
-        className={`carousel-3d-container ${
-          photos.length > 0 ? "active" : ""
-        } ${isTransitioning ? "loading" : ""}`}
-        id="carousel3dContainer"
-      >
+      {viewMode === '3d' && (
+        <div
+          className={`carousel-3d-container ${
+            photos.length > 0 ? "active" : ""
+          } ${isTransitioning ? "loading" : ""}`}
+          id="carousel3dContainer"
+        >
         <div
           className="carousel-3d"
           id="carousel3d"
@@ -816,7 +884,68 @@ useEffect(() => {
           </div>
         )}
       </div>
-       {/* Hero Video Section - Full Screen with Navigation */}
+      )}
+
+      {/* Before/After Carousel View */}
+      {viewMode === 'beforeAfter' && beforeAfterPairs.length > 0 && (
+        <div className="before-after-section" style={{
+          maxWidth: '1200px',
+          margin: '3rem auto',
+          padding: '0 1rem'
+        }}>
+          <BeforeAfterCarousel photoPairs={beforeAfterPairs} autoPlayInterval={5000} />
+        </div>
+      )}
+
+      {/* Grid View */}
+      {viewMode === 'grid' && (
+        <div className="portfolio-grid" style={{
+          maxWidth: '1200px',
+          margin: '3rem auto',
+          padding: '0 1rem'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '2rem'
+          }}>
+            {allCategoryPhotos.map((photo, index) => {
+              const imgSrc = `${API_BASE}${photo.thumbnail || photo.url}`;
+              const fullSrc = `${API_BASE}${photo.url}`;
+              const isVideo = photo.mime_type && photo.mime_type.startsWith('video/');
+
+              return (
+                <div
+                  key={photo.id || index}
+                  style={{
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s',
+                  }}
+                  onClick={() => openModal(fullSrc, photo.title || '', isVideo)}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <img
+                    src={imgSrc}
+                    style={{
+                      width: '100%',
+                      height: '250px',
+                      objectFit: 'cover'
+                    }}
+                    loading="lazy"
+                  />
+                  
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Hero Video Section - Full Screen with Navigation */}
       {categoryVideos.length > 0 && currentCategory && (
         <div className="video-hero-fullscreen">
           <div className="video-hero-container">
@@ -1024,7 +1153,6 @@ useEffect(() => {
           ) : (
             <img className="modal-content" src={modalSrc} alt="Preview" />
           )}
-          <div className="modal-caption">{modalCaption}</div>
         </div>
       )}
     </>

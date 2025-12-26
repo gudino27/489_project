@@ -17,6 +17,9 @@ const {
   invoiceDb,
 } = require("./db-helpers");
 
+// Import database initialization
+const { initializeDatabase } = require("./init-database");
+
 // Import routes
 const photosRoutes = require("./routes/photos");
 const employeesRoutes = require("./routes/employees");
@@ -123,11 +126,26 @@ app.use("/api/admin", adminTestimonialsRoutes);
 app.use("/", adminRoutes);
 app.use("/", miscRoutes);
 
-// Start server
+// Initialize database and start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📂 Upload directory: ${path.join(__dirname, "uploads")}`);
-});
+
+async function startServer() {
+  try {
+    // Run database initialization/migrations
+    await initializeDatabase();
+
+    // Start the Express server
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📂 Upload directory: ${path.join(__dirname, "uploads")}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
 
 module.exports = app;

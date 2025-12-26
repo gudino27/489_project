@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Trash2, Edit2, Save, Image, GripVertical, X, Video, Play } from 'lucide-react';
+import { Upload, Trash2, Edit2, Save, Image, GripVertical, X, Video, Play, Link } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BASE as props
@@ -12,6 +12,10 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
   const [hasOrderChanges, setHasOrderChanges] = useState(false);
+
+  // Before/After pairing state
+  const [pairingMode, setPairingMode] = useState(false);
+  const [pairingWithPhoto, setPairingWithPhoto] = useState(null);
 
   // Extended categories for portfolio
   const categories = [
@@ -291,6 +295,126 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
     }
   };
 
+  // Update photo type (regular, before, after)
+  const updatePhotoType = async (photoId, newType) => {
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBase}/api/photos/${photoId}`, {
+        method: 'PUT',
+        headers: getAuthHeadersJson(),
+        body: JSON.stringify({ photo_type: newType })
+      });
+
+      if (response.ok) {
+        await loadPhotos();
+      } else if (response.status === 401) {
+        alert('Authentication failed');
+      }
+    } catch (error) {
+      console.error('Error updating photo type:', error);
+      alert('Failed to update photo type');
+    }
+  };
+
+  // Pair two photos as before/after
+  const pairPhotos = async (beforePhotoId, afterPhotoId) => {
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
+    try {
+      // Generate a unique pair ID (timestamp-based)
+      const pairId = Date.now();
+
+      // Update both photos with the pair ID and their types
+      await Promise.all([
+        fetch(`${apiBase}/api/photos/${beforePhotoId}`, {
+          method: 'PUT',
+          headers: getAuthHeadersJson(),
+          body: JSON.stringify({
+            photo_type: 'before',
+            comparison_pair_id: pairId
+          })
+        }),
+        fetch(`${apiBase}/api/photos/${afterPhotoId}`, {
+          method: 'PUT',
+          headers: getAuthHeadersJson(),
+          body: JSON.stringify({
+            photo_type: 'after',
+            comparison_pair_id: pairId
+          })
+        })
+      ]);
+
+      await loadPhotos();
+      setPairingMode(false);
+      setPairingWithPhoto(null);
+      alert('Photos paired successfully!');
+    } catch (error) {
+      console.error('Error pairing photos:', error);
+      alert('Failed to pair photos');
+    }
+  };
+
+  // Unpair a photo
+  const unpairPhoto = async (photoId) => {
+    if (!token) {
+      alert('Authentication required');
+      return;
+    }
+
+    if (!window.confirm('Unpair this photo? Both photos in the pair will be reset to regular photos.')) {
+      return;
+    }
+
+    try {
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo || !photo.comparison_pair_id) return;
+
+      // Find the paired photo
+      const pairedPhoto = photos.find(
+        p => p.comparison_pair_id === photo.comparison_pair_id && p.id !== photoId
+      );
+
+      // Reset both photos
+      const updates = [
+        fetch(`${apiBase}/api/photos/${photoId}`, {
+          method: 'PUT',
+          headers: getAuthHeadersJson(),
+          body: JSON.stringify({
+            photo_type: 'regular',
+            comparison_pair_id: null
+          })
+        })
+      ];
+
+      if (pairedPhoto) {
+        updates.push(
+          fetch(`${apiBase}/api/photos/${pairedPhoto.id}`, {
+            method: 'PUT',
+            headers: getAuthHeadersJson(),
+            body: JSON.stringify({
+              photo_type: 'regular',
+              comparison_pair_id: null
+            })
+          })
+        );
+      }
+
+      await Promise.all(updates);
+      await loadPhotos();
+      alert('Photos unpaired successfully!');
+    } catch (error) {
+      console.error('Error unpairing photos:', error);
+      alert('Failed to unpair photos');
+    }
+  };
+
   // Show loading or no token message
   if (!token) {
     return (
@@ -549,27 +673,113 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
 
                   {/* Category selector and delete button - hidden during reordering */}
                   {!isReordering && (
-                    <div className="mt-2 flex items-center justify-between">
-                      <select
-                        value={photo.category}
-                        onChange={(e) => updatePhotoCategory(photo.id, e.target.value)}
-                        className="text-xs px-1 py-1 border rounded"
-                      >
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.icon} {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => deletePhoto(photo.id)}
-                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                        style={{ minHeight: '44px', minWidth: '44px' }}
-                        title={t('photoManager.deletePhoto') || 'Delete photo'}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    <>
+                      <div className="mt-2 flex items-center justify-between">
+                        <select
+                          value={photo.category}
+                          onChange={(e) => updatePhotoCategory(photo.id, e.target.value)}
+                          className="text-xs px-1 py-1 border rounded"
+                        >
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.icon} {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => deletePhoto(photo.id)}
+                          className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          style={{ minHeight: '44px', minWidth: '44px' }}
+                          title={t('photoManager.deletePhoto') || 'Delete photo'}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      {/* Before/After Controls */}
+                      <div className="mt-2 space-y-2">
+                        <select
+                          value={photo.photo_type || 'regular'}
+                          onChange={(e) => updatePhotoType(photo.id, e.target.value)}
+                          className="w-full text-xs px-2 py-1 border rounded"
+                        >
+                          <option value="regular">📷 Regular Photo</option>
+                          <option value="before">⏪ Before Photo</option>
+                          <option value="after">⏩ After Photo</option>
+                        </select>
+
+                        {/* Paired photo indicator */}
+                        {photo.comparison_pair_id && (
+                          <div className="flex items-center justify-between text-xs bg-green-50 p-1 rounded">
+                            <span className="text-green-700 font-medium">
+                              🔗 Paired
+                            </span>
+                            <button
+                              onClick={() => unpairPhoto(photo.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Unpair photos"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Pairing button for before/after photos */}
+                        {(photo.photo_type === 'before' || photo.photo_type === 'after') && !photo.comparison_pair_id && (
+                          <button
+                            onClick={() => {
+                              if (pairingWithPhoto === photo.id) {
+                                setPairingWithPhoto(null);
+                                setPairingMode(false);
+                              } else {
+                                setPairingWithPhoto(photo.id);
+                                setPairingMode(true);
+                              }
+                            }}
+                            className={`w-full text-xs px-2 py-1 rounded ${
+                              pairingWithPhoto === photo.id
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            <Link size={12} className="inline mr-1" />
+                            {pairingWithPhoto === photo.id ? 'Cancel Pairing' : 'Pair with...'}
+                          </button>
+                        )}
+
+                        {/* Pairing instruction when in pairing mode */}
+                        {pairingMode && pairingWithPhoto && pairingWithPhoto !== photo.id && (
+                          <>
+                            {(() => {
+                              const pairingPhoto = photos.find(p => p.id === pairingWithPhoto);
+                              const canPair =
+                                pairingPhoto &&
+                                photo.photo_type &&
+                                pairingPhoto.photo_type &&
+                                photo.photo_type !== pairingPhoto.photo_type &&
+                                (photo.photo_type === 'before' || photo.photo_type === 'after') &&
+                                (pairingPhoto.photo_type === 'before' || pairingPhoto.photo_type === 'after') &&
+                                !photo.comparison_pair_id;
+
+                              return canPair ? (
+                                <button
+                                  onClick={() => {
+                                    if (pairingPhoto.photo_type === 'before') {
+                                      pairPhotos(pairingPhoto.id, photo.id);
+                                    } else {
+                                      pairPhotos(photo.id, pairingPhoto.id);
+                                    }
+                                  }}
+                                  className="w-full text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                >
+                                  ✓ Pair with this
+                                </button>
+                              ) : null;
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>

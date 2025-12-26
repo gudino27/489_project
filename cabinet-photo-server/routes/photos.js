@@ -264,8 +264,8 @@ router.put("/:id", async (req, res) => {
     const photoId = parseInt(req.params.id);
     const updates = {};
 
-    // Only update allowed fields
-    const allowedFields = ["title", "category", "featured", "display_order"];
+    // Only update allowed fields (includes before/after photo fields)
+    const allowedFields = ["title", "category", "featured", "display_order", "photo_type", "comparison_pair_id"];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];

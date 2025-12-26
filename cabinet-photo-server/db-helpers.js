@@ -131,6 +131,14 @@ const photoDb = {
       fields.push('display_order = ?');
       values.push(updates.display_order);
     }
+    if (updates.photo_type !== undefined) {
+      fields.push('photo_type = ?');
+      values.push(updates.photo_type);
+    }
+    if (updates.comparison_pair_id !== undefined) {
+      fields.push('comparison_pair_id = ?');
+      values.push(updates.comparison_pair_id);
+    }
 
     if (fields.length === 0) {
       await db.close();

@@ -47,6 +47,9 @@ async function initializeDatabase() {
     console.log(' Adding quick quote tables...');
     await addQuickQuoteTables(db);
 
+    console.log(' Adding before/after photo columns...');
+    await addBeforeAfterPhotoColumns(db);
+
     console.log('\n✅ Database initialization completed successfully!');
 
   } catch (error) {
@@ -1423,6 +1426,50 @@ async function addQuickQuoteTables(db) {
   `);
 
   console.log(' Created quick quote tables and indexes');
+}
+
+async function addBeforeAfterPhotoColumns(db) {
+  try {
+    console.log('   Checking photos table schema...');
+
+    // Get current table schema
+    const tableInfo = await db.all(`PRAGMA table_info(photos)`);
+    const columnNames = tableInfo.map(col => col.name);
+
+    // Add photo_type column if it doesn't exist
+    if (!columnNames.includes('photo_type')) {
+      console.log('   Adding photo_type column...');
+      // SQLite doesn't support CHECK constraints in ALTER TABLE, so add column without it
+      await db.exec(`ALTER TABLE photos ADD COLUMN photo_type TEXT DEFAULT 'regular'`);
+      console.log('   ✓ Added photo_type column');
+    } else {
+      console.log('   ✓ photo_type column already exists');
+    }
+
+    // Add comparison_pair_id column if it doesn't exist
+    if (!columnNames.includes('comparison_pair_id')) {
+      console.log('   Adding comparison_pair_id column...');
+      await db.exec(`
+        ALTER TABLE photos ADD COLUMN comparison_pair_id INTEGER
+      `);
+      console.log('   ✓ Added comparison_pair_id column');
+    } else {
+      console.log('   ✓ comparison_pair_id column already exists');
+    }
+
+    // Create index for before/after queries
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_photos_comparison_pair ON photos(comparison_pair_id);
+      CREATE INDEX IF NOT EXISTS idx_photos_type ON photos(photo_type);
+    `);
+    console.log('   ✓ Created indexes for before/after queries');
+
+  } catch (error) {
+    console.error('   ⚠️  Error adding before/after columns:', error.message);
+    // Don't throw - this is a non-critical migration
+  }
+
+  console.log(' Before/after photo columns ready');
 }
 
 async function fixPayrollSchema(db) {
