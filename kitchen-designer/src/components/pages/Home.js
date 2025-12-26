@@ -85,12 +85,11 @@ const Home = () => {
       }}>
         <div className="video-background">
           <video
-            autoPlay={!isMobile}
+            autoPlay
             muted
             loop
             playsInline
-            preload={isMobile ? "none" : "metadata"}
-            poster="/home-page-images/kitchen-island.jpeg"
+            preload="metadata"
             onError={(e) => console.warn('Video failed to load:', e)}
           >
             <source src="/videos/woodworking-hero.webm" type="video/webm" />
