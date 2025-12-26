@@ -97,6 +97,12 @@ app.use("/api/analytics/time", (req, res, next) => {
   next();
 });
 
+// Override Cross-Origin-Resource-Policy for static files to allow cross-origin access
+app.use(["/photos", "/testimonial-photos"], (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+});
+
 // Serve static files from uploads directory
 app.use("/photos", express.static(path.join(__dirname, "uploads")));
 app.use("/testimonial-photos", express.static(path.join(__dirname, "uploads", "testimonial-photos")));
