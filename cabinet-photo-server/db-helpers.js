@@ -3922,7 +3922,7 @@ const appointmentDb = {
     const db = await getDb();
     try {
       const appointment = await db.get(`
-        SELECT a.*, e.name as employee_name
+        SELECT a.*, e.name as assigned_employee_name
         FROM appointments a
         LEFT JOIN employees e ON a.assigned_employee_id = e.id
         WHERE a.id = ?
@@ -3941,7 +3941,7 @@ const appointmentDb = {
     const db = await getDb();
     try {
       const appointment = await db.get(`
-        SELECT a.*, e.name as employee_name
+        SELECT a.*, e.name as assigned_employee_name
         FROM appointments a
         LEFT JOIN employees e ON a.assigned_employee_id = e.id
         WHERE a.cancellation_token = ?
@@ -3960,7 +3960,7 @@ const appointmentDb = {
     const db = await getDb();
     try {
       let query = `
-        SELECT a.*, e.name as employee_name
+        SELECT a.*, e.name as assigned_employee_name
         FROM appointments a
         LEFT JOIN employees e ON a.assigned_employee_id = e.id
       `;
@@ -3988,7 +3988,7 @@ const appointmentDb = {
     const db = await getDb();
     try {
       const appointments = await db.all(`
-        SELECT a.*, e.name as employee_name
+        SELECT a.*, e.name as assigned_employee_name
         FROM appointments a
         LEFT JOIN employees e ON a.assigned_employee_id = e.id
         WHERE DATE(a.appointment_date) = DATE(?)
@@ -4009,7 +4009,7 @@ const appointmentDb = {
     const db = await getDb();
     try {
       let query = `
-        SELECT a.*, e.name as employee_name
+        SELECT a.*, e.name as assigned_employee_name
         FROM appointments a
         LEFT JOIN employees e ON a.assigned_employee_id = e.id
         WHERE a.appointment_date BETWEEN ? AND ?

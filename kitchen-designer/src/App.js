@@ -23,6 +23,8 @@ const SmsCompliance = lazy(() => import('./components/SmsCompliance'));
 const PrivacySettings = lazy(() => import('./components/PrivacySettings'));
 const CabinetCare = lazy(() => import('./components/pages/CabinetCare'));
 const WhyChooseUs = lazy(() => import('./components/pages/WhyChooseUs'));
+const AppointmentBooking = lazy(() => import('./components/pages/AppointmentBooking'));
+const AppointmentCancel = lazy(() => import('./components/pages/AppointmentCancel'));
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -71,6 +73,8 @@ function App() {
               <Route path="/privacy-settings" element={<PrivacySettings />} />
               <Route path="/cabinet-care" element={<CabinetCare />} />
               <Route path="/why-choose-us" element={<WhyChooseUs />} />
+              <Route path="/book-appointment" element={<AppointmentBooking />} />
+              <Route path="/appointment/cancel/:token" element={<AppointmentCancel />} />
             </Routes>
           </Suspense>
         </Router>

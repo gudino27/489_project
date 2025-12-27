@@ -297,6 +297,16 @@ router.post('/admin/timeline/:timelineId/phase', authenticateUser, requireRole([
 
         // Send SMS if phone number available
         if (clientPhone) {
+          // Format phone number for Twilio (add US country code)
+          let formattedPhone = clientPhone.replace(/\D/g, ''); // Remove non-digits
+          if (formattedPhone.length === 10) {
+            formattedPhone = `+1${formattedPhone}`; // Add US country code
+          } else if (formattedPhone.length === 11 && formattedPhone.startsWith('1')) {
+            formattedPhone = `+${formattedPhone}`;
+          } else if (!formattedPhone.startsWith('+')) {
+            formattedPhone = `+1${formattedPhone}`;
+          }
+
           const phaseLabels = {
             en: {
               design: 'Design',
@@ -319,8 +329,8 @@ router.post('/admin/timeline/:timelineId/phase', authenticateUser, requireRole([
             ? `Hola ${clientName}, nueva fase agregada a su proyecto: ${phaseName}. Vea más detalles en su portal de seguimiento.`
             : `Hi ${clientName}, new phase added to your project: ${phaseName}. View details in your timeline portal.`;
 
-          await sendSMS(clientPhone, message);
-          console.log(`📱 New phase SMS sent to ${clientPhone}`);
+          await sendSMS(formattedPhone, message);
+          console.log(`📱 New phase SMS sent to ${formattedPhone}`);
         }
       } catch (notificationError) {
         console.error('Failed to send new phase notification:', notificationError);
@@ -374,6 +384,16 @@ router.put('/admin/timeline/phase/:phaseId', authenticateUser, requireRole(['adm
         await dbInstance.close();
 
         if (invoice && invoice.phone) {
+          // Format phone number for Twilio (add US country code)
+          let formattedPhone = invoice.phone.replace(/\D/g, ''); // Remove non-digits
+          if (formattedPhone.length === 10) {
+            formattedPhone = `+1${formattedPhone}`; // Add US country code
+          } else if (formattedPhone.length === 11 && formattedPhone.startsWith('1')) {
+            formattedPhone = `+${formattedPhone}`;
+          } else if (!formattedPhone.startsWith('+')) {
+            formattedPhone = `+1${formattedPhone}`;
+          }
+
           // Prepare SMS message (bilingual)
           const phaseNames = {
             design: { en: 'Design', es: 'Diseño' },
@@ -397,7 +417,7 @@ router.put('/admin/timeline/phase/:phaseId', authenticateUser, requireRole(['adm
             ? `Hola ${invoice.first_name}, actualización de proyecto: ${phaseName} ${statusMsg}. Factura #${invoice.invoice_number}.`
             : `Hi ${invoice.first_name}, project update: ${phaseName} ${statusMsg}. Invoice #${invoice.invoice_number}.`;
 
-          await sendSMS(invoice.phone, message);
+          await sendSMS(formattedPhone, message);
         }
       } catch (smsError) {
         console.error('[TIMELINE SMS] Failed to send notification:', smsError);
@@ -538,13 +558,23 @@ router.post('/admin/timeline/:id/send-link', authenticateUser, requireRole(['adm
     // Send SMS if requested
     if ((method === 'sms' || method === 'both') && clientPhone) {
       try {
+        // Format phone number for Twilio (add US country code)
+        let formattedPhone = clientPhone.replace(/\D/g, ''); // Remove non-digits
+        if (formattedPhone.length === 10) {
+          formattedPhone = `+1${formattedPhone}`; // Add US country code
+        } else if (formattedPhone.length === 11 && formattedPhone.startsWith('1')) {
+          formattedPhone = `+${formattedPhone}`;
+        } else if (!formattedPhone.startsWith('+')) {
+          formattedPhone = `+1${formattedPhone}`;
+        }
+
         const message = language === 'es'
           ? `Hola ${clientName}, aquí está el enlace a su portal de proyecto:\n ${timelineUrl}`
           : `Hi ${clientName}, here's your project timeline portal link:\n ${timelineUrl}`;
 
-        await sendSMS(clientPhone, message);
+        await sendSMS(formattedPhone, message);
         results.sms = 'sent';
-        console.log(`📱 Timeline link sent via SMS to ${clientPhone}`);
+        console.log(`📱 Timeline link sent via SMS to ${formattedPhone}`);
       } catch (smsError) {
         console.error('Failed to send timeline SMS:', smsError);
         results.sms = 'failed';

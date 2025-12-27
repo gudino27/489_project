@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { appointmentDb } = require('../db-helpers');
+const { appointmentDb, employeeDb } = require('../db-helpers');
 const { authenticateUser, requireRole } = require('../middleware/auth');
 const { handleError } = require('../utils/error-handler');
 const {
@@ -12,28 +12,96 @@ const {
   generateAppointmentReminderEmail,
   generateAppointmentCancellationEmail,
 } = require('../utils/email');
-const { sendSmsWithRouting } = require('../utils/sms');
+const { sendSmsWithRouting, sendSMS } = require('../utils/sms');
 const crypto = require('crypto');
 
 // PUBLIC ROUTES - Customer Appointment Booking
 
-// Get available time slots for a specific date and appointment type
-router.get('/api/appointments/available-slots', async (req, res) => {
+// Get available dates for a specific month (for calendar highlighting)
+router.get('/api/appointments/available-dates/:year/:month', async (req, res) => {
   try {
-    const { date, appointmentType, duration } = req.query;
+    const { year, month } = req.params;
+    const yearInt = parseInt(year);
+    const monthInt = parseInt(month);
 
-    if (!date || !appointmentType) {
-      return res.status(400).json({ error: 'Date and appointment type are required' });
+    if (isNaN(yearInt) || isNaN(monthInt) || monthInt < 1 || monthInt > 12) {
+      return res.status(400).json({ error: 'Invalid year or month' });
+    }
+
+    // Get all employee availability (any day that has at least one employee available)
+    const allAvailability = await appointmentDb.getAllEmployeeAvailability();
+
+    if (!allAvailability || allAvailability.length === 0) {
+      return res.json({ availableDates: [] });
+    }
+
+    // Get the days of week that have availability
+    const availableDaysOfWeek = new Set(
+      allAvailability
+        .filter(a => a.is_available)
+        .map(a => a.day_of_week)
+    );
+
+    // Generate all dates in the month that fall on available days
+    const availableDates = [];
+    const firstDay = new Date(yearInt, monthInt - 1, 1);
+    const lastDay = new Date(yearInt, monthInt, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      // Only include future dates (or today)
+      if (d >= today && availableDaysOfWeek.has(d.getDay())) {
+        // Check if entire day is blocked
+        const dateStr = d.toISOString().split('T')[0];
+        const blockedTimes = await appointmentDb.getBlockedTimesByDate(dateStr);
+
+        // If not fully blocked, add to available dates
+        const isFullyBlocked = blockedTimes.some(bt => {
+          // Check if block covers entire business day (simplified check)
+          return bt.all_day === 1;
+        });
+
+        if (!isFullyBlocked) {
+          availableDates.push(dateStr);
+        }
+      }
+    }
+
+    res.json({ availableDates });
+  } catch (error) {
+    handleError(error, 'Failed to fetch available dates', res, 500);
+  }
+});
+
+// Get available time slots for a specific date
+// Supports both path param (/available-slots/:date) and query param (?date=...)
+const getAvailableSlotsHandler = async (req, res) => {
+  try {
+    const date = req.params.date || req.query.date;
+    const duration = req.query.duration;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
     }
 
     const durationMinutes = parseInt(duration) || 60;
 
+    // Parse date properly to avoid timezone issues
+    // Date format is YYYY-MM-DD, parse as local date
+    const [year, month, day] = date.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+    const dayOfWeek = localDate.getDay();
+
+    console.log(`Fetching slots for date: ${date}, dayOfWeek: ${dayOfWeek}`);
+
     // Get all employee availability for the day of week
-    const dayOfWeek = new Date(date).getDay();
     const availability = await appointmentDb.getEmployeeAvailabilityByDay(dayOfWeek);
 
+    console.log(`Found ${availability?.length || 0} availability records for day ${dayOfWeek}`);
+
     if (!availability || availability.length === 0) {
-      return res.json({ availableSlots: [] });
+      return res.json({ slots: [], availableSlots: [] });
     }
 
     // Get existing appointments for this date
@@ -43,7 +111,7 @@ router.get('/api/appointments/available-slots', async (req, res) => {
     const blockedTimes = await appointmentDb.getBlockedTimesByDate(date);
 
     // Generate available time slots
-    const availableSlots = generateTimeSlots(
+    const generatedSlots = generateTimeSlots(
       availability,
       existingAppointments,
       blockedTimes,
@@ -51,11 +119,25 @@ router.get('/api/appointments/available-slots', async (req, res) => {
       durationMinutes
     );
 
-    res.json({ availableSlots });
+    // Format slots as 24-hour time strings for the frontend (HH:MM format)
+    const slots = generatedSlots.map(slot => {
+      const slotDate = new Date(slot.time);
+      const hours = slotDate.getHours().toString().padStart(2, '0');
+      const minutes = slotDate.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    });
+
+    console.log(`Generated ${slots.length} time slots`);
+
+    // Return both formats for compatibility
+    res.json({ slots, availableSlots: generatedSlots });
   } catch (error) {
     handleError(error, 'Failed to fetch available slots', res, 500);
   }
-});
+};
+
+router.get('/api/appointments/available-slots/:date', getAvailableSlotsHandler);
+router.get('/api/appointments/available-slots', getAvailableSlotsHandler);
 
 // Book an appointment (public endpoint)
 router.post('/api/appointments/book', async (req, res) => {
@@ -212,7 +294,8 @@ router.post('/api/appointments/cancel/:token', async (req, res) => {
 });
 
 // Get appointment details by token (for cancel/reschedule page)
-router.get('/api/appointments/details/:token', async (req, res) => {
+// Supports both /details/:token and /by-token/:token for compatibility
+const getAppointmentByTokenHandler = async (req, res) => {
   try {
     const { token } = req.params;
 
@@ -235,23 +318,70 @@ router.get('/api/appointments/details/:token', async (req, res) => {
   } catch (error) {
     handleError(error, 'Failed to fetch appointment details', res, 500);
   }
-});
+};
+
+router.get('/api/appointments/details/:token', getAppointmentByTokenHandler);
+router.get('/api/appointments/by-token/:token', getAppointmentByTokenHandler);
 
 // ADMIN ROUTES - Appointment Management
 
 // Get all appointments (admin only)
 router.get('/api/admin/appointments', authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    const { status, startDate, endDate } = req.query;
+    const { status, startDate, endDate, filter } = req.query;
 
     let appointments;
-    if (startDate && endDate) {
-      appointments = await appointmentDb.getAppointmentsByDateRange(startDate, endDate, status);
+    const statusFilter = status !== 'all' ? status : null;
+
+    // Handle date filter presets
+    if (filter && filter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let filterStartDate, filterEndDate;
+
+      switch (filter) {
+        case 'today':
+          filterStartDate = today.toISOString().split('T')[0];
+          filterEndDate = today.toISOString().split('T')[0];
+          break;
+        case 'upcoming':
+          filterStartDate = today.toISOString().split('T')[0];
+          const futureDate = new Date(today);
+          futureDate.setFullYear(futureDate.getFullYear() + 1);
+          filterEndDate = futureDate.toISOString().split('T')[0];
+          break;
+        case 'week':
+          filterStartDate = today.toISOString().split('T')[0];
+          const weekEnd = new Date(today);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          filterEndDate = weekEnd.toISOString().split('T')[0];
+          break;
+        case 'past':
+          const pastStart = new Date(today);
+          pastStart.setFullYear(pastStart.getFullYear() - 1);
+          filterStartDate = pastStart.toISOString().split('T')[0];
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          filterEndDate = yesterday.toISOString().split('T')[0];
+          break;
+        default:
+          filterStartDate = null;
+          filterEndDate = null;
+      }
+
+      if (filterStartDate && filterEndDate) {
+        appointments = await appointmentDb.getAppointmentsByDateRange(filterStartDate, filterEndDate, statusFilter);
+      } else {
+        appointments = await appointmentDb.getAllAppointments(statusFilter);
+      }
+    } else if (startDate && endDate) {
+      appointments = await appointmentDb.getAppointmentsByDateRange(startDate, endDate, statusFilter);
     } else {
-      appointments = await appointmentDb.getAllAppointments(status);
+      appointments = await appointmentDb.getAllAppointments(statusFilter);
     }
 
-    res.json(appointments);
+    res.json({ appointments: appointments || [] });
   } catch (error) {
     handleError(error, 'Failed to fetch appointments', res, 500);
   }
@@ -279,7 +409,7 @@ router.patch('/api/admin/appointments/:id/status', authenticateUser, requireRole
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show'];
+    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show', 'needs_reschedule'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -287,9 +417,91 @@ router.patch('/api/admin/appointments/:id/status', authenticateUser, requireRole
     await appointmentDb.updateAppointmentStatus(parseInt(id), status);
     const appointment = await appointmentDb.getAppointmentById(parseInt(id));
 
+    // Send confirmation email if status changed to confirmed
+    if (status === 'confirmed' && appointment) {
+      try {
+        const confirmationEmail = {
+          from: process.env.EMAIL_FROM || 'noreply@gudinocustom.com',
+          to: appointment.client_email,
+          subject: appointment.client_language === 'es'
+            ? 'Cita Confirmada - Gudino Custom'
+            : 'Appointment Confirmed - Gudino Custom',
+          html: appointment.client_language === 'es'
+            ? `<h2>¡Su cita ha sido confirmada!</h2>
+               <p>Hola ${appointment.client_name},</p>
+               <p>Su cita ha sido confirmada para el ${new Date(appointment.appointment_date).toLocaleString('es-US')}.</p>
+               <p>Nos vemos pronto!</p>`
+            : `<h2>Your appointment has been confirmed!</h2>
+               <p>Hello ${appointment.client_name},</p>
+               <p>Your appointment has been confirmed for ${new Date(appointment.appointment_date).toLocaleString('en-US')}.</p>
+               <p>We look forward to seeing you!</p>`
+        };
+        await emailTransporter.sendMail(confirmationEmail);
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+      }
+    }
+
     res.json({ success: true, appointment });
   } catch (error) {
     handleError(error, 'Failed to update appointment status', res, 500);
+  }
+});
+
+// Request client to reschedule (admin only)
+router.post('/api/admin/appointments/:id/request-reschedule', authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    const appointment = await appointmentDb.getAppointmentById(parseInt(id));
+
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    // Update status to needs_reschedule
+    await appointmentDb.updateAppointmentStatus(parseInt(id), 'needs_reschedule');
+
+    // Send email to client asking them to reschedule
+    try {
+      const rescheduleUrl = `https://gudinocustom.com/book-appointment`;
+      const cancelUrl = `https://gudinocustom.com/appointment/cancel/${appointment.cancellation_token}`;
+
+      const rescheduleEmail = {
+        from: process.env.EMAIL_FROM || 'noreply@gudinocustom.com',
+        to: appointment.client_email,
+        subject: appointment.client_language === 'es'
+          ? 'Solicitud de Reprogramación - Gudino Custom'
+          : 'Reschedule Request - Gudino Custom',
+        html: appointment.client_language === 'es'
+          ? `<h2>Solicitud de Reprogramación</h2>
+             <p>Hola ${appointment.client_name},</p>
+             <p>Desafortunadamente, necesitamos reprogramar su cita del ${new Date(appointment.appointment_date).toLocaleString('es-US')}.</p>
+             ${message ? `<p><strong>Mensaje:</strong> ${message}</p>` : ''}
+             <p>Por favor, seleccione un nuevo horario que le convenga:</p>
+             <p><a href="${rescheduleUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;">Reprogramar Cita</a></p>
+             <p>Si necesita cancelar en lugar de reprogramar: <a href="${cancelUrl}">Cancelar Cita</a></p>
+             <p>Disculpe las molestias.</p>`
+          : `<h2>Reschedule Request</h2>
+             <p>Hello ${appointment.client_name},</p>
+             <p>Unfortunately, we need to reschedule your appointment on ${new Date(appointment.appointment_date).toLocaleString('en-US')}.</p>
+             ${message ? `<p><strong>Message:</strong> ${message}</p>` : ''}
+             <p>Please select a new time that works for you:</p>
+             <p><a href="${rescheduleUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;">Reschedule Appointment</a></p>
+             <p>If you need to cancel instead: <a href="${cancelUrl}">Cancel Appointment</a></p>
+             <p>We apologize for any inconvenience.</p>`
+      };
+      await emailTransporter.sendMail(rescheduleEmail);
+      console.log(`✉️  Reschedule request email sent to ${appointment.client_email}`);
+    } catch (emailError) {
+      console.error('Failed to send reschedule email:', emailError);
+    }
+
+    const updatedAppointment = await appointmentDb.getAppointmentById(parseInt(id));
+    res.json({ success: true, appointment: updatedAppointment });
+  } catch (error) {
+    handleError(error, 'Failed to request reschedule', res, 500);
   }
 });
 
@@ -299,8 +511,45 @@ router.patch('/api/admin/appointments/:id', authenticateUser, requireRole(['admi
     const { id } = req.params;
     const updates = req.body;
 
+    // Get original appointment to check if employee assignment changed
+    const originalAppointment = await appointmentDb.getAppointmentById(parseInt(id));
+
     await appointmentDb.updateAppointment(parseInt(id), updates);
     const appointment = await appointmentDb.getAppointmentById(parseInt(id));
+
+    // If employee was assigned, send them an SMS notification
+    if (updates.assigned_employee_id &&
+        updates.assigned_employee_id !== originalAppointment?.assigned_employee_id) {
+      try {
+        const employee = await employeeDb.getEmployeeById(updates.assigned_employee_id);
+        if (employee && employee.phone) {
+          const appointmentDate = new Date(appointment.appointment_date);
+          const dateStr = appointmentDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          });
+          const timeStr = appointmentDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          const smsMessage = `New appointment assigned to you!\n` +
+            `📅 ${dateStr} at ${timeStr}\n` +
+            `👤 ${appointment.client_name}\n` +
+            `📋 ${appointment.appointment_type}\n` +
+            `📍 ${appointment.location_address || 'See admin panel'}\n` +
+            `📞 ${appointment.client_phone}`;
+
+          await sendSMS(employee.phone, smsMessage);
+          console.log(`📱 SMS notification sent to employee ${employee.name} at ${employee.phone}`);
+        }
+      } catch (smsError) {
+        console.error('Failed to send employee SMS notification:', smsError);
+        // Don't fail the request if SMS fails
+      }
+    }
 
     res.json({ success: true, appointment });
   } catch (error) {
@@ -394,6 +643,19 @@ router.delete('/api/admin/employee-availability/:id', authenticateUser, requireR
   }
 });
 
+// Get availability for a specific employee (alternate route for frontend)
+router.get('/api/admin/employees/:employeeId/availability', authenticateUser, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+
+    const availability = await appointmentDb.getEmployeeAvailability(parseInt(employeeId));
+
+    res.json({ availability: availability || [] });
+  } catch (error) {
+    handleError(error, 'Failed to fetch employee availability', res, 500);
+  }
+});
+
 // BLOCKED TIMES ROUTES (admin only)
 
 // Get blocked times
@@ -410,7 +672,7 @@ router.get('/api/admin/blocked-times', authenticateUser, requireRole(['admin', '
       blockedTimes = await appointmentDb.getAllBlockedTimes();
     }
 
-    res.json(blockedTimes);
+    res.json({ blockedTimes: blockedTimes || [] });
   } catch (error) {
     handleError(error, 'Failed to fetch blocked times', res, 500);
   }
@@ -475,15 +737,17 @@ router.delete('/api/admin/blocked-times/:id', authenticateUser, requireRole(['ad
 // Generate available time slots based on employee availability, existing appointments, and blocked times
 function generateTimeSlots(availability, existingAppointments, blockedTimes, date, durationMinutes) {
   const slots = [];
-  const appointmentDate = new Date(date);
+
+  // Parse date properly to avoid timezone issues (YYYY-MM-DD format)
+  const [year, month, day] = date.split('-').map(Number);
+  const appointmentDate = new Date(year, month - 1, day);
 
   // For each available employee
   availability.forEach((avail) => {
     const [startHour, startMinute] = avail.start_time.split(':').map(Number);
     const [endHour, endMinute] = avail.end_time.split(':').map(Number);
 
-    let currentTime = new Date(appointmentDate);
-    currentTime.setHours(startHour, startMinute, 0, 0);
+    let currentTime = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
 
     const endTime = new Date(appointmentDate);
     endTime.setHours(endHour, endMinute, 0, 0);

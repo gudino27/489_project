@@ -22,6 +22,7 @@ import {
   Clock,
   Instagram,
   Calendar,
+  CalendarCheck,
   ChevronDown,
   Briefcase,
   Settings,
@@ -49,6 +50,7 @@ import SecurityMonitor from './SecurityMonitor';
 import TimeClockManager from './TimeClockManager';
 import InstagramManager from './InstagramManager';
 import ProjectTimelineManager from './ProjectTimelineManager';
+import ScheduleManager from './ScheduleManager';
 import PasswordChangeRequired from './PasswordChangeRequired';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
@@ -297,7 +299,8 @@ const AdminPanel = () => {
         items: [
           { id: 'testimonials', icon: MessageSquare, label: t('admin.tabs.testimonials') },
           { id: 'instagram', icon: Instagram, label: t('admin.tabs.instagram') },
-          { id: 'timelines', icon: Calendar, label: t('admin.tabs.timelines') }
+          { id: 'timelines', icon: Calendar, label: t('admin.tabs.timelines') },
+          { id: 'appointments', icon: CalendarCheck, label: t('admin.tabs.appointments') }
         ]
       }
     ];
@@ -792,6 +795,10 @@ const AdminPanel = () => {
          Project Timeline Management Tab
         */}
         {activeTab === 'timelines' && (<ProjectTimelineManager />)}
+        {/*
+         Schedule/Appointments Management Tab
+        */}
+        {activeTab === 'appointments' && (<ScheduleManager token={token} API_BASE={API_BASE} />)}
         {/*
          User Management Tab
         */}

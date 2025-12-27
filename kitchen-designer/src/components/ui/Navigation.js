@@ -73,23 +73,28 @@ const Navigation = () => {
                         <p>Contact</p>
                     </Link>
 
-                    <div className={`nav-item dropdown ${isActive('/cabinet-care') || isActive('/why-choose-us') ? 'active' : ''} ${isDropdownOpen ? 'show' : ''}`}>
+                    <div className={`nav-item dropdown ${isActive('/cabinet-care') || isActive('/why-choose-us') || isActive('/book-appointment') ? 'active' : ''} ${isDropdownOpen ? 'show' : ''}`} style={{paddingRight:'30px'}}>
                         <button
-                            className="nav-link dropdown-toggle text-white"
+                            className="nav-link dropdown-toggle text-white mx-3"
                             onClick={toggleDropdown}
                             aria-expanded={isDropdownOpen}
                         >
-                            <p style={{fontSize:'17px', fontWeight:'200'}}>Learn More</p>
+                            <p style={{ fontWeight:'200'}}>Cabinet 101</p>
                         </button>
-                        <ul className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
+                        <ul className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}style={{marginLeft:'40px'}}>
                             <li>
-                                <Link className="dropdown-item text-left" to="/cabinet-care" onClick={closeDropdown}style={{border:"1px solid #ffffff8a"}}>
+                                <Link className="dropdown-item text-left" to="/cabinet-care" onClick={closeDropdown}style={{border:"1px solid #ffffff8a",textAlign:"center"}}>
                                     Cabinet Care
                                 </Link>
                             </li>
                             <li>
-                                <Link className="dropdown-item text-center" to="/why-choose-us" onClick={closeDropdown}style={{border:"1px solid #ffffff8a"}}>
+                                <Link className="dropdown-item text-center" to="/why-choose-us" onClick={closeDropdown}style={{border:"1px solid #ffffff8a",textAlign:"center"}}>
                                     Why Choose Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link className="dropdown-item text-center" to="/book-appointment" onClick={closeDropdown}style={{border:"1px solid #ffffff8a",textAlign:"center"}}>
+                                    Book Appointment
                                 </Link>
                             </li>
                         </ul>
