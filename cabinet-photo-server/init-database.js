@@ -1414,10 +1414,7 @@ async function addSmsRoutingTables(db) {
     CREATE INDEX IF NOT EXISTS idx_sms_history_sent_at ON sms_routing_history(sent_at);
   `);
 
-  // (No automatic seeding of SMS routing settings or recipients.)
-  // Ensure there are no duplicate recipients for the same message_type + phone_number
-  // and create a unique index to prevent future duplicates. This is wrapped in try/catch
-  // because older DBs may temporarily contain duplicates; we'll attempt to clean them first.
+ 
   try {
     await db.run(`DELETE FROM sms_routing_recipients
       WHERE rowid NOT IN (

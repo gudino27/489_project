@@ -3,10 +3,9 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const { userDb, getDb } = require("../db-helpers");
-const { authenticateUser, JWT_SECRET } = require("../middleware/auth");
+const { authenticateUser } = require("../middleware/auth");
 const { emailTransporter } = require("../utils/email");
 const { validatePasswordComplexity } = require("../utils/password-validation");
 const { handleError } = require("../utils/error-handler");
@@ -272,14 +271,15 @@ router.post("/change-password-required", async (req, res) => {
     );
 
     // Generate new session token
-    const token = jwt.sign(
-      { userId: result.user.id, username: result.user.username, role: result.user.role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
 
-    // Create session
-    await userDb.createSession(result.user.id, token, ipAddress, userAgent);
+    // Create session in database
+    await db.run(
+      `INSERT INTO user_sessions (user_id, token, expires_at, ip_address, user_agent, last_activity)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [result.user.id, token, expiresAt.toISOString(), ipAddress, userAgent]
+    );
 
     res.json({
       success: true,
