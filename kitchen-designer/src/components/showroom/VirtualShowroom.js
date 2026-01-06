@@ -22,7 +22,7 @@ const VirtualShowroom = () => {
   const [activeHotspot, setActiveHotspot] = useState(null);
   const [showWelcome, setShowWelcome] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
   // Check if showroom is enabled - redirect to home if disabled
   useEffect(() => {

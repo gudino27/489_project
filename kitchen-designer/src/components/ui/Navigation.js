@@ -9,7 +9,7 @@ const Navigation = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showroomVisible, setShowroomVisible] = useState(false);
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const API_URL = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
     // Fetch showroom visibility setting (with polling every 30 seconds)
     useEffect(() => {

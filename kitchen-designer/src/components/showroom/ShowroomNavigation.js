@@ -86,7 +86,7 @@ const ShowroomNavigation = ({ rooms, currentRoom, onRoomChange, language, style 
                       >
                         {room.thumbnail_url ? (
                           <img
-                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${room.thumbnail_url}`}
+                            src={`${process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com'}${room.thumbnail_url}`}
                             alt=""
                             className="w-10 h-10 rounded object-cover"
                           />
@@ -185,7 +185,7 @@ const ShowroomNavigation = ({ rooms, currentRoom, onRoomChange, language, style 
           >
             {room.thumbnail_url ? (
               <img
-                src={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${room.thumbnail_url}`}
+                src={`${process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com'}${room.thumbnail_url}`}
                 alt={getRoomName(room)}
                 className="w-full h-full object-cover"
               />

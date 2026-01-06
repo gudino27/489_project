@@ -78,7 +78,7 @@ const ShowroomHotspot = ({ hotspot, language, onClose, onNavigate }) => {
     }
   };
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
   const imageUrl = hotspot.image_url
     ? (hotspot.image_url.startsWith('http') ? hotspot.image_url : `${API_URL}${hotspot.image_url}`)
     : null;

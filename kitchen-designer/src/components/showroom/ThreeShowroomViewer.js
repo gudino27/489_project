@@ -26,7 +26,7 @@ const ThreeShowroomViewer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMaterialPanel, setShowMaterialPanel] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
   // Initialize material selections with defaults when room changes
   useEffect(() => {

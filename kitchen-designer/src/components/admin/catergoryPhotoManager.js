@@ -28,7 +28,7 @@ const CategoryPhotoManager = ({ token, API_BASE }) => { // Add token and API_BAS
   ];
 
   // Use API_BASE from props or fallback
-  const apiBase = API_BASE || process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const apiBase = API_BASE || process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
   // Helper function to check if item is a video
   const isVideo = (item) => {
