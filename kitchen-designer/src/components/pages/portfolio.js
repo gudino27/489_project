@@ -39,7 +39,7 @@ const Portfolio = () => {
   const [allCategoryPhotos, setAllCategoryPhotos] = useState([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [savedPositions, setSavedPositions] = useState({});
-  const [viewMode, setViewMode] = useState('3d');
+  const [viewMode, setViewMode] = useState('grid');
   const [beforeAfterPairs, setBeforeAfterPairs] = useState([]);
 
   // Modal state

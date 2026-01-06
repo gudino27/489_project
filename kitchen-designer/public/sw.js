@@ -1,9 +1,9 @@
 // Service Worker for Gudino Custom Admin Panel PWA
 // Network-first strategy for always-online experience
 
-const CACHE_NAME = 'gudino-admin-v1';
+const CACHE_NAME = 'gudino-admin-v2'; // Updated version to force cache refresh
 const OFFLINE_URL = '/offline.html';
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://api.gudinocustom.com';
+const API_BASE = 'https://api.gudinocustom.com';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
