@@ -25,6 +25,7 @@ const CabinetCare = lazy(() => import('./components/pages/CabinetCare'));
 const WhyChooseUs = lazy(() => import('./components/pages/WhyChooseUs'));
 const AppointmentBooking = lazy(() => import('./components/pages/AppointmentBooking'));
 const AppointmentCancel = lazy(() => import('./components/pages/AppointmentCancel'));
+const VirtualShowroom = lazy(() => import('./components/showroom/VirtualShowroom'));
 // -----------------------------
 // Top-Level App Component
 // Main application component that handles routing between different sections
@@ -75,6 +76,7 @@ function App() {
               <Route path="/why-choose-us" element={<WhyChooseUs />} />
               <Route path="/book-appointment" element={<AppointmentBooking />} />
               <Route path="/appointment/cancel/:token" element={<AppointmentCancel />} />
+              <Route path="/showroom" element={<VirtualShowroom />} />
             </Routes>
           </Suspense>
         </Router>

@@ -38,6 +38,7 @@ const miscRoutes = require("./routes/misc");
 const instagramRoutes = require("./routes/instagram");
 const timelinesRoutes = require("./routes/timelines");
 const appointmentsRoutes = require("./routes/appointments");
+const showroomRoutes = require("./routes/showroom");
 
 const app = express();
 
@@ -112,6 +113,10 @@ app.use(["/photos", "/testimonial-photos"], (req, res, next) => {
 // Serve static files from uploads directory
 app.use("/photos", express.static(path.join(__dirname, "uploads")));
 app.use("/testimonial-photos", express.static(path.join(__dirname, "uploads", "testimonial-photos")));
+// Serve showroom uploads (panoramas, textures, materials)
+app.use("/uploads/showroom", express.static(path.join(__dirname, "uploads", "showroom")));
+// Serve 3DVista demo panoramas for testing virtual showroom
+app.use("/demo-panoramas", express.static(path.join(__dirname, "..", "3dvistademo")));
 
 // Mount routes
 app.use("/api/photos", photosRoutes);
@@ -129,6 +134,7 @@ app.use("/api/admin", adminTestimonialsRoutes);
 app.use("/api/instagram", instagramRoutes);
 app.use("/api", timelinesRoutes);
 app.use("/", appointmentsRoutes);
+app.use("/api/showroom", showroomRoutes);
 app.use("/", adminRoutes);
 app.use("/", miscRoutes);
 

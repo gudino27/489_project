@@ -4568,6 +4568,867 @@ const appointmentDb = {
   }
 };
 
+// ==================== SHOWROOM DATABASE OPERATIONS ====================
+const showroomDb = {
+  // -------------------- ROOMS --------------------
+  async getAllRooms(enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = 'SELECT * FROM showroom_rooms';
+      if (enabledOnly) {
+        query += ' WHERE is_enabled = 1';
+      }
+      query += ' ORDER BY display_order ASC, created_at DESC';
+      const rooms = await db.all(query);
+      await db.close();
+      return rooms;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getRoomById(id) {
+    const db = await getDb();
+    try {
+      const room = await db.get('SELECT * FROM showroom_rooms WHERE id = ?', [id]);
+      await db.close();
+      return room;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getStartingRoom() {
+    const db = await getDb();
+    try {
+      // Get the starting room, or first enabled room if no starting room is set
+      let room = await db.get('SELECT * FROM showroom_rooms WHERE is_starting_room = 1 AND is_enabled = 1');
+      if (!room) {
+        room = await db.get('SELECT * FROM showroom_rooms WHERE is_enabled = 1 ORDER BY display_order ASC LIMIT 1');
+      }
+      await db.close();
+      return room;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async createRoom(roomData) {
+    const db = await getDb();
+    try {
+      const {
+        room_name_en, room_name_es, room_description_en, room_description_es,
+        image_360_url, thumbnail_url, display_order, is_enabled, is_starting_room,
+        category, default_yaw, default_pitch, default_hfov
+      } = roomData;
+
+      // If setting as starting room, unset all other starting rooms
+      if (is_starting_room) {
+        await db.run('UPDATE showroom_rooms SET is_starting_room = 0');
+      }
+
+      const result = await db.run(`
+        INSERT INTO showroom_rooms (
+          room_name_en, room_name_es, room_description_en, room_description_es,
+          image_360_url, thumbnail_url, display_order, is_enabled, is_starting_room,
+          category, default_yaw, default_pitch, default_hfov
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        room_name_en, room_name_es, room_description_en || null, room_description_es || null,
+        image_360_url, thumbnail_url || null, display_order || 0, is_enabled !== false ? 1 : 0,
+        is_starting_room ? 1 : 0, category || 'showroom', default_yaw || 0, default_pitch || 0,
+        default_hfov || 100
+      ]);
+
+      const newRoom = await db.get('SELECT * FROM showroom_rooms WHERE id = ?', [result.lastID]);
+      await db.close();
+      return newRoom;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateRoom(id, updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = [
+        'room_name_en', 'room_name_es', 'room_description_en', 'room_description_es',
+        'image_360_url', 'thumbnail_url', 'display_order', 'is_enabled', 'is_starting_room',
+        'category', 'default_yaw', 'default_pitch', 'default_hfov'
+      ];
+
+      // If setting as starting room, unset all other starting rooms
+      if (updates.is_starting_room) {
+        await db.run('UPDATE showroom_rooms SET is_starting_room = 0');
+      }
+
+      const setClause = [];
+      const values = [];
+
+      for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+          setClause.push(`${field} = ?`);
+          values.push(updates[field]);
+        }
+      }
+
+      if (setClause.length === 0) {
+        await db.close();
+        return await this.getRoomById(id);
+      }
+
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      await db.run(`UPDATE showroom_rooms SET ${setClause.join(', ')} WHERE id = ?`, values);
+      const updatedRoom = await db.get('SELECT * FROM showroom_rooms WHERE id = ?', [id]);
+      await db.close();
+      return updatedRoom;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteRoom(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_rooms WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateRoomOrder(roomOrders) {
+    const db = await getDb();
+    try {
+      for (const { id, display_order } of roomOrders) {
+        await db.run('UPDATE showroom_rooms SET display_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [display_order, id]);
+      }
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- HOTSPOTS --------------------
+  async getHotspotsByRoomId(roomId, enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = 'SELECT * FROM showroom_hotspots WHERE room_id = ?';
+      if (enabledOnly) {
+        query += ' AND is_enabled = 1';
+      }
+      query += ' ORDER BY created_at ASC';
+      const hotspots = await db.all(query, [roomId]);
+      await db.close();
+      return hotspots;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getHotspotById(id) {
+    const db = await getDb();
+    try {
+      const hotspot = await db.get('SELECT * FROM showroom_hotspots WHERE id = ?', [id]);
+      await db.close();
+      return hotspot;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async createHotspot(hotspotData) {
+    const db = await getDb();
+    try {
+      const {
+        room_id, hotspot_type, position_yaw, position_pitch, icon,
+        title_en, title_es, content_en, content_es, link_url,
+        link_room_id, cabinet_type, image_url, is_enabled
+      } = hotspotData;
+
+      const result = await db.run(`
+        INSERT INTO showroom_hotspots (
+          room_id, hotspot_type, position_yaw, position_pitch, icon,
+          title_en, title_es, content_en, content_es, link_url,
+          link_room_id, cabinet_type, image_url, is_enabled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        room_id, hotspot_type, position_yaw, position_pitch, icon || 'info',
+        title_en || null, title_es || null, content_en || null, content_es || null,
+        link_url || null, link_room_id || null, cabinet_type || null, image_url || null,
+        is_enabled !== false ? 1 : 0
+      ]);
+
+      const newHotspot = await db.get('SELECT * FROM showroom_hotspots WHERE id = ?', [result.lastID]);
+      await db.close();
+      return newHotspot;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateHotspot(id, updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = [
+        'room_id', 'hotspot_type', 'position_yaw', 'position_pitch', 'icon',
+        'title_en', 'title_es', 'content_en', 'content_es', 'link_url',
+        'link_room_id', 'cabinet_type', 'image_url', 'is_enabled'
+      ];
+
+      const setClause = [];
+      const values = [];
+
+      for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+          setClause.push(`${field} = ?`);
+          values.push(updates[field]);
+        }
+      }
+
+      if (setClause.length === 0) {
+        await db.close();
+        return await this.getHotspotById(id);
+      }
+
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      await db.run(`UPDATE showroom_hotspots SET ${setClause.join(', ')} WHERE id = ?`, values);
+      const updatedHotspot = await db.get('SELECT * FROM showroom_hotspots WHERE id = ?', [id]);
+      await db.close();
+      return updatedHotspot;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteHotspot(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_hotspots WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- SETTINGS --------------------
+  async getSettings() {
+    const db = await getDb();
+    try {
+      const settings = await db.get('SELECT * FROM showroom_settings WHERE id = 1');
+      await db.close();
+      return settings;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateSettings(updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = [
+        'welcome_message_en', 'welcome_message_es', 'navigation_style',
+        'vr_mode_enabled', 'auto_rotate_enabled', 'auto_rotate_speed',
+        'mouse_sensitivity', 'show_compass', 'show_zoom_controls',
+        'use_threejs_viewer', 'showroom_visible'
+      ];
+
+      const setClause = [];
+      const values = [];
+
+      for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+          setClause.push(`${field} = ?`);
+          values.push(updates[field]);
+        }
+      }
+
+      if (setClause.length === 0) {
+        await db.close();
+        return await this.getSettings();
+      }
+
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+
+      await db.run(`UPDATE showroom_settings SET ${setClause.join(', ')} WHERE id = 1`, values);
+      const updatedSettings = await db.get('SELECT * FROM showroom_settings WHERE id = 1');
+      await db.close();
+      return updatedSettings;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- FULL SHOWROOM DATA --------------------
+  async getFullShowroomData(enabledOnly = true) {
+    const db = await getDb();
+    try {
+      // Get settings
+      const settings = await db.get('SELECT * FROM showroom_settings WHERE id = 1');
+
+      // Get all rooms with their hotspots
+      let roomQuery = 'SELECT * FROM showroom_rooms';
+      if (enabledOnly) {
+        roomQuery += ' WHERE is_enabled = 1';
+      }
+      roomQuery += ' ORDER BY display_order ASC';
+      const rooms = await db.all(roomQuery);
+
+      // Get hotspots for each room
+      for (const room of rooms) {
+        let hotspotQuery = 'SELECT * FROM showroom_hotspots WHERE room_id = ?';
+        if (enabledOnly) {
+          hotspotQuery += ' AND is_enabled = 1';
+        }
+        room.hotspots = await db.all(hotspotQuery, [room.id]);
+      }
+
+      await db.close();
+      return { settings, rooms };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- MATERIAL CATEGORIES --------------------
+  async getMaterialCategories(enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = 'SELECT * FROM showroom_material_categories';
+      if (enabledOnly) {
+        query += ' WHERE is_enabled = 1';
+      }
+      query += ' ORDER BY display_order ASC';
+      const categories = await db.all(query);
+      await db.close();
+      return categories;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getMaterialCategoryById(id) {
+    const db = await getDb();
+    try {
+      const category = await db.get('SELECT * FROM showroom_material_categories WHERE id = ?', [id]);
+      await db.close();
+      return category;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getMaterialCategoryBySlug(slug) {
+    const db = await getDb();
+    try {
+      const category = await db.get('SELECT * FROM showroom_material_categories WHERE category_slug = ?', [slug]);
+      await db.close();
+      return category;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async createMaterialCategory(categoryData) {
+    const db = await getDb();
+    try {
+      const { category_name_en, category_name_es, category_slug, icon, display_order, is_enabled } = categoryData;
+      const result = await db.run(`
+        INSERT INTO showroom_material_categories (category_name_en, category_name_es, category_slug, icon, display_order, is_enabled)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [category_name_en, category_name_es, category_slug, icon || null, display_order || 0, is_enabled !== false ? 1 : 0]);
+      const newCategory = await db.get('SELECT * FROM showroom_material_categories WHERE id = ?', [result.lastID]);
+      await db.close();
+      return newCategory;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateMaterialCategory(id, updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = ['category_name_en', 'category_name_es', 'category_slug', 'icon', 'display_order', 'is_enabled'];
+      const setClause = [];
+      const values = [];
+      for (const [key, value] of Object.entries(updates)) {
+        if (allowedFields.includes(key)) {
+          setClause.push(`${key} = ?`);
+          values.push(value);
+        }
+      }
+      if (setClause.length === 0) {
+        await db.close();
+        return null;
+      }
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+      await db.run(`UPDATE showroom_material_categories SET ${setClause.join(', ')} WHERE id = ?`, values);
+      const updated = await db.get('SELECT * FROM showroom_material_categories WHERE id = ?', [id]);
+      await db.close();
+      return updated;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteMaterialCategory(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_material_categories WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- MATERIALS --------------------
+  async getMaterials(categoryId = null, enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = 'SELECT m.*, c.category_name_en, c.category_name_es, c.category_slug FROM showroom_materials m LEFT JOIN showroom_material_categories c ON m.category_id = c.id';
+      const conditions = [];
+      const params = [];
+      if (categoryId) {
+        conditions.push('m.category_id = ?');
+        params.push(categoryId);
+      }
+      if (enabledOnly) {
+        conditions.push('m.is_enabled = 1');
+      }
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+      query += ' ORDER BY m.display_order ASC, m.material_name_en ASC';
+      const materials = await db.all(query, params);
+      await db.close();
+      return materials;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getMaterialById(id) {
+    const db = await getDb();
+    try {
+      const material = await db.get(`
+        SELECT m.*, c.category_name_en, c.category_name_es, c.category_slug
+        FROM showroom_materials m
+        LEFT JOIN showroom_material_categories c ON m.category_id = c.id
+        WHERE m.id = ?
+      `, [id]);
+      await db.close();
+      return material;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getMaterialsByCategorySlug(slug, enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = `
+        SELECT m.*, c.category_name_en, c.category_name_es, c.category_slug
+        FROM showroom_materials m
+        JOIN showroom_material_categories c ON m.category_id = c.id
+        WHERE c.category_slug = ?
+      `;
+      if (enabledOnly) {
+        query += ' AND m.is_enabled = 1';
+      }
+      query += ' ORDER BY m.display_order ASC';
+      const materials = await db.all(query, [slug]);
+      await db.close();
+      return materials;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async createMaterial(materialData) {
+    const db = await getDb();
+    try {
+      const {
+        category_id, material_name_en, material_name_es, material_code,
+        thumbnail_url, texture_url, normal_map_url, color_hex,
+        roughness, metalness, repeat_scale_x, repeat_scale_y,
+        price_indicator, is_enabled, display_order
+      } = materialData;
+      const result = await db.run(`
+        INSERT INTO showroom_materials (
+          category_id, material_name_en, material_name_es, material_code,
+          thumbnail_url, texture_url, normal_map_url, color_hex,
+          roughness, metalness, repeat_scale_x, repeat_scale_y,
+          price_indicator, is_enabled, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        category_id, material_name_en, material_name_es, material_code || null,
+        thumbnail_url || null, texture_url || null, normal_map_url || null, color_hex || null,
+        roughness ?? 0.5, metalness ?? 0.0, repeat_scale_x ?? 1.0, repeat_scale_y ?? 1.0,
+        price_indicator || null, is_enabled !== false ? 1 : 0, display_order || 0
+      ]);
+      const newMaterial = await db.get('SELECT * FROM showroom_materials WHERE id = ?', [result.lastID]);
+      await db.close();
+      return newMaterial;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateMaterial(id, updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = [
+        'category_id', 'material_name_en', 'material_name_es', 'material_code',
+        'thumbnail_url', 'texture_url', 'normal_map_url', 'color_hex',
+        'roughness', 'metalness', 'repeat_scale_x', 'repeat_scale_y',
+        'price_indicator', 'is_enabled', 'display_order'
+      ];
+      const setClause = [];
+      const values = [];
+      for (const [key, value] of Object.entries(updates)) {
+        if (allowedFields.includes(key)) {
+          setClause.push(`${key} = ?`);
+          values.push(value);
+        }
+      }
+      if (setClause.length === 0) {
+        await db.close();
+        return null;
+      }
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+      await db.run(`UPDATE showroom_materials SET ${setClause.join(', ')} WHERE id = ?`, values);
+      const updated = await db.get('SELECT * FROM showroom_materials WHERE id = ?', [id]);
+      await db.close();
+      return updated;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteMaterial(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_materials WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- SWAPPABLE ELEMENTS --------------------
+  async getSwappableElements(roomId = null, enabledOnly = false) {
+    const db = await getDb();
+    try {
+      let query = 'SELECT * FROM showroom_swappable_elements';
+      const conditions = [];
+      const params = [];
+      if (roomId) {
+        conditions.push('room_id = ?');
+        params.push(roomId);
+      }
+      if (enabledOnly) {
+        conditions.push('is_enabled = 1');
+      }
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+      query += ' ORDER BY display_order ASC';
+      const elements = await db.all(query, params);
+      await db.close();
+      return elements;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async getSwappableElementById(id) {
+    const db = await getDb();
+    try {
+      const element = await db.get('SELECT * FROM showroom_swappable_elements WHERE id = ?', [id]);
+      await db.close();
+      return element;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async createSwappableElement(elementData) {
+    const db = await getDb();
+    try {
+      const {
+        room_id, element_name_en, element_name_es, element_type,
+        uv_bounds, polygon_points, highlight_color, default_material_id, is_enabled, display_order
+      } = elementData;
+
+      // Log for debugging polygon_points
+      console.log('[DB createSwappableElement] polygon_points:', {
+        received: !!polygon_points,
+        type: typeof polygon_points,
+        value: polygon_points
+      });
+
+      const result = await db.run(`
+        INSERT INTO showroom_swappable_elements (
+          room_id, element_name_en, element_name_es, element_type,
+          uv_bounds, polygon_points, highlight_color, default_material_id, is_enabled, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        room_id, element_name_en, element_name_es, element_type,
+        typeof uv_bounds === 'string' ? uv_bounds : JSON.stringify(uv_bounds),
+        polygon_points ? (typeof polygon_points === 'string' ? polygon_points : JSON.stringify(polygon_points)) : null,
+        highlight_color || '#f59e0b', default_material_id || null,
+        is_enabled !== false ? 1 : 0, display_order || 0
+      ]);
+      const newElement = await db.get('SELECT * FROM showroom_swappable_elements WHERE id = ?', [result.lastID]);
+      console.log('[DB createSwappableElement] Created:', newElement?.id, 'polygon_points saved:', !!newElement?.polygon_points);
+      await db.close();
+      return newElement;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async updateSwappableElement(id, updates) {
+    const db = await getDb();
+    try {
+      const allowedFields = [
+        'room_id', 'element_name_en', 'element_name_es', 'element_type',
+        'uv_bounds', 'polygon_points', 'highlight_color', 'default_material_id', 'is_enabled', 'display_order'
+      ];
+
+      // Log for debugging
+      console.log('[DB updateSwappableElement] id:', id, 'polygon_points in updates:', {
+        present: 'polygon_points' in updates,
+        value: updates.polygon_points
+      });
+
+      const setClause = [];
+      const values = [];
+      for (const [key, value] of Object.entries(updates)) {
+        if (allowedFields.includes(key)) {
+          setClause.push(`${key} = ?`);
+          // Serialize JSON fields (uv_bounds and polygon_points)
+          if ((key === 'uv_bounds' || key === 'polygon_points') && value && typeof value !== 'string') {
+            values.push(JSON.stringify(value));
+          } else {
+            values.push(value);
+          }
+        }
+      }
+      if (setClause.length === 0) {
+        await db.close();
+        return null;
+      }
+      setClause.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+      await db.run(`UPDATE showroom_swappable_elements SET ${setClause.join(', ')} WHERE id = ?`, values);
+      const updated = await db.get('SELECT * FROM showroom_swappable_elements WHERE id = ?', [id]);
+      console.log('[DB updateSwappableElement] Updated:', updated?.id, 'polygon_points saved:', !!updated?.polygon_points);
+      await db.close();
+      return updated;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async deleteSwappableElement(id) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_swappable_elements WHERE id = ?', [id]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- ELEMENT-MATERIAL LINKS --------------------
+  async getMaterialsForElement(elementId, enabledOnly = false) {
+    const db = await getDb();
+    try {
+      // Include category info for the MaterialSwapPanel category filtering
+      let query = `
+        SELECT m.*, eml.is_default,
+               c.category_name_en, c.category_name_es, c.category_slug
+        FROM showroom_materials m
+        JOIN showroom_element_material_links eml ON m.id = eml.material_id
+        LEFT JOIN showroom_material_categories c ON m.category_id = c.id
+        WHERE eml.element_id = ?
+      `;
+      if (enabledOnly) {
+        query += ' AND m.is_enabled = 1';
+      }
+      query += ' ORDER BY eml.is_default DESC, m.display_order ASC';
+      const materials = await db.all(query, [elementId]);
+      await db.close();
+      return materials;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async linkMaterialToElement(elementId, materialId, isDefault = false) {
+    const db = await getDb();
+    try {
+      // If setting as default, unset other defaults for this element
+      if (isDefault) {
+        await db.run('UPDATE showroom_element_material_links SET is_default = 0 WHERE element_id = ?', [elementId]);
+      }
+      await db.run(`
+        INSERT OR REPLACE INTO showroom_element_material_links (element_id, material_id, is_default)
+        VALUES (?, ?, ?)
+      `, [elementId, materialId, isDefault ? 1 : 0]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async unlinkMaterialFromElement(elementId, materialId) {
+    const db = await getDb();
+    try {
+      await db.run('DELETE FROM showroom_element_material_links WHERE element_id = ? AND material_id = ?', [elementId, materialId]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  async setDefaultMaterialForElement(elementId, materialId) {
+    const db = await getDb();
+    try {
+      // Unset all defaults for this element
+      await db.run('UPDATE showroom_element_material_links SET is_default = 0 WHERE element_id = ?', [elementId]);
+      // Set the new default
+      await db.run('UPDATE showroom_element_material_links SET is_default = 1 WHERE element_id = ? AND material_id = ?', [elementId, materialId]);
+      // Also update the default_material_id on the element itself
+      await db.run('UPDATE showroom_swappable_elements SET default_material_id = ? WHERE id = ?', [materialId, elementId]);
+      await db.close();
+      return true;
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  },
+
+  // -------------------- FULL DATA WITH MATERIALS --------------------
+  async getFullShowroomDataWithMaterials(enabledOnly = true) {
+    const db = await getDb();
+    try {
+      // Get settings
+      const settings = await db.get('SELECT * FROM showroom_settings WHERE id = 1');
+
+      // Get rooms
+      let roomQuery = 'SELECT * FROM showroom_rooms';
+      if (enabledOnly) {
+        roomQuery += ' WHERE is_enabled = 1';
+      }
+      roomQuery += ' ORDER BY display_order ASC';
+      const rooms = await db.all(roomQuery);
+
+      // Get hotspots and swappable elements for each room
+      for (const room of rooms) {
+        // Get hotspots
+        let hotspotQuery = 'SELECT * FROM showroom_hotspots WHERE room_id = ?';
+        if (enabledOnly) {
+          hotspotQuery += ' AND is_enabled = 1';
+        }
+        room.hotspots = await db.all(hotspotQuery, [room.id]);
+
+        // Get swappable elements with their default materials
+        let elementQuery = `
+          SELECT e.*, m.material_name_en as default_material_name_en, m.material_name_es as default_material_name_es,
+                 m.texture_url as default_texture_url, m.color_hex as default_color_hex
+          FROM showroom_swappable_elements e
+          LEFT JOIN showroom_materials m ON e.default_material_id = m.id
+          WHERE e.room_id = ?
+        `;
+        if (enabledOnly) {
+          elementQuery += ' AND e.is_enabled = 1';
+        }
+        elementQuery += ' ORDER BY e.display_order ASC';
+        room.swappable_elements = await db.all(elementQuery, [room.id]);
+
+        // For each swappable element, get its available materials with category info
+        for (const element of room.swappable_elements) {
+          // Parse uv_bounds JSON
+          if (element.uv_bounds && typeof element.uv_bounds === 'string') {
+            try { element.uv_bounds = JSON.parse(element.uv_bounds); } catch (e) {}
+          }
+
+          let materialQuery = `
+            SELECT m.*, eml.is_default,
+                   c.category_name_en, c.category_name_es, c.category_slug
+            FROM showroom_materials m
+            JOIN showroom_element_material_links eml ON m.id = eml.material_id
+            LEFT JOIN showroom_material_categories c ON m.category_id = c.id
+            WHERE eml.element_id = ?
+          `;
+          if (enabledOnly) {
+            materialQuery += ' AND m.is_enabled = 1';
+          }
+          materialQuery += ' ORDER BY eml.is_default DESC, m.display_order ASC';
+          element.available_materials = await db.all(materialQuery, [element.id]);
+        }
+      }
+
+      await db.close();
+      return { settings, rooms };
+    } catch (error) {
+      await db.close();
+      throw error;
+    }
+  }
+};
+
 module.exports = {
   getDb,
   queueDbOperation,
@@ -4580,5 +5441,6 @@ module.exports = {
   invoiceDb,
   instagramDb,
   timelineDb,
-  appointmentDb
+  appointmentDb,
+  showroomDb
 };

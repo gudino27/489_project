@@ -32,7 +32,7 @@ const DesignerOrContactChoice = ({ className = '', onQuickQuoteClick }) => {
         features: [
           'Fast and simple',
           'Upload inspiration photos',
-          'Get a response in 24-48 hours',
+          'Get a response in 2-4 business days',
           'No design experience needed',
         ],
         button: 'Request Quote',
@@ -58,7 +58,7 @@ const DesignerOrContactChoice = ({ className = '', onQuickQuoteClick }) => {
         features: [
           'Rápido y sencillo',
           'Cargar fotos de inspiración',
-          'Obtenga una respuesta en 24-48 horas',
+          'Obtenga una respuesta en 2-4 días hábiles',
           'No se necesita experiencia en diseño',
         ],
         button: 'Solicitar Cotización',

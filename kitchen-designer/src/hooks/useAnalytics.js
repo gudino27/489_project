@@ -48,27 +48,18 @@ const getUserInfo = () => {
   }
 };
 
-// Check if user has opted out of analytics or enabled "Do Not Track"
+// Check if user has explicitly opted out of analytics
 const isOptedOut = () => {
   try {
-    // Check for explicit opt-out flag
+    // Only check for explicit opt-out flag (user must manually opt out)
     const optOut = localStorage.getItem('analytics_opt_out');
     if (optOut === 'true') {
-      console.log('Analytics: User has opted out');
       return true;
     }
-
-    // Check for "Do Not Track" browser setting
-    const dnt = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
-    if (dnt === '1' || dnt === 'yes') {
-      console.log('Analytics: Do Not Track is enabled');
-      return true;
-    }
-
     return false;
   } catch (e) {
-    // If there's an error checking opt-out status, default to not tracking
-    return true;
+    // If there's an error checking opt-out status, default to tracking
+    return false;
   }
 };
 
@@ -81,9 +72,8 @@ export const useAnalytics = (pagePath) => {
   useEffect(() => {
     if (!pagePath || isTracking.current) return;
 
-    // Privacy compliance: Respect opt-out and Do Not Track
+    // Privacy compliance: Respect explicit opt-out
     if (isOptedOut()) {
-      console.log('Analytics: Tracking disabled for this user');
       return;
     }
 
@@ -121,7 +111,7 @@ export const useAnalytics = (pagePath) => {
 
        
       } catch (error) {
-        console.error('Analytics tracking error:', error);
+        // Silently fail - don't interrupt user experience
       }
     };
 
@@ -196,9 +186,8 @@ export const useAnalytics = (pagePath) => {
 // Hook for tracking custom events
 export const useEventTracking = () => {
   const trackEvent = async (eventName, eventData = {}) => {
-    // Privacy compliance: Respect opt-out and Do Not Track
+    // Privacy compliance: Respect explicit opt-out
     if (isOptedOut()) {
-      console.log('Event tracking: Disabled for this user');
       return;
     }
 
@@ -224,7 +213,7 @@ export const useEventTracking = () => {
 
       
     } catch (error) {
-      console.error('Event tracking error:', error);
+      // Silently fail - don't interrupt user experience
     }
   };
 

@@ -7,8 +7,32 @@ const Navigation = () => {
     const location = useLocation();
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showroomVisible, setShowroomVisible] = useState(false);
 
-    // Removed dynamic padding calculation to prevent CLS - now using fixed heights in CSS
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+    // Fetch showroom visibility setting (with polling every 30 seconds)
+    useEffect(() => {
+        const fetchShowroomSettings = async () => {
+            try {
+                const response = await fetch(`${API_URL}/api/showroom/public/settings`);
+                if (response.ok) {
+                    const settings = await response.json();
+                    setShowroomVisible(settings?.showroom_visible === 1 || settings?.showroom_visible === true);
+                }
+            } catch (error) {
+                // Silently fail - showroom stays hidden if settings can't be fetched
+            }
+        };
+
+        // Fetch immediately on mount
+        fetchShowroomSettings();
+
+        // Poll every 60 seconds to check for admin changes
+        const interval = setInterval(fetchShowroomSettings, 60000);
+
+        return () => clearInterval(interval);
+    }, [API_URL]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -66,6 +90,11 @@ const Navigation = () => {
                     <Link className={`nav-link text-white ${isActive('/design') ? 'active' : ''}`} to="/design" onClick={handleNavCollapse}>
                         <p>Design</p>
                     </Link>
+                    {showroomVisible && (
+                        <Link className={`nav-link text-white ${isActive('/showroom') ? 'active' : ''}`} to="/showroom" onClick={handleNavCollapse}>
+                            <p>Showroom</p>
+                        </Link>
+                    )}
                     <Link className={`nav-link text-white ${isActive('/about') ? 'active' : ''}`} to="/about" onClick={handleNavCollapse}>
                         <p>About</p>
                     </Link>

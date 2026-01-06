@@ -59,6 +59,12 @@ async function initializeDatabase() {
     console.log(' Adding appointment booking tables...');
     await addAppointmentTables(db);
 
+    console.log(' Adding virtual showroom tables...');
+    await addShowroomTables(db);
+
+    console.log(' Adding showroom material swapping tables...');
+    await addShowroomMaterialTables(db);
+
     console.log('\n✅ Database initialization completed successfully!');
 
   } catch (error) {
@@ -1780,6 +1786,233 @@ async function fixPayrollSchema(db) {
     console.error('   ❌ Error fixing payroll schema:', error.message);
     // Don't throw - allow initialization to continue
   }
+}
+
+async function addShowroomTables(db) {
+  try {
+    // Showroom rooms table - stores 360° panorama images for each room/area
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_rooms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_name_en TEXT NOT NULL,
+        room_name_es TEXT NOT NULL,
+        room_description_en TEXT,
+        room_description_es TEXT,
+        image_360_url TEXT NOT NULL, -- Path to 360° image
+        thumbnail_url TEXT, -- Preview thumbnail
+        display_order INTEGER DEFAULT 0,
+        is_enabled BOOLEAN DEFAULT 1,
+        is_starting_room BOOLEAN DEFAULT 0,
+        category TEXT DEFAULT 'showroom', -- 'showroom', 'workshop', 'gallery'
+        default_yaw FLOAT DEFAULT 0, -- Starting horizontal angle (degrees)
+        default_pitch FLOAT DEFAULT 0, -- Starting vertical angle (degrees)
+        default_hfov FLOAT DEFAULT 100, -- Horizontal field of view
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Showroom hotspots table - interactive points on 360° images
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_hotspots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        hotspot_type TEXT NOT NULL, -- 'info', 'link_designer', 'link_room', 'link_material'
+        position_yaw FLOAT NOT NULL, -- Horizontal position (degrees)
+        position_pitch FLOAT NOT NULL, -- Vertical position (degrees)
+        icon TEXT DEFAULT 'info', -- Icon identifier: 'info', 'cabinet', 'arrow', 'material'
+        title_en TEXT,
+        title_es TEXT,
+        content_en TEXT, -- Description or info content
+        content_es TEXT,
+        link_url TEXT, -- For link_designer or link_material types
+        link_room_id INTEGER, -- For link_room type (navigation to another room)
+        cabinet_type TEXT, -- For link_designer type (pre-select cabinet)
+        image_url TEXT, -- Optional image to show in info popup
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES showroom_rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (link_room_id) REFERENCES showroom_rooms(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Showroom settings table - global settings for the virtual showroom
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1), -- Only one row allowed
+        welcome_message_en TEXT DEFAULT 'Welcome to our Virtual Showroom',
+        welcome_message_es TEXT DEFAULT 'Bienvenido a nuestro Showroom Virtual',
+        navigation_style TEXT DEFAULT 'dropdown', -- 'dropdown', 'minimap', 'arrows'
+        vr_mode_enabled BOOLEAN DEFAULT 1,
+        auto_rotate_enabled BOOLEAN DEFAULT 0,
+        auto_rotate_speed FLOAT DEFAULT 0.5, -- Degrees per frame
+        mouse_sensitivity FLOAT DEFAULT 1.0,
+        show_compass BOOLEAN DEFAULT 1,
+        show_zoom_controls BOOLEAN DEFAULT 1,
+        showroom_visible BOOLEAN DEFAULT 0, -- Controls if showroom tab appears in navigation
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Migration: Add showroom_visible column for existing databases
+    try {
+      await db.exec(`ALTER TABLE showroom_settings ADD COLUMN showroom_visible BOOLEAN DEFAULT 0`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+
+    // Insert default settings row
+    await db.exec(`
+      INSERT OR IGNORE INTO showroom_settings (id, welcome_message_en, welcome_message_es)
+      VALUES (1, 'Welcome to our Virtual Showroom', 'Bienvenido a nuestro Showroom Virtual')
+    `);
+
+    // Create indexes for showroom tables
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_showroom_rooms_enabled ON showroom_rooms(is_enabled);
+      CREATE INDEX IF NOT EXISTS idx_showroom_rooms_order ON showroom_rooms(display_order);
+      CREATE INDEX IF NOT EXISTS idx_showroom_rooms_category ON showroom_rooms(category);
+      CREATE INDEX IF NOT EXISTS idx_showroom_hotspots_room ON showroom_hotspots(room_id);
+      CREATE INDEX IF NOT EXISTS idx_showroom_hotspots_type ON showroom_hotspots(hotspot_type);
+      CREATE INDEX IF NOT EXISTS idx_showroom_hotspots_enabled ON showroom_hotspots(is_enabled);
+    `);
+
+    console.log('   ✓ Created virtual showroom tables and indexes');
+  } catch (error) {
+    console.error('   ⚠️  Error creating showroom tables:', error.message);
+    // Don't throw - allow initialization to continue
+  }
+
+  console.log(' Virtual showroom tables ready');
+}
+
+// Showroom Material Swapping Tables
+// Enables users to click on elements in the 360° panorama and swap materials/finishes
+async function addShowroomMaterialTables(db) {
+  try {
+    // Material categories table (flooring, countertops, cabinet finishes, etc.)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_material_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name_en TEXT NOT NULL,
+        category_name_es TEXT NOT NULL,
+        category_slug TEXT NOT NULL UNIQUE, -- 'flooring', 'countertop', 'cabinet', etc.
+        icon TEXT, -- Icon identifier for UI
+        display_order INTEGER DEFAULT 0,
+        is_enabled BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Materials table - available materials/finishes that can be applied
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_materials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL,
+        material_name_en TEXT NOT NULL,
+        material_name_es TEXT NOT NULL,
+        material_code TEXT, -- SKU or product code
+        thumbnail_url TEXT, -- Small preview image for UI picker
+        texture_url TEXT, -- Full texture image for 3D rendering
+        normal_map_url TEXT, -- Optional normal map for surface detail
+        color_hex TEXT, -- Fallback color if no texture
+        roughness FLOAT DEFAULT 0.5, -- PBR roughness (0-1)
+        metalness FLOAT DEFAULT 0.0, -- PBR metalness (0-1)
+        repeat_scale_x FLOAT DEFAULT 1.0, -- Texture repeat horizontal
+        repeat_scale_y FLOAT DEFAULT 1.0, -- Texture repeat vertical
+        price_indicator TEXT, -- '$', '$$', '$$$' for price range display
+        is_enabled BOOLEAN DEFAULT 1,
+        display_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES showroom_material_categories(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Swappable elements table - defines clickable regions in the panorama
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_swappable_elements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        element_name_en TEXT NOT NULL,
+        element_name_es TEXT NOT NULL,
+        element_type TEXT NOT NULL, -- 'floor', 'wall', 'countertop', 'cabinet', 'backsplash', 'furniture'
+        uv_bounds TEXT NOT NULL, -- JSON: { minU, maxU, minV, maxV } or polygon points for region
+        highlight_color TEXT DEFAULT '#f59e0b', -- Color when hovered/selected
+        default_material_id INTEGER, -- Default material variant to show
+        is_enabled BOOLEAN DEFAULT 1,
+        display_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES showroom_rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (default_material_id) REFERENCES showroom_materials(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Element-material links table - which materials are available for each element
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS showroom_element_material_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        element_id INTEGER NOT NULL,
+        material_id INTEGER NOT NULL,
+        is_default BOOLEAN DEFAULT 0, -- Is this the default material for this element?
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (element_id) REFERENCES showroom_swappable_elements(id) ON DELETE CASCADE,
+        FOREIGN KEY (material_id) REFERENCES showroom_materials(id) ON DELETE CASCADE,
+        UNIQUE(element_id, material_id)
+      )
+    `);
+
+    // Add use_threejs_viewer setting to showroom_settings if not exists
+    const settingsColumns = await db.all("PRAGMA table_info(showroom_settings)");
+    const hasThreejsColumn = settingsColumns.some(col => col.name === 'use_threejs_viewer');
+    if (!hasThreejsColumn) {
+      await db.exec(`ALTER TABLE showroom_settings ADD COLUMN use_threejs_viewer BOOLEAN DEFAULT 0`);
+      console.log('   ✓ Added use_threejs_viewer column to showroom_settings');
+    }
+
+    // Add polygon_points column to showroom_swappable_elements if not exists
+    // This stores exact polygon points from 3D selection for more accurate overlays
+    const elementsColumns = await db.all("PRAGMA table_info(showroom_swappable_elements)");
+    const hasPolygonColumn = elementsColumns.some(col => col.name === 'polygon_points');
+    if (!hasPolygonColumn) {
+      await db.exec(`ALTER TABLE showroom_swappable_elements ADD COLUMN polygon_points TEXT`);
+      console.log('   ✓ Added polygon_points column to showroom_swappable_elements');
+    }
+
+    // Create indexes for material tables
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_showroom_material_categories_enabled ON showroom_material_categories(is_enabled);
+      CREATE INDEX IF NOT EXISTS idx_showroom_material_categories_slug ON showroom_material_categories(category_slug);
+      CREATE INDEX IF NOT EXISTS idx_showroom_materials_category ON showroom_materials(category_id);
+      CREATE INDEX IF NOT EXISTS idx_showroom_materials_enabled ON showroom_materials(is_enabled);
+      CREATE INDEX IF NOT EXISTS idx_showroom_swappable_elements_room ON showroom_swappable_elements(room_id);
+      CREATE INDEX IF NOT EXISTS idx_showroom_swappable_elements_enabled ON showroom_swappable_elements(is_enabled);
+      CREATE INDEX IF NOT EXISTS idx_showroom_element_material_links_element ON showroom_element_material_links(element_id);
+      CREATE INDEX IF NOT EXISTS idx_showroom_element_material_links_material ON showroom_element_material_links(material_id);
+    `);
+
+    // Insert default material categories
+    await db.exec(`
+      INSERT OR IGNORE INTO showroom_material_categories (category_slug, category_name_en, category_name_es, icon, display_order)
+      VALUES
+        ('flooring', 'Flooring', 'Pisos', 'floor', 1),
+        ('countertop', 'Countertops', 'Encimeras', 'counter', 2),
+        ('cabinet', 'Cabinet Finishes', 'Acabados de Gabinetes', 'cabinet', 3),
+        ('backsplash', 'Backsplash', 'Salpicadero', 'tiles', 4),
+        ('wall', 'Wall Colors', 'Colores de Pared', 'paint', 5)
+    `);
+
+    console.log('   ✓ Created showroom material swapping tables and indexes');
+  } catch (error) {
+    console.error('   ⚠️  Error creating showroom material tables:', error.message);
+    // Don't throw - allow initialization to continue
+  }
+
+  console.log(' Showroom material swapping tables ready');
 }
 
 // Only run if this file is executed directly

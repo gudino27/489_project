@@ -56,15 +56,15 @@ const QuickContactForm = ({ onBack }) => {
   const projectTypes = {
     en: [
       { value: '', label: 'Select project type...' },
-      { value: 'kitchen', label: 'Kitchen Cabinets' },
-      { value: 'bathroom', label: 'Bathroom Vanities' },
-      { value: 'custom', label: 'Custom Woodworking' },
+      { value: 'new-construction', label: 'New Construction' },
+      { value: 'remodel', label: 'Remodel' },
+      { value: 'addition', label: 'Addition' },
     ],
     es: [
       { value: '', label: 'Seleccione tipo de proyecto...' },
-      { value: 'kitchen', label: 'Gabinetes de Cocina' },
-      { value: 'bathroom', label: 'Vanidades de Baño' },
-      { value: 'custom', label: 'Carpintería Personalizada' },
+      { value: 'new-construction', label: 'Nueva Construcción' },
+      { value: 'remodel', label: 'Remodelación' },
+      { value: 'addition', label: 'Adición' },
     ],
   };
 
@@ -206,8 +206,8 @@ const QuickContactForm = ({ onBack }) => {
             </h2>
             <p>
               {currentLanguage === 'es'
-                ? 'Gracias por su interés en Gudino Custom Woodworking. Nos pondremos en contacto con usted dentro de 24-48 horas.'
-                : 'Thank you for your interest in Gudino Custom Woodworking. We will contact you within 24-48 hours.'}
+                ? 'Gracias por su interés en Gudino Custom Woodworking. Nos pondremos en contacto con usted dentro de 2-4 días hábiles.'
+                : 'Thank you for your interest in Gudino Custom Woodworking. We will contact you within 2-4 business days.'}
             </p>
             <p className="text-sm text-gray-600 mt-4">
               {currentLanguage === 'es'
@@ -229,7 +229,7 @@ const QuickContactForm = ({ onBack }) => {
   return (
     <>
       <Navigation />
-      <div className="testimonial-container">
+      <div className="testimonial-container my-12">
         <div className="testimonial-form-card">
           <h2 className="testimonial-form-title text-4xl mb-6">
             {currentLanguage === 'es'
@@ -293,7 +293,7 @@ const QuickContactForm = ({ onBack }) => {
 
               <div className="form-group mb-6">
                 <label htmlFor="client_phone" className="form-label text-base mb-2 block">
-                  {currentLanguage === 'es' ? 'Teléfono' : 'Phone'}
+                  {currentLanguage === 'es' ? 'Teléfono' : 'Phone'} *
                 </label>
                 <input
                   type="tel"
@@ -301,6 +301,7 @@ const QuickContactForm = ({ onBack }) => {
                   name="client_phone"
                   value={formData.client_phone}
                   onChange={handleInputChange}
+                  required
                   className="form-input text-base py-3"
                   placeholder="Enter Your Phone Number"
                 />
@@ -335,90 +336,6 @@ const QuickContactForm = ({ onBack }) => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="form-group mb-6">
-                <label htmlFor="room_dimensions" className="form-label text-base mb-2 block">
-                  {currentLanguage === 'es'
-                    ? 'Dimensiones del Espacio'
-                    : 'Room Dimensions'}
-                </label>
-                <input
-                  type="text"
-                  id="room_dimensions"
-                  name="room_dimensions"
-                  value={formData.room_dimensions}
-                  onChange={handleInputChange}
-                  className="form-input text-base py-3"
-                  placeholder={
-                    currentLanguage === 'es'
-                      ? 'Ej: 10 pies x 12 pies'
-                      : 'e.g., 10ft x 12ft'
-                  }
-                />
-              </div>
-
-              <div className="form-group mb-6">
-                <label htmlFor="budget_range" className="form-label text-base mb-2 block">
-                  {currentLanguage === 'es'
-                    ? 'Rango de Presupuesto'
-                    : 'Budget Range'}
-                </label>
-                <select
-                  id="budget_range"
-                  name="budget_range"
-                  value={formData.budget_range}
-                  onChange={handleInputChange}
-                  className="form-input text-base py-3"
-                >
-                  {budgetRanges[currentLanguage].map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group mb-6">
-                <label htmlFor="preferred_materials" className="form-label text-base mb-2 block">
-                  {currentLanguage === 'es'
-                    ? 'Materiales Preferidos'
-                    : 'Preferred Materials'}
-                </label>
-                <input
-                  type="text"
-                  id="preferred_materials"
-                  name="preferred_materials"
-                  value={formData.preferred_materials}
-                  onChange={handleInputChange}
-                  className="form-input text-base py-3"
-                  placeholder={
-                    currentLanguage === 'es'
-                      ? 'Ej: Madera de roble, MDF, etc.'
-                      : 'e.g., Oak wood, MDF, etc.'
-                  }
-                />
-              </div>
-
-              <div className="form-group mb-6">
-                <label htmlFor="preferred_colors" className="form-label text-base mb-2 block">
-                  {currentLanguage === 'es'
-                    ? 'Colores / Acabados Preferidos'
-                    : 'Preferred Colors / Finishes'}
-                </label>
-                <input
-                  type="text"
-                  id="preferred_colors"
-                  name="preferred_colors"
-                  value={formData.preferred_colors}
-                  onChange={handleInputChange}
-                  className="form-input text-base py-3"
-                  placeholder={
-                    currentLanguage === 'es'
-                      ? 'Ej: Blanco, Gris, Natural, etc.'
-                      : 'e.g., White, Gray, Natural, etc.'
-                  }
-                />
               </div>
 
               <div className="form-group mb-6">

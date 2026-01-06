@@ -27,7 +27,8 @@ import {
   Briefcase,
   Settings,
   Menu,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 // -------------------------------------------------
@@ -51,6 +52,7 @@ import TimeClockManager from './TimeClockManager';
 import InstagramManager from './InstagramManager';
 import ProjectTimelineManager from './ProjectTimelineManager';
 import ScheduleManager from './ScheduleManager';
+import ShowroomManager from './ShowroomManager';
 import PasswordChangeRequired from './PasswordChangeRequired';
 import MainNavBar from '../ui/Navigation';
 import '../css/admin.css';
@@ -300,7 +302,8 @@ const AdminPanel = () => {
           { id: 'testimonials', icon: MessageSquare, label: t('admin.tabs.testimonials') },
           { id: 'instagram', icon: Instagram, label: t('admin.tabs.instagram') },
           { id: 'timelines', icon: Calendar, label: t('admin.tabs.timelines') },
-          { id: 'appointments', icon: CalendarCheck, label: t('admin.tabs.appointments') }
+          { id: 'appointments', icon: CalendarCheck, label: t('admin.tabs.appointments') },
+          { id: 'showroom', icon: Eye, label: t('admin.tabs.showroom') }
         ]
       }
     ];
@@ -799,6 +802,10 @@ const AdminPanel = () => {
          Schedule/Appointments Management Tab
         */}
         {activeTab === 'appointments' && (<ScheduleManager token={token} API_BASE={API_BASE} />)}
+        {/*
+         Virtual Showroom Management Tab
+        */}
+        {activeTab === 'showroom' && (<ShowroomManager token={token} API_BASE={API_BASE} />)}
         {/*
          User Management Tab
         */}
