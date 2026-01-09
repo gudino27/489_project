@@ -1541,6 +1541,7 @@ async function addInstagramTables(db) {
     `);
 
     // Create instagram_settings table for storing API credentials and refresh token
+    // UPDATED: Added instagram_business_account_id for new Instagram Graph API (Basic Display API deprecated Dec 4, 2024)
     await db.exec(`
       CREATE TABLE IF NOT EXISTS instagram_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1548,15 +1549,44 @@ async function addInstagramTables(db) {
         token_expires_at DATETIME,
         last_fetch_at DATETIME,
         auto_refresh_enabled BOOLEAN DEFAULT 0,
+        instagram_business_account_id TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
+    // Add instagram_business_account_id column if it doesn't exist (migration for existing databases)
+    try {
+      await db.exec(`ALTER TABLE instagram_settings ADD COLUMN instagram_business_account_id TEXT`);
+      console.log('[DB INIT] Added instagram_business_account_id column to instagram_settings');
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+
     // Insert default settings row if it doesn't exist
     await db.exec(`
       INSERT OR IGNORE INTO instagram_settings (id, auto_refresh_enabled)
       VALUES (1, 0)
+    `);
+
+    // Create instagram_oembed_posts table for Meta oEmbed Read permission demo
+    // This is separate from instagram_posts - only stores posts admin explicitly picks
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS instagram_oembed_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id TEXT NOT NULL UNIQUE,
+        permalink TEXT NOT NULL,
+        media_url TEXT,
+        caption TEXT,
+        timestamp DATETIME,
+        display_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create index for oEmbed posts display order
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_instagram_oembed_display_order ON instagram_oembed_posts(display_order);
     `);
 
     console.log('   ✓ Created Instagram tables and indexes');

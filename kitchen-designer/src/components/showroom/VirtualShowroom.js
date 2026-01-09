@@ -111,7 +111,7 @@ const VirtualShowroom = () => {
     return (
       <>
         <Navigation />
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center" style={{ paddingTop: '80px' }}>
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center" >
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-amber-500 mx-auto mb-4"></div>
             <p className="text-white text-lg">{t?.loading || 'Loading Virtual Showroom...'}</p>
@@ -126,7 +126,7 @@ const VirtualShowroom = () => {
     return (
       <>
         <Navigation />
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center" style={{ paddingTop: '80px' }}>
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center" >
           <div className="text-center max-w-md mx-auto px-4">
             <div className="text-red-500 text-6xl mb-4">!</div>
             <h2 className="text-white text-2xl mb-2">{t?.errorTitle || 'Unable to Load Showroom'}</h2>
@@ -166,7 +166,7 @@ const VirtualShowroom = () => {
   return (
     <>
       <Navigation />
-      <div className="relative w-full bg-gray-900" style={{ height: 'calc(100vh - 80px)', marginTop: '80px' }}>
+      <div className="relative w-full bg-gray-900" style={{ height: 'calc(100vh - 80px)' }}>
         {/* Welcome Overlay */}
         {showWelcome && (
           <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center">

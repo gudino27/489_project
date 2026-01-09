@@ -3442,6 +3442,7 @@ const instagramDb = {
   },
 
   // Update Instagram settings
+  // UPDATED: Added instagram_business_account_id for new Instagram Graph API
   async updateSettings(settings) {
     const db = await getDb();
     const fields = [];
@@ -3463,6 +3464,11 @@ const instagramDb = {
       fields.push('auto_refresh_enabled = ?');
       values.push(settings.auto_refresh_enabled ? 1 : 0);
     }
+    // New field for Instagram Graph API (replaces Basic Display API)
+    if (settings.instagram_business_account_id !== undefined) {
+      fields.push('instagram_business_account_id = ?');
+      values.push(settings.instagram_business_account_id);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = CURRENT_TIMESTAMP');
@@ -3472,6 +3478,115 @@ const instagramDb = {
         values
       );
     }
+    await db.close();
+  }
+};
+
+// Instagram oEmbed database operations
+// Separate from instagramDb - stores only admin-selected posts for Meta oEmbed demo
+const instagramOembedDb = {
+  // Get all saved oEmbed posts
+  async getPosts() {
+    const db = await getDb();
+    const posts = await db.all(
+      'SELECT * FROM instagram_oembed_posts ORDER BY display_order ASC, created_at DESC'
+    );
+    await db.close();
+    return posts;
+  },
+
+  // Get a single oEmbed post by ID
+  async getPostById(id) {
+    const db = await getDb();
+    const post = await db.get('SELECT * FROM instagram_oembed_posts WHERE id = ?', [id]);
+    await db.close();
+    return post;
+  },
+
+  // Check if a post is already saved
+  async postExists(postId) {
+    const db = await getDb();
+    const exists = await db.get('SELECT id FROM instagram_oembed_posts WHERE post_id = ?', [postId]);
+    await db.close();
+    return !!exists;
+  },
+
+  // Add a selected post to oEmbed table
+  async addPost(postData) {
+    const db = await getDb();
+    const { post_id, permalink, media_url, caption, timestamp } = postData;
+
+    // Check if already exists
+    const existing = await db.get('SELECT id FROM instagram_oembed_posts WHERE post_id = ?', [post_id]);
+    if (existing) {
+      await db.close();
+      return existing.id; // Return existing ID without duplicating
+    }
+
+    // Get current max display order
+    const maxOrder = await db.get('SELECT MAX(display_order) as max FROM instagram_oembed_posts');
+    const nextOrder = (maxOrder?.max || 0) + 1;
+
+    const result = await db.run(`
+      INSERT INTO instagram_oembed_posts (post_id, permalink, media_url, caption, timestamp, display_order)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [post_id, permalink, media_url, caption, timestamp, nextOrder]);
+    await db.close();
+    return result.lastID;
+  },
+
+  // Add multiple posts at once
+  async addPosts(posts) {
+    const db = await getDb();
+    const addedIds = [];
+
+    // Get current max display order
+    const maxOrder = await db.get('SELECT MAX(display_order) as max FROM instagram_oembed_posts');
+    let nextOrder = (maxOrder?.max || 0) + 1;
+
+    for (const postData of posts) {
+      const { post_id, permalink, media_url, caption, timestamp } = postData;
+
+      // Check if already exists
+      const existing = await db.get('SELECT id FROM instagram_oembed_posts WHERE post_id = ?', [post_id]);
+      if (existing) {
+        addedIds.push(existing.id);
+        continue;
+      }
+
+      const result = await db.run(`
+        INSERT INTO instagram_oembed_posts (post_id, permalink, media_url, caption, timestamp, display_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [post_id, permalink, media_url, caption, timestamp, nextOrder]);
+      addedIds.push(result.lastID);
+      nextOrder++;
+    }
+
+    await db.close();
+    return addedIds;
+  },
+
+  // Remove a saved oEmbed post
+  async removePost(id) {
+    const db = await getDb();
+    await db.run('DELETE FROM instagram_oembed_posts WHERE id = ?', [id]);
+    await db.close();
+  },
+
+  // Update display order for a post
+  async updateOrder(id, order) {
+    const db = await getDb();
+    await db.run(
+      'UPDATE instagram_oembed_posts SET display_order = ? WHERE id = ?',
+      [order, id]
+    );
+    await db.close();
+  },
+
+  // Clear all oEmbed posts
+  async clearAll() {
+    const db = await getDb();
+    await db.run('DELETE FROM instagram_oembed_posts');
     await db.close();
   }
 };
@@ -5440,6 +5555,7 @@ module.exports = {
   testimonialDb,
   invoiceDb,
   instagramDb,
+  instagramOembedDb,
   timelineDb,
   appointmentDb,
   showroomDb

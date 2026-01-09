@@ -604,6 +604,7 @@ const Portfolio = () => {
 
       {/* Instagram Feed Section */}
       <InstagramFeed limit={6} showTitle={true} />
+      
     </>
   );
 };
