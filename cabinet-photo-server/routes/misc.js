@@ -292,7 +292,9 @@ router.get("/api/health", async (req, res) => {
 
     // Database connectivity check
     try {
-      const testQuery = await photoDb.get("SELECT 1 as test");
+      const db = await getDb();
+      const testQuery = await db.get("SELECT 1 as test");
+      await db.close();
       health.checks.database = {
         status: "OK",
         message: "Database connection successful",
@@ -307,7 +309,7 @@ router.get("/api/health", async (req, res) => {
 
     // File system checks
     try {
-      const uploadsDir = path.join(__dirname, "uploads");
+      const uploadsDir = path.join(__dirname, "..", "uploads");
       await fs.access(uploadsDir);
       health.checks.uploads = {
         status: "OK",
