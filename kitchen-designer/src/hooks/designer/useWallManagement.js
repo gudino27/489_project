@@ -279,10 +279,14 @@ export const useWallManagement = ({
 
     const preset = presets[presetType];
     if (preset) {
+      // Update originalWalls to match the preset - walls removed by preset
+      // are treated as "never existed" so user isn't charged for their removal
+      // Only walls that exist in the preset are considered "original"
       setCurrentRoomData({
         ...currentRoomData,
         walls: preset.walls,
-        removedWalls: preset.removedWalls,
+        removedWalls: [], // No removed walls since preset defines the starting layout
+        originalWalls: preset.walls, // Only preset walls are "original" - removing them later will cost
         elements: [], // Clear existing elements when changing floor plan
       });
       setShowFloorPlanPresets(false);
