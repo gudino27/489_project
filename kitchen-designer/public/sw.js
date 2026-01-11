@@ -40,6 +40,13 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// Listen for skip waiting message from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
 
@@ -106,7 +113,7 @@ function isStaticAsset(url) {
 
 // API request handler - Network-first with timeout
 async function handleAPIRequest(request) {
-  const timeoutDuration = 3000; // 3 seconds
+  const timeoutDuration = 10000; // 10 seconds - increased for slower connections
 
   try {
     // Create timeout promise
@@ -135,7 +142,7 @@ async function handleAPIRequest(request) {
       return cachedResponse;
     }
 
-    // Return error response for API calls
+    // Return error response for API calls with CORS headers
     return new Response(
       JSON.stringify({
         error: 'Network unavailable',
@@ -144,7 +151,11 @@ async function handleAPIRequest(request) {
       }),
       {
         status: 503,
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': 'https://gudinocustom.com',
+          'Access-Control-Allow-Credentials': 'true'
+        }
       }
     );
   }

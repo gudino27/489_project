@@ -133,12 +133,9 @@
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New content is available, show update notification
-
-                    // Optional: Show user notification about update
-                    if (window.confirm('New version available! Refresh to update?')) {
-                      window.location.reload();
-                    }
+                    // New service worker is ready - auto-activate and refresh
+                    // Tell the new SW to skip waiting and take over immediately
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
                   }
                 });
               }
@@ -148,9 +145,17 @@
           });
       });
 
+      // When the new service worker takes control, refresh the page automatically
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
-
         if (event.data.type === 'CACHE_UPDATED') {
         }
       });

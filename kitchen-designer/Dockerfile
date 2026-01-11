@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Accept git commit as build arg for cache versioning
+ARG GIT_COMMIT=dev
+
 WORKDIR /app
 
 # Copy package files
@@ -11,6 +14,9 @@ RUN npm install
 
 # Copy application files
 COPY . .
+
+# Inject git commit into service worker cache name for automatic cache busting
+RUN sed -i "s/gudino-admin-v[0-9]*/gudino-admin-${GIT_COMMIT}/" public/sw.js
 
 # Build the React app
 RUN npm run build
