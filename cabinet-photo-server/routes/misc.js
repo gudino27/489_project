@@ -502,9 +502,9 @@ router.get("/robots.txt", (req, res) => {
 # RIGHTS UNDER ARTICLE 4 OF THE EUROPEAN UNION DIRECTIVE 2019/790 ON COPYRIGHT
 # AND RELATED RIGHTS IN THE DIGITAL SINGLE MARKET.
 # BEGIN Cloudflare Managed content
-User-Agent: *
-Content-Signal: search=yes,ai-train=no
-Allow: /
+# User-Agent: *
+# Content-Signal: search=yes,ai-train=no
+# Allow: /
 User-agent: Amazonbot
 Disallow: /
 User-agent: Applebot-Extended
