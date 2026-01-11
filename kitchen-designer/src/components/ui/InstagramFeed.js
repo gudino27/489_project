@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Instagram, AlertCircle } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
@@ -13,21 +13,52 @@ const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com'
  * - Loading and error states
  * - Configurable post limit
  * - Link to full Instagram profile
- * 
+ * - Lazy loading with Intersection Observer (loads only when visible)
+ *
  * Note: We use iframe embeds (/embed/) instead of embed.js to avoid
  * tracking prevention issues and Invariant Violation errors
  */
 const InstagramFeed = ({ limit = 6, showTitle = true, className = '' }) => {
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start false - only load when visible
   const [error, setError] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef(null);
 
   // Instagram profile URL
   const INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/gudinocustomwoodworking?igsh=MWNqZjhyaWtjOGhcg==';
 
+  // Intersection Observer for lazy loading - only load when section is visible
   useEffect(() => {
-    loadPosts();
-  }, []);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !isVisible) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '200px', // Start loading 200px before visible
+        threshold: 0.01
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  // Only load posts when component becomes visible
+  useEffect(() => {
+    if (isVisible) {
+      loadPosts();
+    }
+  }, [isVisible]);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -78,18 +109,37 @@ const InstagramFeed = ({ limit = 6, showTitle = true, className = '' }) => {
     }
   };
 
-  // Don't render anything if there are no posts and not loading
-  if (!loading && posts.length === 0) {
+  // Don't render anything if visible and there are no posts and not loading
+  if (isVisible && !loading && posts.length === 0) {
     return null;
   }
 
   return (
-    <div 
-      className={`instagram-feed ${className}`} 
-      style={{ 
-        padding: '4rem 1rem'
+    <div
+      ref={containerRef}
+      className={`instagram-feed ${className}`}
+      style={{
+        padding: '4rem 1rem',
+        minHeight: isVisible ? 'auto' : '400px' // Reserve space before loading
       }}
     >
+      {/* Placeholder skeleton shown before content is loaded */}
+      {!isVisible && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '300px',
+          color: '#9CA3AF'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <Instagram size={48} style={{ opacity: 0.3 }} />
+            <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>Instagram Feed</p>
+          </div>
+        </div>
+      )}
+
+      {isVisible && (
       <div style={{ maxWidth: 'auto', margin: '0 auto' }}>
         
         {/* Header Card */}
@@ -336,7 +386,7 @@ const InstagramFeed = ({ limit = 6, showTitle = true, className = '' }) => {
                   borderRadius: '50px',
                   fontWeight: '600',
                   fontSize: '1rem',
-                  transition: 'all 0.3s ease',
+                  transition: 'transform 0.3s ease, border-color 0.3s ease, color 0.3s ease',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                 }}
                 onMouseEnter={(e) => {
@@ -359,6 +409,7 @@ const InstagramFeed = ({ limit = 6, showTitle = true, className = '' }) => {
           </>
         )}
       </div>
+      )}
     </div>
   );
 };

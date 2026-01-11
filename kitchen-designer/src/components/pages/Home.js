@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
 import SEO from '../ui/SEO';
@@ -7,6 +7,18 @@ import InstagramFeed from '../ui/InstagramFeed';
 import { useLanguage } from '../../contexts/LanguageContext';
 import '../css/home.css';
 import { useAnalytics } from '../../hooks/useAnalytics';
+
+// Throttle utility for performance optimization
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
 
 const Home = () => {
   // Analytics tracking
@@ -19,6 +31,8 @@ const Home = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isWorkTypesOpen, setIsWorkTypesOpen] = useState(false);
   const [visibleQuotes, setVisibleQuotes] = useState([]);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const visibleQuotesRef = useRef(visibleQuotes);
 
   const workTypes = [
     { title: t('home.workTypes.kitchen'), description: t('home.workTypes.kitchenDesc') },
@@ -34,13 +48,18 @@ const Home = () => {
     setIsWorkTypesOpen(!isWorkTypesOpen);
   };
 
+  // Keep ref in sync with state for use in throttled callback
+  useEffect(() => {
+    visibleQuotesRef.current = visibleQuotes;
+  }, [visibleQuotes]);
+
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
     const handleScroll = () => {
-      if (!isMobile) {
+      if (window.innerWidth > 768) {
         setScrollY(window.scrollY);
       }
 
@@ -50,23 +69,26 @@ const Home = () => {
         const rect = quote.getBoundingClientRect();
         const isInView = rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
 
-        if (isInView && !visibleQuotes.includes(index)) {
+        if (isInView && !visibleQuotesRef.current.includes(index)) {
           setVisibleQuotes(prev => [...prev, index]);
           quote.classList.add('animate-in');
         }
       });
     };
 
+    // Throttle scroll handler to run at most every 100ms for better performance
+    const throttledScroll = throttle(handleScroll, 100);
+
     checkIfMobile();
     handleScroll(); // Check on mount
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', throttledScroll, { passive: true });
     window.addEventListener('resize', checkIfMobile);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', throttledScroll);
       window.removeEventListener('resize', checkIfMobile);
     };
-  }, [isMobile, visibleQuotes]);
+  }, []);
 
   return (
     <>
@@ -89,11 +111,24 @@ const Home = () => {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload={isMobile ? "none" : "metadata"}
+            poster="/home-page-images/hero-poster.jpg"
+            onCanPlay={() => setVideoLoaded(true)}
             onError={(e) => console.warn('Video failed to load:', e)}
+            style={{ opacity: videoLoaded ? 1 : 0.7, transition: 'opacity 0.5s ease' }}
           >
-            <source src="/videos/woodworking-hero.webm" type="video/webm" />
-            <source src="/videos/woodworking-hero.mp4" type="video/mp4" />
+            {/* Mobile-optimized video sources (smaller file size) */}
+            {isMobile ? (
+              <>
+                <source src="/videos/woodworking-hero-mobile.webm" type="video/webm" />
+                <source src="/videos/woodworking-hero-mobile.mp4" type="video/mp4" />
+              </>
+            ) : (
+              <>
+                <source src="/videos/woodworking-hero.webm" type="video/webm" />
+                <source src="/videos/woodworking-hero.mp4" type="video/mp4" />
+              </>
+            )}
             Your browser does not support the video tag.
           </video>
         </div>
@@ -151,7 +186,14 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.03}px)` }}>
-            <img src="/home-page-images/kitchen-island.jpeg" alt="Kitchen Island" loading="lazy" width="1920" height="1280" />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/home-page-images/kitchen-island-600.webp 600w, /home-page-images/kitchen-island-1200.webp 1200w, /home-page-images/kitchen-island.webp 1920w"
+                sizes="100vw"
+              />
+              <img src="/home-page-images/kitchen-island.jpeg" alt="Kitchen Island" loading="lazy" decoding="async" width="1920" height="1280" />
+            </picture>
           </div>
         </section>
 
@@ -179,7 +221,14 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image zoomed-out" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.015}px)` }}>
-            <img src="/home-page-images/kitchen.jpg" alt="Kitchen" loading="lazy" width="1920" height="1280" />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/home-page-images/kitchen-600.webp 600w, /home-page-images/kitchen-1200.webp 1200w, /home-page-images/kitchen.webp 1920w"
+                sizes="100vw"
+              />
+              <img src="/home-page-images/kitchen.jpg" alt="Kitchen" loading="lazy" decoding="async" width="1920" height="1280" />
+            </picture>
           </div>
         </section>
 
@@ -230,7 +279,14 @@ const Home = () => {
 
         <section className="image-section parallax-section">
           <div className="parallax-image" style={{ transform: isMobile ? 'none' : `translateY(${scrollY * 0.01}px)` }}>
-            <img src="/home-page-images/blueprint.jpg" alt="Blueprint" loading="lazy" width="1920" height="1280" />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/home-page-images/blueprint-600.webp 600w, /home-page-images/blueprint-1200.webp 1200w, /home-page-images/blueprint.webp 1920w"
+                sizes="100vw"
+              />
+              <img src="/home-page-images/blueprint.jpg" alt="Blueprint" loading="lazy" decoding="async" width="1920" height="1280" />
+            </picture>
           </div>
         </section>
 

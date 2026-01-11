@@ -26,9 +26,10 @@
   background: #a8a8a8;
 }
 
-/* Smooth transitions - exclude SVG elements during dragging */
-*:not(svg):not(svg *) {
-  transition: all 0.2s ease-in-out;
+/* GPU-accelerated transitions for interactive elements only */
+/* Removed global transition: all rule - it caused 45+ non-composited animations */
+button, a, .nav-link, .cta-button {
+  transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
 }
 
 /* Only apply transitions when NOT dragging */

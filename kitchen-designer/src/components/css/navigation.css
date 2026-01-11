@@ -7,7 +7,7 @@
     padding: 0.5rem 1rem;
     height: 80px;
     min-height: 80px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     background: rgba(0, 0, 0, 0.85) !important;
@@ -56,7 +56,7 @@
 
 .nav-link {
     position: relative;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
     margin: 0 8px;
     font-weight: 500;
     z-index: 2;
@@ -93,7 +93,7 @@
 .nav-link p {
     font-size: 18px;
     margin: 0;
-    transition: all 0.3s ease;
+    transition: color 0.3s ease;
     position: relative;
     z-index: 2;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -107,7 +107,7 @@
     width: 0;
     height: 2px;
     background: linear-gradient(90deg, #ffffff, #e0e0e0);
-    transition: all 0.3s ease;
+    transition: width 0.3s ease;
     transform: translateX(-50%);
     z-index: 2;
 }
@@ -142,7 +142,7 @@
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     border-radius: 6px;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
     position: relative;
     overflow: hidden;
     z-index: 2;
@@ -349,7 +349,7 @@ body {
     min-width: 65px !important;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    transition: all 0.3s ease !important;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease !important;
     position: relative;
     z-index: 1001;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -390,7 +390,7 @@ body {
 .navbar .dropdown-toggle {
     /* Make it look like other nav-links */
     position: relative;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
     margin: 0 8px;
     font-weight: 500;
     z-index: 2;
@@ -428,7 +428,7 @@ body {
 .navbar .dropdown-toggle p {
     font-size: 18px;
     margin: 0;
-    transition: all 0.3s ease;
+    transition: color 0.3s ease;
     position: relative;
     z-index: 2;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -442,7 +442,7 @@ body {
     width: 0;
     height: 2px;
     background: linear-gradient(90deg, #ffffff, #e0e0e0);
-    transition: all 0.3s ease;
+    transition: width 0.3s ease;
     transform: translateX(-50%);
     z-index: 2;
 }
@@ -491,7 +491,7 @@ body {
 
 .navbar .dropdown-item {
     color: #ffffff;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, padding-left 0.3s ease;
     background: transparent;
     border: none;
     display: block;
