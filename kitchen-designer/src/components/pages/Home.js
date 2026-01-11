@@ -317,9 +317,6 @@ const Home = () => {
             </div>
           </div>
         </section>
-
-        {/* Instagram Feed Section */}
-        <InstagramFeed limit={6} showTitle={true} />
       </div>
       <Footer />
     </>
