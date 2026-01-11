@@ -1,12 +1,10 @@
 # Build stage
 FROM node:20-alpine AS builder
 
-# Add fallback Alpine repositories to handle DNS issues
+# Add fallback Alpine repositories to handle DNS issues (HTTPS only for reliability)
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.20/main" > /etc/apk/repositories && \
     echo "https://dl-cdn.alpinelinux.org/alpine/v3.20/community" >> /etc/apk/repositories && \
-    echo "http://dl-4.alpinelinux.org/alpine/v3.20/main" >> /etc/apk/repositories && \
-    echo "http://dl-4.alpinelinux.org/alpine/v3.20/community" >> /etc/apk/repositories && \
-    apk update
+    (apk update || true)
 
 # Install build dependencies for SQLite
 RUN apk add --no-cache python3 py3-pip py3-setuptools make g++ sqlite-dev
@@ -24,12 +22,10 @@ COPY . .
 # Production stage
 FROM node:20-alpine
 
-# Add fallback Alpine repositories to handle DNS issues
+# Add fallback Alpine repositories to handle DNS issues (HTTPS only for reliability)
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.20/main" > /etc/apk/repositories && \
     echo "https://dl-cdn.alpinelinux.org/alpine/v3.20/community" >> /etc/apk/repositories && \
-    echo "http://dl-4.alpinelinux.org/alpine/v3.20/main" >> /etc/apk/repositories && \
-    echo "http://dl-4.alpinelinux.org/alpine/v3.20/community" >> /etc/apk/repositories && \
-    apk update
+    (apk update || true)
 
 # Install runtime dependencies including Chromium for Puppeteer and FFmpeg for video processing
 RUN apk add --no-cache sqlite chromium ffmpeg \
