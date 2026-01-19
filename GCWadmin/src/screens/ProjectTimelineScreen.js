@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { Calendar, Clock, Users } from 'lucide-react-native';
 import ContentGlass from '../components/ContentGlass';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useAuth } from '../contexts/AuthContext';
-import * as timelinesApi from '../api/timelines';
 
 const TABS = [
   { id: 'timelines', label: 'Timelines', IconComponent: Calendar },
@@ -23,9 +20,7 @@ const TABS = [
 
 const ProjectTimelineScreen = () => {
   const { t } = useLanguage();
-  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('timelines');
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
