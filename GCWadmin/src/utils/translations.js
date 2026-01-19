@@ -1171,6 +1171,25 @@ const translations = {
     "common.success": "Success",
     "common.coming_soon": "Coming Soon",
 
+    // Instagram Manager
+    "instagram.title": "Instagram Manager",
+    "instagram.subtitle": "Manage Instagram posts and settings",
+    "instagram.fetchNew": "Fetch New Posts",
+    "instagram.noPosts": "No Instagram posts found",
+    "instagram.noCaption": "No caption",
+    "instagram.accessToken": "Access Token",
+    "instagram.accessTokenPlaceholder": "Enter Instagram API access token",
+    "instagram.loadError": "Failed to load Instagram data",
+    "instagram.fetchSuccess": "Instagram posts fetched successfully",
+    "instagram.fetchError": "Failed to fetch Instagram posts",
+    "instagram.toggleError": "Failed to toggle post visibility",
+    "instagram.deleteConfirmTitle": "Delete Post",
+    "instagram.deleteConfirmMessage": "Are you sure you want to delete this post?",
+    "instagram.deleteSuccess": "Post deleted successfully",
+    "instagram.deleteError": "Failed to delete post",
+    "instagram.settingsSaved": "Settings saved successfully",
+    "instagram.settingsError": "Failed to save settings",
+
     // More Screen
     "more.title": "More",
     "more.employees": "Employees",
@@ -3354,6 +3373,25 @@ const translations = {
     "common.error": "Error",
     "common.success": "Éxito",
     "common.coming_soon": "Próximamente",
+
+    // Instagram Manager (Administrador de Instagram)
+    "instagram.title": "Administrador de Instagram",
+    "instagram.subtitle": "Gestionar publicaciones y configuración de Instagram",
+    "instagram.fetchNew": "Obtener Nuevas Publicaciones",
+    "instagram.noPosts": "No se encontraron publicaciones de Instagram",
+    "instagram.noCaption": "Sin descripción",
+    "instagram.accessToken": "Token de Acceso",
+    "instagram.accessTokenPlaceholder": "Ingrese el token de acceso de la API de Instagram",
+    "instagram.loadError": "Error al cargar datos de Instagram",
+    "instagram.fetchSuccess": "Publicaciones de Instagram obtenidas exitosamente",
+    "instagram.fetchError": "Error al obtener publicaciones de Instagram",
+    "instagram.toggleError": "Error al cambiar la visibilidad de la publicación",
+    "instagram.deleteConfirmTitle": "Eliminar Publicación",
+    "instagram.deleteConfirmMessage": "¿Está seguro de que desea eliminar esta publicación?",
+    "instagram.deleteSuccess": "Publicación eliminada exitosamente",
+    "instagram.deleteError": "Error al eliminar publicación",
+    "instagram.settingsSaved": "Configuración guardada exitosamente",
+    "instagram.settingsError": "Error al guardar configuración",
 
     // More Screen (Pantalla de Más)
     "more.title": "Más",
