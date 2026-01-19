@@ -32,9 +32,9 @@ const Contact = () => {
     email: "Info@gudinocustom.com",
     address: "70 Ray Rd, Sunnyside, WA 98944",
     hours: {
-      weekdays: "Monday - Friday: 7:00 AM - 5:00 PM",
-      saturday: "Saturday: 8:00 AM - 5:00 PM",
-      sunday: "Sunday: Closed"
+      weekdays: t('contact.hours.weekdays'),
+      saturday: t('contact.hours.saturday'),
+      sunday: t('contact.hours.sunday')
     }
   };
 
@@ -132,7 +132,7 @@ const Contact = () => {
                   <h3>{t('contact.callUs')}</h3>
                   <div className="phone-options">
                     <div className="phone-option">
-                      <span className="language-label">English</span>
+                      <span className="language-label">{t('contact.languageLabel.english')}</span>
                       <div className="contact-detail-row">
                         <p className="contact-detail">{contactInfo.phone.english}</p>
                         <button
@@ -151,7 +151,7 @@ const Contact = () => {
                       <span className="card-action" onClick={handleEnglishPhoneClick}>{t('contact.clickToCall')}</span>
                     </div>
                     <div className="phone-option">
-                      <span className="language-label">Español</span>
+                      <span className="language-label">{t('contact.languageLabel.spanish')}</span>
                       <div className="contact-detail-row">
                         <p className="contact-detail">{contactInfo.phone.spanish}</p>
                         <button
@@ -278,7 +278,7 @@ const Contact = () => {
                       <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                         <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
                       </svg>
-                      <span>Get Directions</span>
+                      <span>{t('contact.getDirectionsButton')}</span>
                     </button>
                   </>
                 )}

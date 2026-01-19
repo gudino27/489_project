@@ -2,12 +2,15 @@ import "../css/sms-compliance.css";
 import Collapsible from "../ui/Collapsible";
 import Navigation from "../ui/Navigation";
 import SEO from "../ui/SEO";
+import { useLanguage } from "../../utils/LanguageContext";
 
 const WhyChooseUs = () => {
+  const { t } = useLanguage();
+  
   return (
     <>
       <SEO
-        title="Why Choose Gudino Custom Woodworking"
+        title={t('whyChooseUs.title')}
         description="Discover why homeowners choose Gudino Custom for their kitchen and bathroom projects. Expert craftsmanship, quality materials, professional installation, and exceptional customer service."
         keywords="why choose us, custom woodworking benefits, quality cabinets, professional installation, expert craftsmanship, Washington cabinet maker"
         canonical="https://gudinocustom.com/why-choose-us"
@@ -17,74 +20,66 @@ const WhyChooseUs = () => {
       <div style={{ height: "1vh" }}></div>
       <div className="sms-compliance-container">
         <div className="sms-content">
-          <h1 className="sms-header">Why Choose Gudino Custom Woodworking</h1>
+          <h1 className="sms-header">{t('whyChooseUs.title')}</h1>
           <p>
-            <em>Experience the difference of custom craftsmanship and professional installation</em>
+            <em>{t('whyChooseUs.subtitle')}</em>
           </p>
 
-          <Collapsible title="What Sets Us Apart" defaultOpen={true}>
+          <Collapsible title={t('whyChooseUs.setsApart.title')} defaultOpen={true}>
             <p>
-              We handle everything from design to installation with experienced craftsmen, so you get
-              consistent quality and precision throughout your entire project.
+              {t('whyChooseUs.setsApart.description')}
             </p>
 
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Everything Handled In-House</strong>
+                <strong>{t('whyChooseUs.setsApart.inHouse.title')}</strong>
                 <p>
-                  Every step from design to installation is done by our experienced craftsmen.
-                  No third parties, just consistent quality and precision.
+                  {t('whyChooseUs.setsApart.inHouse.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Perfect Fit, Every Time</strong>
+                <strong>{t('whyChooseUs.setsApart.perfectFit.title')}</strong>
                 <p>
-                  We measure on-site and plan carefully so your cabinets fit your space exactly.
+                  {t('whyChooseUs.setsApart.perfectFit.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Built to Last</strong>
+                <strong>{t('whyChooseUs.setsApart.builtToLast.title')}</strong>
                 <p>
-                  We use quality materials and proven construction techniques that stand up to
-                  daily use for years.
+                  {t('whyChooseUs.setsApart.builtToLast.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Direct Communication</strong>
+                <strong>{t('whyChooseUs.setsApart.directCommunication.title')}</strong>
                 <p>
-                  You work directly with our team no middlemen, no confusion. Just clear answers
-                  and responsive service.
+                  {t('whyChooseUs.setsApart.directCommunication.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Better Scheduling</strong>
+                <strong>{t('whyChooseUs.setsApart.betterScheduling.title')}</strong>
                 <p>
-                  Fewer people involved means better timelines, fewer delays, and a smoother
-                  experience overall.
+                  {t('whyChooseUs.setsApart.betterScheduling.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Quality That Lasts</strong>
+                <strong>{t('whyChooseUs.setsApart.quality.title')}</strong>
                 <p>
-                  When craftsmanship and installation are both done right, you get cabinets that
-                  look great and work well for the long haul.
+                  {t('whyChooseUs.setsApart.quality.description')}
                 </p>
               </li>
             </ul>
 
             <div className="sms-highlight-box">
-              <strong>See the Difference for Yourself</strong>
+              <strong>{t('whyChooseUs.setsApart.callToAction')}</strong>
               <br /><br />
-              If you want cabinets that are designed, built, and installed without cutting corners,
-              let's talk. Schedule a consultation and we'll walk you through how we work.
+              {t('whyChooseUs.setsApart.callToActionText')}
             </div>
           </Collapsible>
 
-          <Collapsible title="Why We're Different from Big-Box Stores">
-            <p><strong>Common Problems with Big-Box Cabinet Orders</strong></p>
+          <Collapsible title={t('whyChooseUs.bigBox.title')}>
+            <p><strong>{t('whyChooseUs.bigBox.problems')}</strong></p>
             <p>
-              Big-box stores are convenient, but cabinet orders often come with headaches that
-              can delay your project and affect the final result:
+              {t('whyChooseUs.bigBox.description')}
             </p>
 
             <ul className="sms-list">
@@ -134,61 +129,55 @@ const WhyChooseUs = () => {
             </div>
           </Collapsible>
 
-          <Collapsible title="Why Installation Matters">
-            <p><strong>What Can Go Wrong with Poor Installation</strong></p>
+          <Collapsible title={t('whyChooseUs.installation.title')}>
+            <p><strong>{t('whyChooseUs.installation.problems')}</strong></p>
             <p>
-              Great cabinets can look and perform poorly if they're not installed properly.
-              Here are some common issues:
+              {t('whyChooseUs.installation.description')}
             </p>
 
             <ul className="sms-list">
               <li style={{ marginTop: "12px" }}>
-                <strong>Cabinets That Aren't Level</strong>
+                <strong>{t('whyChooseUs.installation.notLevel.title')}</strong>
                 <p>
-                  When cabinets aren't level, doors swing open on their own, drawers stick,
-                  and everything looks crooked.
+                  {t('whyChooseUs.installation.notLevel.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Poor Wall Attachment</strong>
+                <strong>{t('whyChooseUs.installation.poorAttachment.title')}</strong>
                 <p>
-                  Cabinets that aren't secured properly can loosen over time or pull away
-                  from the wall a safety issue.
+                  {t('whyChooseUs.installation.poorAttachment.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Doors and Drawers That Don't Line Up</strong>
+                <strong>{t('whyChooseUs.installation.misaligned.title')}</strong>
                 <p>
-                  Uneven alignment causes rubbing, sticking, and gaps that look sloppy.
+                  {t('whyChooseUs.installation.misaligned.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Not Enough Support for Upper Cabinets</strong>
+                <strong>{t('whyChooseUs.installation.support.title')}</strong>
                 <p>
-                  Wall cabinets need proper support or they'll sag and separate once you
-                  start using them.
+                  {t('whyChooseUs.installation.support.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Gaps from Uneven Walls or Floors</strong>
+                <strong>{t('whyChooseUs.installation.gaps.title')}</strong>
                 <p>
-                  If the installer doesn't address uneven surfaces, you'll end up with
-                  visible gaps and a poor fit.
+                  {t('whyChooseUs.installation.gaps.description')}
                 </p>
               </li>
               <li style={{ marginTop: "12px" }}>
-                <strong>Wrong Spacing Around Appliances</strong>
+                <strong>{t('whyChooseUs.installation.appliances.title')}</strong>
                 <p>
-                  Incorrect clearances can make it hard to install appliances or use them properly.
+                  {t('whyChooseUs.installation.appliances.description')}
                 </p>
               </li>
             </ul>
 
             <div className="sms-highlight-box">
-              <strong>Protect Your Investment</strong>
+              <strong>{t('whyChooseUs.installation.callToAction')}</strong>
               <br /><br />
-              Good installation is just as important as good craftsmanship. We install your
-              cabinets correctly and securely so they look great and work well for years to come.
+              {t('whyChooseUs.installation.callToActionText')}
             </div>
           </Collapsible>
         </div>

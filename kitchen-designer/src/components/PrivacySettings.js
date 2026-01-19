@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Footer from './ui/Footer';
 import './css/sms-compliance.css';
+import { useLanguage } from '../utils/LanguageContext';
 
 const PrivacySettings = () => {
+  const { t } = useLanguage();
   const [isOptedOut, setIsOptedOut] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -30,29 +32,29 @@ const PrivacySettings = () => {
     <>
       <div className="sms-compliance-container" style={{ minHeight: '100vh', paddingTop: '80px' }}>
         <div className="sms-content">
-          <h1 className="sms-header">Privacy Settings & Opt-Out</h1>
+          <h1 className="sms-header">{t('privacySettings.title')}</h1>
 
-          <div className="sms-section-header">Current Status</div>
+          <div className="sms-section-header">{t('privacySettings.currentStatus')}</div>
           <div className={`sms-highlight-box ${isOptedOut ? 'opt-out-active' : 'opt-in-active'}`}>
-            <strong>Analytics Tracking:</strong> {isOptedOut ? 'DISABLED ✓' : 'ENABLED'}
+            <strong>{t('privacySettings.analyticsTracking')}:</strong> {isOptedOut ? t('privacySettings.disabled') : t('privacySettings.enabled')}
           </div>
 
           {showSuccess && (
             <div className="sms-highlight-box" style={{ backgroundColor: '#d4edda', borderColor: '#c3e6cb', color: '#155724', marginTop: '20px' }}>
-              ✓ Your preference has been saved successfully!
+              {t('privacySettings.preferenceSaved')}
             </div>
           )}
 
-          <div className="sms-section-header">What We Track</div>
-          <p>When analytics tracking is enabled, we collect:</p>
+          <div className="sms-section-header">{t('privacySettings.whatWeTrack')}</div>
+          <p>{t('privacySettings.trackingIntro')}</p>
           <ul className="sms-list">
-            <li>Pages you visit on our website</li>
-            <li>Time spent on each page</li>
-            <li>Approximate location (city-level)</li>
-            <li>Device and browser information</li>
+            <li>{t('privacySettings.trackingPages')}</li>
+            <li>{t('privacySettings.trackingTime')}</li>
+            <li>{t('privacySettings.trackingLocation')}</li>
+            <li>{t('privacySettings.trackingDevice')}</li>
           </ul>
 
-          <div className="sms-section-header">Your Privacy Options</div>
+          <div className="sms-section-header">{t('privacySettings.yourOptions')}</div>
 
           <div style={{ display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
             <button
@@ -69,7 +71,7 @@ const PrivacySettings = () => {
                 opacity: isOptedOut ? 0.6 : 1,
               }}
             >
-              {isOptedOut ? '✓ Already Opted Out' : 'Opt-Out of Analytics'}
+              {isOptedOut ? t('privacySettings.alreadyOptedOut') : t('privacySettings.optOutButton')}
             </button>
 
             <button
@@ -86,57 +88,54 @@ const PrivacySettings = () => {
                 opacity: !isOptedOut ? 0.6 : 1,
               }}
             >
-              {!isOptedOut ? '✓ Already Opted In' : 'Opt-In to Analytics'}
+              {!isOptedOut ? t('privacySettings.alreadyOptedIn') : t('privacySettings.optInButton')}
             </button>
           </div>
 
-          <div className="sms-section-header" style={{ marginTop: '40px' }}>How Opt-Out Works</div>
+          <div className="sms-section-header" style={{ marginTop: '40px' }}>{t('privacySettings.howOptOut')}</div>
           <p>
-            When you opt-out, we store a preference in your browser's local storage. This prevents our
-            analytics system from tracking your visits. The opt-out preference is specific to this browser
-            and device.
+            {t('privacySettings.optOutDescription')}
           </p>
           <p>
-            <strong>Important:</strong> If you clear your browser's cache/cookies or use a different browser/device,
-            you'll need to opt-out again.
+            <strong>{t('privacySettings.optOutImportant')}</strong>
           </p>
 
-          <div className="sms-section-header">Browser "Do Not Track"</div>
+          <div className="sms-section-header">{t('privacySettings.dntTitle')}</div>
           <p>
-            We also respect the "Do Not Track" (DNT) browser setting. If your browser is set to "Do Not Track",
-            we will not collect analytics data even if you haven't manually opted out on this page.
+            {t('privacySettings.dntDescription')}
           </p>
           <p>
-            Current DNT Status: <strong>{navigator.doNotTrack === '1' ? 'ENABLED ✓' : 'Not Enabled'}</strong>
+            {t('privacySettings.dntStatus')} <strong>{navigator.doNotTrack === '1' ? t('privacySettings.dntEnabled') : t('privacySettings.dntNotEnabled')}</strong>
           </p>
 
-          <div className="sms-section-header">Data Deletion Requests</div>
+          <div className="sms-section-header">{t('privacySettings.deletionTitle')}</div>
           <p>
-            If you'd like us to delete analytics data we've already collected about you, please contact us:
+            {t('privacySettings.deletionDescription')}
           </p>
           <ul className="sms-list">
-            <li><strong>Email:</strong> admin@gudinocustom.com</li>
-            <li><strong>Phone:</strong> (509) 515-4090</li>
-            <li><strong>Response Time:</strong> We'll respond within 30 days</li>
+            <li><strong>{t('privacySettings.deletionEmail')}</strong></li>
+            <li><strong>{t('privacySettings.deletionPhone')}</strong></li>
+            <li><strong>{t('privacySettings.deletionResponseTime')}</strong></li>
           </ul>
 
-          <div className="sms-section-header">What Data Gets Deleted</div>
-          <p>We automatically delete analytics data after 24 months as part of our data retention policy.</p>
+          <div className="sms-section-header">{t('privacySettings.dataRetentionTitle')}</div>
+          <p>{t('privacySettings.dataRetentionDescription')}</p>
 
-          <div className="sms-section-header">Other Privacy Options</div>
+          <div className="sms-section-header">{t('privacySettings.otherOptionsTitle')}</div>
           <p>
             <a href="/privacy" style={{ color: '#007bff', textDecoration: 'underline' }}>
-              View our complete Privacy Policy
+              {t('privacySettings.viewPrivacyPolicy')}
             </a>
           </p>
           <p>
             <a href="/contact" style={{ color: '#007bff', textDecoration: 'underline' }}>
-              Contact us with privacy questions
+              {t('privacySettings.contactPrivacy')}
             </a>
           </p>
 
           <div style={{ marginTop: '40px', padding: '20px', backgroundColor: '#868788ff', borderRadius: '5px' }}>
-            <strong>Note:</strong> Essential website functions (form submissions, and invoice access)
+            <strong>{t('privacySettings.note')}</strong>
+          </div>
           </div>
         </div>
       </div>

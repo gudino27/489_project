@@ -4,12 +4,14 @@ import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
 import SEO from '../ui/SEO';
 import '../css/sms-compliance.css';
+import { useLanguage } from '../../utils/LanguageContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
 // Instagram oEmbed Demo Page
 // This page demonstrates Instagram oEmbed integration for Meta's App Review
 const InstagramEmbed = () => {
+  const { t } = useLanguage();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,7 +105,7 @@ const InstagramEmbed = () => {
                   paddingBottom: 0,
                   fontSize: '28px'
                 }}>
-                  Instagram Gallery
+                  {t('instagram.title')}
                 </h1>
               </div>
 
@@ -113,7 +115,7 @@ const InstagramEmbed = () => {
                 maxWidth: '600px',
                 margin: '0 auto 1.5rem'
               }}>
-                Our latest custom woodworking projects, embedded directly from Instagram using Meta's oEmbed API
+                {t('instagram.subtitle')}
               </p>
 
               <a
@@ -135,7 +137,7 @@ const InstagramEmbed = () => {
                 }}
               >
                 <Instagram size={20} />
-                @gudinocustomwoodworking
+                {t('instagram.followButton')}
                 <ExternalLink size={16} />
               </a>
             </div>
@@ -152,7 +154,7 @@ const InstagramEmbed = () => {
                   }}
                 />
                 <p style={{ marginTop: '1rem', color: '#d1d5db', fontSize: '1.125rem' }}>
-                  Loading Instagram posts...
+                  {t('instagram.loading')}
                 </p>
                 <style>{`
                   @keyframes spin {
@@ -186,10 +188,10 @@ const InstagramEmbed = () => {
               }}>
                 <Instagram size={64} style={{ margin: '0 auto', color: '#6B7280' }} />
                 <p style={{ marginTop: '1rem', fontSize: '1.25rem', color: '#e5e7eb' }}>
-                  No posts available yet
+                  {t('instagram.noPosts')}
                 </p>
                 <p style={{ marginTop: '0.5rem', color: '#9ca3af' }}>
-                  Check back soon for our latest Instagram content
+                  {t('instagram.noPostsMessage')}
                 </p>
               </div>
             )}
@@ -228,7 +230,7 @@ const InstagramEmbed = () => {
                         textAlign: 'center',
                         color: '#9ca3af'
                       }}>
-                        <p>Unable to load embed</p>
+                        <p>{t('instagram.unableToLoad')}</p>
                         {post.oembed_error && (
                           <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
                             {post.oembed_error}
@@ -245,7 +247,7 @@ const InstagramEmbed = () => {
                             textDecoration: 'underline'
                           }}
                         >
-                          View on Instagram
+                          {t('instagram.viewOnInstagram')}
                         </a>
                       </div>
                     )}
@@ -257,9 +259,9 @@ const InstagramEmbed = () => {
             {/* Meta Review Info Box */}
             <div className="sms-highlight-box" style={{ marginTop: '2rem', textAlign: 'center' }}>
               <p style={{ margin: 0 }}>
-                This page demonstrates Instagram oEmbed integration using Meta's official oEmbed API.
+                {t('instagram.metaInfo')}
                 <br />
-                Posts from <strong>@gudinocustomwoodworking</strong> are embedded using the Instagram oEmbed endpoint.
+                {t('instagram.metaInfoDetail')}
               </p>
             </div>
 
@@ -294,7 +296,7 @@ const InstagramEmbed = () => {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                View More on Instagram
+                {t('instagram.viewMore')}
                 <ExternalLink size={18} />
               </a>
             </div>

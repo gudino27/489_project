@@ -1,42 +1,44 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import '../css/footer.css';
+import { useLanguage } from '../../utils/LanguageContext';
 
 const Footer = () => {
+  const { t } = useLanguage();
 
   return (
     <footer className="footer-glass">
       <div className="footer-container">
         <div className="footer-section">
           <div className="footer-text">
-            Messages sent when invoices are complete or modified
+            {t('footer.smsMessage')}
           </div>
           <div className="footer-text">
-            Text STOP to opt out • Message & data rates apply
+            {t('footer.optOut')}
           </div>
         </div>
         
         <div className="footer-section">
           <Link to="/sms-consent-verification" className="footer-link">
-            SMS Consent Info
+            {t('footer.smsConsent')}
           </Link>
           <span className="footer-separator">|</span>
           <Link to="/sms-terms" className="footer-link">
-            Terms
+            {t('footer.terms')}
           </Link>
           <span className="footer-separator">|</span>
           <Link to="/privacy" className="footer-link">
-            Privacy
+            {t('footer.privacy')}
           </Link>
           <span className="footer-separator">|</span>
           <Link to="/cabinet-Care" className="footer-link">
-            Cabinet Care
+            {t('footer.cabinetCare')}
           </Link>
         </div>
         
         
         <div className="footer-copyright">
-          © {new Date().getFullYear()} Gudino Custom Cabinets. All rights reserved.
+          {t('footer.copyright', { year: new Date().getFullYear() })}
         </div>
       </div>
     </footer>
