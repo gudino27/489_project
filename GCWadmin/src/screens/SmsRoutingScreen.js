@@ -11,15 +11,21 @@ import {
   RefreshControl,
   FlatList,
 } from 'react-native';
-import { COLORS } from '../constants/colors';
+import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
+import {
+  Settings, Users, History, Send, Phone, Plus,
+  Pencil, Trash2, Check, X, RefreshCw, MessageSquare,
+  ToggleLeft, ToggleRight, ChevronDown, AlertCircle,
+  Clock,
+} from 'lucide-react-native';
 import { ContentGlass } from '../components/GlassView';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const TABS = [
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
-  { id: 'recipients', label: 'Recipients', icon: '👥' },
-  { id: 'history', label: 'History', icon: '📜' },
+  { id: 'settings', label: 'Settings', IconComponent: Settings },
+  { id: 'recipients', label: 'Recipients', IconComponent: Users },
+  { id: 'history', label: 'History', IconComponent: History },
 ];
 
 const SmsRoutingScreen = () => {
@@ -319,7 +325,7 @@ const SmsRoutingScreen = () => {
   const renderSettingsTab = () => (
     <ScrollView
       style={styles.tabContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
     >
       <Text style={styles.sectionTitle}>SMS Settings</Text>
       {MESSAGE_TYPES.map((messageType) => {
@@ -340,7 +346,8 @@ const SmsRoutingScreen = () => {
                 onPress={() => testSmsRouting(messageType.value)}
                 disabled={loading}
               >
-                <Text style={styles.testButtonText}>🧪 Test</Text>
+                <Send size={14} color={COLORS.white} />
+                <Text style={styles.testButtonText}>Test</Text>
               </TouchableOpacity>
             </View>
 
@@ -393,7 +400,7 @@ const SmsRoutingScreen = () => {
   const renderRecipientsTab = () => (
     <ScrollView
       style={styles.tabContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
     >
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>SMS Recipients</Text>
@@ -401,7 +408,17 @@ const SmsRoutingScreen = () => {
           style={styles.addButton}
           onPress={() => setShowAddForm(!showAddForm)}
         >
-          <Text style={styles.addButtonText}>{showAddForm ? '✕ Cancel' : '➕ Add Recipient'}</Text>
+          {showAddForm ? (
+            <>
+              <X size={14} color={COLORS.white} />
+              <Text style={styles.addButtonText}>Cancel</Text>
+            </>
+          ) : (
+            <>
+              <Plus size={14} color={COLORS.white} />
+              <Text style={styles.addButtonText}>Add Recipient</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -512,7 +529,8 @@ const SmsRoutingScreen = () => {
                   style={styles.saveButton}
                   onPress={() => updateRecipient(recipient.id, recipient)}
                 >
-                  <Text style={styles.saveButtonText}>💾 Save</Text>
+                  <Check size={14} color={COLORS.white} />
+                  <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.cancelButton}
@@ -521,7 +539,8 @@ const SmsRoutingScreen = () => {
                     fetchRecipients();
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>✕ Cancel</Text>
+                  <X size={14} color={COLORS.text} />
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -530,7 +549,10 @@ const SmsRoutingScreen = () => {
               <View style={styles.recipientHeader}>
                 <View>
                   <Text style={styles.recipientName}>{recipient.name}</Text>
-                  <Text style={styles.recipientPhone}>📱 {recipient.phone_number}</Text>
+                  <View style={styles.recipientPhoneRow}>
+                    <Phone size={14} color={COLORS.textLight} />
+                    <Text style={styles.recipientPhone}>{recipient.phone_number}</Text>
+                  </View>
                   <Text style={styles.recipientType}>Type: {MESSAGE_TYPES.find((t) => t.value === recipient.message_type)?.label}</Text>
                   <Text style={styles.recipientPriority}>Priority: {recipient.priority_order}</Text>
                 </View>
@@ -540,13 +562,15 @@ const SmsRoutingScreen = () => {
                   style={styles.editButton}
                   onPress={() => setEditingRecipient(recipient.id)}
                 >
-                  <Text style={styles.editButtonText}>✏️ Edit</Text>
+                  <Pencil size={14} color={COLORS.white} />
+                  <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => deleteRecipient(recipient.id)}
                 >
-                  <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                  <Trash2 size={14} color={COLORS.white} />
+                  <Text style={styles.deleteButtonText}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -560,19 +584,34 @@ const SmsRoutingScreen = () => {
     <FlatList
       data={history}
       keyExtractor={(item) => String(item.id)}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
       renderItem={({ item }) => (
         <ContentGlass style={styles.historyCard}>
           <View style={styles.historyHeader}>
             <Text style={styles.historyType}>{MESSAGE_TYPES.find((t) => t.value === item.message_type)?.label}</Text>
             <View style={[styles.historyStatus, item.status === 'success' ? styles.historyStatusSuccess : styles.historyStatusError]}>
-              <Text style={styles.historyStatusText}>{item.status === 'success' ? '✓' : '✗'} {item.status}</Text>
+              {item.status === 'success' ? (
+                <Check size={12} color={COLORS.success} />
+              ) : (
+                <X size={12} color={COLORS.error} />
+              )}
+              <Text style={[styles.historyStatusText, item.status === 'success' ? styles.historyStatusTextSuccess : styles.historyStatusTextError]}>
+                {item.status}
+              </Text>
             </View>
           </View>
           <Text style={styles.historyRecipient}>To: {item.recipient_name} ({item.phone_number})</Text>
           <Text style={styles.historyMessage}>{item.message}</Text>
-          <Text style={styles.historyDate}>📅 {formatDate(item.sent_at)}</Text>
-          {item.error_message && <Text style={styles.historyError}>Error: {item.error_message}</Text>}
+          <View style={styles.historyDateRow}>
+            <Clock size={12} color={COLORS.textLight} />
+            <Text style={styles.historyDate}>{formatDate(item.sent_at)}</Text>
+          </View>
+          {item.error_message && (
+            <View style={styles.historyErrorRow}>
+              <AlertCircle size={12} color={COLORS.error} />
+              <Text style={styles.historyError}>Error: {item.error_message}</Text>
+            </View>
+          )}
         </ContentGlass>
       )}
       ListEmptyComponent={
@@ -601,22 +640,28 @@ const SmsRoutingScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>💬 SMS Routing</Text>
+        <View style={styles.headerTitleRow}>
+          <MessageSquare size={24} color={COLORS.primary} />
+          <Text style={styles.headerTitle}>SMS Routing</Text>
+        </View>
         <Text style={styles.headerSubtitle}>Manage SMS notification routing</Text>
       </View>
 
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={styles.tabIcon}>{tab.icon}</Text>
-            <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {TABS.map((tab) => {
+          const IconComponent = tab.IconComponent;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <IconComponent size={16} color={activeTab === tab.id ? COLORS.primary : COLORS.textLight} />
+              <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Content */}
@@ -631,20 +676,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: 16,
+    padding: SPACING[4],
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.bold,
     color: COLORS.text,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginTop: 4,
+    marginTop: SPACING[1],
   },
   tabBar: {
     backgroundColor: COLORS.white,
@@ -653,111 +703,114 @@ const styles = StyleSheet.create({
     maxHeight: 60,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+    marginHorizontal: SPACING[1],
+    borderRadius: RADIUS.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING[2],
   },
   tabActive: {
     backgroundColor: COLORS.primary + '20',
   },
-  tabIcon: {
-    fontSize: 16,
-  },
   tabLabel: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.medium,
   },
   tabLabelActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontWeight: TYPOGRAPHY.bold,
   },
   tabContent: {
     flex: 1,
-    padding: 16,
+    padding: SPACING[4],
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   addButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   addButtonText: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   settingsCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginBottom: SPACING[3],
   },
   settingsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: SPACING[4],
   },
   settingsHeaderText: {
     flex: 1,
   },
   settingsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING[1],
   },
   settingsDescription: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.textLight,
   },
   testButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   testButtonText: {
     color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.xs + 1,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   settingsRow: {
-    gap: 12,
+    gap: SPACING[3],
   },
   settingField: {
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   pickerContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING[2],
   },
   statusButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 6,
+    padding: SPACING[3],
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
@@ -768,17 +821,17 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   statusButtonText: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.text,
   },
   statusButtonTextActive: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.semibold,
   },
   modeButton: {
     flex: 1,
-    padding: 10,
-    borderRadius: 6,
+    padding: SPACING[2] + 2,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
@@ -789,206 +842,226 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   modeButtonText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.text,
   },
   modeButtonTextActive: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.semibold,
   },
   addForm: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginBottom: SPACING[4],
   },
   formTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 16,
+    marginBottom: SPACING[4],
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 8,
-    marginTop: 8,
+    marginBottom: SPACING[2],
+    marginTop: SPACING[2],
   },
   input: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 6,
-    padding: 12,
-    fontSize: 14,
-    marginBottom: 8,
+    borderRadius: RADIUS.md,
+    padding: SPACING[3],
+    fontSize: TYPOGRAPHY.sm,
+    marginBottom: SPACING[2],
   },
   radioGroup: {
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   radio: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: RADIUS.full,
     borderWidth: 2,
     borderColor: COLORS.border,
-    marginRight: 8,
+    marginRight: SPACING[2],
   },
   radioSelected: {
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primary,
   },
   radioLabel: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.text,
   },
   employeeSelector: {
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   employeeOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
-    marginRight: 8,
+    marginRight: SPACING[2],
   },
   employeeOptionSelected: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   employeeOptionText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.text,
   },
   employeeOptionTextSelected: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.semibold,
   },
   submitButton: {
     backgroundColor: COLORS.primary,
-    padding: 14,
-    borderRadius: 6,
+    padding: SPACING[3] + 2,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: SPACING[3],
   },
   submitButtonDisabled: {
     opacity: 0.5,
   },
   submitButtonText: {
     color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   recipientCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginBottom: SPACING[3],
   },
   recipientHeader: {
-    marginBottom: 12,
+    marginBottom: SPACING[3],
   },
   recipientName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING[1],
+  },
+  recipientPhoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+    marginBottom: SPACING[1],
   },
   recipientPhone: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginBottom: 2,
   },
   recipientType: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.textLight,
-    marginBottom: 2,
+    marginBottom: SPACING[1],
   },
   recipientPriority: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.textLight,
   },
   recipientActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING[2],
   },
   editButton: {
     flex: 1,
     backgroundColor: COLORS.primary,
-    padding: 10,
-    borderRadius: 6,
+    padding: SPACING[2] + 2,
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING[1],
   },
   editButtonText: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   deleteButton: {
     flex: 1,
     backgroundColor: COLORS.error,
-    padding: 10,
-    borderRadius: 6,
+    padding: SPACING[2] + 2,
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING[1],
   },
   deleteButtonText: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   saveButton: {
     flex: 1,
     backgroundColor: COLORS.success,
-    padding: 10,
-    borderRadius: 6,
+    padding: SPACING[2] + 2,
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING[1],
   },
   saveButtonText: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   cancelButton: {
     flex: 1,
     backgroundColor: COLORS.lightGray,
-    padding: 10,
-    borderRadius: 6,
+    padding: SPACING[2] + 2,
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING[1],
   },
   cancelButtonText: {
     color: COLORS.text,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   historyList: {
-    padding: 16,
+    padding: SPACING[4],
   },
   historyCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginBottom: SPACING[3],
   },
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   historyType: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
   },
   historyStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: SPACING[2],
+    paddingVertical: SPACING[1],
+    borderRadius: RADIUS.base,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   historyStatusSuccess: {
     backgroundColor: COLORS.successBg || '#d4edda',
@@ -997,35 +1070,50 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.errorBg || '#f8d7da',
   },
   historyStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.semibold,
+  },
+  historyStatusTextSuccess: {
+    color: COLORS.success,
+  },
+  historyStatusTextError: {
+    color: COLORS.error,
   },
   historyRecipient: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginBottom: 4,
+    marginBottom: SPACING[1],
   },
   historyMessage: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING[1],
+  },
+  historyDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   historyDate: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
   },
+  historyErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+    marginTop: SPACING[1],
+  },
   historyError: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.error,
-    marginTop: 4,
   },
   emptyState: {
-    padding: 32,
+    padding: SPACING[8],
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
   },
 });

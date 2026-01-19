@@ -10,20 +10,26 @@ import {
   RefreshControl,
   FlatList,
 } from 'react-native';
-import { COLORS } from '../constants/colors';
+import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '../constants';
 import { ContentGlass } from '../components/GlassView';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import {
+  BarChart3, AlertTriangle, Lock, Unlock, FileText,
+  User, Shield, RefreshCw, Clock, MapPin, CheckCircle,
+  XCircle, Activity, Eye, ChevronDown,
+} from 'lucide-react-native';
 
 const SecurityMonitorScreen = () => {
   const { token, API_BASE, getAuthHeaders, getAuthHeadersJson } = useAuth();
   const { t } = useLanguage();
 
+  // Define TABS with Lucide icon components
   const TABS = [
-    { id: 'overview', label: t('securityMonitor.overview'), icon: '📊' },
-    { id: 'failed-logins', label: t('securityMonitor.failedLogins'), icon: '⚠️' },
-    { id: 'locked-accounts', label: t('securityMonitor.lockedAccounts'), icon: '🔒' },
-    { id: 'audit-logs', label: t('securityMonitor.auditLogs'), icon: '📋' },
+    { id: 'overview', label: t('securityMonitor.overview'), icon: BarChart3 },
+    { id: 'failed-logins', label: t('securityMonitor.failedLogins'), icon: AlertTriangle },
+    { id: 'locked-accounts', label: t('securityMonitor.lockedAccounts'), icon: Lock },
+    { id: 'audit-logs', label: t('securityMonitor.auditLogs'), icon: FileText },
   ];
 
   const TIME_FILTERS = [
@@ -41,16 +47,16 @@ const SecurityMonitorScreen = () => {
     { value: 'account_locked', label: t('securityMonitor.accountLocked') },
     { value: 'account_unlocked', label: t('securityMonitor.accountUnlocked') },
   ];
-  
+
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Data states
   const [failedLogins, setFailedLogins] = useState([]);
   const [lockedAccounts, setLockedAccounts] = useState([]);
   const [activityLogs, setActivityLogs] = useState([]);
-  
+
   // Filter states
   const [timeFilter, setTimeFilter] = useState(24);
   const [actionFilter, setActionFilter] = useState('all');
@@ -63,7 +69,7 @@ const SecurityMonitorScreen = () => {
 
   useEffect(() => {
     if (!token) return;
-    
+
     if (activeTab === 'failed-logins') {
       fetchFailedLogins(timeFilter);
     } else if (activeTab === 'locked-accounts') {
@@ -199,6 +205,24 @@ const SecurityMonitorScreen = () => {
     return colors[action] || { bg: '#e2e3e5', text: '#383d41' };
   };
 
+  // Helper function to get action icon component
+  const getActionIcon = (action, size = 14) => {
+    switch (action) {
+      case 'login_success':
+        return <CheckCircle size={size} color={COLORS.success} />;
+      case 'login_failed':
+        return <XCircle size={size} color={COLORS.warning} />;
+      case 'account_locked':
+        return <Lock size={size} color={COLORS.error} />;
+      case 'account_unlocked':
+        return <Unlock size={size} color={COLORS.primary} />;
+      case 'logout':
+        return <Activity size={size} color={COLORS.textLight} />;
+      default:
+        return <Activity size={size} color={COLORS.textLight} />;
+    }
+  };
+
   const stats = {
     totalFailedAttempts: failedLogins.filter((log) => log.action === 'login_failed').length,
     lockedAccountsCount: lockedAccounts.length,
@@ -208,45 +232,63 @@ const SecurityMonitorScreen = () => {
   const renderOverviewTab = () => (
     <ScrollView
       style={styles.tabContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.error} colors={[COLORS.error]} />}
     >
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        <ContentGlass style={[styles.statCard, { borderLeftColor: '#ffc107', borderLeftWidth: 4 }]}>
+        <ContentGlass style={[styles.statCard, { borderLeftColor: COLORS.warning, borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>Failed Attempts (24h)</Text>
-          <Text style={[styles.statValue, { color: '#ffc107' }]}>{stats.totalFailedAttempts}</Text>
-          <Text style={styles.statIcon}>⚠️</Text>
+          <Text style={[styles.statValue, { color: COLORS.warning }]}>{stats.totalFailedAttempts}</Text>
+          <View style={styles.statIconContainer}>
+            <AlertTriangle size={40} color={COLORS.warning} style={{ opacity: 0.2 }} />
+          </View>
         </ContentGlass>
 
         <ContentGlass style={[styles.statCard, { borderLeftColor: COLORS.error, borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>Locked Accounts</Text>
           <Text style={[styles.statValue, { color: COLORS.error }]}>{stats.lockedAccountsCount}</Text>
-          <Text style={styles.statIcon}>🔒</Text>
+          <View style={styles.statIconContainer}>
+            <Lock size={40} color={COLORS.error} style={{ opacity: 0.2 }} />
+          </View>
         </ContentGlass>
 
         <ContentGlass style={[styles.statCard, { borderLeftColor: COLORS.primary, borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>Recent Activity</Text>
           <Text style={[styles.statValue, { color: COLORS.primary }]}>{stats.recentActivity}</Text>
-          <Text style={styles.statIcon}>📊</Text>
+          <View style={styles.statIconContainer}>
+            <BarChart3 size={40} color={COLORS.primary} style={{ opacity: 0.2 }} />
+          </View>
         </ContentGlass>
       </View>
 
       {/* Recent Failed Logins */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>⚠️ Recent Failed Logins</Text>
+        <View style={styles.sectionTitleContainer}>
+          <AlertTriangle size={18} color={COLORS.warning} />
+          <Text style={styles.sectionTitle}>Recent Failed Logins</Text>
+        </View>
         <TouchableOpacity onPress={() => fetchFailedLogins(timeFilter)} style={styles.refreshButton}>
-          <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
+          <RefreshCw size={12} color={COLORS.white} />
+          <Text style={styles.refreshButtonText}>Refresh</Text>
         </TouchableOpacity>
       </View>
 
       {failedLogins.slice(0, 10).map((log, index) => (
         <ContentGlass key={index} style={styles.logCard}>
           <View style={styles.logHeader}>
-            <Text style={styles.logUser}>👤 {log.user_name}</Text>
+            <View style={styles.logUserContainer}>
+              <User size={16} color={COLORS.text} />
+              <Text style={styles.logUser}>{log.user_name}</Text>
+            </View>
             <Text style={styles.logDate}>{formatDate(log.created_at)}</Text>
           </View>
           <Text style={styles.logDetails}>{log.details}</Text>
-          {log.ip_address && <Text style={styles.logIp}>📍 {log.ip_address}</Text>}
+          {log.ip_address && (
+            <View style={styles.logIpContainer}>
+              <MapPin size={12} color={COLORS.textLight} />
+              <Text style={styles.logIp}>{log.ip_address}</Text>
+            </View>
+          )}
         </ContentGlass>
       ))}
 
@@ -259,7 +301,10 @@ const SecurityMonitorScreen = () => {
       {/* Locked Accounts */}
       {lockedAccounts.length > 0 && (
         <>
-          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>🔒 Currently Locked Accounts</Text>
+          <View style={[styles.sectionTitleContainer, { paddingHorizontal: SPACING[4], marginTop: SPACING[5], marginBottom: SPACING[3] }]}>
+            <Lock size={18} color={COLORS.error} />
+            <Text style={styles.sectionTitle}>Currently Locked Accounts</Text>
+          </View>
           {lockedAccounts.map((account) => (
             <ContentGlass key={account.id} style={styles.lockedAccountCard}>
               <View style={styles.lockedAccountHeader}>
@@ -275,7 +320,8 @@ const SecurityMonitorScreen = () => {
                   onPress={() => unlockAccount(account.id)}
                   disabled={loading}
                 >
-                  <Text style={styles.unlockButtonText}>🔓 Unlock</Text>
+                  <Unlock size={14} color={COLORS.white} />
+                  <Text style={styles.unlockButtonText}>Unlock</Text>
                 </TouchableOpacity>
               </View>
             </ContentGlass>
@@ -307,13 +353,16 @@ const SecurityMonitorScreen = () => {
       <FlatList
         data={failedLogins}
         keyExtractor={(item, index) => String(index)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.error} colors={[COLORS.error]} />}
         renderItem={({ item }) => {
           const colors = getActionColor(item.action);
           return (
             <ContentGlass style={styles.logCard}>
               <View style={styles.logHeader}>
-                <Text style={styles.logUser}>👤 {item.user_name}</Text>
+                <View style={styles.logUserContainer}>
+                  <User size={16} color={COLORS.text} />
+                  <Text style={styles.logUser}>{item.user_name}</Text>
+                </View>
                 <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
                   <Text style={[styles.statusBadgeText, { color: colors.text }]}>
                     {item.action === 'account_locked' ? t('securityMonitor.accountLocked') : t('securityMonitor.failed')}
@@ -322,8 +371,16 @@ const SecurityMonitorScreen = () => {
               </View>
               <Text style={styles.logDetails}>{item.details}</Text>
               <View style={styles.logFooter}>
-                {item.ip_address && <Text style={styles.logIp}>📍 {item.ip_address}</Text>}
-                <Text style={styles.logDate}>{formatDate(item.created_at)}</Text>
+                {item.ip_address && (
+                  <View style={styles.logIpContainer}>
+                    <MapPin size={12} color={COLORS.textLight} />
+                    <Text style={styles.logIp}>{item.ip_address}</Text>
+                  </View>
+                )}
+                <View style={styles.logDateContainer}>
+                  <Clock size={12} color={COLORS.textLight} />
+                  <Text style={styles.logDate}>{formatDate(item.created_at)}</Text>
+                </View>
               </View>
             </ContentGlass>
           );
@@ -342,17 +399,23 @@ const SecurityMonitorScreen = () => {
     <FlatList
       data={lockedAccounts}
       keyExtractor={(item) => String(item.id)}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.error} colors={[COLORS.error]} />}
       renderItem={({ item }) => (
         <ContentGlass style={styles.lockedAccountCard}>
           <View style={styles.lockedAccountHeader}>
             <View style={styles.lockedAccountInfo}>
-              <Text style={styles.lockedAccountName}>🔒 {item.full_name || item.username}</Text>
+              <View style={styles.lockedAccountNameContainer}>
+                <Lock size={16} color={COLORS.error} />
+                <Text style={styles.lockedAccountName}>{item.full_name || item.username}</Text>
+              </View>
               <Text style={styles.lockedAccountEmail}>{item.email}</Text>
               <Text style={styles.lockedAccountDetails}>
                 {item.failed_login_attempts} failed attempts
               </Text>
-              <Text style={styles.lockedAccountDate}>Until: {formatDate(item.account_locked_until)}</Text>
+              <View style={styles.lockedAccountDateContainer}>
+                <Clock size={12} color={COLORS.textLight} />
+                <Text style={styles.lockedAccountDate}>Until: {formatDate(item.account_locked_until)}</Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.unlockButton}
@@ -362,7 +425,10 @@ const SecurityMonitorScreen = () => {
               {loading ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.unlockButtonText}>🔓 Unlock</Text>
+                <>
+                  <Unlock size={14} color={COLORS.white} />
+                  <Text style={styles.unlockButtonText}>Unlock</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -370,7 +436,7 @@ const SecurityMonitorScreen = () => {
       )}
       ListEmptyComponent={
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🛡️</Text>
+          <Shield size={64} color={COLORS.textLight} style={{ opacity: 0.5, marginBottom: SPACING[4] }} />
           <Text style={styles.emptyText}>No locked accounts</Text>
           <Text style={styles.emptySubtext}>All accounts are currently unlocked</Text>
         </View>
@@ -401,23 +467,35 @@ const SecurityMonitorScreen = () => {
       <FlatList
         data={activityLogs}
         keyExtractor={(item, index) => String(index)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.error} colors={[COLORS.error]} />}
         renderItem={({ item }) => {
           const colors = getActionColor(item.action);
           return (
             <ContentGlass style={styles.logCard}>
               <View style={styles.logHeader}>
-                <Text style={styles.logUser}>👤 {item.user_name || 'System'}</Text>
+                <View style={styles.logUserContainer}>
+                  <User size={16} color={COLORS.text} />
+                  <Text style={styles.logUser}>{item.user_name || 'System'}</Text>
+                </View>
                 <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
-                  <Text style={[styles.statusBadgeText, { color: colors.text }]}>
+                  {getActionIcon(item.action, 12)}
+                  <Text style={[styles.statusBadgeText, { color: colors.text, marginLeft: 4 }]}>
                     {item.action.replace(/_/g, ' ').toUpperCase()}
                   </Text>
                 </View>
               </View>
               {item.details && <Text style={styles.logDetails}>{item.details}</Text>}
               <View style={styles.logFooter}>
-                {item.ip_address && <Text style={styles.logIp}>📍 {item.ip_address}</Text>}
-                <Text style={styles.logDate}>{formatDate(item.created_at)}</Text>
+                {item.ip_address && (
+                  <View style={styles.logIpContainer}>
+                    <MapPin size={12} color={COLORS.textLight} />
+                    <Text style={styles.logIp}>{item.ip_address}</Text>
+                  </View>
+                )}
+                <View style={styles.logDateContainer}>
+                  <Clock size={12} color={COLORS.textLight} />
+                  <Text style={styles.logDate}>{formatDate(item.created_at)}</Text>
+                </View>
               </View>
             </ContentGlass>
           );
@@ -451,22 +529,28 @@ const SecurityMonitorScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🛡️ Security Monitor</Text>
+        <View style={styles.headerTitleContainer}>
+          <Shield size={24} color={COLORS.primary} />
+          <Text style={styles.headerTitle}>Security Monitor</Text>
+        </View>
         <Text style={styles.headerSubtitle}>Monitor security events and manage accounts</Text>
       </View>
 
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={styles.tabIcon}>{tab.icon}</Text>
-            <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {TABS.map((tab) => {
+          const IconComponent = tab.icon;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <IconComponent size={16} color={activeTab === tab.id ? COLORS.error : COLORS.textLight} />
+              <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Content */}
@@ -481,20 +565,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: 16,
+    padding: SPACING[4],
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY['2xl'],
+    fontWeight: TYPOGRAPHY.bold,
     color: COLORS.text,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginTop: 4,
+    marginTop: SPACING[1],
+    marginLeft: SPACING[8], // Offset to align with title text
   },
   tabBar: {
     backgroundColor: COLORS.white,
@@ -503,133 +593,151 @@ const styles = StyleSheet.create({
     maxHeight: 60,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
+    paddingHorizontal: SPACING[4],
+    paddingVertical: SPACING[3],
+    marginHorizontal: SPACING[1],
+    borderRadius: RADIUS.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING[2],
   },
   tabActive: {
     backgroundColor: COLORS.error + '20',
   },
-  tabIcon: {
-    fontSize: 16,
-  },
   tabLabel: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.medium,
   },
   tabLabelActive: {
     color: COLORS.error,
-    fontWeight: '700',
+    fontWeight: TYPOGRAPHY.bold,
   },
   tabContent: {
     flex: 1,
   },
   statsContainer: {
-    padding: 16,
-    gap: 12,
+    padding: SPACING[4],
+    gap: SPACING[3],
   },
   statCard: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
     position: 'relative',
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.textLight,
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: TYPOGRAPHY['4xl'] - 4,
+    fontWeight: TYPOGRAPHY.bold,
+    marginBottom: SPACING[1],
   },
-  statIcon: {
+  statIconContainer: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    fontSize: 40,
-    opacity: 0.2,
+    top: SPACING[4],
+    right: SPACING[4],
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    paddingHorizontal: 16,
-    marginBottom: 12,
   },
   refreshButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   refreshButtonText: {
     color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   logCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
   },
   logHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
-  logUser: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
+  logUserContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
     flex: 1,
   },
+  logUser: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
+    color: COLORS.text,
+  },
   logDetails: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   logFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  logIpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+  },
   logIp: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
   },
+  logDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
+  },
   logDate: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: SPACING[2],
+    paddingVertical: SPACING[1],
+    borderRadius: RADIUS.base,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.xs - 1,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   lockedAccountCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    borderRadius: RADIUS.xl,
+    padding: SPACING[4],
+    marginHorizontal: SPACING[4],
+    marginBottom: SPACING[3],
     borderLeftWidth: 4,
     borderLeftColor: COLORS.error,
   },
@@ -640,98 +748,106 @@ const styles = StyleSheet.create({
   },
   lockedAccountInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: SPACING[3],
+  },
+  lockedAccountNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[2],
+    marginBottom: SPACING[1],
   },
   lockedAccountName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 4,
   },
   lockedAccountEmail: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginBottom: 4,
+    marginBottom: SPACING[1],
   },
   lockedAccountDetails: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
-    marginBottom: 2,
+    marginBottom: SPACING[1],
+  },
+  lockedAccountDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[1],
   },
   lockedAccountDate: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textLight,
   },
   unlockButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
     minWidth: 80,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING[1],
   },
   unlockButtonText: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
   },
   filterBar: {
-    padding: 16,
+    padding: SPACING[4],
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: TYPOGRAPHY.semibold,
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: SPACING[2],
   },
   filterScroll: {
     flexGrow: 0,
   },
   filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: SPACING[3],
+    paddingVertical: SPACING[2],
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
-    marginRight: 8,
+    marginRight: SPACING[2],
   },
   filterButtonActive: {
     backgroundColor: COLORS.error,
     borderColor: COLORS.error,
   },
   filterButtonText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.xs + 1,
     color: COLORS.text,
   },
   filterButtonTextActive: {
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.semibold,
   },
   listContent: {
-    paddingVertical: 16,
+    paddingVertical: SPACING[4],
   },
   emptyState: {
-    padding: 48,
+    padding: SPACING[12],
     alignItems: 'center',
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5,
-  },
   emptyText: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.base,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.medium,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.sm,
     color: COLORS.textLight,
-    marginTop: 4,
+    marginTop: SPACING[1],
   },
 });
 

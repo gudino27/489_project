@@ -198,10 +198,10 @@ const UserManagementScreen = () => {
   };
 
   const handleCancelInvitation = async (invitationId) => {
-    Alert.alert('Cancel Invitation', 'Are you sure you want to cancel this invitation?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('userManagement.cancelInvitation'), t('userManagement.cancelInvitationConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Confirm',
+        text: t('common.confirm'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -218,7 +218,7 @@ const UserManagementScreen = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return t('userManagement.never');
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -230,9 +230,9 @@ const UserManagementScreen = () => {
   };
 
   const getInvitationStatus = (invitation) => {
-    if (invitation.status === 'completed') return { text: 'Completed', color: COLORS.success };
-    if (invitation.status === 'expired') return { text: 'Expired', color: COLORS.danger };
-    return { text: 'Pending', color: COLORS.warning };
+    if (invitation.status === 'completed') return { text: t('userManagement.statusCompleted'), color: COLORS.success };
+    if (invitation.status === 'expired') return { text: t('userManagement.statusExpired'), color: COLORS.danger };
+    return { text: t('userManagement.statusPending'), color: COLORS.warning };
   };
 
   const handleUpdateUser = async () => {
@@ -386,7 +386,7 @@ const UserManagementScreen = () => {
 
                 <View style={styles.userCardMeta}>
                   <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Role</Text>
+                    <Text style={styles.metaLabel}>{t('userManagement.role')}</Text>
                     <View
                       style={[
                         styles.roleBadge,
@@ -401,13 +401,13 @@ const UserManagementScreen = () => {
                         <User size={14} color={COLORS.white} />
                       )}
                       <Text style={styles.roleBadgeText}>
-                        {user.role === 'super_admin' ? t('userManagement.superAdmin') : user.role === 'employee' ? 'Employee' : t('userManagement.admin')}
+                        {user.role === 'super_admin' ? t('userManagement.superAdmin') : user.role === 'employee' ? t('userManagement.employee') : t('userManagement.admin')}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Last Activity</Text>
+                    <Text style={styles.metaLabel}>{t('userManagement.lastActivity')}</Text>
                     <Text style={styles.metaValue}>{formatDate(user.last_activity)}</Text>
                   </View>
                 </View>
@@ -453,7 +453,7 @@ const UserManagementScreen = () => {
 
                   <View style={styles.userCardMeta}>
                     <View style={styles.metaItem}>
-                      <Text style={styles.metaLabel}>Role</Text>
+                      <Text style={styles.metaLabel}>{t('userManagement.role')}</Text>
                       <View
                         style={[
                           styles.roleBadge,
@@ -468,13 +468,13 @@ const UserManagementScreen = () => {
                           <User size={14} color={COLORS.white} />
                         )}
                         <Text style={styles.roleBadgeText}>
-                          {invitation.role === 'super_admin' ? t('userManagement.superAdmin') : invitation.role === 'employee' ? 'Employee' : t('userManagement.admin')}
+                          {invitation.role === 'super_admin' ? t('userManagement.superAdmin') : invitation.role === 'employee' ? t('userManagement.employee') : t('userManagement.admin')}
                         </Text>
                       </View>
                     </View>
 
                     <View style={styles.metaItem}>
-                      <Text style={styles.metaLabel}>Created</Text>
+                      <Text style={styles.metaLabel}>{t('userManagement.created')}</Text>
                       <Text style={styles.metaValue}>{formatDate(invitation.created_at)}</Text>
                     </View>
                   </View>
@@ -486,7 +486,7 @@ const UserManagementScreen = () => {
                         onPress={() => handleResendInvitation(invitation.id)}
                       >
                         <RefreshCw size={16} color={COLORS.primary} />
-                        <Text style={styles.invitationActionText}>Resend</Text>
+                        <Text style={styles.invitationActionText}>{t('userManagement.resend')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.invitationActionButton, styles.invitationCancelButton]}
@@ -494,7 +494,7 @@ const UserManagementScreen = () => {
                       >
                         <X size={16} color={COLORS.error} />
                         <Text style={[styles.invitationActionText, styles.invitationCancelText]}>
-                          Cancel
+                          {t('common.cancel')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -521,7 +521,7 @@ const UserManagementScreen = () => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Add New User</Text>
+              <Text style={styles.modalTitle}>{t('userManagement.addNewUser')}</Text>
 
               {/* Mode Toggle */}
               <View style={styles.modeToggle}>
@@ -539,7 +539,7 @@ const UserManagementScreen = () => {
                       creationMode === 'manual' && styles.modeButtonTextActive,
                     ]}
                   >
-                    Manual Creation
+                    {t('userManagement.manualCreation')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -556,7 +556,7 @@ const UserManagementScreen = () => {
                       creationMode === 'invite' && styles.modeButtonTextActive,
                     ]}
                   >
-                    Send Invitation
+                    {t('userManagement.sendInvitation')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -564,7 +564,7 @@ const UserManagementScreen = () => {
               <ScrollView style={styles.modalForm}>
                 {/* Common Fields */}
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Full Name *</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.fullName')} *</Text>
                   <TextInput
                     style={styles.formInput}
                     value={newUser.full_name}
@@ -575,7 +575,7 @@ const UserManagementScreen = () => {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Email *</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.email')} *</Text>
                   <TextInput
                     style={styles.formInput}
                     value={newUser.email}
@@ -589,7 +589,7 @@ const UserManagementScreen = () => {
 
                 {creationMode === 'invite' && (
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Phone *</Text>
+                    <Text style={styles.formLabel}>{t('userManagement.phone')} *</Text>
                     <TextInput
                       style={styles.formInput}
                       value={newUser.phone}
@@ -604,7 +604,7 @@ const UserManagementScreen = () => {
                 {creationMode === 'manual' && (
                   <>
                     <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Username *</Text>
+                      <Text style={styles.formLabel}>{t('userManagement.username')} *</Text>
                       <TextInput
                         style={styles.formInput}
                         value={newUser.username}
@@ -616,7 +616,7 @@ const UserManagementScreen = () => {
                     </View>
 
                     <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Password *</Text>
+                      <Text style={styles.formLabel}>{t('userManagement.password')} *</Text>
                       <TextInput
                         style={styles.formInput}
                         value={newUser.password}
@@ -628,7 +628,7 @@ const UserManagementScreen = () => {
                     </View>
 
                     <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Confirm Password *</Text>
+                      <Text style={styles.formLabel}>{t('userManagement.confirmPassword')} *</Text>
                       <TextInput
                         style={styles.formInput}
                         value={newUser.confirmPassword}
@@ -642,7 +642,7 @@ const UserManagementScreen = () => {
                 )}
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Role *</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.role')} *</Text>
                   <View style={styles.roleSelector}>
                     <TouchableOpacity
                       style={[
@@ -657,7 +657,7 @@ const UserManagementScreen = () => {
                           newUser.role === 'employee' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Employee
+                        {t('userManagement.employee')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -673,7 +673,7 @@ const UserManagementScreen = () => {
                           newUser.role === 'admin' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Admin
+                        {t('userManagement.admin')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -689,7 +689,7 @@ const UserManagementScreen = () => {
                           newUser.role === 'super_admin' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Super Admin
+                        {t('userManagement.superAdmin')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -698,7 +698,7 @@ const UserManagementScreen = () => {
                 {creationMode === 'invite' && (
                   <>
                     <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Delivery Method *</Text>
+                      <Text style={styles.formLabel}>{t('userManagement.deliveryMethod')} *</Text>
                       <View style={styles.deliverySelector}>
                         <TouchableOpacity
                           style={[
@@ -714,7 +714,7 @@ const UserManagementScreen = () => {
                               newUser.deliveryMethod === 'email' && styles.deliveryOptionTextActive,
                             ]}
                           >
-                            Email
+                            {t('userManagement.deliveryEmail')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -731,7 +731,7 @@ const UserManagementScreen = () => {
                               newUser.deliveryMethod === 'sms' && styles.deliveryOptionTextActive,
                             ]}
                           >
-                            SMS
+                            {t('userManagement.deliverySMS')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -747,7 +747,7 @@ const UserManagementScreen = () => {
                               newUser.deliveryMethod === 'both' && styles.deliveryOptionTextActive,
                             ]}
                           >
-                            Both
+                            {t('userManagement.deliveryBoth')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -756,7 +756,7 @@ const UserManagementScreen = () => {
                     <View style={styles.infoBox}>
                       <AlertCircle size={16} color={COLORS.info} />
                       <Text style={styles.infoBoxText}>
-                        User will receive a secure link to set up their account. Link expires in 7 days.
+                        {t('userManagement.invitationLinkInfo')}
                       </Text>
                     </View>
                   </>
@@ -768,7 +768,7 @@ const UserManagementScreen = () => {
                   style={styles.modalCancelButton}
                   onPress={() => setShowAddUser(false)}
                 >
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                  <Text style={styles.modalCancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSubmitButton} onPress={handleCreateUser}>
                   <Text style={styles.modalSubmitButtonText}>
@@ -791,11 +791,11 @@ const UserManagementScreen = () => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Edit User</Text>
+              <Text style={styles.modalTitle}>{t('userManagement.editUser')}</Text>
 
               <ScrollView style={styles.modalForm}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Username</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.username')}</Text>
                   <TextInput
                     style={[styles.formInput, styles.formInputDisabled]}
                     value={editingUser.username}
@@ -804,7 +804,7 @@ const UserManagementScreen = () => {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Email</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.email')}</Text>
                   <TextInput
                     style={styles.formInput}
                     value={editForm.email}
@@ -817,7 +817,7 @@ const UserManagementScreen = () => {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Full Name</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.fullName')}</Text>
                   <TextInput
                     style={styles.formInput}
                     value={editForm.full_name}
@@ -828,7 +828,7 @@ const UserManagementScreen = () => {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Role</Text>
+                  <Text style={styles.formLabel}>{t('userManagement.role')}</Text>
                   <View style={styles.roleSelector}>
                     <TouchableOpacity
                       style={[
@@ -843,7 +843,7 @@ const UserManagementScreen = () => {
                           editForm.role === 'employee' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Employee
+                        {t('userManagement.employee')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -859,7 +859,7 @@ const UserManagementScreen = () => {
                           editForm.role === 'admin' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Admin
+                        {t('userManagement.admin')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -875,7 +875,7 @@ const UserManagementScreen = () => {
                           editForm.role === 'super_admin' && styles.roleOptionTextActive,
                         ]}
                       >
-                        Super Admin
+                        {t('userManagement.superAdmin')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -887,10 +887,10 @@ const UserManagementScreen = () => {
                   style={styles.modalCancelButton}
                   onPress={() => setEditingUser(null)}
                 >
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                  <Text style={styles.modalCancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSubmitButton} onPress={handleUpdateUser}>
-                  <Text style={styles.modalSubmitButtonText}>Update User</Text>
+                  <Text style={styles.modalSubmitButtonText}>{t('userManagement.updateUser')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

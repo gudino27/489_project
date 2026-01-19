@@ -175,7 +175,7 @@ const AnalyticsScreen = () => {
 
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
       >
         {/* Realtime Stats */}
         {realtimeStats && realtimeStats.activeSessions > 0 && (
@@ -227,13 +227,13 @@ const AnalyticsScreen = () => {
         {/* Testimonial Analytics */}
         {testimonialStats && (
           <>
-            <Text style={styles.sectionTitle}>Testimonial Analytics</Text>
+            <Text style={styles.sectionTitle}>{t('analytics.testimonialAnalytics')}</Text>
             <View style={styles.metricsGrid}>
               <ContentGlass style={styles.metricCard}>
                 <View style={[styles.metricIcon, { backgroundColor: COLORS.primary + '20' }]}>
                   <MessageSquare size={24} color={COLORS.primary} />
                 </View>
-                <Text style={styles.metricLabel}>Total Submissions</Text>
+                <Text style={styles.metricLabel}>{t('analytics.totalSubmissions')}</Text>
                 <Text style={styles.metricValue}>{testimonialStats.submissions?.total_submissions || 0}</Text>
               </ContentGlass>
 
@@ -241,7 +241,7 @@ const AnalyticsScreen = () => {
                 <View style={[styles.metricIcon, { backgroundColor: '#FCD34D40' }]}>
                   <Star size={24} color="#FCD34D" />
                 </View>
-                <Text style={styles.metricLabel}>Average Rating</Text>
+                <Text style={styles.metricLabel}>{t('analytics.averageRating')}</Text>
                 <Text style={styles.metricValue}>
                   {testimonialStats.submissions?.avg_rating ? testimonialStats.submissions.avg_rating.toFixed(1) : 'N/A'}
                 </Text>
@@ -251,7 +251,7 @@ const AnalyticsScreen = () => {
                 <View style={[styles.metricIcon, { backgroundColor: COLORS.success + '20' }]}>
                   <Camera size={24} color={COLORS.success} />
                 </View>
-                <Text style={styles.metricLabel}>With Photos</Text>
+                <Text style={styles.metricLabel}>{t('analytics.withPhotos')}</Text>
                 <Text style={styles.metricValue}>{testimonialStats.submissions?.submissions_with_photos || 0}</Text>
               </ContentGlass>
 
@@ -259,7 +259,7 @@ const AnalyticsScreen = () => {
                 <View style={[styles.metricIcon, { backgroundColor: '#9333EA20' }]}>
                   <Send size={24} color="#9333EA" />
                 </View>
-                <Text style={styles.metricLabel}>Conversion Rate</Text>
+                <Text style={styles.metricLabel}>{t('analytics.conversionRate')}</Text>
                 <Text style={styles.metricValue}>{testimonialStats.link_activity?.conversion_rate || 0}%</Text>
               </ContentGlass>
             </View>
@@ -267,7 +267,7 @@ const AnalyticsScreen = () => {
             {/* Rating Distribution */}
             {testimonialStats.rating_distribution && testimonialStats.rating_distribution.length > 0 && (
               <ContentGlass style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Rating Distribution</Text>
+                <Text style={styles.chartTitle}>{t('analytics.ratingDistribution')}</Text>
                 {testimonialStats.rating_distribution.map((rating) => {
                   const percentage = (rating.count / (testimonialStats.submissions?.total_submissions || 1)) * 100;
                   return (
@@ -286,7 +286,7 @@ const AnalyticsScreen = () => {
             {/* Project Types */}
             {testimonialStats.project_types && testimonialStats.project_types.length > 0 && (
               <ContentGlass style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Project Types</Text>
+                <Text style={styles.chartTitle}>{t('analytics.projectTypes')}</Text>
                 {testimonialStats.project_types.map((project) => (
                   <View key={project.project_type} style={styles.projectRow}>
                     <View style={styles.projectInfo}>
@@ -304,7 +304,7 @@ const AnalyticsScreen = () => {
         {/* Top Pages */}
         {stats?.pageViews && stats.pageViews.length > 0 && (
           <ContentGlass style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Top Pages</Text>
+            <Text style={styles.chartTitle}>{t('analytics.topPages')}</Text>
             {stats.pageViews.slice(0, 8).map((page, index) => (
               <View key={index} style={styles.pageRow}>
                 <View style={styles.pageInfo}>
@@ -320,7 +320,7 @@ const AnalyticsScreen = () => {
         {/* Browser Breakdown */}
         {stats?.browsers && stats.browsers.length > 0 && (
           <ContentGlass style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Browser Breakdown</Text>
+            <Text style={styles.chartTitle}>{t('analytics.browserBreakdown')}</Text>
             {stats.browsers.map((browser, index) => {
               const total = stats.browsers.reduce((sum, b) => sum + b.count, 0);
               const percentage = ((browser.count / total) * 100).toFixed(1);
@@ -350,7 +350,7 @@ const AnalyticsScreen = () => {
         {/* Daily Views Chart */}
         {stats?.dailyViews && stats.dailyViews.length > 0 && (
           <ContentGlass style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Daily Page Views</Text>
+            <Text style={styles.chartTitle}>{t('analytics.dailyPageViews')}</Text>
             {stats.dailyViews.slice(0, 14).map((day, index) => {
               const maxViews = Math.max(...stats.dailyViews.map((d) => d.views));
               const percentage = (day.views / maxViews) * 100;
@@ -363,7 +363,7 @@ const AnalyticsScreen = () => {
                       <Text style={styles.dailyBarText}>{day.views}</Text>
                     </View>
                   </View>
-                  <Text style={styles.dailySessions}>{day.unique_sessions} sessions</Text>
+                  <Text style={styles.dailySessions}>{day.unique_sessions} {t('analytics.sessions')}</Text>
                 </View>
               );
             })}
@@ -373,7 +373,7 @@ const AnalyticsScreen = () => {
         {/* Recent Activity */}
         {realtimeStats?.recentViews && realtimeStats.recentViews.length > 0 && (
           <ContentGlass style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Recent Page Views</Text>
+            <Text style={styles.chartTitle}>{t('analytics.recentPageViews')}</Text>
             {realtimeStats.recentViews.slice(0, 10).map((view, index) => (
               <View key={index} style={styles.recentRow}>
                 <View style={styles.recentInfo}>
