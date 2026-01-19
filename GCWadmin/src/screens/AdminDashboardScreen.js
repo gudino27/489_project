@@ -24,6 +24,9 @@ import {
   ChevronDown,
   Globe,
   Clock,
+  Instagram,
+  Calendar,
+  Eye,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -46,6 +49,7 @@ import AnalyticsScreen from './AnalyticsScreen';
 import SmsRoutingScreen from './SmsRoutingScreen';
 import SecurityMonitorScreen from './SecurityMonitorScreen';
 import TimeClockScreen from './TimeClockScreen';
+import InstagramManagerScreen from './InstagramManagerScreen';
 
 const AdminDashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
@@ -80,6 +84,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     { key: 'designs', label: t('admin.tabs.designs'), icon: FileText },
     { key: 'invoices', label: t('admin.tabs.invoices'), icon: Receipt },
     { key: 'testimonials', label: t('admin.tabs.testimonials'), icon: MessageSquare },
+    { key: 'instagram', label: t('admin.tabs.instagram'), icon: Instagram },
     { key: 'users', label: t('admin.tabs.users'), icon: Users, superAdminOnly: true },
     { key: 'analytics', label: t('admin.tabs.analytics'), icon: BarChart3, superAdminOnly: true },
     { key: 'sms-routing', label: t('admin.tabs.sms-routing'), icon: MessageCircle, superAdminOnly: true },
@@ -152,6 +157,8 @@ const AdminDashboardScreen = ({ navigation }) => {
         return user?.role === 'super_admin' ? <SmsRoutingScreen /> : null;
       case 'security':
         return user?.role === 'super_admin' ? <SecurityMonitorScreen /> : null;
+      case 'instagram':
+        return <InstagramManagerScreen />;
       default:
         return (
           <View style={styles.placeholderContent}>
