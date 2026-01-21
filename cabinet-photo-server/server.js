@@ -50,8 +50,22 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "https://www.instagram.com"],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://fonts.googleapis.com",
+        "https://cdn.jsdelivr.net"
+      ],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'",  // Allow inline scripts (needed for React and embedded scripts)
+        "https://www.instagram.com",
+        "https://cdn.jsdelivr.net",  // Bootstrap and other CDN scripts
+        "https://cdnjs.cloudflare.com",  // Cloudflare CDN
+        "https://ajax.cloudflare.com",  // Cloudflare Rocket Loader
+        "https://static.cloudflareinsights.com"  // Cloudflare analytics
+      ],
+      workerSrc: ["'self'", "blob:"],  // Allow service workers
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'"],

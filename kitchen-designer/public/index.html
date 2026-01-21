@@ -134,8 +134,10 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
-            // Force immediate update check
-            registration.update();
+            // Check for updates periodically (every 1 hour instead of every load)
+            setInterval(() => {
+              registration.update();
+            }, 3600000); // 1 hour
 
             // Listen for updates
             registration.addEventListener('updatefound', () => {
@@ -143,9 +145,8 @@
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New service worker is ready - auto-activate and refresh
-                    // Tell the new SW to skip waiting and take over immediately
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    // Show notification instead of auto-reloading
+                    showUpdateNotification(newWorker);
                   }
                 });
               }
@@ -155,14 +156,62 @@
           });
       });
 
-      // When the new service worker takes control, refresh the page automatically
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
+      // Show a notification when update is available
+      function showUpdateNotification(newWorker) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #1f2937;
+          color: white;
+          padding: 15px 25px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          z-index: 10000;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        `;
+        notification.innerHTML = `
+          <span>New version available!</span>
+          <button onclick="this.parentElement.refreshApp()" style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          ">Update</button>
+          <button onclick="this.parentElement.remove()" style="
+            background: transparent;
+            color: white;
+            border: 1px solid #6b7280;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          ">Later</button>
+        `;
+        notification.refreshApp = () => {
+          newWorker.postMessage({ type: 'SKIP_WAITING' });
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
+          });
+        };
+        document.body.appendChild(notification);
+        
+        // Auto-dismiss after 30 seconds
+        setTimeout(() => notification.remove(), 30000);
+      }
 
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
