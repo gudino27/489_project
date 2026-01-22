@@ -131,13 +131,36 @@
   <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
+      // Prevent reload loops - track if we just reloaded
+      const wasReloaded = sessionStorage.getItem('sw_reload');
+      if (wasReloaded) {
+        sessionStorage.removeItem('sw_reload');
+      }
+
+      // Track page load time to prevent reloads during initial load
+      const pageLoadTime = Date.now();
+
+      // Prevent any automatic controllerchange reloads
+      // This should ONLY happen when user explicitly clicks "Update" button
+      let allowReload = false;
+
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
-            // Check for updates periodically (every 1 hour instead of every load)
+            // Check for updates periodically (every 2 hours, not on every load)
+            // Also check visibility to avoid updates when page is hidden
             setInterval(() => {
-              registration.update();
-            }, 3600000); // 1 hour
+              if (!document.hidden) {
+                registration.update();
+              }
+            }, 7200000); // 2 hours
+
+            // Check for updates when page becomes visible
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden) {
+                registration.update();
+              }
+            });
 
             // Listen for updates
             registration.addEventListener('updatefound', () => {
@@ -153,6 +176,7 @@
             });
           })
           .catch((registrationError) => {
+            console.error('Service worker registration failed:', registrationError);
           });
       });
 
@@ -198,11 +222,17 @@
           ">Later</button>
         `;
         notification.refreshApp = () => {
+          // User explicitly clicked "Update" - allow reload
+          allowReload = true;
           newWorker.postMessage({ type: 'SKIP_WAITING' });
+
           let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (!refreshing) {
+            // Only reload if user clicked "Update" AND we haven't already reloaded
+            if (!refreshing && allowReload) {
               refreshing = true;
+              // Mark that we're about to reload to prevent loops
+              sessionStorage.setItem('sw_reload', 'true');
               window.location.reload();
             }
           });

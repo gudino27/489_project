@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Instagram, AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import Navigation from '../ui/Navigation';
 import Footer from '../ui/Footer';
 import SEO from '../ui/SEO';
 import '../css/sms-compliance.css';
-import { useLanguage } from '../../utils/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
@@ -15,21 +15,29 @@ const InstagramEmbed = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
     loadOembedPosts();
   }, []);
 
   // Load Instagram embed.js script when posts are loaded
+  // Use ref to prevent multiple script injections which can cause service worker conflicts
   useEffect(() => {
-    if (posts.length > 0) {
-      // Remove existing script if any
+    if (posts.length > 0 && !scriptLoadedRef.current) {
+      // Check if script already exists in DOM
       const existingScript = document.querySelector('script[src*="instagram.com/embed.js"]');
+
       if (existingScript) {
-        existingScript.remove();
+        // Script already exists, just process embeds
+        scriptLoadedRef.current = true;
+        if (window.instgrm) {
+          window.instgrm.Embeds.process();
+        }
+        return;
       }
 
-      // Add fresh Instagram embed script
+      // Add Instagram embed script only once
       const script = document.createElement('script');
       script.src = 'https://www.instagram.com/embed.js';
       script.async = true;
@@ -37,16 +45,14 @@ const InstagramEmbed = () => {
 
       // Process embeds when script loads
       script.onload = () => {
+        scriptLoadedRef.current = true;
         if (window.instgrm) {
           window.instgrm.Embeds.process();
         }
       };
 
-      return () => {
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      };
+      // Don't remove script on cleanup - keep it loaded
+      // Multiple add/remove cycles cause issues with service worker caching
     }
   }, [posts]);
 

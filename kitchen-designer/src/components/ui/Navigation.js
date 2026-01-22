@@ -11,9 +11,12 @@ const Navigation = () => {
 
     const API_URL = process.env.REACT_APP_API_URL || 'https://api.gudinocustom.com';
 
-    // Fetch showroom visibility setting (with polling every 30 seconds)
+    // Fetch showroom visibility setting (with optimized polling)
     useEffect(() => {
         const fetchShowroomSettings = async () => {
+            // Don't fetch if page is hidden (mobile battery optimization)
+            if (document.hidden) return;
+
             try {
                 const response = await fetch(`${API_URL}/api/showroom/public/settings`);
                 if (response.ok) {
@@ -28,10 +31,26 @@ const Navigation = () => {
         // Fetch immediately on mount
         fetchShowroomSettings();
 
-        // Poll every 60 seconds to check for admin changes
-        const interval = setInterval(fetchShowroomSettings, 60000);
+        // Poll every 5 minutes instead of 60 seconds (reduces mobile load)
+        const interval = setInterval(() => {
+            if (!document.hidden) {
+                fetchShowroomSettings();
+            }
+        }, 300000); // 5 minutes
 
-        return () => clearInterval(interval);
+        // Also check when page becomes visible
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchShowroomSettings();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [API_URL]);
 
     // Close dropdown when clicking outside

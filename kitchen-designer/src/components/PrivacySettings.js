@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Footer from './ui/Footer';
 import './css/sms-compliance.css';
-import { useLanguage } from '../utils/LanguageContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const PrivacySettings = () => {
   const { t } = useLanguage();
@@ -135,7 +135,6 @@ const PrivacySettings = () => {
 
           <div style={{ marginTop: '40px', padding: '20px', backgroundColor: '#868788ff', borderRadius: '5px' }}>
             <strong>{t('privacySettings.note')}</strong>
-          </div>
           </div>
         </div>
       </div>

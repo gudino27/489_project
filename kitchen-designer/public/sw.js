@@ -36,8 +36,9 @@ self.addEventListener('install', (event) => {
       })
   );
 
-  // Skip waiting to activate immediately
-  self.skipWaiting();
+  // Removed self.skipWaiting() - only skip when user clicks "Update" button
+  // This prevents automatic activation and potential mobile reloads
+  // Skip waiting is now controlled by message event handler (line 44-48)
 });
 
 // Listen for skip waiting message from client
@@ -127,7 +128,8 @@ async function handleAPIRequest(request) {
       timeoutPromise
     ]);
 
-    if (response.ok) {
+    // Only cache successful full responses (not partial 206)
+    if (response.status === 200) {
       // Cache successful API responses for short-term use
       const cache = await caches.open(CACHE_NAME);
       cache.put(request.clone(), response.clone());
@@ -167,7 +169,8 @@ async function handleNavigationRequest(request) {
     // Try network first
     const response = await fetch(request);
 
-    if (response.ok) {
+    // Only cache successful full responses (not partial 206)
+    if (response.status === 200) {
       // Cache successful navigation responses
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
@@ -196,7 +199,8 @@ async function handleStaticAsset(request) {
 
     // If not in cache, fetch and cache
     const response = await fetch(request);
-    if (response.ok) {
+    // Only cache successful full responses (not partial 206)
+    if (response.status === 200) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
     }
@@ -213,7 +217,8 @@ async function handleGenericRequest(request) {
   try {
     const response = await fetch(request);
 
-    if (response.ok) {
+    // Only cache successful full responses (not partial 206)
+    if (response.status === 200) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
     }

@@ -2,7 +2,7 @@ import "../css/sms-compliance.css";
 import Collapsible from "../ui/Collapsible";
 import Navigation from "../ui/Navigation";
 import SEO from "../ui/SEO";
-import { useLanguage } from "../../utils/LanguageContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const WhyChooseUs = () => {
   const { t } = useLanguage();

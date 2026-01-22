@@ -144,13 +144,34 @@ class SessionManager {
 // Create singleton instance
 const sessionManager = new SessionManager();
 
-// Add activity listeners
+// Add activity listeners with throttling to prevent mobile performance issues
 if (typeof window !== 'undefined') {
-  ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
-    window.addEventListener(event, () => {
+  // Throttle function to limit cookie updates - prevents excessive writes on mobile
+  let lastActivityUpdate = 0;
+  const THROTTLE_INTERVAL = 30000; // 30 seconds - only update cookie every 30s max
+
+  const throttledUpdateActivity = () => {
+    const now = Date.now();
+    // Always update in-memory timestamp
+    sessionManager.lastActivity = now;
+
+    // Only update cookie if enough time has passed
+    if (now - lastActivityUpdate >= THROTTLE_INTERVAL) {
+      lastActivityUpdate = now;
       sessionManager.updateActivity();
-    });
-  });
+    }
+  };
+
+  // Use passive listeners for scroll/touch to improve mobile performance
+  const passiveOptions = { passive: true };
+
+  // Desktop events - track with throttle
+  window.addEventListener('mousedown', throttledUpdateActivity);
+  window.addEventListener('keydown', throttledUpdateActivity);
+
+  // Mobile events - use passive listeners and throttle aggressively
+  window.addEventListener('touchstart', throttledUpdateActivity, passiveOptions);
+  window.addEventListener('scroll', throttledUpdateActivity, passiveOptions);
 }
 
 export default sessionManager;
