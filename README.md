@@ -4,7 +4,7 @@
 <div align="center">
 
 
-# 489_PROJECT
+# Gudino Custom
 
 <!-- BADGES -->
 <img src="https://img.shields.io/github/last-commit/gudino27/489_project?style=flat&logo=git&logoColor=white&color=0080ff" alt="last-commit">
