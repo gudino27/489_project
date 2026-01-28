@@ -34,6 +34,13 @@ const GlassView = ({
       borderColor: 'rgba(255, 255, 255, 0.2)',
       shadowColor: 'rgba(31, 38, 135, 0.15)',
     },
+    medium: {
+      intensity: 60, // ~10px blur (same as regular)
+      tint: 'light',
+      overlayColor: 'rgba(255, 255, 255, 0.25)',
+      borderColor: 'rgba(255, 255, 255, 0.18)',
+      shadowColor: 'rgba(31, 38, 135, 0.37)',
+    },
     regular: {
       intensity: 60, // ~10px blur
       tint: 'light',

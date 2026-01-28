@@ -26,6 +26,7 @@ import {
   Clock,
   Instagram,
   Calendar,
+  CalendarDays,
   Eye,
 } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,6 +51,9 @@ import SmsRoutingScreen from './SmsRoutingScreen';
 import SecurityMonitorScreen from './SecurityMonitorScreen';
 import TimeClockScreen from './TimeClockScreen';
 import InstagramManagerScreen from './InstagramManagerScreen';
+import ProjectTimelineScreen from './ProjectTimelineScreen';
+import AppointmentsScreen from './AppointmentsScreen';
+import VirtualShowroomScreen from './VirtualShowroomScreen';
 
 const AdminDashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
@@ -85,6 +89,9 @@ const AdminDashboardScreen = ({ navigation }) => {
     { key: 'invoices', label: t('admin.tabs.invoices'), icon: Receipt },
     { key: 'testimonials', label: t('admin.tabs.testimonials'), icon: MessageSquare },
     { key: 'instagram', label: t('admin.tabs.instagram'), icon: Instagram },
+    { key: 'timelines', label: t('admin.tabs.timelines'), icon: Calendar },
+    { key: 'appointments', label: t('admin.tabs.appointments'), icon: CalendarDays },
+    { key: 'showroom', label: t('admin.tabs.showroom'), icon: Eye },
     { key: 'users', label: t('admin.tabs.users'), icon: Users, superAdminOnly: true },
     { key: 'analytics', label: t('admin.tabs.analytics'), icon: BarChart3, superAdminOnly: true },
     { key: 'sms-routing', label: t('admin.tabs.sms-routing'), icon: MessageCircle, superAdminOnly: true },
@@ -159,6 +166,12 @@ const AdminDashboardScreen = ({ navigation }) => {
         return user?.role === 'super_admin' ? <SecurityMonitorScreen /> : null;
       case 'instagram':
         return <InstagramManagerScreen />;
+      case 'timelines':
+        return <ProjectTimelineScreen />;
+      case 'appointments':
+        return <AppointmentsScreen />;
+      case 'showroom':
+        return <VirtualShowroomScreen />;
       default:
         return (
           <View style={styles.placeholderContent}>

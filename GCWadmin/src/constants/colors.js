@@ -67,6 +67,7 @@ export const COLORS = {
 
   // Info colors
   info: '#3b82f6', // blue-500
+  infoBg: '#eff6ff', // blue-50
   infoLight: '#60a5fa', // blue-400
   infoDark: '#2563eb', // blue-600
 
