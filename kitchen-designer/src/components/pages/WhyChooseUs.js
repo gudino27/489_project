@@ -15,7 +15,7 @@ const WhyChooseUs = () => {
         keywords="why choose us, custom woodworking benefits, quality cabinets, professional installation, expert craftsmanship, Washington cabinet maker"
         canonical="https://gudinocustom.com/why-choose-us"
       />
-      <div>
+      <div style={{background:"rgb(110,110,110)"}}>
         <Navigation />
       <div style={{ height: "1vh" }}></div>
       <div className="sms-compliance-container">

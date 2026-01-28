@@ -7,6 +7,7 @@
   font-family: Arial, sans-serif;
   background: linear-gradient(135deg, #414141 0%, #000000 100%);
   min-height: 100vh;
+  border-radius: 1%;
 }
 
 .sms-tabs-container {
